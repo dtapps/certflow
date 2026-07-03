@@ -1,6 +1,6 @@
 module cnb.cool/dtapp/certflow
 
-go 1.27
+go 1.26.4
 
 ignore ./frontend
 

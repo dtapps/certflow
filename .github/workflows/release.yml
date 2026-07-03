@@ -52,7 +52,7 @@ jobs:
       # 安装 Go（使用稳定版本）
       - uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version-file: 'go.mod'
 
       # 安装 pnpm
       - uses: pnpm/action-setup@v4
