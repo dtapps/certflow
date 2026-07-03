@@ -140,7 +140,6 @@ jobs:
         shell: bash
         run: wails3 task package VERSION=${{ inputs.version }}
 
-      # 重命名产物，统一命名规则
       - name: 重命名产物
         if: ${{ matrix.enabled }}
         shell: bash
@@ -152,10 +151,10 @@ jobs:
           cd bin
           mkdir -p renamed
 
-          # macOS: .app 包
+          # macOS: .app 压缩为 .zip（自更新需要）
           if [ -d "certflow.app" ]; then
-            cp -r certflow.app "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.app"
-            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.app" renamed/
+            zip -r "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" certflow.app
+            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
           fi
 
           # Windows: NSIS 安装包（优先）或裸 .exe
@@ -186,7 +185,6 @@ jobs:
           echo "重命名后文件："
           ls -lh renamed/
 
-      # 上传统一命名的产物
       - name: 上传产物
         if: ${{ matrix.enabled }}
         uses: actions/upload-artifact@v4
@@ -208,7 +206,6 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # 下载所有产物到同一个目录（文件名已统一，不会冲突）
       - name: 下载所有产物
         uses: actions/download-artifact@v4
         with:
@@ -219,7 +216,6 @@ jobs:
       - name: 显示发布文件
         run: ls -lh release/
 
-      # 从 git log 生成更新内容
       - name: 生成发布说明
         shell: bash
         run: |
@@ -270,7 +266,14 @@ jobs:
           echo "" >> release_body.md
           echo "${CHANGES}" >> release_body.md
 
-      # 发布 Release（文件名和链接自动匹配）
+      # 生成 SHA256 校验和文件（自更新需要）
+      - name: 生成 SHA256SUMS
+        run: |
+          cd release
+          shasum -a 256 * > SHA256SUMS
+          echo "SHA256SUMS："
+          cat SHA256SUMS
+
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
