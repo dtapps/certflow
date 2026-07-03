@@ -135,8 +135,11 @@ jobs:
       # Windows 安装 NSIS（打包安装包需要）
       - name: 安装 NSIS
         if: ${{ matrix.enabled && runner.os == 'Windows' }}
-        shell: bash
-        run: choco install nsis -y
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
+          echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       # 构建
       - name: 构建
