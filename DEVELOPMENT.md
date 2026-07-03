@@ -170,7 +170,7 @@ make build VERSION=1.0.0
 ### 发布工作流
 
 - **GitHub Actions**：手动输入版本号，六个平台并行构建，发布 GitHub Release
-- **Gitea/Gitee/GitLab/GitCode/CNB**：手动输入版本号，从 GitHub Release 下载产物并发布
+- **CNB**：手动输入版本号，从 GitHub Release 下载产物并发布
 
 ---
 

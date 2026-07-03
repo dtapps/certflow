@@ -169,7 +169,7 @@ Injected variables (`main.go`):
 ### Release Workflow
 
 - **GitHub Actions**: Manual trigger with version input, six-platform parallel build, publishes GitHub Release
-- **Gitea/Gitee/GitCode/CNB**: Manual trigger, downloads artifacts from GitHub Release and publishes locally
+- **CNB**: Manual trigger, downloads artifacts from GitHub Release and publishes locally
 
 ---
 
