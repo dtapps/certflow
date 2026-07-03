@@ -172,6 +172,9 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
+      # 检出代码
+      - uses: actions/checkout@v4
+
       # 下载所有构建产物
       - name: 下载所有产物
         uses: actions/download-artifact@v4
@@ -182,22 +185,34 @@ jobs:
 
       # 整理文件
       - name: 整理文件
+        shell: bash
         run: |
           cd dist
           find . -type d -empty -delete
 
-          # macOS: 重命名 .app
-          if [ -d "certflow.app" ]; then
-            mv "certflow.app" "CertFlow-${{ inputs.version }}-macos.app"
-          fi
-          # Windows: 重命名 .exe
-          if [ -f "certflow.exe" ]; then
-            mv "certflow.exe" "CertFlow-${{ inputs.version }}-windows.exe"
-          fi
-          # Linux: 重命名二进制
-          if [ -f "certflow" ]; then
-            mv "certflow" "CertFlow-${{ inputs.version }}-linux"
-          fi
+          # 重命名产物
+          for f in *; do
+            case "$f" in
+              *.app)
+                mv "$f" "CertFlow-${{ inputs.version }}-macos.app"
+                ;;
+              *.exe)
+                mv "$f" "CertFlow-${{ inputs.version }}-windows.exe"
+                ;;
+              *.AppImage)
+                mv "$f" "CertFlow-${{ inputs.version }}-linux.AppImage"
+                ;;
+              *.deb)
+                mv "$f" "CertFlow-${{ inputs.version }}-linux.deb"
+                ;;
+              *.rpm)
+                mv "$f" "CertFlow-${{ inputs.version }}-linux.rpm"
+                ;;
+              *.pkg.tar.zst)
+                mv "$f" "CertFlow-${{ inputs.version }}-linux.pkg.tar.zst"
+                ;;
+            esac
+          done
 
           echo "发布文件："
           ls -lh
@@ -219,10 +234,13 @@ jobs:
           printf '|------|------|------|\n' >> release_body.md
           printf '| macOS (Apple Silicon) | CertFlow-%s-macos-arm64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
           printf '| macOS (Intel) | CertFlow-%s-macos-amd64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
-          printf '| Windows (x64) | CertFlow-%s-windows-amd64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
+          printf '| Windows (x64) | CertFlow-%s-windows-x64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
           printf '| Windows (ARM64) | CertFlow-%s-windows-arm64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
-          printf '| Linux (x64) | CertFlow-%s-linux-amd64 | Linux 二进制 |\n' "$VERSION" >> release_body.md
-          printf '| Linux (ARM64) | CertFlow-%s-linux-arm64 | Linux 二进制 |\n' "$VERSION" >> release_body.md
+          printf '| Linux (x64) | CertFlow-%s-linux-x86_64.AppImage | Linux 便携版 |\n' "$VERSION" >> release_body.md
+          printf '| Linux (ARM64) | CertFlow-%s-linux-aarch64.AppImage | Linux 便携版 |\n' "$VERSION" >> release_body.md
+          printf '| Linux (DEB) | CertFlow-%s-linux.deb | Debian/Ubuntu |\n' "$VERSION" >> release_body.md
+          printf '| Linux (RPM) | CertFlow-%s-linux.rpm | Fedora/RHEL |\n' "$VERSION" >> release_body.md
+          printf '| Linux (Arch) | CertFlow-%s-linux.pkg.tar.zst | Arch Linux |\n' "$VERSION" >> release_body.md
           printf '\n## 更新内容\n\n%s\n' "$CHANGES" >> release_body.md
 
       # 创建 GitHub Release 并上传附件
