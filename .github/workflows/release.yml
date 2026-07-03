@@ -9,6 +9,30 @@ on:
         description: '版本号（例如 1.0.0）'
         required: true
         type: string
+      mac_arm64:
+        description: 'macOS Apple Silicon'
+        type: boolean
+        default: true
+      mac_amd64:
+        description: 'macOS Intel'
+        type: boolean
+        default: true
+      linux_amd64:
+        description: 'Linux x64'
+        type: boolean
+        default: true
+      linux_arm64:
+        description: 'Linux ARM64'
+        type: boolean
+        default: true
+      windows_amd64:
+        description: 'Windows x64'
+        type: boolean
+        default: true
+      windows_arm64:
+        description: 'Windows ARM64'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -16,33 +40,41 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           # macOS Apple Silicon
           - os: macos-latest
             goos: darwin
             goarch: arm64
+            enabled: ${{ inputs.mac_arm64 }}
           # macOS Intel
           - os: macos-13
             goos: darwin
             goarch: amd64
+            enabled: ${{ inputs.mac_amd64 }}
           # Linux x64
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
+            enabled: ${{ inputs.linux_amd64 }}
           # Linux ARM64
           - os: ubuntu-latest
             goos: linux
             goarch: arm64
+            enabled: ${{ inputs.linux_arm64 }}
           # Windows x64
           - os: windows-latest
             goos: windows
             goarch: amd64
+            enabled: ${{ inputs.windows_amd64 }}
           # Windows ARM64
           - os: windows-latest
             goos: windows
             goarch: arm64
+            enabled: ${{ inputs.windows_arm64 }}
 
+    if: ${{ matrix.enabled }}
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -59,7 +91,7 @@ jobs:
 
       # 安装 Linux 系统依赖（Wails3 需要 GTK4 + WebKit）
       - name: 安装系统依赖
-        if: runner.os == 'Linux' && matrix.goarch == 'amd64'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
@@ -101,10 +133,12 @@ jobs:
 
       # 构建
       - name: 构建
+        shell: bash
         run: wails3 task build VERSION=${{ inputs.version }}
 
       # 打包
       - name: 打包
+        shell: bash
         run: wails3 task package VERSION=${{ inputs.version }}
 
       # 上传构建产物（macOS 上传 .app，其他上传 bin/ 目录）
