@@ -49,10 +49,10 @@ jobs:
       # 检出代码
       - uses: actions/checkout@v4
 
-      # 安装 Go（版本从 go.mod 读取）
+      # 安装 Go（使用稳定版本）
       - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version: 'stable'
 
       # 安装 pnpm
       - uses: pnpm/action-setup@v4
@@ -62,7 +62,7 @@ jobs:
       # 安装 Node.js
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
