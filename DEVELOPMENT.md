@@ -108,14 +108,7 @@ certflow/
 │   ├── windows/               # Windows 构建
 │   └── linux/                 # Linux 构建
 ├── .github/workflows/         # GitHub Actions 工作流
-│   └── release.yml            # 六平台发布
-├── .gitea/workflows/          # Gitea 工作流
-│   └── release.yml            # 从 GitHub 下载发布
-├── .gitee-go/workflows/       # Gitee 工作流
-│   └── release.yml            # 从 GitHub 下载发布
-├── .gitlab-ci.yml             # GitLab CI 工作流
-├── .gitcode/workflows/        # GitCode 工作流
-│   └── release.yml            # 从 GitHub 下载发布
+│   └── release.yml            # 六平台发
 ├── .cnb/workflows/            # CNB 工作流
 │   └── release.yml            # 从 GitHub 下载发布
 ├── .golangci.yml              # Go 代码检查配置

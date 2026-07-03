@@ -109,9 +109,6 @@ certflow/
 │   └── linux/                 # Linux build
 ├── .github/workflows/         # GitHub Actions workflows
 │   └── release.yml            # Six-platform release
-├── .gitea/workflows/          # Gitea workflows
-│   └── release.yml            # Download from GitHub and release
-├── .gitlab-ci.yml             # GitLab CI workflow
 ├── .cnb/workflows/            # CNB workflows
 │   └── release.yml            # Download from GitHub and release
 ├── .golangci.yml              # Go linting configuration
@@ -172,7 +169,7 @@ Injected variables (`main.go`):
 ### Release Workflow
 
 - **GitHub Actions**: Manual trigger with version input, six-platform parallel build, publishes GitHub Release
-- **Gitea/Gitee/GitLab/GitCode/CNB**: Manual trigger, downloads artifacts from GitHub Release and publishes locally
+- **Gitea/Gitee/GitCode/CNB**: Manual trigger, downloads artifacts from GitHub Release and publishes locally
 
 ---
 
