@@ -37,6 +37,7 @@ on:
 permissions:
   contents: write
 
+# https://github.com/actions/runner-images
 jobs:
   build:
     strategy:
@@ -44,37 +45,40 @@ jobs:
       matrix:
         include:
           # macOS Apple Silicon
-          - os: macos-latest
+          - os: macos-26
             goos: darwin
             goarch: arm64
             enabled: ${{ inputs.mac_arm64 }}
           # macOS Intel
-          - os: macos-13
+          - os: macos-26-intel
             goos: darwin
             goarch: amd64
             enabled: ${{ inputs.mac_amd64 }}
           # Linux x64
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             goos: linux
             goarch: amd64
             enabled: ${{ inputs.linux_amd64 }}
           # Linux ARM64
-          - os: ubuntu-latest
+          - os: ubuntu-26.04-arm
             goos: linux
             goarch: arm64
             enabled: ${{ inputs.linux_arm64 }}
           # Windows x64
-          - os: windows-latest
+          - os: windows-2025
             goos: windows
             goarch: amd64
             enabled: ${{ inputs.windows_amd64 }}
           # Windows ARM64
-          - os: windows-latest
+          - os: windows-11-arm
             goos: windows
             goarch: arm64
             enabled: ${{ inputs.windows_arm64 }}
 
     runs-on: ${{ matrix.os }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       # 打印系统信息
@@ -133,11 +137,6 @@ jobs:
         if: ${{ matrix.enabled }}
         uses: arduino/setup-task@v2
 
-      # Linux ARM64 需要 Docker 交叉编译
-      - name: 设置 Docker 交叉编译
-        if: ${{ matrix.enabled && runner.os == 'Linux' && matrix.goarch == 'arm64' }}
-        run: wails3 task setup:docker
-
       # 构建
       - name: 构建
         if: ${{ matrix.enabled }}
@@ -164,6 +163,10 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     steps:
       # 下载所有构建产物
       - name: 下载所有产物
@@ -227,5 +230,3 @@ jobs:
           draft: false
           body_path: release_body.md
           files: dist/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

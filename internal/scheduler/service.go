@@ -14,6 +14,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/settings"
 	"entgo.io/ent/dialect/sql"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/google/uuid"
 )
 
 // Scheduler 提供定时任务调度功能
@@ -51,7 +52,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.DurationJob(1*time.Hour),
 		gocron.NewTask(s.autoRenewTask),
 		gocron.WithName("auto_renew_certificates"),
-		// gocron.WithIdentifier(uuid.NewV7().String()),
+		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
 	)
 	if err != nil {
 		return fmt.Errorf(i18n.T("error.add_renew_job_failed", "Error", err))
@@ -62,7 +63,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.DurationJob(6*time.Hour),
 		gocron.NewTask(s.expiryCheckTask),
 		gocron.WithName("check_expiring_certificates"),
-		// gocron.WithIdentifier(uuid.NewV7().String()),
+		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
 	)
 	if err != nil {
 		return fmt.Errorf(i18n.T("error.add_expiry_check_job_failed", "Error", err))
