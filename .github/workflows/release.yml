@@ -48,6 +48,7 @@ jobs:
     steps:
       # 打印系统信息
       - name: 系统信息
+        shell: bash
         run: |
           echo "操作系统: $(uname -a)"
           echo "内核版本: $(uname -r)"
@@ -58,10 +59,15 @@ jobs:
 
       # 安装 Linux 系统依赖（Wails3 需要 GTK4 + WebKit）
       - name: 安装系统依赖
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.goarch == 'amd64'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+
+      # Linux ARM64 需要 Docker 交叉编译
+      - name: 设置 Docker 交叉编译
+        if: runner.os == 'Linux' && matrix.goarch == 'arm64'
+        run: wails3 task setup:docker
 
       # 安装 Go（使用稳定版本）
       - uses: actions/setup-go@v5
