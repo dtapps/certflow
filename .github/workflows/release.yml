@@ -44,32 +44,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS Apple Silicon
           - os: macos-26
             goos: darwin
             goarch: arm64
             enabled: ${{ inputs.mac_arm64 }}
-          # macOS Intel
           - os: macos-26-intel
             goos: darwin
             goarch: amd64
             enabled: ${{ inputs.mac_amd64 }}
-          # Linux x64
           - os: ubuntu-26.04
             goos: linux
             goarch: amd64
             enabled: ${{ inputs.linux_amd64 }}
-          # Linux ARM64
           - os: ubuntu-26.04-arm
             goos: linux
             goarch: arm64
             enabled: ${{ inputs.linux_arm64 }}
-          # Windows x64
           - os: windows-2025
             goos: windows
             goarch: amd64
             enabled: ${{ inputs.windows_amd64 }}
-          # Windows ARM64
           - os: windows-11-arm
             goos: windows
             goarch: arm64
@@ -81,8 +75,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      # 打印系统信息
-      - name: 系统信息
+      - name: 打印系统信息
         if: ${{ matrix.enabled }}
         shell: bash
         run: |
@@ -90,49 +83,45 @@ jobs:
           echo "内核版本: $(uname -r)"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
 
-      # 检出代码
-      - uses: actions/checkout@v4
+      - name: 检出代码
         if: ${{ matrix.enabled }}
+        uses: actions/checkout@v4
 
-      # 安装 Linux 系统依赖（Wails3 需要 GTK4 + WebKit）
       - name: 安装系统依赖
         if: ${{ matrix.enabled && runner.os == 'Linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
-      # 安装 Go（使用稳定版本）
-      - uses: actions/setup-go@v5
+      - name: 安装 Go
         if: ${{ matrix.enabled }}
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
-      # 安装 pnpm
-      - uses: pnpm/action-setup@v4
+      - name: 安装 pnpm
         if: ${{ matrix.enabled }}
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      # 安装 Node.js
-      - uses: actions/setup-node@v4
+      - name: 安装 Node.js
         if: ${{ matrix.enabled }}
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      # 安装前端依赖
       - name: 安装前端依赖
         if: ${{ matrix.enabled }}
         run: pnpm install
         working-directory: frontend
 
-      # 安装 Wails3 CLI
       - name: 安装 Wails3
         if: ${{ matrix.enabled }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      # Windows 安装 NSIS（打包安装包需要）
       - name: 安装 NSIS
         if: ${{ matrix.enabled && runner.os == 'Windows' }}
         shell: pwsh
@@ -141,25 +130,69 @@ jobs:
           $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
-      # 构建
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
         run: wails3 task build VERSION=${{ inputs.version }}
 
-      # 打包
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
         run: wails3 task package VERSION=${{ inputs.version }}
 
-      # 上传构建产物
+      # 重命名产物，统一命名规则
+      - name: 重命名产物
+        if: ${{ matrix.enabled }}
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          PLATFORM="${{ matrix.goos }}"
+          ARCH="${{ matrix.goarch }}"
+
+          cd bin
+          mkdir -p renamed
+
+          # macOS: .app 包
+          if [ -d "certflow.app" ]; then
+            cp -r certflow.app "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.app"
+            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.app" renamed/
+          fi
+
+          # Windows: NSIS 安装包（优先）或裸 .exe
+          if ls *-installer.exe 1>/dev/null 2>&1; then
+            for f in *-installer.exe; do
+              mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe"
+            done
+            mv CertFlow-*.exe renamed/
+          elif [ -f "certflow.exe" ]; then
+            mv certflow.exe "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe"
+            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe" renamed/
+          fi
+
+          # Linux: AppImage, DEB, RPM, Arch
+          for f in *.AppImage; do
+            [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.AppImage" && mv CertFlow-*.AppImage renamed/
+          done
+          for f in *.deb; do
+            [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.deb" && mv CertFlow-*.deb renamed/
+          done
+          for f in *.rpm; do
+            [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.rpm" && mv CertFlow-*.rpm renamed/
+          done
+          for f in *.pkg.tar.zst; do
+            [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.pkg.tar.zst" && mv CertFlow-*.pkg.tar.zst renamed/
+          done
+
+          echo "重命名后文件："
+          ls -lh renamed/
+
+      # 上传统一命名的产物
       - name: 上传产物
         if: ${{ matrix.enabled }}
         uses: actions/upload-artifact@v4
         with:
           name: certflow-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: bin/
+          path: bin/renamed/
           if-no-files-found: warn
           retention-days: 1
 
@@ -167,23 +200,27 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    
+
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    steps:
-      # 检出代码
-      - uses: actions/checkout@v4
 
-      # 下载所有构建产物（按平台分目录，避免同名覆盖）
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 下载所有产物到同一个目录（文件名已统一，不会冲突）
       - name: 下载所有产物
         uses: actions/download-artifact@v4
         with:
-          path: dist
+          path: release
           pattern: certflow-*
+          merge-multiple: true
 
-      # 整理文件并生成发布说明
-      - name: 整理文件并生成发布说明
+      - name: 显示发布文件
+        run: ls -lh release/
+
+      # 从 git log 生成更新内容
+      - name: 生成发布说明
         shell: bash
         run: |
           VERSION="${{ inputs.version }}"
@@ -198,59 +235,42 @@ jobs:
             CHANGES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" 2>/dev/null || echo "- 版本更新")
           fi
 
-          cat > release_body.md << 'EOF'
-          ## 下载
+          # 生成下载表格（文件名已统一，直接用）
+          echo "## 下载" > release_body.md
+          echo "" >> release_body.md
+          echo "| 平台 | 文件 | 说明 |" >> release_body.md
+          echo "|------|------|------|" >> release_body.md
 
-          | 平台 | 文件 | 说明 |
-          |------|------|------|
-          EOF
-
-          # 遍历所有平台子目录中的文件
-          find dist -type f \( -name "*.app" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.pkg.tar.zst" \) | sort | while read f; do
+          for f in release/*; do
             fname=$(basename "$f")
-
-            # 提取架构信息
-            ARCH=""
-            case "$fname" in
-              *arm64*|*aarch64*) ARCH="ARM64" ;;
-              *amd64*|*x86_64*|*x64*) ARCH="x64" ;;
-            esac
-            [ -n "$ARCH" ] && ARCH=" (${ARCH})"
-
             case "$fname" in
               *.app)
-                printf '| macOS%s | [%s](%s/%s) | Mac 应用 |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| macOS | [${fname}](${RELEASE_URL}/${fname}) | Mac 应用 |" >> release_body.md
                 ;;
               *.exe)
-                printf '| Windows%s | [%s](%s/%s) | Windows 安装包 |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| Windows | [${fname}](${RELEASE_URL}/${fname}) | Windows 安装包 |" >> release_body.md
                 ;;
               *.AppImage)
-                printf '| Linux%s | [%s](%s/%s) | AppImage |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| Linux | [${fname}](${RELEASE_URL}/${fname}) | AppImage 便携版 |" >> release_body.md
                 ;;
               *.deb)
-                printf '| Linux (DEB)%s | [%s](%s/%s) | Debian/Ubuntu |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| Linux DEB | [${fname}](${RELEASE_URL}/${fname}) | Debian/Ubuntu |" >> release_body.md
                 ;;
               *.rpm)
-                printf '| Linux (RPM)%s | [%s](%s/%s) | Fedora/RHEL |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| Linux RPM | [${fname}](${RELEASE_URL}/${fname}) | Fedora/RHEL |" >> release_body.md
                 ;;
               *.pkg.tar.zst)
-                printf '| Linux (Arch)%s | [%s](%s/%s) | Arch Linux |\n' "$ARCH" "$fname" "$RELEASE_URL" "$fname" >> release_body.md
+                echo "| Linux Arch | [${fname}](${RELEASE_URL}/${fname}) | Arch Linux |" >> release_body.md
                 ;;
             esac
           done
 
-          printf '\n## 更新内容\n\n%s\n' "$CHANGES" >> release_body.md
+          echo "" >> release_body.md
+          echo "## 更新内容" >> release_body.md
+          echo "" >> release_body.md
+          echo "${CHANGES}" >> release_body.md
 
-          # 收集所有要上传的文件到 release 目录
-          mkdir -p release
-          find dist -mindepth 2 \( -name "*.app" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.pkg.tar.zst" -o -name "*.dmg" \) | sort | while read f; do
-            fname=$(basename "$f")
-            cp -r "$f" "release/${fname}"
-          done
-          echo "发布文件："
-          ls -lh release/
-
-      # 创建 GitHub Release 并上传附件
+      # 发布 Release（文件名和链接自动匹配）
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
