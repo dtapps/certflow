@@ -1,0 +1,102 @@
+# GitLab 发布工作流
+# 手动触发，输入版本号后从 GitHub Release 下载六个平台的构建产物并创建 GitLab Release
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+stages:
+  - release
+
+variables:
+  # GitHub 仓库地址
+  GITHUB_REPO: "dtapps/certflow"
+
+release:
+  stage: release
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      TAG="v${VERSION}"
+
+      # 从 GitHub Release 获取发布内容并替换下载链接
+      RELEASE_INFO=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${TAG}")
+      BODY=$(echo "$RELEASE_INFO" | jq -r '.body // empty')
+
+      if [ -n "$BODY" ]; then
+        GITLAB_DL_BASE="${CI_PROJECT_URL}/-/releases/${TAG}/downloads"
+        GITLAB_BODY=$(echo "$BODY" \
+          | sed "s|https://github.com/${GITHUB_REPO}/releases/download/${TAG}/|${GITLAB_DL_BASE}/|g")
+      else
+        GITLAB_BODY="Release ${TAG}"
+      fi
+
+      echo "发布内容："
+      echo "$GITLAB_BODY"
+
+    # 下载所有附件到临时目录
+    - |
+      TAG="v${VERSION}"
+      DOWNLOAD_DIR="dist"
+      mkdir -p "${DOWNLOAD_DIR}"
+
+      RELEASE_INFO=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${TAG}")
+      ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
+      echo "共 ${ASSET_COUNT} 个附件"
+
+      for i in $(seq 0 $((ASSET_COUNT - 1))); do
+        ASSET_NAME=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].name")
+        ASSET_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].browser_download_url")
+        echo "下载 ${ASSET_NAME}..."
+        curl -sL -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
+        echo "  ✓ 完成"
+      done
+
+      echo ""
+      echo "下载完成："
+      ls -lh "${DOWNLOAD_DIR}/"
+
+    # 创建 GitLab Release
+    - |
+      TAG="v${VERSION}"
+
+      # 写入 release body 到文件（避免 JSON 转义问题）
+      echo "$GITLAB_BODY" > /tmp/release_body.md
+
+      curl --fail --request POST \
+        --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases" \
+        --form "tag_name=${TAG}" \
+        --form "name=${TAG}" \
+        --form "release_notes=@/tmp/release_body.md"
+
+      echo "✓ Release ${TAG} 创建成功"
+
+    # 上传附件
+    - |
+      TAG="v${VERSION}"
+
+      for FILE in dist/*; do
+        if [ -f "$FILE" ]; then
+          FILENAME=$(basename "$FILE")
+          echo "上传 ${FILENAME}..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --request POST \
+            --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+            "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases/${TAG}/assets/links" \
+            --form "name=${FILENAME}" \
+            --form "link_type=package" \
+            --form "filepath=@${FILE}")
+          if [ "$HTTP_CODE" = "201" ]; then
+            echo "  ✓ 上传成功"
+          else
+            echo "  ✗ 上传失败 (${HTTP_CODE})"
+          fi
+        fi
+      done
+
+      echo ""
+      echo "Release ${TAG} 发布完成！"
+  rules:
+    - if: $VERSION

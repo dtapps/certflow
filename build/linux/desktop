@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=CertFlow
+Comment=SSL 证书管理工具
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/certflow %u
+Terminal=false
+Type=Application
+Icon=certflow
+Categories=Utility;
+StartupWMClass=certflow
+
+ 

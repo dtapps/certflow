@@ -1,0 +1,15 @@
+branch:
+  - buttons:
+      - name: 发布 Release
+        description: 从 GitHub 下载构建产物并发布到 CNB
+        event: web_trigger_release
+        permissions:
+          roles:
+            - owner
+            - master
+            - developer
+        inputs:
+          version:
+            description: 请输入版本号（例如 1.0.0）
+            required: true
+            type: input

@@ -1,0 +1,2 @@
+include:
+  - .cnb/workflows/release.yml

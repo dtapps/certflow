@@ -1,0 +1,537 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+@plugin "daisyui/theme" {
+  name: "dark";
+  prefersdark: true;
+  --color-base-100: oklch(14.5% 0.005 252);
+  --color-base-200: oklch(17.5% 0.006 252);
+  --color-base-300: oklch(22.5% 0.008 252);
+  --color-base-content: oklch(77.5% 0.01 252);
+  --color-primary: oklch(58% 0.233 277);
+  --color-primary-focus: oklch(52% 0.25 277);
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: oklch(62% 0.25 310);
+  --color-secondary-focus: oklch(56% 0.27 310);
+  --color-secondary-content: oklch(100% 0 0);
+  --color-accent: oklch(68% 0.22 290);
+  --color-accent-focus: oklch(62% 0.25 290);
+  --color-accent-content: oklch(100% 0 0);
+  --color-success: oklch(65% 0.17 160);
+  --color-success-content: oklch(100% 0 0);
+  --color-warning: oklch(78% 0.16 75);
+  --color-warning-content: oklch(100% 0 0);
+  --color-error: oklch(62% 0.22 25);
+  --color-error-content: oklch(100% 0 0);
+  --color-info: oklch(62% 0.18 250);
+  --color-info-content: oklch(100% 0 0);
+  --color-neutral: oklch(22.5% 0.008 252);
+  --color-neutral-content: oklch(77.5% 0.01 252);
+  --input-color: oklch(77.5% 0.01 252);
+  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.5rem;
+  --radius-btn: 0.5rem;
+}
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  color-scheme: light;
+  --color-base-100: oklch(99% 0.003 252);
+  --color-base-200: oklch(100% 0 0);
+  --color-base-300: oklch(96% 0.005 252);
+  --color-base-content: oklch(17.5% 0.006 252);
+  --color-primary: oklch(58% 0.233 277);
+  --color-primary-focus: oklch(52% 0.25 277);
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: oklch(62% 0.25 310);
+  --color-secondary-focus: oklch(56% 0.27 310);
+  --color-secondary-content: oklch(100% 0 0);
+  --color-accent: oklch(68% 0.22 290);
+  --color-accent-focus: oklch(62% 0.25 290);
+  --color-accent-content: oklch(100% 0 0);
+  --color-success: oklch(65% 0.17 160);
+  --color-success-content: oklch(100% 0 0);
+  --color-warning: oklch(78% 0.16 75);
+  --color-warning-content: oklch(100% 0 0);
+  --color-error: oklch(62% 0.22 25);
+  --color-error-content: oklch(100% 0 0);
+  --color-info: oklch(62% 0.18 250);
+  --color-info-content: oklch(100% 0 0);
+  --color-neutral: oklch(96% 0.005 252);
+  --color-neutral-content: oklch(17.5% 0.006 252);
+  --input-color: oklch(17.5% 0.006 252);
+  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.5rem;
+  --radius-btn: 0.5rem;
+}
+
+@theme {
+  --color-primary-50: #f0f4ff;
+  --color-primary-100: #dbe4ff;
+  --color-primary-200: #bac8ff;
+  --color-primary-300: #91a7ff;
+  --color-primary-400: #748ffc;
+  --color-primary-500: #5c7cfa;
+  --color-primary-600: #4c6ef5;
+  --color-primary-700: #4263eb;
+  --color-primary-800: #3b5bdb;
+  --color-primary-900: #364fc7;
+
+  --color-accent-50: #f3f0ff;
+  --color-accent-100: #e5dbff;
+  --color-accent-200: #d0bfff;
+  --color-accent-300: #b197fc;
+  --color-accent-400: #9775fa;
+  --color-accent-500: #845ef7;
+  --color-accent-600: #7950f2;
+  --color-accent-700: #7048e8;
+  --color-accent-800: #6741d9;
+  --color-accent-900: #5f3dc4;
+
+  --color-dark-50: #c1c2c5;
+  --color-dark-100: #a6a7ab;
+  --color-dark-200: #909296;
+  --color-dark-300: #5c5f66;
+  --color-dark-400: #373a40;
+  --color-dark-500: #2c2e33;
+  --color-dark-600: #25262b;
+  --color-dark-700: #1a1b1e;
+  --color-dark-800: #141517;
+  --color-dark-900: #101113;
+
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@layer base {
+  /* Dark theme (default) */
+  :root, [data-theme="dark"] {
+    --color-bg-base: #141517;
+    --color-bg-surface: #1a1b1e;
+    --color-bg-elevated: #25262b;
+    --color-bg-hover: #2c2e33;
+    --color-border: #373a40;
+    --color-text-primary: #c1c2c5;
+    --color-text-secondary: #a6a7ab;
+    --color-text-muted: #5c5f66;
+    --color-glass-bg: rgb(255 255 255 / 0.05);
+    --color-glass-border: rgb(255 255 255 / 0.1);
+    --color-glass-shadow: rgba(0, 0, 0, 0.3);
+    --color-scrollbar-track: #1a1b1e;
+    --color-scrollbar-thumb: #373a40;
+    --color-scrollbar-thumb-hover: #5c5f66;
+  }
+
+  /* Light theme */
+  [data-theme="light"] {
+    --color-bg-base: #f8f9fa;
+    --color-bg-surface: #ffffff;
+    --color-bg-elevated: #f1f3f5;
+    --color-bg-hover: #e9ecef;
+    --color-border: #dee2e6;
+    --color-text-primary: #1a1b1e;
+    --color-text-secondary: #495057;
+    --color-text-muted: #868e96;
+    --color-glass-bg: rgb(0 0 0 / 0.03);
+    --color-glass-border: rgb(0 0 0 / 0.08);
+    --color-glass-shadow: rgba(0, 0, 0, 0.08);
+    --color-scrollbar-track: #f1f3f5;
+    --color-scrollbar-thumb: #ced4da;
+    --color-scrollbar-thumb-hover: #adb5bd;
+
+    /* Override dark colors so Tailwind classes adapt to light theme */
+    --color-dark-50: #495057;
+    --color-dark-100: #495057;
+    --color-dark-200: #495057;
+    --color-dark-300: #868e96;
+    --color-dark-400: #868e96;
+    --color-dark-500: #dee2e6;
+    --color-dark-600: #e9ecef;
+    --color-dark-700: #f1f3f5;
+    --color-dark-800: #f8f9fa;
+    --color-dark-900: #ffffff;
+  }
+
+  html, body {
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #app {
+    height: 100vh !important;
+    width: 100vw !important;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  /* Tell browser to use correct color scheme for form controls */
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scrollbar-thumb-hover);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background-color: var(--color-glass-bg);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--color-glass-shadow);
+  }
+
+  .glass-light {
+    background-color: var(--color-glass-bg);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 16px var(--color-glass-shadow);
+  }
+
+  .card {
+    background-color: var(--color-glass-bg);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--color-glass-shadow);
+    padding: 1.5rem;
+    transition: all 0.3s;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 10px 15px -3px color-mix(in oklab, var(--color-primary) 25%, transparent);
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-focus);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-base-300);
+    color: var(--color-base-content);
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: 1px solid var(--color-base-content);
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-base-200);
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-error);
+    color: var(--color-error-content);
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 10px 15px -3px color-mix(in oklab, var(--color-error) 25%, transparent);
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-danger:hover {
+    background-color: color-mix(in oklab, var(--color-error) 80%, black);
+  }
+
+  .input {
+    padding: 0.625rem 1rem !important;
+    background-color: var(--color-base-200) !important;
+    border: 1px solid var(--color-base-300) !important;
+    border-radius: 0.5rem !important;
+    color: var(--color-base-content) !important;
+    transition: all 0.2s;
+  }
+
+  .input:focus {
+    outline: none !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 20%, transparent) !important;
+  }
+
+  select.input {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 36px !important;
+  }
+
+  .stat-card {
+    background-color: var(--color-glass-bg);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--color-glass-shadow);
+    padding: 1.5rem;
+    transition: all 0.3s;
+  }
+
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, var(--color-primary), var(--color-accent));
+  }
+
+  /* Icon background tints (Tailwind v4 doesn't generate opacity modifiers for CSS vars) */
+  .bg-success-soft { background-color: color-mix(in oklab, var(--color-success) 10%, transparent); }
+  .bg-accent-soft { background-color: color-mix(in oklab, var(--color-accent) 10%, transparent); }
+  .bg-primary-soft { background-color: color-mix(in oklab, var(--color-primary) 8%, transparent); }
+  .bg-error-soft { background-color: color-mix(in oklab, var(--color-error) 10%, transparent); }
+  .bg-warning-soft { background-color: color-mix(in oklab, var(--color-warning) 10%, transparent); }
+  .bg-info-soft { background-color: color-mix(in oklab, var(--color-info) 10%, transparent); }
+  .bg-primary-faint { background-color: color-mix(in oklab, var(--color-primary) 5%, transparent); }
+  .bg-amber-soft { background-color: color-mix(in oklab, var(--color-warning) 10%, transparent); }
+
+  /* Border tints */
+  .border-primary-soft { border-color: color-mix(in oklab, var(--color-primary) 20%, transparent); }
+  .border-success-soft { border-color: color-mix(in oklab, var(--color-success) 20%, transparent); }
+  .border-error-soft { border-color: color-mix(in oklab, var(--color-error) 20%, transparent); }
+  .border-amber-soft { border-color: color-mix(in oklab, var(--color-warning) 20%, transparent); }
+  .border-amber-moderate { border-color: color-mix(in oklab, var(--color-warning) 30%, transparent); }
+
+  /* Text opacity variants (Tailwind v4 doesn't generate /opacity for CSS vars) */
+  .text-content-30 { color: color-mix(in oklab, var(--color-base-content) 30%, transparent); }
+  .text-content-50 { color: color-mix(in oklab, var(--color-base-content) 50%, transparent); }
+  .text-content-70 { color: color-mix(in oklab, var(--color-base-content) 70%, transparent); }
+  .text-content-80 { color: color-mix(in oklab, var(--color-base-content) 80%, transparent); }
+
+  /* Background opacity variants for base colors */
+  .bg-base-200-faint { background-color: color-mix(in oklab, var(--color-base-200) 50%, transparent); }
+  .bg-base-300-faint { background-color: color-mix(in oklab, var(--color-base-300) 30%, transparent); }
+  .bg-base-300-moderate { background-color: color-mix(in oklab, var(--color-base-300) 50%, transparent); }
+  .border-base-300-faint { border-color: color-mix(in oklab, var(--color-base-300) 50%, transparent); }
+
+  /* Ensure badge text is always visible */
+  .badge-primary { color: var(--color-primary-content); }
+  .badge-ghost { color: var(--color-base-content); }
+  .badge-success { color: var(--color-success-content); }
+  .badge-error { color: var(--color-error-content); }
+
+  /* Modal: ensure solid background for readability */
+  .modal-box {
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+  }
+
+  .modal-box .label-text {
+    color: var(--color-base-content);
+  }
+
+  .modal-box input,
+  .modal-box select,
+  .modal-box textarea {
+    background-color: var(--color-base-200);
+    color: var(--color-base-content);
+  }
+
+  /* Action icon button */
+  .icon-btn {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+  }
+  .icon-btn:hover {
+    background-color: var(--color-bg-hover);
+  }
+  .icon-btn:hover svg {
+    color: var(--color-text-primary);
+  }
+  .icon-btn-danger:hover svg {
+    color: var(--color-error);
+  }
+
+  /* Badge base */
+  .badge-tag {
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .badge-tag-primary {
+    background-color: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
+    border-color: color-mix(in oklab, var(--color-primary) 20%, transparent);
+  }
+  .badge-tag-muted {
+    background-color: color-mix(in oklab, var(--color-base-300) 50%, transparent);
+    color: var(--color-text-secondary);
+    border-color: var(--color-base-300);
+  }
+
+  /* Page wrapper */
+  .page { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
+
+  /* Section header (icon + title) */
+  .section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-base-content);
+  }
+
+  /* Settings row with border */
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-base-300);
+  }
+  .setting-row:last-child {
+    border-bottom: none;
+  }
+  .setting-row-label {
+    font-weight: 500;
+    color: var(--color-base-content);
+  }
+  .setting-row-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.125rem;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 2px solid var(--color-primary);
+    border-top-color: transparent;
+    border-radius: 9999px;
+  }
+  .spinner-sm {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--color-primary);
+    border-top-color: transparent;
+    border-radius: 9999px;
+  }
+
+  /* List item hover */
+  .list-item {
+    padding: 1.5rem;
+    transition: background-color 0.2s;
+  }
+  .list-item:hover {
+    background-color: color-mix(in oklab, var(--color-base-300) 30%, transparent);
+  }
+
+  /* List divider */
+  .list-divider > * + * {
+    border-top: 1px solid var(--color-base-300);
+  }
+
+  /* Empty state icon */
+  .empty-icon {
+    width: 5rem;
+    height: 5rem;
+    margin: 0 auto 1rem;
+  }
+}
+
+/* Unlayered: fix select text color in light theme */
+.select {
+  color: var(--color-base-content);
+}
+
+/* Unlayered: fix search icon color in light theme */
+.input ~ svg {
+  color: var(--color-text-muted);
+}
+
+/* Unlayered: fix daisyUI 5.x btn-ghost invisible text/icons in light theme */
+.btn-ghost {
+  color: var(--color-base-content) !important;
+}
+.btn-ghost:hover {
+  background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent) !important;
+}
+
+/* Unlayered: compact number input */
+.input.input-sm {
+  padding: 0.625rem 0.75rem !important;
+  text-align: center;
+}
+
+/* Unlayered: override public/style.css body --wails-draggable: drag */
+body {
+  --wails-draggable: no-drag !important;
+}
+
+

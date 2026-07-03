@@ -1,0 +1,123 @@
+# Gitee 发布工作流
+# 手动触发，输入版本号后从 GitHub Release 下载六个平台的构建产物并创建 Gitee Release
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 1.0.0）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - uses: actions/checkout@v4
+
+      # 从 GitHub Release 下载六个平台的构建产物
+      - name: 从 GitHub Release 下载
+        run: |
+          TAG="v${{ github.event.inputs.version }}"
+          GITHUB_API="https://api.github.com/repos/dtapps/certflow"
+          DOWNLOAD_DIR="dist"
+          mkdir -p "${DOWNLOAD_DIR}"
+
+          # 检查 GitHub Release 是否存在
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${GITHUB_API}/releases/tags/${TAG}")
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "错误：GitHub 上未找到 ${TAG} 的 Release"
+            exit 1
+          fi
+          echo "✓ 找到 GitHub Release: ${TAG}"
+
+          # 下载所有附件
+          RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
+          ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
+          echo "共 ${ASSET_COUNT} 个附件"
+
+          for i in $(seq 0 $((ASSET_COUNT - 1))); do
+            ASSET_NAME=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].name")
+            ASSET_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].browser_download_url")
+            echo "下载 ${ASSET_NAME}..."
+            curl -sL -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
+            echo "  ✓ 完成"
+          done
+
+          echo ""
+          echo "下载完成："
+          ls -lh "${DOWNLOAD_DIR}/"
+
+      # 从 GitHub Release 获取发布内容并替换下载链接
+      - name: 获取发布内容
+        run: |
+          TAG="v${{ github.event.inputs.version }}"
+          GITHUB_API="https://api.github.com/repos/dtapps/certflow"
+          RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
+          BODY=$(echo "$RELEASE_INFO" | jq -r '.body // empty')
+
+          if [ -n "$BODY" ]; then
+            GITEE_DL_BASE="https://gitee.com/dtapps/certflow/releases/download/${TAG}"
+            GITEE_BODY=$(echo "$BODY" \
+              | sed "s|https://github.com/dtapps/certflow/releases/download/${TAG}/|${GITEE_DL_BASE}/|g")
+          else
+            GITEE_BODY="Release ${TAG}"
+          fi
+
+          echo "发布内容："
+          echo "$GITEE_BODY"
+
+          # 写入文件供后续步骤使用
+          echo "$GITEE_BODY" > /tmp/release_body.md
+
+      # 创建 Gitee Release 并上传附件
+      - name: 创建 Gitee Release
+        run: |
+          TAG="v${{ github.event.inputs.version }}"
+
+          curl --fail --request POST \
+            --header "PRIVATE-TOKEN: ${GITEE_TOKEN}" \
+            "https://gitee.com/api/v5/repos/dtapps/certflow/releases" \
+            --data-urlencode "tag_name=${TAG}" \
+            --data-urlencode "name=${TAG}" \
+            --data-urlencode "body@/tmp/release_body.md"
+
+          echo "✓ Release ${TAG} 创建成功"
+
+      # 上传附件
+      - name: 上传附件
+        run: |
+          TAG="v${{ github.event.inputs.version }}"
+
+          # 获取 release id
+          RELEASE_ID=$(curl -s \
+            --header "PRIVATE-TOKEN: ${GITEE_TOKEN}" \
+            "https://gitee.com/api/v5/repos/dtapps/certflow/releases/tags/${TAG}" \
+            | jq -r '.id')
+
+          for FILE in dist/*; do
+            if [ -f "$FILE" ]; then
+              FILENAME=$(basename "$FILE")
+              echo "上传 ${FILENAME}..."
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                --request POST \
+                --header "PRIVATE-TOKEN: ${GITEE_TOKEN}" \
+                "https://gitee.com/api/v5/repos/dtapps/certflow/releases/${RELEASE_ID}/attach_files" \
+                --form "file=@${FILE}")
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "  ✓ 上传成功"
+              else
+                echo "  ✗ 上传失败 (${HTTP_CODE})"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "Release ${TAG} 发布完成！"

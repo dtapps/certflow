@@ -1,0 +1,395 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import * as MonitorService from '@bindings/cnb.cool/dtapp/certflow/monitorservicewrapper'
+import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/internal/monitor/models'
+import { useI18n } from '../stores/i18n'
+import { formatDateTime } from '../utils/format'
+
+const { t } = useI18n()
+
+const domains = ref<MonitoredDomainItem[]>([])
+const isLoading = ref(false)
+const showAddModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const deleteTargetId = ref<number | null>(null)
+const editingId = ref<number | null>(null)
+const checkingId = ref<number | null>(null)
+
+const formData = ref({
+  domain: '',
+  port: 443,
+  check_type: 'ssl',
+  url: '',
+  check_interval: 3600,
+  enabled: true,
+})
+
+const loadDomains = async () => {
+  isLoading.value = true
+  try {
+    domains.value = (await MonitorService.List() ?? []).filter((item): item is MonitoredDomainItem => item !== null)
+  } catch (e) {
+    console.error('Failed to load domains:', e)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(loadDomains)
+
+const openCreate = () => {
+  editingId.value = null
+  formData.value = { domain: '', port: 443, check_type: 'https', url: '', check_interval: 3600, enabled: true }
+  showAddModal.value = true
+}
+
+const openEdit = (item: MonitoredDomainItem) => {
+  editingId.value = item.id
+  formData.value = {
+    domain: item.domain,
+    port: item.port,
+    check_type: item.check_type,
+    url: item.url,
+    check_interval: item.check_interval,
+    enabled: item.enabled,
+  }
+  showEditModal.value = true
+}
+
+const handleSave = async () => {
+  try {
+    if (editingId.value) {
+      await MonitorService.Update(editingId.value, formData.value)
+    } else {
+      await MonitorService.Create(formData.value)
+    }
+    showAddModal.value = false
+    showEditModal.value = false
+    await loadDomains()
+  } catch (e) {
+    console.error('Failed to save:', e)
+  }
+}
+
+const openDeleteModal = (id: number) => {
+  deleteTargetId.value = id
+  showDeleteModal.value = true
+}
+
+const handleDelete = async () => {
+  if (deleteTargetId.value === null) return
+  const id = deleteTargetId.value
+  showDeleteModal.value = false
+  deleteTargetId.value = null
+  try {
+    await MonitorService.Delete(id)
+    await loadDomains()
+  } catch (e) {
+    console.error('Failed to delete:', e)
+  }
+}
+
+const handleCheckNow = async (id: number) => {
+  checkingId.value = id
+  try {
+    await MonitorService.CheckNow(id)
+    await loadDomains()
+  } catch (e) {
+    console.error('Failed to check:', e)
+  } finally {
+    checkingId.value = null
+  }
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'ok': return 'text-success'
+    case 'warning': return 'text-warning'
+    case 'error': return 'text-error'
+    case 'expired': return 'text-error'
+    default: return 'text-content-50'
+  }
+}
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'ok': return 'badge-tag badge-tag-primary'
+    case 'warning': return 'badge-tag badge-tag-warning'
+    case 'error': return 'badge-tag badge-tag-error'
+    case 'expired': return 'badge-tag badge-tag-error'
+    default: return 'badge-tag badge-tag-muted'
+  }
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'ok': return t('monitor.statusOk')
+    case 'warning': return t('monitor.statusWarning')
+    case 'error': return t('monitor.statusError')
+    default: return t('monitor.statusUnknown')
+  }
+}
+
+const formatRemainingDays = (days: number) => {
+  if (days <= 0) return t('monitor.expired')
+  if (days <= 30) return `${days} ${t('common.daysLeft')} ⚠️`
+  return `${days} ${t('common.daysLeft')}`
+}
+
+const truncateFingerprint = (fp: string) => {
+  if (!fp) return ''
+  return fp.length > 32 ? fp.substring(0, 32) + '...' : fp
+}
+
+const formatResponseTime = (ms: number) => {
+  if (ms <= 0) return '—'
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+const expandedId = ref<number | null>(null)
+const toggleExpand = (id: number) => {
+  expandedId.value = expandedId.value === id ? null : id
+}
+
+const totalCount = computed(() => domains.value.length)
+const okCount = computed(() => domains.value.filter(d => d.status === 'ok').length)
+const warnCount = computed(() => domains.value.filter(d => d.status === 'warning' || d.status === 'expired').length)
+const errorCount = computed(() => domains.value.filter(d => d.status === 'error').length)
+</script>
+
+<template>
+  <div class="page">
+    <!-- 页面标题 -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-base-content">{{ t('monitor.title') }}</h1>
+        <p class="text-content-70 text-sm mt-1">{{ t('monitor.subtitle') }}</p>
+      </div>
+      <button @click="openCreate" class="btn btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        {{ t('monitor.add') }}
+      </button>
+    </div>
+
+    <!-- 概览统计 -->
+    <div v-if="domains.length > 0" class="grid grid-cols-4 gap-4">
+      <div class="stat-card">
+        <p class="text-content-70 text-sm">{{ t('monitor.total') }}</p>
+        <p class="text-2xl font-bold text-base-content mt-1">{{ totalCount }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-content-70 text-sm">{{ t('monitor.statusOk') }}</p>
+        <p class="text-2xl font-bold text-success mt-1">{{ okCount }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-content-70 text-sm">{{ t('monitor.statusWarning') }}</p>
+        <p class="text-2xl font-bold text-warning mt-1">{{ warnCount }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="text-content-70 text-sm">{{ t('monitor.statusError') }}</p>
+        <p class="text-2xl font-bold text-error mt-1">{{ errorCount }}</p>
+      </div>
+    </div>
+
+    <!-- 监控列表 -->
+    <div class="glass-panel rounded-2xl overflow-hidden">
+      <div v-if="isLoading" class="flex items-center justify-center py-20">
+        <div class="spinner animate-spin"></div>
+      </div>
+
+      <div v-else-if="domains.length === 0" class="text-center py-20">
+        <svg class="w-20 h-20 mx-auto text-content-30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <p class="text-content-70 text-lg">{{ t('monitor.noRecords') }}</p>
+        <p class="text-content-50 text-sm mt-2">{{ t('monitor.noRecordsDesc') }}</p>
+      </div>
+
+      <div v-else class="p-4 space-y-3">
+        <div v-for="item in domains" :key="item.id" class="rounded-xl border border-base-300 p-4 hover:border-primary/30 transition-colors cursor-pointer" @click="toggleExpand(item.id)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="item.status === 'ok' ? 'bg-success-soft' : item.status === 'warning' ? 'bg-amber-soft' : item.status === 'error' || item.status === 'expired' ? 'bg-error-soft' : 'bg-base-300'">
+                <svg class="w-5 h-5" :class="getStatusColor(item.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="text-base-content font-medium">{{ item.domain }}</p>
+                  <span :class="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span>
+                  <span v-if="!item.enabled" class="badge-tag badge-tag-muted text-[10px]">OFF</span>
+                </div>
+                <div class="flex items-center gap-4 text-content-50 text-xs mt-1">
+                  <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
+                  <span v-if="item.check_interval">{{ item.check_interval }}s</span>
+                  <span v-if="item.last_check_at">{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button @click="handleCheckNow(item.id)" :disabled="checkingId === item.id" class="icon-btn" :title="t('monitor.checkNow')">
+                <svg v-if="checkingId === item.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </button>
+              <button @click="openEdit(item)" class="icon-btn" :title="t('dns.editTitle')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              </button>
+              <button @click.stop="openDeleteModal(item.id)" class="icon-btn icon-btn-danger" :title="t('dns.deleteTitle')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- HTTPS 详情展开区 -->
+          <div v-if="expandedId === item.id && item.check_type === 'https' && item.cert_issuer" class="mt-3 pt-3 border-t border-base-300 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div>
+              <p class="text-content-50">{{ t('monitor.issuer') }}</p>
+              <p class="text-base-content font-medium truncate">{{ item.cert_issuer }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('monitor.remainingDays') }}</p>
+              <p :class="item.cert_remaining_days <= 30 ? 'text-warning font-medium' : 'text-base-content font-medium'">{{ formatRemainingDays(item.cert_remaining_days) }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('cert.detail.signatureAlgo') }}</p>
+              <p class="text-base-content font-medium font-mono text-[11px]">{{ item.cert_signature_algo || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('cert.detail.publicKeyAlgo') }}</p>
+              <p class="text-base-content font-medium font-mono text-[11px]">{{ item.cert_public_key_algo }} {{ item.cert_public_key_bits }}bit</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-content-50">{{ t('monitor.fingerprint') }}</p>
+              <p class="text-base-content font-mono truncate text-[11px]" :title="item.cert_fingerprint">{{ truncateFingerprint(item.cert_fingerprint) }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('monitor.responseTime') }}</p>
+              <p class="text-base-content font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('monitor.statusCode') }}</p>
+              <p class="text-base-content font-mono font-medium">{{ item.http_status_code }}</p>
+            </div>
+          </div>
+
+          <!-- HTTP 详情 -->
+          <div v-if="expandedId === item.id && item.check_type === 'http' && item.http_status_code > 0" class="mt-3 pt-3 border-t border-base-300 grid grid-cols-3 gap-3 text-xs">
+            <div>
+              <p class="text-content-50">{{ t('monitor.statusCode') }}</p>
+              <p class="text-base-content font-mono font-medium">{{ item.http_status_code }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('monitor.responseTime') }}</p>
+              <p class="text-base-content font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+            </div>
+            <div>
+              <p class="text-content-50">{{ t('monitor.lastCheck') }}</p>
+              <p class="text-base-content font-medium">{{ item.last_check_at || '—' }}</p>
+            </div>
+          </div>
+
+          <!-- 错误信息 -->
+          <div v-if="expandedId === item.id && item.last_check_error" class="mt-3 pt-3 border-t border-base-300">
+            <p class="text-error text-xs">{{ t('monitor.error') }}: {{ item.last_check_error }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加弹窗 -->
+    <dialog v-if="showAddModal" class="modal modal-open">
+      <div class="modal-box glass-panel max-w-lg">
+        <h3 class="font-bold text-lg">{{ t('monitor.addDomain') }}</h3>
+        <div class="space-y-4 mt-4">
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.domain') }} *</span></label>
+            <input v-model="formData.domain" type="text" :placeholder="t('monitor.domainPlaceholder')" class="input input-bordered w-full" />
+          </div>
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.checkType') }}</span></label>
+            <select v-model="formData.check_type" class="select select-bordered w-full">
+              <option value="https">HTTPS 健康检查</option>
+              <option value="http">HTTP 健康检查</option>
+            </select>
+          </div>
+          <div v-if="formData.check_type === 'ssl'">
+            <label class="label"><span class="label-text">{{ t('monitor.domain') }} {{ t('monitor.statusCode') }}</span></label>
+            <input v-model.number="formData.port" type="number" min="1" max="65535" class="input input-bordered w-full" />
+          </div>
+          <div v-if="formData.check_type === 'http'">
+            <label class="label"><span class="label-text">URL</span></label>
+            <input v-model="formData.url" type="text" :placeholder="t('monitor.urlPlaceholder')" class="input input-bordered w-full" />
+          </div>
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.checkInterval') }} ({{ t('monitor.intervalHint') }})</span></label>
+            <input v-model.number="formData.check_interval" type="number" min="60" class="input input-bordered w-full" />
+          </div>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showAddModal = false">{{ t('common.cancel') }}</button>
+          <button class="btn btn-primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button @click="showAddModal = false">close</button></form>
+    </dialog>
+
+    <!-- 编辑弹窗 -->
+    <dialog v-if="showEditModal" class="modal modal-open">
+      <div class="modal-box glass-panel max-w-lg">
+        <h3 class="font-bold text-lg">{{ t('monitor.editDomain') }}</h3>
+        <div class="space-y-4 mt-4">
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.domain') }} *</span></label>
+            <input v-model="formData.domain" type="text" class="input input-bordered w-full" />
+          </div>
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.checkType') }}</span></label>
+            <select v-model="formData.check_type" class="select select-bordered w-full">
+              <option value="https">HTTPS 健康检查</option>
+              <option value="http">HTTP 健康检查</option>
+            </select>
+          </div>
+          <div v-if="formData.check_type === 'ssl'">
+            <label class="label"><span class="label-text">Port</span></label>
+            <input v-model.number="formData.port" type="number" min="1" max="65535" class="input input-bordered w-full" />
+          </div>
+          <div v-if="formData.check_type === 'http'">
+            <label class="label"><span class="label-text">URL</span></label>
+            <input v-model="formData.url" type="text" :placeholder="t('monitor.urlPlaceholder')" class="input input-bordered w-full" />
+          </div>
+          <div>
+            <label class="label"><span class="label-text">{{ t('monitor.checkInterval') }} ({{ t('monitor.intervalHint') }})</span></label>
+            <input v-model.number="formData.check_interval" type="number" min="60" class="input input-bordered w-full" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" v-model="formData.enabled" class="toggle toggle-primary toggle-sm" />
+            <span class="text-sm">{{ t('dns.enabled') }}</span>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showEditModal = false">{{ t('common.cancel') }}</button>
+          <button class="btn btn-primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button @click="showEditModal = false">close</button></form>
+    </dialog>
+
+    <!-- 删除确认弹窗 -->
+    <dialog v-if="showDeleteModal" class="modal modal-open">
+      <div class="modal-box glass-panel">
+        <h3 class="font-bold text-lg">{{ t('dns.deleteTitle') }}</h3>
+        <p class="py-4">{{ t('monitor.deleteConfirm') }}</p>
+        <div class="modal-action">
+          <button class="btn" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
+          <button class="btn btn-error" @click="handleDelete">{{ t('common.confirm') }}</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button @click="showDeleteModal = false">close</button></form>
+    </dialog>
+  </div>
+</template>

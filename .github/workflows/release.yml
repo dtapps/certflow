@@ -1,0 +1,163 @@
+# 发布工作流
+# 手动触发，输入版本号后自动构建六个平台并发布 GitHub Release
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 1.0.0）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # macOS Apple Silicon
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          # macOS Intel
+          - os: macos-13
+            goos: darwin
+            goarch: amd64
+          # Linux x64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          # Linux ARM64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          # Windows x64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+          # Windows ARM64
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # 检出代码
+      - uses: actions/checkout@v4
+
+      # 安装 Go（版本从 go.mod 读取）
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      # 安装 pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # 安装 Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # 安装前端依赖
+      - name: 安装前端依赖
+        run: pnpm install
+        working-directory: frontend
+
+      # 安装 Wails3 CLI
+      - name: 安装 Wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      # 构建
+      - name: 构建
+        run: wails3 task build VERSION=${{ inputs.version }}
+
+      # 打包
+      - name: 打包
+        run: wails3 task package VERSION=${{ inputs.version }}
+
+      # 上传构建产物（macOS 上传 .app，其他上传 bin/ 目录）
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: certflow-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/
+          if-no-files-found: warn
+          retention-days: 1
+
+  # 所有平台构建完成后，发布 GitHub Release
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # 下载所有构建产物
+      - name: 下载所有产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: certflow-*
+          merge-multiple: true
+
+      # 整理文件
+      - name: 整理文件
+        run: |
+          cd dist
+          find . -type d -empty -delete
+
+          # macOS: 重命名 .app
+          if [ -d "certflow.app" ]; then
+            mv "certflow.app" "CertFlow-${{ inputs.version }}-macos.app"
+          fi
+          # Windows: 重命名 .exe
+          if [ -f "certflow.exe" ]; then
+            mv "certflow.exe" "CertFlow-${{ inputs.version }}-windows.exe"
+          fi
+          # Linux: 重命名二进制
+          if [ -f "certflow" ]; then
+            mv "certflow" "CertFlow-${{ inputs.version }}-linux"
+          fi
+
+          echo "发布文件："
+          ls -lh
+
+      # 生成发布说明
+      - name: 生成发布说明
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          PREV_TAG=$(git tag --sort=-v:refname | head -2 | tail -1)
+          if [ -z "$PREV_TAG" ]; then
+            CHANGES="首次发布"
+          else
+            CHANGES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" 2>/dev/null || echo "- 版本更新")
+          fi
+
+          printf '## 下载\n\n' > release_body.md
+          printf '| 平台 | 文件 | 说明 |\n' >> release_body.md
+          printf '|------|------|------|\n' >> release_body.md
+          printf '| macOS (Apple Silicon) | CertFlow-%s-macos-arm64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
+          printf '| macOS (Intel) | CertFlow-%s-macos-amd64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
+          printf '| Windows (x64) | CertFlow-%s-windows-amd64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
+          printf '| Windows (ARM64) | CertFlow-%s-windows-arm64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
+          printf '| Linux (x64) | CertFlow-%s-linux-amd64 | Linux 二进制 |\n' "$VERSION" >> release_body.md
+          printf '| Linux (ARM64) | CertFlow-%s-linux-arm64 | Linux 二进制 |\n' "$VERSION" >> release_body.md
+          printf '\n## 更新内容\n\n%s\n' "$CHANGES" >> release_body.md
+
+      # 创建 GitHub Release 并上传附件
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          draft: false
+          body_path: release_body.md
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

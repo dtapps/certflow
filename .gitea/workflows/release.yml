@@ -1,0 +1,115 @@
+# Gitea 发布工作流
+# 输入版本号，从 GitHub Release 下载六个平台的构建产物并创建 Gitea Release
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 1.0.0）'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - uses: actions/checkout@v4
+
+      # 从 GitHub Release 下载六个平台的构建产物
+      - name: 从 GitHub Release 下载
+        run: |
+          VERSION="${{ inputs.version }}"
+          GITHUB_API="https://api.github.com/repos/dtapps/certflow"
+          TAG="v${VERSION}"
+          DOWNLOAD_DIR="dist"
+          mkdir -p "${DOWNLOAD_DIR}"
+
+          # 检查 GitHub Release 是否存在
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${GITHUB_API}/releases/tags/${TAG}")
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "错误：GitHub 上未找到 v${VERSION} 的 Release"
+            exit 1
+          fi
+          echo "✓ 找到 GitHub Release: ${TAG}"
+
+          # 下载所有附件
+          RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
+          ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
+          echo "共 ${ASSET_COUNT} 个附件"
+
+          for i in $(seq 0 $((ASSET_COUNT - 1))); do
+            ASSET_NAME=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].name")
+            ASSET_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].browser_download_url")
+            echo "下载 ${ASSET_NAME}..."
+            curl -sL -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
+            echo "  ✓ 完成"
+          done
+
+          echo ""
+          echo "下载完成："
+          ls -lh "${DOWNLOAD_DIR}/"
+
+      # 创建 Gitea Release 并上传附件
+      - name: 创建 Gitea Release
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="v${VERSION}"
+          GITHUB_API="https://api.github.com/repos/dtapps/certflow"
+          GITEA_API="${GITEA_URL}/api/v1"
+          REPO="dtapps/certflow"
+          GITEA_DL_BASE="${GITEA_URL}/dtapps/certflow/releases/download/${TAG}"
+
+          # 从 GitHub Release 获取发布内容，替换下载链接为 Gitea 地址
+          RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
+          BODY=$(echo "$RELEASE_INFO" | jq -r '.body // empty')
+
+          if [ -n "$BODY" ]; then
+            # 替换 GitHub 下载链接为 Gitea 下载链接
+            GITEA_BODY=$(echo "$BODY" \
+              | sed "s|https://github.com/dtapps/certflow/releases/download/${TAG}/|${GITEA_DL_BASE}/|g")
+          else
+            GITEA_BODY="Release ${TAG}"
+          fi
+
+          # 创建 Release
+          RELEASE_ID=$(curl -s -X POST \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${GITEA_API}/repos/${REPO}/releases" \
+            -d "$(jq -n \
+              --arg tag "$TAG" \
+              --arg name "$TAG" \
+              --arg body "$GITEA_BODY" \
+              '{tag_name: $tag, name: $name, body: $body}')" | jq -r '.id')
+
+          if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
+            echo "错误：创建 Release 失败"
+            exit 1
+          fi
+          echo "✓ Release 创建成功，ID: ${RELEASE_ID}"
+
+          # 上传附件
+          for FILE in dist/*; do
+            if [ -f "$FILE" ]; then
+              FILENAME=$(basename "$FILE")
+              echo "上传 ${FILENAME}..."
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X POST \
+                -H "Authorization: token ${GITEA_TOKEN}" \
+                -F "attachment=@${FILE}" \
+                "${GITEA_API}/repos/${REPO}/releases/${RELEASE_ID}/assets")
+              if [ "$HTTP_CODE" = "201" ]; then
+                echo "  ✓ 上传成功"
+              else
+                echo "  ✗ 上传失败 (${HTTP_CODE})"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "Release ${TAG} 发布完成！"
