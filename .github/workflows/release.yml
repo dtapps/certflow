@@ -64,11 +64,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
-      # Linux ARM64 需要 Docker 交叉编译
-      - name: 设置 Docker 交叉编译
-        if: runner.os == 'Linux' && matrix.goarch == 'arm64'
-        run: wails3 task setup:docker
-
       # 安装 Go（使用稳定版本）
       - uses: actions/setup-go@v5
         with:
@@ -98,6 +93,11 @@ jobs:
       # 安装 Task
       - name: 安装 Task
         uses: arduino/setup-task@v2
+
+      # Linux ARM64 需要 Docker 交叉编译
+      - name: 设置 Docker 交叉编译
+        if: runner.os == 'Linux' && matrix.goarch == 'arm64'
+        run: wails3 task setup:docker
 
       # 构建
       - name: 构建
