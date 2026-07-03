@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"time"
 
 	"entgo.io/ent"
@@ -27,7 +26,7 @@ func (DNSProvider) Fields() []ent.Field {
 				"dnsla", "dns51", "xinnet",
 			).
 			Comment("提供商类型"),
-		field.JSON("config", json.RawMessage{}).
+		field.Bytes("config").
 			Optional().
 			Comment("配置 JSON"),
 		field.Bool("is_default").

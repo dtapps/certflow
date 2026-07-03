@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 )
 
@@ -60,14 +58,8 @@ func (_u *DNSProviderUpdate) SetNillableProviderType(v *dnsprovider.ProviderType
 }
 
 // SetConfig sets the "config" field.
-func (_u *DNSProviderUpdate) SetConfig(v jsontext.Value) *DNSProviderUpdate {
+func (_u *DNSProviderUpdate) SetConfig(v []byte) *DNSProviderUpdate {
 	_u.mutation.SetConfig(v)
-	return _u
-}
-
-// AppendConfig appends value to the "config" field.
-func (_u *DNSProviderUpdate) AppendConfig(v jsontext.Value) *DNSProviderUpdate {
-	_u.mutation.AppendConfig(v)
 	return _u
 }
 
@@ -242,15 +234,10 @@ func (_u *DNSProviderUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.SetField(dnsprovider.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedConfig(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, dnsprovider.FieldConfig, value)
-		})
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(dnsprovider.FieldConfig, field.TypeJSON)
+		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
 	}
 	if value, ok := _u.mutation.IsDefault(); ok {
 		_spec.SetField(dnsprovider.FieldIsDefault, field.TypeBool, value)
@@ -361,14 +348,8 @@ func (_u *DNSProviderUpdateOne) SetNillableProviderType(v *dnsprovider.ProviderT
 }
 
 // SetConfig sets the "config" field.
-func (_u *DNSProviderUpdateOne) SetConfig(v jsontext.Value) *DNSProviderUpdateOne {
+func (_u *DNSProviderUpdateOne) SetConfig(v []byte) *DNSProviderUpdateOne {
 	_u.mutation.SetConfig(v)
-	return _u
-}
-
-// AppendConfig appends value to the "config" field.
-func (_u *DNSProviderUpdateOne) AppendConfig(v jsontext.Value) *DNSProviderUpdateOne {
-	_u.mutation.AppendConfig(v)
 	return _u
 }
 
@@ -573,15 +554,10 @@ func (_u *DNSProviderUpdateOne) sqlSave(ctx context.Context) (_node *DNSProvider
 		_spec.SetField(dnsprovider.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedConfig(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, dnsprovider.FieldConfig, value)
-		})
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(dnsprovider.FieldConfig, field.TypeJSON)
+		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
 	}
 	if value, ok := _u.mutation.IsDefault(); ok {
 		_spec.SetField(dnsprovider.FieldIsDefault, field.TypeBool, value)

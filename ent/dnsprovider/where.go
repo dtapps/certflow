@@ -60,6 +60,11 @@ func Name(v string) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldEQ(FieldName, v))
 }
 
+// Config applies equality check predicate on the "config" field. It's identical to ConfigEQ.
+func Config(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldEQ(FieldConfig, v))
+}
+
 // IsDefault applies equality check predicate on the "is_default" field. It's identical to IsDefaultEQ.
 func IsDefault(v bool) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldEQ(FieldIsDefault, v))
@@ -168,6 +173,46 @@ func ProviderTypeIn(vs ...ProviderType) predicate.DNSProvider {
 // ProviderTypeNotIn applies the NotIn predicate on the "provider_type" field.
 func ProviderTypeNotIn(vs ...ProviderType) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldNotIn(FieldProviderType, vs...))
+}
+
+// ConfigEQ applies the EQ predicate on the "config" field.
+func ConfigEQ(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldEQ(FieldConfig, v))
+}
+
+// ConfigNEQ applies the NEQ predicate on the "config" field.
+func ConfigNEQ(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldNEQ(FieldConfig, v))
+}
+
+// ConfigIn applies the In predicate on the "config" field.
+func ConfigIn(vs ...[]byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldIn(FieldConfig, vs...))
+}
+
+// ConfigNotIn applies the NotIn predicate on the "config" field.
+func ConfigNotIn(vs ...[]byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldNotIn(FieldConfig, vs...))
+}
+
+// ConfigGT applies the GT predicate on the "config" field.
+func ConfigGT(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldGT(FieldConfig, v))
+}
+
+// ConfigGTE applies the GTE predicate on the "config" field.
+func ConfigGTE(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldGTE(FieldConfig, v))
+}
+
+// ConfigLT applies the LT predicate on the "config" field.
+func ConfigLT(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldLT(FieldConfig, v))
+}
+
+// ConfigLTE applies the LTE predicate on the "config" field.
+func ConfigLTE(v []byte) predicate.DNSProvider {
+	return predicate.DNSProvider(sql.FieldLTE(FieldConfig, v))
 }
 
 // ConfigIsNil applies the IsNil predicate on the "config" field.

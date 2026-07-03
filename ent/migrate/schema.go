@@ -72,7 +72,7 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"cloudflare", "aliyun", "tencentcloud", "huawei", "aws", "googlecloud", "baiducloud", "jdcloud", "volcengine", "edgeone", "aliesa", "ucloud", "westcn", "com35", "rainyun", "todaynic", "dnsla", "dns51", "xinnet"}},
-		{Name: "config", Type: field.TypeJSON, Nullable: true},
+		{Name: "config", Type: field.TypeBytes, Nullable: true},
 		{Name: "is_default", Type: field.TypeBool, Default: false},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
 		{Name: "comment", Type: field.TypeString, Nullable: true},

@@ -132,10 +132,10 @@ jobs:
         if: ${{ matrix.enabled }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      # 安装 Task
-      - name: 安装 Task
-        if: ${{ matrix.enabled }}
-        uses: arduino/setup-task@v2
+      # # 安装 Task
+      # - name: 安装 Task
+      #   if: ${{ matrix.enabled }}
+      #   uses: arduino/setup-task@v2
 
       # 构建
       - name: 构建

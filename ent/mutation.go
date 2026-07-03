@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"sync"
@@ -2403,8 +2402,7 @@ type DNSProviderMutation struct {
 	id                  *int
 	name                *string
 	provider_type       *dnsprovider.ProviderType
-	_config             *jsontext.Value
-	append_config       jsontext.Value
+	_config             *[]byte
 	is_default          *bool
 	is_active           *bool
 	comment             *string
@@ -2590,13 +2588,12 @@ func (m *DNSProviderMutation) ResetProviderType() {
 }
 
 // SetConfig sets the "config" field.
-func (m *DNSProviderMutation) SetConfig(j jsontext.Value) {
-	m._config = &j
-	m.append_config = nil
+func (m *DNSProviderMutation) SetConfig(b []byte) {
+	m._config = &b
 }
 
 // Config returns the value of the "config" field in the mutation.
-func (m *DNSProviderMutation) Config() (r jsontext.Value, exists bool) {
+func (m *DNSProviderMutation) Config() (r []byte, exists bool) {
 	v := m._config
 	if v == nil {
 		return
@@ -2607,7 +2604,7 @@ func (m *DNSProviderMutation) Config() (r jsontext.Value, exists bool) {
 // OldConfig returns the old "config" field's value of the DNSProvider entity.
 // If the DNSProvider object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DNSProviderMutation) OldConfig(ctx context.Context) (v jsontext.Value, err error) {
+func (m *DNSProviderMutation) OldConfig(ctx context.Context) (v []byte, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
@@ -2621,23 +2618,9 @@ func (m *DNSProviderMutation) OldConfig(ctx context.Context) (v jsontext.Value, 
 	return oldValue.Config, nil
 }
 
-// AppendConfig adds j to the "config" field.
-func (m *DNSProviderMutation) AppendConfig(j jsontext.Value) {
-	m.append_config = append(m.append_config, j...)
-}
-
-// AppendedConfig returns the list of values that were appended to the "config" field in this mutation.
-func (m *DNSProviderMutation) AppendedConfig() (jsontext.Value, bool) {
-	if len(m.append_config) == 0 {
-		return nil, false
-	}
-	return m.append_config, true
-}
-
 // ClearConfig clears the value of the "config" field.
 func (m *DNSProviderMutation) ClearConfig() {
 	m._config = nil
-	m.append_config = nil
 	m.clearedFields[dnsprovider.FieldConfig] = struct{}{}
 }
 
@@ -2650,7 +2633,6 @@ func (m *DNSProviderMutation) ConfigCleared() bool {
 // ResetConfig resets all changes to the "config" field.
 func (m *DNSProviderMutation) ResetConfig() {
 	m._config = nil
-	m.append_config = nil
 	delete(m.clearedFields, dnsprovider.FieldConfig)
 }
 
@@ -3033,7 +3015,7 @@ func (m *DNSProviderMutation) SetField(name string, value ent.Value) error {
 		m.SetProviderType(v)
 		return nil
 	case dnsprovider.FieldConfig:
-		v, ok := value.(jsontext.Value)
+		v, ok := value.([]byte)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

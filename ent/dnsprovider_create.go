@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"time"
@@ -37,7 +36,7 @@ func (_c *DNSProviderCreate) SetProviderType(v dnsprovider.ProviderType) *DNSPro
 }
 
 // SetConfig sets the "config" field.
-func (_c *DNSProviderCreate) SetConfig(v jsontext.Value) *DNSProviderCreate {
+func (_c *DNSProviderCreate) SetConfig(v []byte) *DNSProviderCreate {
 	_c.mutation.SetConfig(v)
 	return _c
 }
@@ -246,7 +245,7 @@ func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
 		_node.ProviderType = value
 	}
 	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
 		_node.Config = value
 	}
 	if value, ok := _c.mutation.IsDefault(); ok {
@@ -362,7 +361,7 @@ func (u *DNSProviderUpsert) UpdateProviderType() *DNSProviderUpsert {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsert) SetConfig(v jsontext.Value) *DNSProviderUpsert {
+func (u *DNSProviderUpsert) SetConfig(v []byte) *DNSProviderUpsert {
 	u.Set(dnsprovider.FieldConfig, v)
 	return u
 }
@@ -507,7 +506,7 @@ func (u *DNSProviderUpsertOne) UpdateProviderType() *DNSProviderUpsertOne {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertOne) SetConfig(v jsontext.Value) *DNSProviderUpsertOne {
+func (u *DNSProviderUpsertOne) SetConfig(v []byte) *DNSProviderUpsertOne {
 	return u.Update(func(s *DNSProviderUpsert) {
 		s.SetConfig(v)
 	})
@@ -830,7 +829,7 @@ func (u *DNSProviderUpsertBulk) UpdateProviderType() *DNSProviderUpsertBulk {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertBulk) SetConfig(v jsontext.Value) *DNSProviderUpsertBulk {
+func (u *DNSProviderUpsertBulk) SetConfig(v []byte) *DNSProviderUpsertBulk {
 	return u.Update(func(s *DNSProviderUpsert) {
 		s.SetConfig(v)
 	})

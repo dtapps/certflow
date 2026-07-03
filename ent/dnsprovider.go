@@ -3,8 +3,6 @@
 package ent
 
 import (
-	"encoding/json"
-	"encoding/json/jsontext"
 	"fmt"
 	"strings"
 	"time"
@@ -24,7 +22,7 @@ type DNSProvider struct {
 	// 提供商类型
 	ProviderType dnsprovider.ProviderType `json:"provider_type,omitempty"`
 	// 配置 JSON
-	Config jsontext.Value `json:"config,omitempty"`
+	Config []byte `json:"config,omitempty"`
 	// 是否为默认提供商
 	IsDefault bool `json:"is_default,omitempty"`
 	// 是否启用
@@ -110,10 +108,8 @@ func (_m *DNSProvider) assignValues(columns []string, values []any) error {
 		case dnsprovider.FieldConfig:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field config", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Config); err != nil {
-					return fmt.Errorf("unmarshal field config: %w", err)
-				}
+			} else if value != nil {
+				_m.Config = *value
 			}
 		case dnsprovider.FieldIsDefault:
 			if value, ok := values[i].(*sql.NullBool); !ok {
