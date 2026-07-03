@@ -237,6 +237,7 @@
   "error.get_home_dir_failed": "Failed to get home directory",
   "log.app_starting": "CertFlow starting...",
   "log.seed_ca_failed": "Failed to seed default CA",
+  "app.title": "CertFlow",
   "app.description": "SSL Certificate Manager",
   "app.exited": "CertFlow exited",
   "log.export_cert_start": "Exporting certificate: ID={{.ID}}",

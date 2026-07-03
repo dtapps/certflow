@@ -132,10 +132,11 @@ jobs:
         if: ${{ matrix.enabled }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      # # 安装 Task
-      # - name: 安装 Task
-      #   if: ${{ matrix.enabled }}
-      #   uses: arduino/setup-task@v2
+      # Windows 安装 NSIS（打包安装包需要）
+      - name: 安装 NSIS
+        if: ${{ matrix.enabled && runner.os == 'Windows' }}
+        shell: bash
+        run: choco install nsis -y
 
       # 构建
       - name: 构建

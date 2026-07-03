@@ -237,6 +237,7 @@
   "error.get_home_dir_failed": "获取用户目录失败",
   "log.app_starting": "CertFlow 启动中...",
   "log.seed_ca_failed": "预置默认 CA 失败",
+  "app.title": "CertFlow",
   "app.description": "SSL 证书管理工具",
   "app.exited": "CertFlow 已退出",
   "log.export_cert_start": "导出证书: ID={{.ID}}",
