@@ -5,11 +5,11 @@
     <key>CFBundleExecutable</key>
     <string>certflow</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.certflow</string>
+    <string>net.dtapp.certflow</string>
     <key>CFBundleName</key>
-    <string>My Product</string>
+    <string>CertFlow</string>
     <key>CFBundleDisplayName</key>
-    <string>My Product</string>
+    <string>CertFlow</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -49,7 +49,7 @@
     
     
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026, My Company</string>
+    <string>© 2026, DTApp</string>
     
     
     <key>CFBundleGetInfoString</key>

@@ -8,7 +8,7 @@
         <key>CFBundleExecutable</key>
             <string>certflow</string>
         <key>CFBundleIdentifier</key>
-            <string>com.example.certflow</string>
+            <string>net.dtapp.certflow.dev</string>
         <key>CFBundleVersion</key>
             <string>0.1.0</string>
         <key>CFBundleGetInfoString</key>
@@ -24,7 +24,7 @@
         <key>NSHighResolutionCapable</key>
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
-            <string>© 2026, LiGuangchun</string>
+            <string>© 2026, DTApp</string>
         <key>NSAppTransportSecurity</key>
         <dict>
             <key>NSAllowsLocalNetworking</key>

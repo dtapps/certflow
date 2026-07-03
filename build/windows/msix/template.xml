@@ -10,13 +10,13 @@
     <Installer
         Path="certflow"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\DTApp\CertFlow">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
+        PackageName="CertFlow"
+        PackageDisplayName="CertFlow"
+        PublisherName="CN=DTApp"
+        PublisherDisplayName="DTApp"
         Version="0.1.0.0"
         PackageDescription="A certflow application">
         <Capabilities>
@@ -25,9 +25,9 @@
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.certflow"
+                Id="net.dtapp.certflow"
                 Description="A certflow application"
-                DisplayName="My Product"
+                DisplayName="CertFlow"
                 ExecutableName="certflow"
                 EntryPoint="Windows.FullTrustApplication">
                 
@@ -41,8 +41,8 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
+            <DisplayName>CertFlow</DisplayName>
+            <PublisherDisplayName>DTApp</PublisherDisplayName>
             <Description>A certflow application</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>

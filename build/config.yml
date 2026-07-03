@@ -5,11 +5,11 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "LiGuangchun" # The name of the company
+  companyName: "DTApp" # The name of the company
   productName: "CertFlow" # The name of the application
-  productIdentifier: "cnb.cool.dtapp.certflow" # The unique product identifier
+  productIdentifier: "net.dtapp.certflow" # The unique product identifier
   description: "SSL 证书管理工具" # The application description
-  copyright: "(c) 2026, LiGuangchun" # Copyright text
+  copyright: "(c) 2026, DTApp" # Copyright text
   comments: "SSL Certificate Management" # Comments
   version: "0.0.1" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
@@ -18,17 +18,17 @@ info:
 
 # iOS build configuration (uncomment to customise iOS project generation)
 # Note: Keys under `ios` OVERRIDE values under `info` when set.
-# ios:
-#   # The iOS bundle identifier used in the generated Xcode project (CFBundleIdentifier)
-#   bundleID: "com.mycompany.myproduct"
-#   # The display name shown under the app icon (CFBundleDisplayName/CFBundleName)
-#   displayName: "My Product"
-#   # The app version to embed in Info.plist (CFBundleShortVersionString/CFBundleVersion)
-#   version: "0.0.1"
-#   # The company/organisation name for templates and project settings
-#   company: "My Company"
-#   # Additional comments to embed in Info.plist metadata
-#   comments: "Some Product Comments"
+ios:
+  # The iOS bundle identifier used in the generated Xcode project (CFBundleIdentifier)
+  bundleID: "net.dtapp.certflow"
+  # The display name shown under the app icon (CFBundleDisplayName/CFBundleName)
+  displayName: "CertFlow"
+  # The app version to embed in Info.plist (CFBundleShortVersionString/CFBundleVersion)
+  version: "0.0.1"
+  # The company/organisation name for templates and project settings
+  company: "DTApp"
+  # Additional comments to embed in Info.plist metadata
+  comments: "SSL Certificate Management"
 
 # Dev mode configuration
 dev_mode:

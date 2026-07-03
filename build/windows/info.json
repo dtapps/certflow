@@ -5,9 +5,9 @@
 	"info": {
 		"0000": {
 			"ProductVersion": "0.1.0",
-			"CompanyName": "LiGuangchun",
+			"CompanyName": "DTApp",
 			"FileDescription": "SSL 证书管理工具",
-			"LegalCopyright": "© 2026, LiGuangchun",
+			"LegalCopyright": "© 2026, DTApp",
 			"ProductName": "CertFlow",
 			"Comments": "SSL Certificate Management"
 		}
