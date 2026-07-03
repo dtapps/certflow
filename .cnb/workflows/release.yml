@@ -4,6 +4,7 @@
     - runner:
         tags: cnb:arch:amd64
         cpus: 4
+      imports: https://cnb.cool/dtapp/envs/-/blob/main/github.yml # 导入外部环境变量/配置
       stages:
         - name: 处理版本号
           script: |
@@ -22,24 +23,40 @@
             DOWNLOAD_DIR="dist"
             mkdir -p "${DOWNLOAD_DIR}"
 
+            # 可选：通过 CERTFLOW_GITHUB_TOKEN 环境变量传入认证令牌（提高 API 限额）
+            AUTH_HEADER=""
+            if [ -n "${CERTFLOW_GITHUB_TOKEN}" ]; then
+              AUTH_HEADER="-H \"Authorization: token ${CERTFLOW_GITHUB_TOKEN}\""
+            fi
+
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
               "${GITHUB_API}/releases/tags/${TAG}")
 
             if [ "$HTTP_CODE" != "200" ]; then
-              echo "错误：GitHub 上未找到 ${TAG} 的 Release"
+              echo "错误：GitHub 上未找到 ${TAG} 的 Release（HTTP ${HTTP_CODE}）"
               exit 1
             fi
             echo "✓ 找到 GitHub Release: ${TAG}"
 
-            RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
+            RELEASE_INFO=$(curl -s \
+              -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
+              "${GITHUB_API}/releases/tags/${TAG}")
             ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
             echo "共 ${ASSET_COUNT} 个附件"
+
+            if [ "$ASSET_COUNT" = "0" ]; then
+              echo "错误：Release 没有附件，请先在 GitHub Actions 完成构建"
+              exit 1
+            fi
 
             for i in $(seq 0 $((ASSET_COUNT - 1))); do
               ASSET_NAME=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].name")
               ASSET_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].browser_download_url")
               echo "下载 ${ASSET_NAME}..."
-              curl -sL -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
+              curl -sL \
+                -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
+                -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
               echo "  ✓ 完成"
             done
 
