@@ -49,24 +49,9 @@
             echo "下载完成："
             ls -lh "${DOWNLOAD_DIR}/"
 
-        - name: 从 GitHub Release 获取发布内容并替换下载链接
-          script: |
-            TAG="${INTERIOR_VERSION}"
-            GITHUB_API="https://api.github.com/repos/dtapps/certflow"
-            RELEASE_INFO=$(curl -s "${GITHUB_API}/releases/tags/${TAG}")
-            BODY=$(echo "$RELEASE_INFO" | jq -r '.body // empty')
-
-            if [ -n "$BODY" ]; then
-              CNB_DL_BASE="https://cnb.cool/dtapp/certflow/releases/download/${TAG}"
-              CNB_BODY=$(echo "$BODY" \
-                | sed "s|https://github.com/dtapps/certflow/releases/download/${TAG}/|${CNB_DL_BASE}/|g")
-            else
-              CNB_BODY="Release ${TAG}"
-            fi
-
-            echo "发布内容："
-            echo "$CNB_BODY"
-            echo "##[set-output latestChangeLog=$CNB_BODY]"
+        # https://docs.cnb.cool/zh/plugin/public/cnbcool/changelog.html
+        - name: 生成 Release 日志
+          image: cnbcool/changelog
           exports:
             latestChangeLog: LATEST_CHANGE_LOG
 
