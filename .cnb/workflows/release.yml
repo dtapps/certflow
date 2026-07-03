@@ -74,7 +74,7 @@
         - name: 生成发布内容
           script: |
             TAG="${INTERIOR_VERSION}"
-            CNB_DL_BASE="https://cnb.cool/dtapp/certflow/releases/download/${TAG}"
+            CNB_DL_BASE="https://cnb.cool/dtapp/certflow/-/releases/download/${TAG}"
 
             # 下载表格
             printf "## 下载\n\n" > /tmp/release_body.md
@@ -124,7 +124,7 @@
           options:
             tag: ${INTERIOR_VERSION}
             title: "${INTERIOR_VERSION}"
-            description: ${LATEST_CHANGE_LOG}
+            descriptionFromFile: /tmp/release_body.md
 
         # https://docs.cnb.cool/zh/plugin/public/cnbcool/attachments.html
         - name: 上传 Release 附件
