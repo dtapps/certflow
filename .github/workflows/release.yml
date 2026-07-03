@@ -183,45 +183,20 @@ jobs:
           pattern: certflow-*
           merge-multiple: true
 
-      # 整理文件
-      - name: 整理文件
+      # 整理文件并生成发布说明
+      - name: 整理文件并生成发布说明
         shell: bash
         run: |
           cd dist
           find . -type d -empty -delete
-
-          # 重命名产物
-          for f in *; do
-            case "$f" in
-              *.app)
-                mv "$f" "CertFlow-${{ inputs.version }}-macos.app"
-                ;;
-              *.exe)
-                mv "$f" "CertFlow-${{ inputs.version }}-windows.exe"
-                ;;
-              *.AppImage)
-                mv "$f" "CertFlow-${{ inputs.version }}-linux.AppImage"
-                ;;
-              *.deb)
-                mv "$f" "CertFlow-${{ inputs.version }}-linux.deb"
-                ;;
-              *.rpm)
-                mv "$f" "CertFlow-${{ inputs.version }}-linux.rpm"
-                ;;
-              *.pkg.tar.zst)
-                mv "$f" "CertFlow-${{ inputs.version }}-linux.pkg.tar.zst"
-                ;;
-            esac
-          done
-
           echo "发布文件："
           ls -lh
 
-      # 生成发布说明
-      - name: 生成发布说明
-        shell: bash
-        run: |
           VERSION="${{ inputs.version }}"
+          TAG="v${VERSION}"
+          REPO="${{ github.repository }}"
+          RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
           PREV_TAG=$(git tag --sort=-v:refname | head -2 | tail -1)
           if [ -z "$PREV_TAG" ]; then
             CHANGES="首次发布"
@@ -229,19 +204,45 @@ jobs:
             CHANGES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" 2>/dev/null || echo "- 版本更新")
           fi
 
-          printf '## 下载\n\n' > release_body.md
-          printf '| 平台 | 文件 | 说明 |\n' >> release_body.md
-          printf '|------|------|------|\n' >> release_body.md
-          printf '| macOS (Apple Silicon) | CertFlow-%s-macos-arm64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
-          printf '| macOS (Intel) | CertFlow-%s-macos-amd64.app | Mac 应用 |\n' "$VERSION" >> release_body.md
-          printf '| Windows (x64) | CertFlow-%s-windows-x64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
-          printf '| Windows (ARM64) | CertFlow-%s-windows-arm64.exe | Windows 安装包 |\n' "$VERSION" >> release_body.md
-          printf '| Linux (x64) | CertFlow-%s-linux-x86_64.AppImage | Linux 便携版 |\n' "$VERSION" >> release_body.md
-          printf '| Linux (ARM64) | CertFlow-%s-linux-aarch64.AppImage | Linux 便携版 |\n' "$VERSION" >> release_body.md
-          printf '| Linux (DEB) | CertFlow-%s-linux.deb | Debian/Ubuntu |\n' "$VERSION" >> release_body.md
-          printf '| Linux (RPM) | CertFlow-%s-linux.rpm | Fedora/RHEL |\n' "$VERSION" >> release_body.md
-          printf '| Linux (Arch) | CertFlow-%s-linux.pkg.tar.zst | Arch Linux |\n' "$VERSION" >> release_body.md
-          printf '\n## 更新内容\n\n%s\n' "$CHANGES" >> release_body.md
+          cat > ../release_body.md << EOF
+          ## 下载
+
+          | 平台 | 文件 | 说明 |
+          |------|------|------|
+          EOF
+
+          for f in *; do
+            # 提取架构信息（从文件名中）
+            ARCH=""
+            case "$f" in
+              *arm64*|*aarch64*) ARCH="ARM64" ;;
+              *amd64*|*x86_64*|*x64*) ARCH="x64" ;;
+            esac
+            [ -n "$ARCH" ] && ARCH=" (${ARCH})"
+
+            case "$f" in
+              *.app)
+                printf '| macOS%s | [%s](%s/%s) | Mac 应用 |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+              *.exe)
+                printf '| Windows%s | [%s](%s/%s) | Windows 安装包 |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+              *.AppImage)
+                printf '| Linux%s | [%s](%s/%s) | AppImage |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+              *.deb)
+                printf '| Linux (DEB)%s | [%s](%s/%s) | Debian/Ubuntu |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+              *.rpm)
+                printf '| Linux (RPM)%s | [%s](%s/%s) | Fedora/RHEL |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+              *.pkg.tar.zst)
+                printf '| Linux (Arch)%s | [%s](%s/%s) | Arch Linux |\n' "$ARCH" "$f" "$RELEASE_URL" "$f" >> ../release_body.md
+                ;;
+            esac
+          done
+
+          printf '\n## 更新内容\n\n%s\n' "$CHANGES" >> ../release_body.md
 
       # 创建 GitHub Release 并上传附件
       - name: 发布 Release
