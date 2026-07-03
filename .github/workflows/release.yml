@@ -46,6 +46,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # 打印系统信息
+      - name: 系统信息
+        run: |
+          echo "操作系统: $(uname -a)"
+          echo "内核版本: $(uname -r)"
+          cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
+
       # 检出代码
       - uses: actions/checkout@v4
 
@@ -54,7 +61,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       # 安装 Go（使用稳定版本）
       - uses: actions/setup-go@v5
@@ -81,6 +88,10 @@ jobs:
       # 安装 Wails3 CLI
       - name: 安装 Wails3
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      # 安装 Task
+      - name: 安装 Task
+        uses: arduino/setup-task@v2
 
       # 构建
       - name: 构建
