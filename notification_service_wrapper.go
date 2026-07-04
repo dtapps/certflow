@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/notification"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -14,6 +16,7 @@ type NotificationServiceWrapper struct {
 }
 
 // NewNotificationServiceWrapper 创建新的通知服务包装器
+// https://v3.wails.io/features/notifications/overview/
 func NewNotificationServiceWrapper(notifService *notification.NotificationService) *NotificationServiceWrapper {
 	return &NotificationServiceWrapper{notifService: notifService}
 }
@@ -48,6 +51,7 @@ func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([
 	ctx := context.Background()
 	items, err := s.notifService.ListNotifications(ctx, limit, offset)
 	if err != nil {
+		logging.Error("%s: %v", i18n.T("log.notification_list_failed"), err)
 		return nil, err
 	}
 
@@ -68,13 +72,22 @@ func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([
 // CountUnread 获取未读通知数量
 func (s *NotificationServiceWrapper) CountUnread() (int, error) {
 	ctx := context.Background()
-	return s.notifService.CountUnread(ctx)
+	count, err := s.notifService.CountUnread(ctx)
+	if err != nil {
+		logging.Error("%s: %v", i18n.T("log.notification_count_failed"), err)
+		return 0, err
+	}
+	return count, nil
 }
 
 // MarkAsRead 标记通知为已读
 func (s *NotificationServiceWrapper) MarkAsRead(id int) error {
 	ctx := context.Background()
-	return s.notifService.MarkAsRead(ctx, id)
+	if err := s.notifService.MarkAsRead(ctx, id); err != nil {
+		logging.Error("%s: %v", i18n.T("log.notification_mark_read_failed"), err)
+		return err
+	}
+	return nil
 }
 
 // MarkAllAsRead 标记所有通知为已读
@@ -86,13 +99,21 @@ func (s *NotificationServiceWrapper) MarkAllAsRead() error {
 // DeleteNotification 删除通知
 func (s *NotificationServiceWrapper) DeleteNotification(id int) error {
 	ctx := context.Background()
-	return s.notifService.DeleteNotification(ctx, id)
+	if err := s.notifService.DeleteNotification(ctx, id); err != nil {
+		logging.Error("%s: %v", i18n.T("log.notification_delete_failed"), err)
+		return err
+	}
+	return nil
 }
 
 // ClearAllNotifications 清空所有通知
 func (s *NotificationServiceWrapper) ClearAllNotifications() error {
 	ctx := context.Background()
-	return s.notifService.ClearAllNotifications(ctx)
+	if err := s.notifService.ClearAllNotifications(ctx); err != nil {
+		logging.Error("%s: %v", i18n.T("log.notification_clear_failed"), err)
+		return err
+	}
+	return nil
 }
 
 // ServiceStartup 实现 Wails 服务接口

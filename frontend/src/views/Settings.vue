@@ -8,6 +8,7 @@ import * as LoggingService from '@bindings/cnb.cool/dtapp/certflow/loggingservic
 import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservicewrapper'
 import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapper'
 import * as WindowService from '@bindings/cnb.cool/dtapp/certflow/windowservicewrapper'
+import * as AutostartService from '@bindings/cnb.cool/dtapp/certflow/autostartservicewrapper'
 import type { Settings, DNSConfig } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useTheme } from '../stores/theme'
 import { useI18n } from '../stores/i18n'
@@ -28,8 +29,8 @@ const defaultSettings: SafeSettings = {
   auto_check_expiry: true,
   check_interval: 6,
   data_dir: '~/.certflow',
-  language: 'zh-CN',
-  theme: 'dark',
+  language: 'auto',
+  theme: 'auto',
   dns_configs: [],
   proxy: { enabled: false, protocol: 'http', host: '', port: 8080 },
   log: { level: 'INFO', max_mb: 10, max_backups: 5 },
@@ -38,6 +39,7 @@ const defaultSettings: SafeSettings = {
 const settings = ref<SafeSettings>({ ...defaultSettings })
 const originalSettings = ref<string>('')
 const dnsEnabled = ref(false)
+const autostartEnabled = ref(false)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -117,6 +119,19 @@ watch(() => settings.value.notification_enabled, async (enabled) => {
   }
 })
 
+// 实时设置开机自启
+watch(autostartEnabled, async (enabled) => {
+  try {
+    if (enabled) {
+      await AutostartService.Enable()
+    } else {
+      await AutostartService.Disable()
+    }
+  } catch (e) {
+    console.error('设置开机自启失败:', e)
+  }
+})
+
 const handleSave = async () => {
   saving.value = true
   try {
@@ -163,7 +178,13 @@ const handleRunMonitorCheck = async () => {
 }
 
 const handleCheckUpdate = async () => {
-  await BrowserService.OpenURL('https://github.com/dtapps/certflow/releases')
+  const locale = await SettingsService.GetSettings()
+  const lang = locale.language || 'auto'
+  if (lang === 'zh-CN') {
+    await BrowserService.OpenURL('https://cnb.cool/dtapp/certflow/-/releases')
+  } else {
+    await BrowserService.OpenURL('https://github.com/dtapps/certflow/releases')
+  }
 }
 
 // 切换自定义 DNS 总开关
@@ -245,10 +266,16 @@ const openLogFullscreen = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadSettings()
   loadLogFiles()
   loadLogContent()
+  // 获取开机自启状态
+  try {
+    autostartEnabled.value = await AutostartService.IsEnabled()
+  } catch (e) {
+    console.error('获取开机自启状态失败:', e)
+  }
 })
 </script>
 
@@ -279,6 +306,23 @@ onMounted(() => {
             <p class="setting-row-desc">{{ t('settings.renewal.days.desc') }}</p>
           </div>
           <div class="w-16"><input v-model.number="settings.default_renewal_days" type="number" min="1" max="90" class="input input-sm" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 启动设置 -->
+    <div class="glass-panel rounded-2xl p-6">
+      <h2 class="section-title">
+        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        {{ t('settings.autostart.title') }}
+      </h2>
+      <div class="space-y-4">
+        <div class="setting-row">
+          <div>
+            <p class="setting-row-label">{{ t('settings.autostart.enabled') }}</p>
+            <p class="setting-row-desc">{{ t('settings.autostart.enabled.desc') }}</p>
+          </div>
+          <input type="checkbox" class="toggle toggle-primary" v-model="autostartEnabled" />
         </div>
       </div>
     </div>
@@ -439,8 +483,8 @@ onMounted(() => {
           </div>
           <select v-model="settings.language" class="select select-bordered w-32 text-sm">
             <option value="auto">{{ t('lang.auto') }}</option>
-            <option value="zh-CN">简体中文</option>
-            <option value="en-US">English</option>
+            <option value="zh-CN">{{ t('lang.zh') }}</option>
+            <option value="en-US">{{ t('lang.en') }}</option>
           </select>
         </div>
         <div class="setting-row">

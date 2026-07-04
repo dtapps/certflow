@@ -1,43 +1,19 @@
-# 发布工作流
-# 手动触发，输入版本号后自动构建六个平台并发布 GitHub Release
-name: Release
+# 每日构建工作流
+# 每天 00:00 UTC 自动构建 nightly 版本并发布为 Pre-release
+name: Nightly Build
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: '版本号（例如 1.0.0）'
-        required: true
-        type: string
-      mac_arm64:
-        description: 'macOS Apple Silicon'
-        type: boolean
-        default: true
-      mac_amd64:
-        description: 'macOS Intel'
-        type: boolean
-        default: true
-      linux_amd64:
-        description: 'Linux x64'
-        type: boolean
-        default: true
-      linux_arm64:
-        description: 'Linux ARM64'
-        type: boolean
-        default: true
-      windows_amd64:
-        description: 'Windows x64'
-        type: boolean
-        default: true
-      windows_arm64:
-        description: 'Windows ARM64'
-        type: boolean
-        default: true
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 00:00（北京时间 08:00）
+  workflow_dispatch:  # 支持手动触发
 
 permissions:
   contents: write
 
-# https://github.com/actions/runner-images
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
+
 jobs:
   build:
     strategy:
@@ -47,67 +23,71 @@ jobs:
           - os: macos-26
             goos: darwin
             goarch: arm64
-            enabled: ${{ inputs.mac_arm64 }}
           - os: macos-26-intel
             goos: darwin
             goarch: amd64
-            enabled: ${{ inputs.mac_amd64 }}
           - os: ubuntu-26.04
             goos: linux
             goarch: amd64
-            enabled: ${{ inputs.linux_amd64 }}
           - os: ubuntu-26.04-arm
             goos: linux
             goarch: arm64
-            enabled: ${{ inputs.linux_arm64 }}
           - os: windows-2025
             goos: windows
             goarch: amd64
-            enabled: ${{ inputs.windows_amd64 }}
           - os: windows-11-arm
             goos: windows
             goarch: arm64
-            enabled: ${{ inputs.windows_arm64 }}
 
     runs-on: ${{ matrix.os }}
 
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
-
     steps:
+      - name: 生成版本号
+        id: version
+        shell: bash
+        run: |
+          # 获取最近的 tag
+          PREV_TAG=$(git tag --sort=-v:refname | head -1)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG="v0.0.0"
+          fi
+          # 提取基础版本号（去掉 v 前缀）
+          BASE_VERSION="${PREV_TAG#v}"
+          # 生成 nightly 版本号：基础版本-nightly.日期
+          DATE=$(date +%Y%m%d)
+          VERSION="${BASE_VERSION}-nightly.${DATE}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Nightly 版本号: ${VERSION}"
+
       - name: 打印系统信息
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
           echo "操作系统: $(uname -a)"
           echo "内核版本: $(uname -r)"
+          echo "Nightly 版本: ${{ steps.version.outputs.version }}"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
 
       - name: 检出代码
-        if: ${{ matrix.enabled }}
         uses: actions/checkout@v4
 
       - name: 安装系统依赖
-        if: ${{ matrix.enabled && runner.os == 'Linux' }}
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: 安装 Go
-        if: ${{ matrix.enabled }}
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
       - name: 安装 pnpm
-        if: ${{ matrix.enabled }}
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
       - name: 安装 Node.js
-        if: ${{ matrix.enabled }}
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -115,16 +95,14 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 安装前端依赖
-        if: ${{ matrix.enabled }}
         run: pnpm install
         working-directory: frontend
 
       - name: 安装 Wails3
-        if: ${{ matrix.enabled }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: 安装 NSIS
-        if: ${{ matrix.enabled && runner.os == 'Windows' }}
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           choco install nsis -y
@@ -132,20 +110,17 @@ jobs:
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       - name: 构建
-        if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task build VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task build VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
 
       - name: 打包
-        if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task package VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task package VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
 
       - name: 重命名产物
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           PLATFORM="${{ matrix.goos }}"
           ARCH="${{ matrix.goarch }}"
 
@@ -187,23 +162,33 @@ jobs:
           ls -lh renamed/
 
       - name: 上传产物
-        if: ${{ matrix.enabled }}
         uses: actions/upload-artifact@v4
         with:
           name: certflow-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bin/renamed/
           if-no-files-found: warn
-          retention-days: 1
+          retention-days: 3
 
   # 所有平台构建完成后，发布 GitHub Release
   release:
     needs: build
     runs-on: ubuntu-latest
 
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
+      - name: 生成版本号
+        id: version
+        shell: bash
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | head -1)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG="v0.0.0"
+          fi
+          BASE_VERSION="${PREV_TAG#v}"
+          DATE=$(date +%Y%m%d)
+          VERSION="${BASE_VERSION}-nightly.${DATE}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+
       - name: 检出代码
         uses: actions/checkout@v4
         with:
@@ -222,20 +207,29 @@ jobs:
       - name: 生成发布说明
         shell: bash
         run: |
-          VERSION="${{ inputs.version }}"
-          TAG="v${VERSION}"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
           REPO="${{ github.repository }}"
           RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
-          PREV_TAG=$(git tag --sort=-v:refname | head -2 | tail -1)
-          if [ -z "$PREV_TAG" ]; then
+          # 获取上一个稳定版本
+          PREV_STABLE_TAG=$(git tag --sort=-v:refname | grep -v nightly | head -1)
+          if [ -z "$PREV_STABLE_TAG" ]; then
             CHANGES="首次发布"
           else
-            CHANGES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" 2>/dev/null || echo "- 版本更新")
+            CHANGES=$(git log --pretty=format:"- %s" "${PREV_STABLE_TAG}..HEAD" 2>/dev/null || echo "- 版本更新")
           fi
 
           # 生成下载表格
-          echo "## 下载" > release_body.md
+          echo "## ⚠️ Nightly 构建" > release_body.md
+          echo "" >> release_body.md
+          echo "> 这是每日自动构建的预发布版本，可能包含未测试的功能。" >> release_body.md
+          echo "> 如需稳定版本，请使用 [正式发布](https://github.com/${REPO}/releases)。" >> release_body.md
+          echo "" >> release_body.md
+          echo "**版本**: \`${VERSION}\`" >> release_body.md
+          echo "**构建时间**: $(date -u '+%Y-%m-%d %H:%M UTC')" >> release_body.md
+          echo "" >> release_body.md
+          echo "## 下载" >> release_body.md
           echo "" >> release_body.md
           echo "| 平台 | 架构 | 文件 | 大小 | 说明 |" >> release_body.md
           echo "|------|------|------|------|------|" >> release_body.md
@@ -285,19 +279,26 @@ jobs:
           echo "" >> release_body.md
           echo "${CHANGES}" >> release_body.md
 
-      # 生成 SHA256 校验和文件（自更新需要）
-      - name: 生成 SHA256SUMS
+      - name: 生成 SHA256 校验和文件
         run: |
           cd release
           shasum -a 256 * > SHA256SUMS
           echo "SHA256SUMS："
           cat SHA256SUMS
 
+      - name: 删除同名旧 Release（如果存在）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: v${{ inputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Nightly ${{ steps.version.outputs.version }}
           draft: false
+          prerelease: true
           body_path: release_body.md
           files: release/*

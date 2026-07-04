@@ -12,6 +12,8 @@ type WindowServiceWrapper struct {
 	app *application.App
 }
 
+// NewSysTrayService 创建系统窗口服务
+// https://v3.wails.io/features/windows/basics/
 func NewWindowServiceWrapper() *WindowServiceWrapper {
 	return &WindowServiceWrapper{}
 }

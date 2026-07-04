@@ -38,7 +38,7 @@ test: ## Go 后端测试
 # ==================== 构建打包 ====================
 
 go-build: ## 快速编译（make go-build VERSION=1.0.0）
-	VERSION=$(VERSION) go build -tags production -trimpath -buildvcs=false "-ldflags=-w -s -X main.currentVersion=$(VERSION) -X main.buildTime=$$(date -u '+%Y-%m-%dT%H:%M:%SZ') -X main.gitCommit=$$(git rev-parse --short HEAD)" -o bin/certflow
+	go build -tags production -trimpath -buildvcs=false "-ldflags=-w -s" -o bin/certflow
 
 build: ## 构建生产包（make build VERSION=1.0.0）
 	wails3 task build VERSION=$(VERSION)

@@ -12,7 +12,7 @@ func TestInit(t *testing.T) {
 	if err := Init(dir); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
-	defer Close()
+	defer func() { _ = Close() }()
 
 	if Client == nil {
 		t.Fatal("Client is nil after Init")

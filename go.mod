@@ -10,7 +10,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/google/uuid v1.6.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.111
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.112
 	golang.org/x/crypto v0.53.0
 	golang.org/x/text v0.38.0
 	modernc.org/sqlite v1.53.0
@@ -107,6 +107,7 @@ require (
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
+	golang.org/x/image v0.43.0 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -21,7 +23,11 @@ func (s *FileServiceWrapper) SetApp(app *application.App) {
 
 // OpenDirectory 在系统文件管理器中打开目录
 func (s *FileServiceWrapper) OpenDirectory(path string) error {
-	return s.app.Env.OpenFileManager(path, false)
+	if err := s.app.Env.OpenFileManager(path, false); err != nil {
+		logging.Warn("%s", i18n.T("log.open_dir_failed", "Path", path, "Error", err))
+		return err
+	}
+	return nil
 }
 
 func (s *FileServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {

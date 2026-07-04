@@ -35,6 +35,7 @@ var currentVersion = "dev"
 // 构建信息（构建时通过 -ldflags 覆盖）
 var buildTime = ""
 var gitCommit = ""
+var githubToken = ""
 
 func init() {
 	application.RegisterEvent[string]("time")
@@ -105,6 +106,9 @@ func main() {
 	systemSvc := NewSystemServiceWrapper()
 	fileSvc := NewFileServiceWrapper()
 	windowSvc := NewWindowServiceWrapper()
+	systraySvc := NewSysTrayService()
+	dockSvc := NewDockServiceWrapper()
+	autostartSvc := NewAutostartServiceWrapper()
 
 	// 创建 Wails 应用
 	app := application.New(application.Options{
@@ -125,12 +129,15 @@ func main() {
 			application.NewService(systemSvc),
 			application.NewService(fileSvc),
 			application.NewService(windowSvc),
+			application.NewService(systraySvc),
+			application.NewService(dockSvc),
+			application.NewService(autostartSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
@@ -141,11 +148,15 @@ func main() {
 	systemSvc.SetApp(app)
 	fileSvc.SetApp(app)
 	windowSvc.SetApp(app)
+	systraySvc.SetApp(app)
+	dockSvc.SetApp(app)
+	autostartSvc.SetApp(app)
 
 	// 配置自更新功能
 	gh, err := github.New(github.Config{
-		Repository:    "dtapps/certflow",
-		ChecksumAsset: "SHA256SUMS",
+		Repository: "dtapps/certflow",
+		// ChecksumAsset: "SHA256SUMS",
+		Token: githubToken,
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -153,7 +164,7 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
-			CheckInterval:  6 * time.Hour,
+			CheckInterval:  12 * time.Hour,
 		}); err != nil {
 			logging.Error(i18n.T("log.updater_init_failed"), err)
 		}
@@ -180,13 +191,17 @@ func main() {
 		mainWindow.Focus()
 	})
 
+	// 初始化系统托盘
+	systraySvc.SetMainWindow(mainWindow)
+	systraySvc.Init()
+
 	// 创建应用菜单（含检查更新）
 	appMenu := app.Menu.New()
 	appMenu.AddSubmenu(i18n.T("menu.app")).
 		Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
 		go func() {
 			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
-				logging.Error(i18n.T("log.updater_check_failed"), err)
+				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
 			}
 		}()
 	})
@@ -212,10 +227,35 @@ func main() {
 		schedulerService.Stop()
 	}()
 
+	// 启动后异步检查更新
+	checkUpdateOnStart(app)
+
 	// 运行应用
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(i18n.T("app.exited"))
+}
+
+// checkUpdateOnStart 启动后异步检查更新，有更新时发通知
+func checkUpdateOnStart(app *application.App) {
+	go func() {
+		// 延迟 3 秒，等界面加载完成
+		time.Sleep(3 * time.Second)
+		rel, err := app.Updater.Check(context.Background())
+		if err != nil {
+			logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
+			return
+		}
+		if rel == nil {
+			return // 没有更新
+		}
+		// 发送桌面通知
+		app.Event.Emit("notification", map[string]string{
+			"title":    i18n.T("notification.update_available_title"),
+			"subtitle": i18n.T("notification.update_available_subtitle", "version", rel.Version),
+			"category": "system",
+		})
+	}()
 }

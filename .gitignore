@@ -11,3 +11,5 @@ build/android/overlay.json
 build/android/gen/
 .codebuddy/
 .mimocode/
+AGENTS.md
+image/systray*

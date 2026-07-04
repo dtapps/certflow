@@ -60,9 +60,9 @@ func (s *AuthService) load() error {
 
 // save 保存密码哈希到文件
 func (s *AuthService) save() error {
-	data, err := json.Marshal(map[string]string{
+	data, err := json.MarshalIndent(map[string]string{
 		"password_hash": s.passwordHash,
-	})
+	}, "", "  ")
 	if err != nil {
 		return fmt.Errorf(i18n.T("error.serialize_auth_failed", "Error", err))
 	}

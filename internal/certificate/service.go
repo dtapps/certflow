@@ -36,7 +36,7 @@ type pendingChallenge struct {
 	request        legocert.ObtainRequest
 	caEntity       *ent.CA
 	req            CertificateRequest
-	certRecordID   int // 预创建的数据库记录 ID
+	certRecordID   int               // 预创建的数据库记录 ID
 	resultChan     chan obtainResult // goroutine Obtain 的结果
 }
 

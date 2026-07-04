@@ -28,7 +28,7 @@ onMounted(async () => {
   <LoginDialog v-if="!isAuthenticated" @verified="handleVerified" />
 
   <!-- 主界面 -->
-  <div v-else class="flex h-full w-full overflow-hidden" :style="{ backgroundColor: 'var(--color-bg-base)' }">
+  <div v-else class="flex h-full w-full overflow-y-hidden" :style="{ backgroundColor: 'var(--color-bg-base)' }">
     <!-- Sidebar -->
     <Sidebar :collapsed="!sidebarOpen" @toggle="toggleSidebar" />
 

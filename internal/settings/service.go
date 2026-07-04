@@ -99,7 +99,7 @@ func getSystemDNSWindows() []string {
 		return nil
 	}
 	var servers []string
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
 		// 跳过空行和描述行
 		if line == "" || strings.Contains(line, "DNS") || strings.Contains(line, "---") || strings.Contains(line, "配置") {
@@ -143,8 +143,8 @@ func DefaultSettings() Settings {
 		AutoCheckExpiry:     true,
 		CheckInterval:       6,
 		DataDir:             "~/.certflow",
-		Language:            "zh-CN",
-		Theme:               "dark",
+		Language:            "auto",
+		Theme:               "auto",
 		DNSConfigs:          builtinDNSConfigs(nil),
 		Proxy: ProxyConfig{
 			Enabled:  false,
@@ -280,7 +280,7 @@ func (s *Service) IsSeeded() bool {
 // MarkSeeded 标记已预置默认数据（写入独立文件）
 func (s *Service) MarkSeeded() error {
 	seededPath := filepath.Join(filepath.Dir(s.filePath), "seeded.json")
-	data, err := json.Marshal(map[string]bool{"seeded": true})
+	data, err := json.MarshalIndent(map[string]bool{"seeded": true}, "", "  ")
 	if err != nil {
 		return err
 	}

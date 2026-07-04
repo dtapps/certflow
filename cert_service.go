@@ -54,7 +54,7 @@ type ApplyCertRequest struct {
 	DNSProviderID *int     `json:"dns_provider_id,omitempty"` // DNS 提供商 ID（手动 DNS 为 nil）
 	AutoRenew     bool     `json:"auto_renew"`                // 是否自动续期
 	RenewalDays   int      `json:"renewal_days"`              // 到期前续期天数
-	KeyType       string   `json:"key_type,omitempty"`         // 密钥类型：RSA2048/RSA3072/RSA4096/EC256/EC384
+	KeyType       string   `json:"key_type,omitempty"`        // 密钥类型：RSA2048/RSA3072/RSA4096/EC256/EC384
 }
 
 // ApplyCertResult 证书申请结果

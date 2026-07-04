@@ -52,30 +52,30 @@ func (s *MonitorService) SetNotificationService(ns interface {
 
 // MonitoredDomainItem 监控域名条目（前端展示用）
 type MonitoredDomainItem struct {
-	ID                int      `json:"id"`                 // 监控 ID
-	Domain            string   `json:"domain"`              // 域名
-	Port              int      `json:"port"`                // 端口号
-	CheckType         string   `json:"check_type"`          // 检查类型：https/http
-	URL               string   `json:"url"`                 // 自定义检查 URL
-	CheckInterval     int      `json:"check_interval"`      // 检查间隔（秒）
-	Enabled           bool     `json:"enabled"`             // 是否启用
-	Status            string   `json:"status"`              // 状态：ok/warning/error/expired/unknown
-	CertIssuer        string   `json:"cert_issuer"`         // SSL 证书颁发者
-	CertNotBefore     string   `json:"cert_not_before"`     // 证书生效时间
-	CertNotAfter      string   `json:"cert_not_after"`      // 证书过期时间
-	CertFingerprint   string   `json:"cert_fingerprint"`    // 证书 SHA256 指纹
-	CertSubject       string   `json:"cert_subject"`        // 证书主题
-	CertSignatureAlgo string   `json:"cert_signature_algo"` // 签名算法
+	ID                int      `json:"id"`                   // 监控 ID
+	Domain            string   `json:"domain"`               // 域名
+	Port              int      `json:"port"`                 // 端口号
+	CheckType         string   `json:"check_type"`           // 检查类型：https/http
+	URL               string   `json:"url"`                  // 自定义检查 URL
+	CheckInterval     int      `json:"check_interval"`       // 检查间隔（秒）
+	Enabled           bool     `json:"enabled"`              // 是否启用
+	Status            string   `json:"status"`               // 状态：ok/warning/error/expired/unknown
+	CertIssuer        string   `json:"cert_issuer"`          // SSL 证书颁发者
+	CertNotBefore     string   `json:"cert_not_before"`      // 证书生效时间
+	CertNotAfter      string   `json:"cert_not_after"`       // 证书过期时间
+	CertFingerprint   string   `json:"cert_fingerprint"`     // 证书 SHA256 指纹
+	CertSubject       string   `json:"cert_subject"`         // 证书主题
+	CertSignatureAlgo string   `json:"cert_signature_algo"`  // 签名算法
 	CertPublicKeyAlgo string   `json:"cert_public_key_algo"` // 公钥算法
 	CertPublicKeyBits int      `json:"cert_public_key_bits"` // 公钥位数
 	CertSANs          []string `json:"cert_sans"`            // SAN 列表
-	CertRemainingDays int      `json:"cert_remaining_days"` // 剩余天数
-	LastCheckAt       string   `json:"last_check_at"`       // 最后检查时间
-	LastCheckError    string   `json:"last_check_error"`    // 最后检查错误
-	HTTPStatusCode    int      `json:"http_status_code"`    // HTTP 响应码
-	ResponseTimeMs    int      `json:"response_time_ms"`    // 响应时间（毫秒）
-	CreatedAt         string   `json:"created_at"`          // 创建时间
-	UpdatedAt         string   `json:"updated_at"`          // 更新时间
+	CertRemainingDays int      `json:"cert_remaining_days"`  // 剩余天数
+	LastCheckAt       string   `json:"last_check_at"`        // 最后检查时间
+	LastCheckError    string   `json:"last_check_error"`     // 最后检查错误
+	HTTPStatusCode    int      `json:"http_status_code"`     // HTTP 响应码
+	ResponseTimeMs    int      `json:"response_time_ms"`     // 响应时间（毫秒）
+	CreatedAt         string   `json:"created_at"`           // 创建时间
+	UpdatedAt         string   `json:"updated_at"`           // 更新时间
 }
 
 // CreateInput 创建/更新监控域名请求
