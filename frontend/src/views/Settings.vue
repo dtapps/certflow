@@ -247,18 +247,16 @@ const openLogDir = async () => {
 }
 
 const openLogFullscreen = async () => {
-  if (!selectedLogFile.value) return
   try {
-    const content = await LoggingService.ReadLog(selectedLogFile.value, 0)
-    await WindowService.OpenHTMLWindow({
+    await WindowService.OpenWindow({
       WindowName: 'log-viewer',
-      Title: selectedLogFile.value,
-      Content: content || '',
+      Title: t('settings.log.viewer'),
+      Content: '',
       Width: 1000,
       Height: 700,
-      BgColor: '#1a1b1e',
-      TextColor: '#d4d4d4',
-      FontFamily: 'Menlo, Monaco, Consolas, monospace',
+      BgColor: '',
+      TextColor: '',
+      FontFamily: '',
       FontSize: 13,
     })
   } catch (e) {

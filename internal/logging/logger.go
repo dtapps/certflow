@@ -67,11 +67,16 @@ type Logger struct {
 
 // NewLogger 创建新的日志记录器
 func NewLogger(logDir string, level Level, maxMB int, maxBackups int) (*Logger, error) {
+	return NewLoggerWithFilename(logDir, "certflow.log", level, maxMB, maxBackups)
+}
+
+// NewLoggerWithFilename 创建指定文件名的日志记录器
+func NewLoggerWithFilename(logDir string, filename string, level Level, maxMB int, maxBackups int) (*Logger, error) {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, fmt.Errorf(i18n.T("error.create_log_dir_failed", "Error", err))
 	}
 
-	filePath := filepath.Join(logDir, "certflow.log")
+	filePath := filepath.Join(logDir, filename)
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T("error.open_log_file_failed", "Error", err))
@@ -79,7 +84,7 @@ func NewLogger(logDir string, level Level, maxMB int, maxBackups int) (*Logger, 
 
 	return &Logger{
 		level:      level,
-		output:     os.Stdout,
+		output:     nil, // 独立日志不输出到控制台
 		file:       file,
 		filePath:   filePath,
 		maxSize:    int64(maxMB) * 1024 * 1024,
@@ -99,6 +104,16 @@ func (l *Logger) GetLevel() Level {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.level
+}
+
+// GetMaxSize 获取最大文件大小（MB）
+func (l *Logger) GetMaxSize() int {
+	return int(l.maxSize / (1024 * 1024))
+}
+
+// GetMaxBackups 获取最大备份数
+func (l *Logger) GetMaxBackups() int {
+	return l.maxBackups
 }
 
 // Close 关闭日志文件
@@ -248,10 +263,16 @@ func (l *Logger) GetLogFiles() []string {
 		return nil
 	}
 
+	logPrefixes := []string{"certflow.log", "ent.log", "gocron.log"}
 	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "certflow.log") {
-			files = append(files, entry.Name())
+		if !entry.IsDir() {
+			for _, prefix := range logPrefixes {
+				if strings.HasPrefix(entry.Name(), prefix) {
+					files = append(files, entry.Name())
+					break
+				}
+			}
 		}
 	}
 	sort.Strings(files)

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent"
@@ -17,6 +18,27 @@ import (
 	"github.com/google/uuid"
 )
 
+// gocronLogger 适配 gocron Logger 接口
+type gocronLogger struct {
+	logger *logging.Logger
+}
+
+func (l *gocronLogger) Debug(msg string, args ...any) {
+	l.logger.Debug(msg, args...)
+}
+
+func (l *gocronLogger) Info(msg string, args ...any) {
+	l.logger.Info(msg, args...)
+}
+
+func (l *gocronLogger) Warn(msg string, args ...any) {
+	l.logger.Warn(msg, args...)
+}
+
+func (l *gocronLogger) Error(msg string, args ...any) {
+	l.logger.Error(msg, args...)
+}
+
 // Scheduler 提供定时任务调度功能
 type Scheduler struct {
 	db              *ent.Client
@@ -25,6 +47,7 @@ type Scheduler struct {
 	settingsService *settings.Service
 	scheduler       gocron.Scheduler
 	certDir         string
+	dataDir         string
 }
 
 // NewScheduler 创建新的调度器
@@ -35,15 +58,42 @@ func NewScheduler(client *ent.Client, certService *certificate.CertificateServic
 		notifService:    notifService,
 		settingsService: settingsService,
 		certDir:         certDir,
+		dataDir:         certDir,
 	}
+}
+
+// getLogDir 获取日志目录
+func (s *Scheduler) getLogDir() string {
+	return filepath.Join(s.dataDir, "logs")
 }
 
 // Start 启动调度器
 func (s *Scheduler) Start(ctx context.Context) error {
+	// 创建 gocron 独立日志记录器（使用全局日志配置）
+	gocronLogDir := s.getLogDir()
+	var logger *logging.Logger
+	if logging.Global() != nil {
+		logger, _ = logging.NewLoggerWithFilename(gocronLogDir, "gocron.log",
+			logging.Global().GetLevel(),
+			logging.Global().GetMaxSize(),
+			logging.Global().GetMaxBackups())
+	}
+	if logger == nil {
+		logger = logging.Global()
+	}
+
+	// 创建 gocron 日志适配器
+	gocronLog := &gocronLogger{
+		logger: logger,
+	}
+
 	// 创建 gocron 调度器
-	scheduler, err := gocron.NewScheduler()
+	scheduler, err := gocron.NewScheduler(
+		gocron.WithLogger(gocronLog),
+		gocron.WithLocation(time.Local),
+	)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.create_scheduler_failed", "Error", err))
+		return fmt.Errorf("%s: %v", i18n.T("error.create_scheduler_failed"), err)
 	}
 	s.scheduler = scheduler
 

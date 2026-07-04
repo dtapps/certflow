@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"entgo.io/ent/dialect"
 	"modernc.org/sqlite"
 )
@@ -26,20 +28,50 @@ var Client *ent.Client
 func Init(dataDir string) error {
 	dbDir := filepath.Join(dataDir, "data")
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
-		return fmt.Errorf(i18n.T("error.create_db_dir_failed", "Error", err))
+		return fmt.Errorf("%s: %v", i18n.T("error.create_db_dir_failed"), err)
 	}
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout=5000", filepath.Join(dbDir, "certflow.db"))
 
-	client, err := ent.Open(dialect.SQLite, dsn)
+	// 创建 ent 日志记录器（使用全局日志配置）
+	logDir := filepath.Join(dataDir, "logs")
+	var entLogger *logging.Logger
+	if logging.Global() != nil {
+		entLogger, _ = logging.NewLoggerWithFilename(logDir, "ent.log",
+			logging.Global().GetLevel(),
+			logging.Global().GetMaxSize(),
+			logging.Global().GetMaxBackups())
+	}
+
+	// 配置 ent 客户端选项
+	opts := []ent.Option{}
+	if entLogger != nil {
+		opts = append(opts, ent.Log(func(args ...any) {
+			if len(args) > 0 {
+				sqlStr := fmt.Sprint(args...)
+				cleanSql := strings.ReplaceAll(sqlStr, "\"", "'")
+				entLogger.Info("%s", cleanSql)
+			}
+		}))
+	}
+
+	// 调试模式下开启 ent 日志
+	if logging.Global().GetLevel() == logging.DEBUG {
+		opts = append(
+			opts,
+			ent.Debug(),
+		)
+	}
+
+	client, err := ent.Open(dialect.SQLite, dsn, opts...)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.open_db_failed", "Error", err))
+		return fmt.Errorf("%s: %v", i18n.T("error.open_db_failed"), err)
 	}
 
 	// 运行自动迁移
 	ctx := context.Background()
 	if err := client.Schema.Create(ctx); err != nil {
 		client.Close()
-		return fmt.Errorf(i18n.T("error.create_schema_failed", "Error", err))
+		return fmt.Errorf("%s: %v", i18n.T("error.create_schema_failed"), err)
 	}
 
 	Client = client

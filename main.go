@@ -60,6 +60,15 @@ func main() {
 	}
 	i18n.SetLocale(settingsService.Get().Language)
 
+	// 初始化日志系统（必须在数据库和调度器之前）
+	settings := settingsService.Get()
+	logDir := filepath.Join(dataDir, "logs")
+	if err := logging.InitGlobalLogger(logDir, settings.Log.Level, settings.Log.MaxMB, settings.Log.MaxBackups); err != nil {
+		log.Fatalf(i18n.T("error.create_log_dir_failed")+": %v", err)
+	}
+	defer logging.Global().Close()
+	logging.Info(i18n.T("log.app_starting"))
+
 	// 初始化数据库
 	if err := db.Init(dataDir); err != nil {
 		log.Fatalf(i18n.T("error.open_db_failed")+": %v", err)
@@ -81,15 +90,6 @@ func main() {
 	if err != nil {
 		log.Fatalf(i18n.T("error.load_auth_failed")+": %v", err)
 	}
-
-	// 初始化日志系统
-	settings := settingsService.Get()
-	logDir := filepath.Join(dataDir, "logs")
-	if err := logging.InitGlobalLogger(logDir, settings.Log.Level, settings.Log.MaxMB, settings.Log.MaxBackups); err != nil {
-		log.Fatalf(i18n.T("error.create_log_dir_failed")+": %v", err)
-	}
-	defer logging.Global().Close()
-	logging.Info(i18n.T("log.app_starting"))
 
 	// 设置通知服务的数据库客户端
 	notifService.SetDB(db.Client)

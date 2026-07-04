@@ -48,6 +48,11 @@ const router = createRouter({
       name: 'personal-center',
       component: () => import('../views/PersonalCenter.vue'),
     },
+    {
+      path: '/log-viewer',
+      name: 'log-viewer',
+      component: () => import('../views/LogViewer.vue'),
+    },
   ],
 })
 

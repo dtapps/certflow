@@ -25,6 +25,13 @@ export function OpenHTMLWindow(opts: $models.HTMLWindowOptions): $CancellablePro
     return $Call.ByID(293867115, opts);
 }
 
+/**
+ * OpenWindow 打开独立窗口（不带导航）
+ */
+export function OpenWindow(opts: $models.HTMLWindowOptions): $CancellablePromise<void> {
+    return $Call.ByID(3566480882, opts);
+}
+
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(1240195805, app);
 }

@@ -63,6 +63,22 @@ body{background:%s;color:%s;font-family:%s;font-size:%dpx;line-height:1.6;paddin
 	return nil
 }
 
+// OpenWindow 打开独立窗口（不带导航）
+func (s *WindowServiceWrapper) OpenWindow(opts HTMLWindowOptions) error {
+	s.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:             opts.WindowName,
+		Title:            opts.Title,
+		Width:            opts.Width,
+		Height:           opts.Height,
+		MinWidth:         600,
+		MinHeight:        400,
+		URL:              "/log-viewer",
+		BackgroundType:   application.BackgroundTypeSolid,
+		BackgroundColour: application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255},
+	})
+	return nil
+}
+
 func (s *WindowServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil
 }
