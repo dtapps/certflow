@@ -187,6 +187,9 @@
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
+    /* 允许选中文字，Wails3 模板默认禁止选中 */
+    -webkit-user-select: text !important;
+    user-select: text !important;
   }
 
   #app {
