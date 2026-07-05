@@ -42,6 +42,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: 生成版本号
         id: version
         shell: bash
@@ -67,9 +72,6 @@ jobs:
           echo "内核版本: $(uname -r)"
           echo "Nightly 版本: ${{ steps.version.outputs.version }}"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
-
-      - name: 检出代码
-        uses: actions/checkout@v4
 
       - name: 安装系统依赖
         if: runner.os == 'Linux'
@@ -175,6 +177,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: 生成版本号
         id: version
         shell: bash
@@ -188,11 +195,6 @@ jobs:
           VERSION="${BASE_VERSION}-nightly.${DATE}"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: 检出代码
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: 下载所有产物
         uses: actions/download-artifact@v4
