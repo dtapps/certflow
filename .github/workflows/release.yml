@@ -134,12 +134,12 @@ jobs:
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task build VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task build PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
 
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task package VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task package PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
 
       - name: 重命名产物
         if: ${{ matrix.enabled }}
