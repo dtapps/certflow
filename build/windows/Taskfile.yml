@@ -4,6 +4,9 @@ includes:
   common: ../Taskfile.yml
 
 vars:
+  # Windows上date命令不可用，使用PowerShell获取时间
+  BUILD_TIME:
+    sh: powershell.exe -NoProfile -Command "Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'"
   # Signing configuration - edit these values for your project
   # SIGN_CERTIFICATE: "path/to/certificate.pfx"
   # SIGN_THUMBPRINT: "certificate-thumbprint"  # Alternative to SIGN_CERTIFICATE
