@@ -155,8 +155,7 @@ func main() {
 	// 配置自更新功能
 	gh, err := github.New(github.Config{
 		Repository: "dtapps/certflow",
-		// ChecksumAsset: "SHA256SUMS",
-		Token: githubToken,
+		Token:      githubToken,
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -164,7 +163,6 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
-			CheckInterval:  12 * time.Hour,
 		}); err != nil {
 			logging.Error(i18n.T("log.updater_init_failed"), err)
 		}
