@@ -87,7 +87,7 @@ function handleMenuUpdate(key: string) {
     </div>
 
     <!-- 导航 -->
-    <nav class="flex-1 py-4 overflow-y-auto">
+    <nav class="flex-1 pt-1 pb-4 overflow-y-auto">
       <n-menu
         :key="route.path"
         :collapsed="collapsed"
