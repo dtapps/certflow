@@ -32,19 +32,22 @@ make package VERSION=1.0.0
 ## Development Commands
 
 ```bash
-make help          # View all commands
-make lint          # Go code linting
-make lint-fix      # Go code linting (auto-fix)
-make check         # Frontend TypeScript type checking
-make test          # Go backend tests
-make bindings      # Generate Wails TypeScript bindings
-make ent           # Generate Ent ORM code
+make help              # View all commands
+make lint              # Go code linting
+make lint-fix          # Go code linting (auto-fix)
+make check             # Frontend TypeScript type checking
+make test              # Go backend tests
+make bindings          # Generate Wails TypeScript bindings
+make ent               # Generate Ent ORM code
+make format            # Format all code (Go + Vue/TS)
+make format-go         # Format Go code
+make format-frontend   # Format frontend code
 ```
 
 ## Tech Stack
 
 - **Backend**: Go 1.27 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite
-- **Frontend**: Vue 3 + TypeScript + Vite 8 + TailwindCSS v4 + DaisyUI v5
+- **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## Repositories
 

@@ -32,19 +32,22 @@ make package VERSION=1.0.0
 ## 开发命令
 
 ```bash
-make help          # 查看所有命令
-make lint          # Go 代码检查
-make lint-fix      # Go 代码检查（自动修复）
-make check         # 前端 TypeScript 类型检查
-make test          # Go 后端测试
-make bindings      # 生成 Wails TypeScript 绑定
-make ent           # 生成 Ent ORM 代码
+make help              # 查看所有命令
+make lint              # Go 代码检查
+make lint-fix          # Go 代码检查（自动修复）
+make check             # 前端 TypeScript 类型检查
+make test              # Go 后端测试
+make bindings          # 生成 Wails TypeScript 绑定
+make ent               # 生成 Ent ORM 代码
+make format            # 格式化所有代码（Go + Vue/TS）
+make format-go         # 格式化 Go 代码
+make format-frontend   # 格式化前端代码
 ```
 
 ## 技术栈
 
 - **后端**：Go 1.27 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite
-- **前端**：Vue 3 + TypeScript + Vite 8 + TailwindCSS v4 + DaisyUI v5
+- **前端**：Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## 仓库
 

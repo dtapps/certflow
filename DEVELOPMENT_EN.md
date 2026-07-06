@@ -31,7 +31,10 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 | TypeScript | Type-safe language |
 | Vite 8 | Build tool / dev server |
 | Tailwind CSS v4 | Utility-first CSS framework |
-| DaisyUI v5 | Tailwind component library |
+| Naive UI v2 | Vue 3 component library |
+| Pinia | State management |
+| @vicons/ionicons5 | Icon library |
+| @vueuse/core | Vue composition API utilities |
 | @wailsio/runtime | Wails frontend-backend communication runtime |
 
 ### Build & Deploy
@@ -41,6 +44,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 | Makefile | Development command wrapper |
 | Taskfile.yml | Cross-platform build system |
 | golangci-lint v2 | Go code linting |
+| Prettier | Frontend code formatting |
 | pnpm | Frontend package manager |
 | wails3 CLI | Wails build/dev/code generation |
 
@@ -51,6 +55,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 ```
 certflow/
 ├── main.go                    # Entry point
+├── system_service.go          # System service (theme/window management)
 ├── cert_service.go            # Certificate service (Wails wrapper)
 ├── ca_service.go              # CA management service
 ├── dns_service.go             # DNS provider service
@@ -92,14 +97,23 @@ certflow/
 │   │   │   ├── CAConfig.vue
 │   │   │   ├── DNSProviders.vue
 │   │   │   ├── Monitor.vue
-│   │   │   └── Settings.vue
+│   │   │   ├── Settings.vue
+│   │   │   ├── PersonalCenter.vue
+│   │   │   └── LogViewer.vue
 │   │   ├── components/        # Shared components
+│   │   │   ├── Sidebar.vue    # Sidebar navigation
+│   │   │   ├── TopBar.vue     # Top toolbar
+│   │   │   └── LoginDialog.vue # Login dialog
 │   │   ├── router/            # Route configuration
-│   │   ├── stores/            # State management (includes i18n)
+│   │   ├── stores/            # Pinia state management
+│   │   │   ├── i18n.ts        # Internationalization
+│   │   │   ├── theme.ts       # Theme management
+│   │   │   └── notifications.ts # Notification management
 │   │   ├── utils/             # Utility functions
 │   │   ├── style.css          # Global styles
 │   │   └── main.ts            # Entry point
 │   ├── package.json
+│   ├── .prettierrc            # Prettier config
 │   └── vite.config.ts
 ├── build/                     # Build configuration
 │   ├── config.yml             # Wails app config
@@ -122,19 +136,22 @@ certflow/
 ## Development Commands
 
 ```bash
-make help          # View all commands
-make deps          # Install all dependencies (Go + frontend)
-make dev           # Start Wails development mode
-make build         # Build production package (make build VERSION=1.0.0)
-make package       # Package macOS app (make package VERSION=1.0.0)
-make go-build      # Quick compile (Go backend only)
-make lint          # Go code linting (golangci-lint)
-make lint-fix      # Go code linting (auto-fix)
-make check         # Frontend TypeScript type checking
-make test          # Go backend tests
-make bindings      # Generate Wails TypeScript bindings
-make ent           # Generate Ent ORM code
-make clean         # Clean build artifacts
+make help              # View all commands
+make deps              # Install all dependencies (Go + frontend)
+make dev               # Start Wails development mode
+make build             # Build production package (make build VERSION=1.0.0)
+make package           # Package macOS app (make package VERSION=1.0.0)
+make go-build          # Quick compile (Go backend only)
+make lint              # Go code linting (golangci-lint)
+make lint-fix          # Go code linting (auto-fix)
+make check             # Frontend TypeScript type checking
+make test              # Go backend tests
+make bindings          # Generate Wails TypeScript bindings
+make ent               # Generate Ent ORM code
+make format            # Format all code (Go + Vue/TS)
+make format-go         # Format Go code
+make format-frontend   # Format frontend code (Prettier)
+make clean             # Clean build artifacts
 ```
 
 ---
@@ -189,17 +206,29 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 ## Internationalization
 
 - **Backend**: `internal/i18n/` uses go-i18n, locale files embedded in binary (`//go:embed`)
-- **Frontend**: `frontend/src/stores/i18n.ts` with built-in Chinese and English
+- **Frontend**: `frontend/src/stores/i18n.ts` with built-in Chinese and English (Pinia store)
 
 All user-visible text must use `i18n.T()` (Go) or `t()` (Vue).
+
+---
+
+## Code Formatting
+
+```bash
+make format            # Format all code
+make format-go         # Format Go code (gofmt)
+make format-frontend   # Format frontend code (Prettier)
+```
+
+Frontend code uses Prettier for formatting, config at `frontend/.prettierrc`.
 
 ---
 
 ## Code Linting
 
 ```bash
-make lint          # Run golangci-lint
-make lint-fix      # Auto-fix
+make lint              # Run golangci-lint
+make lint-fix          # Auto-fix
 ```
 
 Enabled linters: errcheck, govet, staticcheck, ineffassign, misspell, unconvert, nilerr, errorlint, bodyclose, contextcheck, noctx, gosec.
@@ -209,7 +238,7 @@ Enabled linters: errcheck, govet, staticcheck, ineffassign, misspell, unconvert,
 ## Testing
 
 ```bash
-make test          # Run all tests
+make test              # Run all tests
 ```
 
 12 packages with test coverage: auth, ca, certificate, db, dnsprovider, i18n, logging, monitor, network, notification, scheduler, settings.
@@ -222,3 +251,5 @@ make test          # Run all tests
 2. **Binding generation**: After modifying Go services, run `make bindings` to regenerate frontend bindings
 3. **`wails3 build` does not support `-ldflags`**: Version is injected via Taskfile BUILD_FLAGS
 4. **Linux cross-compilation**: Cannot cross-compile Linux from macOS (requires CGO + webkit2gtk), use GitHub Actions instead
+5. **Naive UI is auto-imported**: Use `<n-xxx>` components directly in templates, no global registration needed
+6. **Pinia state management**: Use `useXxxStore()` to get store, `storeToRefs()` for reactive properties
