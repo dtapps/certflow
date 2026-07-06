@@ -48,8 +48,8 @@ const toggleLevel = (level: string) => {
 
 // 过滤后的日志行
 const filteredLines = computed(() => {
-  const lines = logContent.value.split('\n').filter(line => line.trim())
-  return lines.filter(line => {
+  const lines = logContent.value.split('\n').filter((line) => line.trim())
+  return lines.filter((line) => {
     for (const level of selectedLevels.value) {
       if (line.includes(`[${level}]`)) return true
     }
@@ -141,7 +141,7 @@ const logTailOptions = [
   { label: t('settings.log.all'), value: 0 },
 ]
 
-const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value: f })))
+const logFileOptions = computed(() => logFiles.value.map((f) => ({ label: f, value: f })))
 </script>
 
 <template>
@@ -183,7 +183,13 @@ const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value
         </template>
       </n-button>
 
-      <n-button quaternary circle size="small" @click="openLogDir" :title="t('settings.log.openDir')">
+      <n-button
+        quaternary
+        circle
+        size="small"
+        @click="openLogDir"
+        :title="t('settings.log.openDir')"
+      >
         <template #icon>
           <n-icon :size="16"><FolderOpenOutline /></n-icon>
         </template>
@@ -193,7 +199,10 @@ const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value
     <!-- 日志内容 -->
     <div class="flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed">
       <n-spin :show="loading">
-        <div v-if="!loading && filteredLines.length === 0" class="flex items-center justify-center h-32 opacity-50">
+        <div
+          v-if="!loading && filteredLines.length === 0"
+          class="flex items-center justify-center h-32 opacity-50"
+        >
           {{ t('settings.log.noContent') }}
         </div>
         <div v-else class="space-y-0.5">
@@ -201,7 +210,7 @@ const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value
             v-for="(line, index) in filteredLines"
             :key="index"
             class="px-2 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5"
-            style="white-space: pre-wrap; word-break: break-all;"
+            style="white-space: pre-wrap; word-break: break-all"
             v-html="highlightLine(line)"
           ></div>
         </div>
@@ -209,7 +218,10 @@ const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value
     </div>
 
     <!-- 状态栏 -->
-    <div class="flex items-center justify-between px-4 py-2 border-t text-xs opacity-50" :style="statusStyle">
+    <div
+      class="flex items-center justify-between px-4 py-2 border-t text-xs opacity-50"
+      :style="statusStyle"
+    >
       <span>{{ filteredLines.length }} {{ t('common.unit') }}</span>
       <span>{{ selectedLogFile }}</span>
     </div>

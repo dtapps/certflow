@@ -84,7 +84,9 @@ watch(theme, async (val) => {
       settings.theme = val
       await SettingsService.SaveSettings(settings)
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 })
 
 watch(currentLocale, async (val) => {
@@ -94,7 +96,9 @@ watch(currentLocale, async (val) => {
       settings.language = val
       await SettingsService.SaveSettings(settings)
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 })
 
 const goToPersonalCenter = () => {
@@ -120,7 +124,9 @@ const doSearch = async () => {
         }
       }
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 
   try {
     const cas = await CAService.ListCA()
@@ -131,7 +137,9 @@ const doSearch = async () => {
         }
       }
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 
   searchResults.value = results
   showResults.value = true
@@ -170,12 +178,18 @@ const getCategoryColor = (category: string) => {
 
 const getCategoryLabel = (category: string) => {
   switch (category) {
-    case 'cert_applied': return t('notification.cert_applied')
-    case 'cert_renewed': return t('notification.cert_renewed')
-    case 'cert_failed': return t('notification.cert_failed')
-    case 'cert_revoked': return t('notification.cert_revoked')
-    case 'cert_expiring': return t('notification.cert_expiring')
-    default: return category
+    case 'cert_applied':
+      return t('notification.cert_applied')
+    case 'cert_renewed':
+      return t('notification.cert_renewed')
+    case 'cert_failed':
+      return t('notification.cert_failed')
+    case 'cert_revoked':
+      return t('notification.cert_revoked')
+    case 'cert_expiring':
+      return t('notification.cert_expiring')
+    default:
+      return category
   }
 }
 
@@ -213,13 +227,7 @@ function handleLocaleSelect(key: string) {
   <header class="topbar" :style="topbarStyle">
     <!-- Left: Toggle + Search -->
     <div class="flex items-center gap-4">
-      <n-button
-        quaternary
-        circle
-        size="small"
-        class="no-drag"
-        @click="$emit('toggleSidebar')"
-      >
+      <n-button quaternary circle size="small" class="no-drag" @click="$emit('toggleSidebar')">
         <template #icon>
           <n-icon :size="20"><component :is="sidebarIcon" /></n-icon>
         </template>
@@ -253,10 +261,18 @@ function handleLocaleSelect(key: string) {
                 @click="goToResult(item)"
               >
                 <div class="flex items-center gap-2">
-                  <n-tag :type="item.type === 'cert' ? 'info' : 'success'" size="small" :bordered="false">
+                  <n-tag
+                    :type="item.type === 'cert' ? 'info' : 'success'"
+                    size="small"
+                    :bordered="false"
+                  >
                     {{ item.type === 'cert' ? 'SSL' : 'CA' }}
                   </n-tag>
-                  <span class="text-sm truncate" :style="{ color: isDark ? '#e5e5e5' : '#1a1a2e' }">{{ item.name }}</span>
+                  <span
+                    class="text-sm truncate"
+                    :style="{ color: isDark ? '#e5e5e5' : '#1a1a2e' }"
+                    >{{ item.name }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -270,7 +286,13 @@ function handleLocaleSelect(key: string) {
     <div class="flex items-center gap-2">
       <!-- 主题切换 -->
       <n-dropdown :options="themeOptions" @select="handleThemeSelect" trigger="click">
-        <n-button quaternary circle size="small" class="no-drag" :title="t('settings.preferences.theme')">
+        <n-button
+          quaternary
+          circle
+          size="small"
+          class="no-drag"
+          :title="t('settings.preferences.theme')"
+        >
           <template #icon>
             <n-icon :size="18"><component :is="themeIcon" /></n-icon>
           </template>
@@ -279,7 +301,13 @@ function handleLocaleSelect(key: string) {
 
       <!-- 语言切换 -->
       <n-dropdown :options="localeOptions" @select="handleLocaleSelect" trigger="click">
-        <n-button quaternary circle size="small" class="no-drag" :title="t('settings.preferences.language')">
+        <n-button
+          quaternary
+          circle
+          size="small"
+          class="no-drag"
+          :title="t('settings.preferences.language')"
+        >
           <template #icon>
             <n-icon :size="18"><LanguageOutline /></n-icon>
           </template>
@@ -319,7 +347,10 @@ function handleLocaleSelect(key: string) {
         </template>
 
         <div class="max-h-80 overflow-y-auto">
-          <div v-if="notifications.length === 0" class="flex flex-col items-center justify-center py-10 opacity-50">
+          <div
+            v-if="notifications.length === 0"
+            class="flex flex-col items-center justify-center py-10 opacity-50"
+          >
             <n-icon :size="40" class="mb-2 opacity-40"><NotificationsOutline /></n-icon>
             <p class="text-sm">{{ t('topbar.noNotifications') }}</p>
           </div>
@@ -337,14 +368,22 @@ function handleLocaleSelect(key: string) {
                   <n-tag :type="getCategoryColor(item.category)" size="tiny" :bordered="false">
                     {{ getCategoryLabel(item.category) }}
                   </n-tag>
-                  <p class="text-xs font-medium truncate flex-1" :style="{ color: isDark ? '#e5e5e5' : '#1a1a2e' }">{{ item.title }}</p>
+                  <p
+                    class="text-xs font-medium truncate flex-1"
+                    :style="{ color: isDark ? '#e5e5e5' : '#1a1a2e' }"
+                  >
+                    {{ item.title }}
+                  </p>
                 </div>
                 <p class="text-xs opacity-60 line-clamp-2 mb-1">{{ item.body }}</p>
                 <p class="text-xs opacity-40">{{ formatRelativeTime(item.created_at) }}</p>
               </div>
               <n-button text size="tiny" @click.stop="remove(item.id)" :title="t('topbar.delete')">
                 <template #icon>
-                  <n-icon :size="14"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12" /></svg></n-icon>
+                  <n-icon :size="14"
+                    ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 18L18 6M6 6l12 12" /></svg
+                  ></n-icon>
                 </template>
               </n-button>
             </div>

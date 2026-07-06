@@ -215,7 +215,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.manualVerify': '手动添加 DNS TXT 记录',
     'apply.autoVerify': '自动 DNS 验证',
     'apply.manualMode': '手动 DNS 模式',
-    'apply.manualModeDesc': '申请过程中，系统会显示需要添加的 TXT 记录，您需要手动在 DNS 管理面板中添加该记录。',
+    'apply.manualModeDesc':
+      '申请过程中，系统会显示需要添加的 TXT 记录，您需要手动在 DNS 管理面板中添加该记录。',
     'apply.confirmConfig': '确认以下配置:',
     'apply.mainDomainLabel': '主域名',
     'apply.sansLabel': '备用域名',
@@ -229,7 +230,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.keyTypeRsa8192': '最高 RSA 安全性',
     'apply.keyTypeEc256': '更快速度，更短证书',
     'apply.keyTypeEc384': '最高安全性椭圆曲线',
-    'apply.keyTypeHint': 'ECDSA 性能更优且证书更短，RSA 兼容性最好。大多数平台推荐 EC256 或 RSA2048。',
+    'apply.keyTypeHint':
+      'ECDSA 性能更优且证书更短，RSA 兼容性最好。大多数平台推荐 EC256 或 RSA2048。',
     'apply.autoRenew': '自动续期',
     'apply.autoRenewDesc': '证书到期前自动申请新证书',
     'apply.renewalDays': '到期前续期天数',
@@ -527,7 +529,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'settings.notification.interval': 'Check Interval',
     'settings.notification.interval.desc': 'How often to check certificate expiry (hours)',
     'settings.notification.test': 'Send Test Notification',
-    'settings.notification.permissionDenied': 'Notification permission denied, please enable in system settings',
+    'settings.notification.permissionDenied':
+      'Notification permission denied, please enable in system settings',
     'settings.maintenance.title': 'Maintenance',
     'settings.maintenance.renewal': 'Renewal Check Now',
     'settings.maintenance.renewal.desc': 'Manually trigger auto renewal task',
@@ -563,7 +566,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'settings.autostart.enabled.desc': 'Automatically start CertFlow when you log in',
     'settings.network.title': 'Network Settings',
     'settings.network.customDNS': 'Custom DNS Resolution',
-    'settings.network.customDNSDesc': 'Use specified DNS servers for domain resolution instead of system default',
+    'settings.network.customDNSDesc':
+      'Use specified DNS servers for domain resolution instead of system default',
     'settings.network.dnsPlaceholder': 'Enter DNS servers, comma-separated, e.g. 8.8.8.8, 8.8.4.4',
     'settings.network.delete': 'Delete',
     'settings.network.addCustomDNS': '+ Add Custom DNS Group',
@@ -682,7 +686,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'personal.securityNote': 'Security Notes',
     'personal.bcryptNote': 'Password is hashed with bcrypt, never stored in plain text',
     'personal.verifyNote': 'Password required each time you open the app',
-    'personal.storageNote': 'Hash stored locally in ~/.certflow/auth.json, never uploaded to any server',
+    'personal.storageNote':
+      'Hash stored locally in ~/.certflow/auth.json, never uploaded to any server',
     'personal.minLength': 'Password must be at least 6 characters',
     'personal.mismatch': 'Passwords do not match',
     'personal.newMinLength': 'New password must be at least 6 characters',
@@ -697,10 +702,12 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.resumeTitle': 'Continue Certificate Application',
     'apply.resumeSubtitle': 'Continue previous incomplete manual DNS verification',
     'apply.resumeMode': 'Resume Mode',
-    'apply.resumeDesc': 'Continuing previous incomplete manual DNS verification. Please confirm DNS TXT record is added before clicking verify.',
+    'apply.resumeDesc':
+      'Continuing previous incomplete manual DNS verification. Please confirm DNS TXT record is added before clicking verify.',
     'apply.mainDomain': 'Main Domain *',
     'apply.mainDomainPlaceholder': 'e.g. example.com or *.example.com',
-    'apply.mainDomainHint': 'Enter the main domain for the certificate, wildcard *.example.com supported',
+    'apply.mainDomainHint':
+      'Enter the main domain for the certificate, wildcard *.example.com supported',
     'apply.sans': 'Alternative Domains (SANs)',
     'apply.sansPlaceholder': 'e.g. www.example.com, api.example.com',
     'apply.sansHint': 'Multiple domains separated by commas (optional)',
@@ -715,7 +722,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.manualVerify': 'Add DNS TXT record manually',
     'apply.autoVerify': 'Automatic DNS verification',
     'apply.manualMode': 'Manual DNS Mode',
-    'apply.manualModeDesc': 'During application, the system will display the TXT record to add. You need to manually add it in your DNS management panel.',
+    'apply.manualModeDesc':
+      'During application, the system will display the TXT record to add. You need to manually add it in your DNS management panel.',
     'apply.confirmConfig': 'Confirm the following configuration:',
     'apply.mainDomainLabel': 'Main Domain',
     'apply.sansLabel': 'Alternative Domains',
@@ -729,7 +737,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.keyTypeRsa8192': 'Maximum RSA security',
     'apply.keyTypeEc256': 'Faster, shorter certificates',
     'apply.keyTypeEc384': 'Highest security elliptic curve',
-    'apply.keyTypeHint': 'ECDSA offers better performance and shorter certificates, RSA has the best compatibility. EC256 or RSA2048 recommended for most platforms.',
+    'apply.keyTypeHint':
+      'ECDSA offers better performance and shorter certificates, RSA has the best compatibility. EC256 or RSA2048 recommended for most platforms.',
     'apply.autoRenew': 'Auto Renewal',
     'apply.autoRenewDesc': 'Automatically apply for new certificate before expiry',
     'apply.renewalDays': 'Days before expiry to renew',
@@ -753,7 +762,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'apply.startManualFailed': 'Failed to start manual DNS verification',
     'apply.applySuccess': 'Certificate applied successfully!',
     'apply.applyFailed': 'Certificate application failed',
-    'apply.dnsVerifyFailed': 'DNS verification failed. Please confirm TXT record is added and retry later',
+    'apply.dnsVerifyFailed':
+      'DNS verification failed. Please confirm TXT record is added and retry later',
     'apply.dnsVerifyError': 'DNS verification failed',
     'apply.loadFailed': 'Failed to load data:',
     'cert.detail': 'Certificate Details',
@@ -952,7 +962,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'certs.retryApply': 'Retry',
     'certs.renew': 'Renew',
     'certs.delete': 'Delete',
-    'certs.deleteConfirm': 'Are you sure you want to delete this certificate? This action cannot be undone.',
+    'certs.deleteConfirm':
+      'Are you sure you want to delete this certificate? This action cannot be undone.',
     'certs.deleteFailed': 'Failed to delete certificate',
     'certs.loadFailed': 'Failed to load certificate list:',
     'login.enterPassword': 'Please enter password',
@@ -1026,9 +1037,7 @@ function applyLocale(locale: Locale) {
 
 export const useI18nStore = defineStore('i18n', () => {
   // 状态
-  const locale = ref<Locale>(
-    (localStorage.getItem('certflow-locale') as Locale) || 'auto'
-  )
+  const locale = ref<Locale>((localStorage.getItem('certflow-locale') as Locale) || 'auto')
 
   const LOCALE_KEY = 'certflow-locale'
 

@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NCard, NInput, NSelect, NButton, NSteps, NStep, NSwitch, NSpin, NTag, NAlert } from 'naive-ui'
+import {
+  NCard,
+  NInput,
+  NSelect,
+  NButton,
+  NSteps,
+  NStep,
+  NSwitch,
+  NSpin,
+  NTag,
+  NAlert,
+} from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
@@ -42,18 +53,23 @@ const manualDNSChallenge = ref<{ records: { name: string; value: string }[] } | 
 const isVerifying = ref(false)
 const verifyFailed = ref(false)
 
-const casOptions = computed(() => cas.value.map(c => ({
-  label: c.name,
-  value: c.id,
-  disabled: c.account_email === '',
-})))
+const casOptions = computed(() =>
+  cas.value.map((c) => ({
+    label: c.name,
+    value: c.id,
+    disabled: c.account_email === '',
+  })),
+)
 
 const dnsOptions = computed(() => {
   const manual = { label: t('apply.manualDNS'), value: 0 }
-  return [manual, ...dnsProviders.value.map(p => ({
-    label: p.name,
-    value: p.id,
-  }))]
+  return [
+    manual,
+    ...dnsProviders.value.map((p) => ({
+      label: p.name,
+      value: p.id,
+    })),
+  ]
 })
 
 const keyTypeOptions = [
@@ -104,7 +120,10 @@ onMounted(async () => {
 
 const parsedSans = computed(() => {
   if (!formData.value.sans) return []
-  return formData.value.sans.split(',').map(s => s.trim()).filter(s => s)
+  return formData.value.sans
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s)
 })
 
 // 检测是否为通配符域名
@@ -127,7 +146,12 @@ const allDomains = computed(() => {
   const sans = parsedSans.value
   const result = [main]
   // 通配符证书不包含根域名，自动添加
-  if (isWildcard.value && rootDomain.value && !sans.includes(rootDomain.value) && rootDomain.value !== main) {
+  if (
+    isWildcard.value &&
+    rootDomain.value &&
+    !sans.includes(rootDomain.value) &&
+    rootDomain.value !== main
+  ) {
     result.push(rootDomain.value)
   }
   for (const san of sans) {
@@ -149,11 +173,16 @@ const effectiveSans = computed(() => {
 
 const canNext = computed(() => {
   switch (currentStep.value) {
-    case 1: return formData.value.domain.trim() !== ''
-    case 2: return formData.value.caId > 0
-    case 3: return formData.value.dnsProviderId >= 0
-    case 4: return true
-    default: return false
+    case 1:
+      return formData.value.domain.trim() !== ''
+    case 2:
+      return formData.value.caId > 0
+    case 3:
+      return formData.value.dnsProviderId >= 0
+    case 4:
+      return true
+    default:
+      return false
   }
 })
 
@@ -172,7 +201,8 @@ const submitApply = async () => {
   verifyFailed.value = false
   try {
     const sans = effectiveSans.value.length > 0 ? effectiveSans.value : []
-    const dnsProviderId = formData.value.dnsProviderId > 0 ? formData.value.dnsProviderId : undefined
+    const dnsProviderId =
+      formData.value.dnsProviderId > 0 ? formData.value.dnsProviderId : undefined
 
     if (formData.value.dnsProviderId === 0) {
       // 手动 DNS 模式
@@ -214,7 +244,9 @@ const submitApply = async () => {
       if (result) {
         applyResult.value = {
           success: result.success,
-          message: result.success ? t('apply.applySuccess') : (result.error || t('apply.applyFailed')),
+          message: result.success
+            ? t('apply.applySuccess')
+            : result.error || t('apply.applyFailed'),
         }
         if (result.success) {
           setTimeout(() => router.push('/certificates'), 2000)
@@ -273,7 +305,13 @@ const verifyDNS = async () => {
 }
 
 const getStepTitle = (step: number) => {
-  const titles = ['', t('apply.inputDomain'), t('apply.selectCAStep'), t('apply.selectDNSStep'), t('apply.confirmConfig')]
+  const titles = [
+    '',
+    t('apply.inputDomain'),
+    t('apply.selectCAStep'),
+    t('apply.selectDNSStep'),
+    t('apply.confirmConfig'),
+  ]
   return titles[step] || ''
 }
 </script>
@@ -281,8 +319,12 @@ const getStepTitle = (step: number) => {
 <template>
   <div class="w-full space-y-6">
     <div class="text-center">
-      <h1 class="text-2xl font-bold">{{ isResumeMode ? t('apply.resumeTitle') : t('apply.title') }}</h1>
-      <p class="text-sm mt-1 opacity-60">{{ isResumeMode ? t('apply.resumeSubtitle') : t('apply.subtitle') }}</p>
+      <h1 class="text-2xl font-bold">
+        {{ isResumeMode ? t('apply.resumeTitle') : t('apply.title') }}
+      </h1>
+      <p class="text-sm mt-1 opacity-60">
+        {{ isResumeMode ? t('apply.resumeSubtitle') : t('apply.subtitle') }}
+      </p>
     </div>
 
     <!-- 继续申请提示 -->
@@ -306,7 +348,10 @@ const getStepTitle = (step: number) => {
       <div v-if="currentStep === 1" class="space-y-6">
         <div>
           <label class="block text-sm font-medium mb-2">{{ t('apply.mainDomain') }}</label>
-          <n-input v-model:value="formData.domain" :placeholder="t('apply.mainDomainPlaceholder')" />
+          <n-input
+            v-model:value="formData.domain"
+            :placeholder="t('apply.mainDomainPlaceholder')"
+          />
           <p class="text-xs mt-2 opacity-50">{{ t('apply.mainDomainHint') }}</p>
         </div>
         <div>
@@ -314,7 +359,11 @@ const getStepTitle = (step: number) => {
           <n-input v-model:value="formData.sans" :placeholder="t('apply.sansPlaceholder')" />
           <p class="text-xs mt-2 opacity-50">{{ t('apply.sansHint') }}</p>
         </div>
-        <n-alert v-if="isWildcard" type="info" :title="t('apply.wildcardHint').replace('{domain}', formData.domain)">
+        <n-alert
+          v-if="isWildcard"
+          type="info"
+          :title="t('apply.wildcardHint').replace('{domain}', formData.domain)"
+        >
           {{ t('apply.rootDomainHint').replace('{domain}', rootDomain) }}
         </n-alert>
         <div v-if="allDomains.length > 0" class="space-y-2">
@@ -322,7 +371,11 @@ const getStepTitle = (step: number) => {
           <div class="flex flex-wrap gap-2">
             <n-tag type="info" size="small">{{ formData.domain }}</n-tag>
             <n-tag v-for="san in parsedSans" :key="san" size="small">{{ san }}</n-tag>
-            <n-tag v-if="isWildcard && rootDomain && !parsedSans.includes(rootDomain)" type="success" size="small">
+            <n-tag
+              v-if="isWildcard && rootDomain && !parsedSans.includes(rootDomain)"
+              type="success"
+              size="small"
+            >
               {{ rootDomain }} {{ t('apply.autoAdded') }}
             </n-tag>
           </div>
@@ -337,24 +390,45 @@ const getStepTitle = (step: number) => {
       <!-- 步骤 2: 选择 CA -->
       <div v-if="currentStep === 2" class="space-y-4">
         <label class="block text-sm font-medium mb-4">{{ t('apply.selectCA') }}</label>
-        <div v-for="caItem in cas" :key="caItem.id"
+        <div
+          v-for="caItem in cas"
+          :key="caItem.id"
           class="p-4 rounded-xl border-2 transition-all duration-200"
           :class="[
             caItem.account_email === '' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer',
-            formData.caId === caItem.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+            formData.caId === caItem.id
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+              : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600',
           ]"
           @click="caItem.account_email !== '' && (formData.caId = caItem.id)"
         >
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
-              <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <div
+              class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-purple-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
               </svg>
             </div>
             <div class="flex-1">
               <div class="flex items-center gap-2">
                 <p class="font-medium">{{ caItem.name }}</p>
-                <n-tag v-if="caItem.account_email === ''" type="warning" size="small" :bordered="false">
+                <n-tag
+                  v-if="caItem.account_email === ''"
+                  type="warning"
+                  size="small"
+                  :bordered="false"
+                >
                   {{ t('apply.unconfigured') }}
                 </n-tag>
               </div>
@@ -367,20 +441,40 @@ const getStepTitle = (step: number) => {
       <!-- 步骤 3: 选择 DNS 提供商 -->
       <div v-if="currentStep === 3" class="space-y-4">
         <label class="block text-sm font-medium mb-4">{{ t('apply.selectDNS') }}</label>
-        <div v-for="dns in dnsOptions" :key="dns.value"
+        <div
+          v-for="dns in dnsOptions"
+          :key="dns.value"
           class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-          :class="formData.dnsProviderId === dns.value ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'"
+          :class="
+            formData.dnsProviderId === dns.value
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+              : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+          "
           @click="formData.dnsProviderId = dns.value"
         >
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+            <div
+              class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
+                />
               </svg>
             </div>
             <div>
               <p class="font-medium">{{ dns.label }}</p>
-              <p class="text-xs opacity-50">{{ dns.value === 0 ? t('apply.manualVerify') : t('apply.autoVerify') }}</p>
+              <p class="text-xs opacity-50">
+                {{ dns.value === 0 ? t('apply.manualVerify') : t('apply.autoVerify') }}
+              </p>
             </div>
           </div>
         </div>
@@ -394,29 +488,43 @@ const getStepTitle = (step: number) => {
         <div class="space-y-4">
           <h3 class="font-medium">{{ t('apply.confirmConfig') }}</h3>
           <div class="space-y-3">
-            <div class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div
+              class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+            >
               <span class="opacity-60">{{ t('apply.mainDomainLabel') }}</span>
               <span class="font-medium">{{ formData.domain }}</span>
             </div>
-            <div v-if="parsedSans.length > 0" class="py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div
+              v-if="parsedSans.length > 0"
+              class="py-3 border-b border-neutral-200 dark:border-neutral-700"
+            >
               <div class="flex justify-between mb-2">
                 <span class="opacity-60">{{ t('apply.sansLabel') }}</span>
                 <span class="text-sm">{{ parsedSans.join(', ') }}</span>
               </div>
-              <div v-if="isWildcard && rootDomain && !parsedSans.includes(rootDomain)" class="flex justify-between">
+              <div
+                v-if="isWildcard && rootDomain && !parsedSans.includes(rootDomain)"
+                class="flex justify-between"
+              >
                 <span class="opacity-60">{{ t('apply.rootDomainLabel') }}</span>
                 <n-tag type="success" size="small">{{ rootDomain }}</n-tag>
               </div>
             </div>
-            <div class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div
+              class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+            >
               <span class="opacity-60">{{ t('apply.caLabel') }}</span>
-              <span>{{ cas.find(c => c.id === formData.caId)?.name }}</span>
+              <span>{{ cas.find((c) => c.id === formData.caId)?.name }}</span>
             </div>
-            <div class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div
+              class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+            >
               <span class="opacity-60">{{ t('apply.dnsLabel') }}</span>
-              <span>{{ dnsOptions.find(d => d.value === formData.dnsProviderId)?.label }}</span>
+              <span>{{ dnsOptions.find((d) => d.value === formData.dnsProviderId)?.label }}</span>
             </div>
-            <div class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div
+              class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+            >
               <span class="opacity-60">{{ t('apply.keyType') }}</span>
               <span class="font-mono text-sm">{{ formData.keyType }}</span>
             </div>
@@ -433,14 +541,23 @@ const getStepTitle = (step: number) => {
           </div>
           <div v-if="formData.autoRenew">
             <label class="block text-sm font-medium mb-2">{{ t('apply.renewalDays') }}</label>
-            <n-input-number v-model:value="formData.renewalDays" :min="1" :max="90" style="width: 128px" />
+            <n-input-number
+              v-model:value="formData.renewalDays"
+              :min="1"
+              :max="90"
+              style="width: 128px"
+            />
           </div>
         </div>
 
         <!-- 手动 DNS TXT 记录信息 -->
         <n-alert v-if="manualDNSChallenge" type="info" :title="t('apply.addTXT')">
           <div class="space-y-3">
-            <div v-for="(record, index) in manualDNSChallenge.records" :key="index" class="space-y-2">
+            <div
+              v-for="(record, index) in manualDNSChallenge.records"
+              :key="index"
+              class="space-y-2"
+            >
               <div class="flex items-center gap-2">
                 <span class="text-xs opacity-50">{{ t('apply.record') }} {{ index + 1 }}</span>
               </div>
@@ -451,7 +568,12 @@ const getStepTitle = (step: number) => {
                     <n-button text size="tiny" @click="copyToClipboard(record.name)">
                       <template #icon>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
                         </svg>
                       </template>
                     </n-button>
@@ -465,7 +587,12 @@ const getStepTitle = (step: number) => {
                     <n-button text size="tiny" @click="copyToClipboard(record.value)">
                       <template #icon>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
                         </svg>
                       </template>
                     </n-button>
@@ -476,30 +603,48 @@ const getStepTitle = (step: number) => {
                 <n-button text size="small" @click="verifyDNSOnline(record)">
                   <template #icon>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                   </template>
                   {{ t('apply.verifyOnline') }}
                 </n-button>
               </div>
-              <div v-if="index < manualDNSChallenge.records.length - 1" class="border-b border-blue-200 dark:border-blue-800 my-2"></div>
+              <div
+                v-if="index < manualDNSChallenge.records.length - 1"
+                class="border-b border-blue-200 dark:border-blue-800 my-2"
+              ></div>
             </div>
           </div>
           <p class="text-xs mt-2 opacity-50">{{ t('apply.verifyHint') }}</p>
         </n-alert>
 
         <!-- 申请结果 -->
-        <n-alert v-if="applyResult && !manualDNSChallenge" :type="applyResult.success ? 'success' : 'error'">
+        <n-alert
+          v-if="applyResult && !manualDNSChallenge"
+          :type="applyResult.success ? 'success' : 'error'"
+        >
           {{ applyResult.message }}
         </n-alert>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="flex justify-between mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+      <div
+        class="flex justify-between mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700"
+      >
         <n-button v-if="currentStep > 1" @click="prevStep" :disabled="isSubmitting || isVerifying">
           <template #icon>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </template>
           {{ t('apply.prevStep') }}
@@ -515,7 +660,12 @@ const getStepTitle = (step: number) => {
           {{ t('apply.nextStep') }}
           <template #icon>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </template>
         </n-button>
@@ -526,7 +676,13 @@ const getStepTitle = (step: number) => {
           :disabled="isVerifying || verifyFailed"
           :loading="isVerifying"
         >
-          {{ isVerifying ? t('apply.verifying') : (verifyFailed ? t('apply.verifyFailedHint') : t('apply.verifyAndGet')) }}
+          {{
+            isVerifying
+              ? t('apply.verifying')
+              : verifyFailed
+                ? t('apply.verifyFailedHint')
+                : t('apply.verifyAndGet')
+          }}
         </n-button>
         <n-button
           v-else

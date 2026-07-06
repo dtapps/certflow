@@ -31,8 +31,10 @@ export const useThemeStore = defineStore('theme', () => {
     return theme.value === 'dark'
   })
 
-  const naiveTheme = computed(() => isDark.value ? darkTheme : lightTheme)
-  const naiveThemeOverrides = computed(() => isDark.value ? baseThemeOverrides : baseThemeOverrides)
+  const naiveTheme = computed(() => (isDark.value ? darkTheme : lightTheme))
+  const naiveThemeOverrides = computed(() =>
+    isDark.value ? baseThemeOverrides : baseThemeOverrides,
+  )
 
   // 同步窗口标题栏背景色
   async function syncWindowAppearance(dark: boolean) {

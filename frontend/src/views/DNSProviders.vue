@@ -1,6 +1,19 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { NCard, NButton, NInput, NSelect, NSwitch, NSpin, NModal, NForm, NFormItem, NEmpty, NTag, NInputNumber } from 'naive-ui'
+import {
+  NCard,
+  NButton,
+  NInput,
+  NSelect,
+  NSwitch,
+  NSpin,
+  NModal,
+  NForm,
+  NFormItem,
+  NEmpty,
+  NTag,
+  NInputNumber,
+} from 'naive-ui'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
 import type { DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
@@ -13,13 +26,30 @@ const isLoading = ref(false)
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
 
-const formData = ref<{ name: string; provider_type: string; config: Record<string, string>; is_default: boolean; is_active: boolean; comment: string }>({ name: '', provider_type: 'cloudflare', config: {}, is_default: false, is_active: true, comment: '' })
+const formData = ref<{
+  name: string
+  provider_type: string
+  config: Record<string, string>
+  is_default: boolean
+  is_active: boolean
+  comment: string
+}>({
+  name: '',
+  provider_type: 'cloudflare',
+  config: {},
+  is_default: false,
+  is_active: true,
+  comment: '',
+})
 
 // 动态配置表单字段
 const configFields = reactive<Record<string, string>>({})
 
 // 各提供商的配置字段定义
-const providerConfigSchema: Record<string, { key: string; labelKey: string; type: 'text' | 'password' }[]> = {
+const providerConfigSchema: Record<
+  string,
+  { key: string; labelKey: string; type: 'text' | 'password' }[]
+> = {
   cloudflare: [
     { key: 'email', labelKey: 'dns.config.email', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
@@ -87,9 +117,7 @@ const providerConfigSchema: Record<string, { key: string; labelKey: string; type
     { key: 'username', labelKey: 'dns.config.username', type: 'text' },
     { key: 'password', labelKey: 'dns.config.password', type: 'password' },
   ],
-  rainyun: [
-    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
-  ],
+  rainyun: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' }],
   todaynic: [
     { key: 'auth_user_id', labelKey: 'dns.config.auth_user_id', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
@@ -120,7 +148,11 @@ const providerConfigSchema: Record<string, { key: string; labelKey: string; type
     { key: 'api_secret', labelKey: 'dns.config.api_secret', type: 'password' },
   ],
   gandiv5: [
-    { key: 'personal_access_token', labelKey: 'dns.config.personal_access_token', type: 'password' },
+    {
+      key: 'personal_access_token',
+      labelKey: 'dns.config.personal_access_token',
+      type: 'password',
+    },
   ],
   dynadot: [
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
@@ -133,29 +165,17 @@ const providerConfigSchema: Record<string, { key: string; labelKey: string; type
     { key: 'client_secret', labelKey: 'dns.config.client_secret', type: 'password' },
     { key: 'tenant_id', labelKey: 'dns.config.tenant_id', type: 'text' },
   ],
-  digitalocean: [
-    { key: 'auth_token', labelKey: 'dns.config.auth_token', type: 'password' },
-  ],
-  vultr: [
-    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
-  ],
-  hetzner: [
-    { key: 'api_token', labelKey: 'dns.config.api_token', type: 'password' },
-  ],
-  linode: [
-    { key: 'token', labelKey: 'dns.config.token', type: 'password' },
-  ],
+  digitalocean: [{ key: 'auth_token', labelKey: 'dns.config.auth_token', type: 'password' }],
+  vultr: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' }],
+  hetzner: [{ key: 'api_token', labelKey: 'dns.config.api_token', type: 'password' }],
+  linode: [{ key: 'token', labelKey: 'dns.config.token', type: 'password' }],
   ovh: [
     { key: 'application_key', labelKey: 'dns.config.application_key', type: 'text' },
     { key: 'application_secret', labelKey: 'dns.config.application_secret', type: 'password' },
     { key: 'consumer_key', labelKey: 'dns.config.consumer_key', type: 'password' },
   ],
-  dnsimple: [
-    { key: 'access_token', labelKey: 'dns.config.access_token', type: 'password' },
-  ],
-  ns1: [
-    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
-  ],
+  dnsimple: [{ key: 'access_token', labelKey: 'dns.config.access_token', type: 'password' }],
+  ns1: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' }],
 }
 
 const currentFields = computed(() => providerConfigSchema[formData.value.provider_type] || [])
@@ -195,10 +215,12 @@ const providerTypes = [
   { value: 'ns1', labelKey: 'dns.type.ns1' },
 ]
 
-const providerTypeOptions = computed(() => providerTypes.map(p => ({
-  label: t(p.labelKey),
-  value: p.value,
-})))
+const providerTypeOptions = computed(() =>
+  providerTypes.map((p) => ({
+    label: t(p.labelKey),
+    value: p.value,
+  })),
+)
 
 // 将配置字段同步到 JSON
 const syncConfigToMap = () => {
@@ -227,17 +249,33 @@ onMounted(async () => {
 
 const openCreate = () => {
   editingId.value = null
-  formData.value = { name: '', provider_type: 'cloudflare', config: {}, is_default: false, is_active: true, comment: '' }
+  formData.value = {
+    name: '',
+    provider_type: 'cloudflare',
+    config: {},
+    is_default: false,
+    is_active: true,
+    comment: '',
+  }
   const fields = providerConfigSchema['cloudflare'] || []
   const newConfig: Record<string, string> = {}
-  fields.forEach(f => { newConfig[f.key] = '' })
+  fields.forEach((f) => {
+    newConfig[f.key] = ''
+  })
   Object.assign(configFields, newConfig)
   showModal.value = true
 }
 
-const openEdit = (p: typeof providers.value[0]) => {
+const openEdit = (p: (typeof providers.value)[0]) => {
   editingId.value = p.id
-  formData.value = { name: p.name, provider_type: p.provider_type, config: (p.config ?? {}) as Record<string, string>, is_default: p.is_default, is_active: p.is_active, comment: p.comment }
+  formData.value = {
+    name: p.name,
+    provider_type: p.provider_type,
+    config: (p.config ?? {}) as Record<string, string>,
+    is_default: p.is_default,
+    is_active: p.is_active,
+    comment: p.comment,
+  }
   Object.assign(configFields, p.config || {})
   showModal.value = true
 }
@@ -268,7 +306,7 @@ const handleDelete = async () => {
   deleteTargetId.value = null
   try {
     await DNSProviderService.DeleteDNSProvider(id)
-    providers.value = providers.value.filter(p => p.id !== id)
+    providers.value = providers.value.filter((p) => p.id !== id)
   } catch (e) {
     console.error('Failed to delete DNS provider', e)
   }
@@ -280,7 +318,7 @@ const handleSetDefault = async (id: number) => {
 }
 
 const getProviderLabel = (type: string) => {
-  const pt = providerTypes.find(p => p.value === type)
+  const pt = providerTypes.find((p) => p.value === type)
   return pt ? t(pt.labelKey) : type
 }
 </script>
@@ -294,7 +332,14 @@ const getProviderLabel = (type: string) => {
       </div>
       <n-button type="primary" @click="openCreate">
         <template #icon>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
         </template>
         {{ t('dns.addProvider') }}
       </n-button>
@@ -305,35 +350,100 @@ const getProviderLabel = (type: string) => {
         <n-empty v-if="!isLoading && providers.length === 0" :description="t('dns.noProvider')" />
 
         <div v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
-          <div v-for="p in providers" :key="p.id" class="flex items-center justify-between px-6 py-4">
+          <div
+            v-for="p in providers"
+            :key="p.id"
+            class="flex items-center justify-between px-6 py-4"
+          >
             <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" /></svg>
+              <div
+                class="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
+                  />
+                </svg>
               </div>
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ p.name }}</h3>
-                  <n-tag size="small" :bordered="false">{{ getProviderLabel(p.provider_type) }}</n-tag>
-                  <n-tag v-if="p.is_default" type="primary" size="small" :bordered="false">{{ t('dns.default') }}</n-tag>
-                  <n-tag v-if="!p.is_active" size="small" :bordered="false">{{ t('dns.disabled') }}</n-tag>
+                  <n-tag size="small" :bordered="false">{{
+                    getProviderLabel(p.provider_type)
+                  }}</n-tag>
+                  <n-tag v-if="p.is_default" type="primary" size="small" :bordered="false">{{
+                    t('dns.default')
+                  }}</n-tag>
+                  <n-tag v-if="!p.is_active" size="small" :bordered="false">{{
+                    t('dns.disabled')
+                  }}</n-tag>
                 </div>
                 <p v-if="p.comment" class="text-sm mt-1 opacity-50">{{ p.comment }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <n-button v-if="!p.is_default" quaternary circle size="small" @click="handleSetDefault(p.id)" :title="t('dns.setTitle')">
+              <n-button
+                v-if="!p.is_default"
+                quaternary
+                circle
+                size="small"
+                @click="handleSetDefault(p.id)"
+                :title="t('dns.setTitle')"
+              >
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
                 </template>
               </n-button>
-              <n-button quaternary circle size="small" @click="openEdit(p)" :title="t('dns.editTitle')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                @click="openEdit(p)"
+                :title="t('dns.editTitle')"
+              >
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
                 </template>
               </n-button>
-              <n-button quaternary circle size="small" type="error" @click="openDeleteModal(p.id)" :title="t('dns.deleteTitle')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                type="error"
+                @click="openDeleteModal(p.id)"
+                :title="t('dns.deleteTitle')"
+              >
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
                 </template>
               </n-button>
             </div>
@@ -343,7 +453,12 @@ const getProviderLabel = (type: string) => {
     </n-card>
 
     <!-- Modal -->
-    <n-modal v-model:show="showModal" preset="card" :title="editingId ? t('dns.editProvider') : t('dns.addProviderTitle')" style="max-width: 560px;">
+    <n-modal
+      v-model:show="showModal"
+      preset="card"
+      :title="editingId ? t('dns.editProvider') : t('dns.addProviderTitle')"
+      style="max-width: 560px"
+    >
       <n-form label-placement="top">
         <n-form-item :label="t('dns.name')">
           <n-input v-model:value="formData.name" :placeholder="t('dns.namePlaceholder')" />
@@ -371,10 +486,16 @@ const getProviderLabel = (type: string) => {
             <n-input
               type="textarea"
               :value="JSON.stringify(formData.config, null, 2)"
-              @update:value="(v: string) => { try { formData.config = JSON.parse(v) } catch {} }"
+              @update:value="
+                (v: string) => {
+                  try {
+                    formData.config = JSON.parse(v)
+                  } catch {}
+                }
+              "
               :placeholder="t('dns.configPlaceholder')"
               :rows="4"
-              style="font-family: monospace; font-size: 12px;"
+              style="font-family: monospace; font-size: 12px"
             />
           </n-form-item>
         </div>

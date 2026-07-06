@@ -22,15 +22,20 @@ const isLoading = ref(false)
 
 const stats = computed(() => ({
   totalCerts: certificates.value.length,
-  activeCerts: certificates.value.filter(c => c.status === 'active').length,
+  activeCerts: certificates.value.filter((c) => c.status === 'active').length,
   expiringCerts: expiringCerts.value.length,
   cas: cas.value.length,
 }))
 
 const recentActivity = computed(() => {
-  return renewalLogs.value.map(log => ({
+  return renewalLogs.value.map((log) => ({
     id: log.id,
-    action: log.status === 'success' ? t('dashboard.renewSuccess') : log.status === 'failed' ? t('dashboard.renewFailed') : t('dashboard.renew'),
+    action:
+      log.status === 'success'
+        ? t('dashboard.renewSuccess')
+        : log.status === 'failed'
+          ? t('dashboard.renewFailed')
+          : t('dashboard.renew'),
     domain: log.domain,
     time: log.attempt_at,
     status: log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'warning',
@@ -38,7 +43,7 @@ const recentActivity = computed(() => {
 })
 
 const expiringCertificates = computed(() => {
-  return expiringCerts.value.map(c => {
+  return expiringCerts.value.map((c) => {
     const daysLeft = Math.ceil((new Date(c.not_after).getTime() - Date.now()) / 86400000)
     return { id: c.id, domain: c.domain, notAfter: c.not_after, daysLeft }
   })
@@ -66,10 +71,14 @@ onMounted(async () => {
 
 const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' => {
   switch (status) {
-    case 'success': return 'success'
-    case 'warning': return 'warning'
-    case 'error': return 'error'
-    default: return 'info'
+    case 'success':
+      return 'success'
+    case 'warning':
+      return 'warning'
+    case 'error':
+      return 'error'
+    default:
+      return 'info'
   }
 }
 </script>
@@ -85,7 +94,12 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
       <n-button type="primary" @click="router.push('/certificates/apply')">
         <template #icon>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
         </template>
         {{ t('dashboard.apply') }}
@@ -128,7 +142,11 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
           </template>
 
           <n-spin :show="isLoading">
-            <n-empty v-if="!isLoading && expiringCertificates.length === 0" :description="t('dashboard.noExpiring')" class="empty-state" />
+            <n-empty
+              v-if="!isLoading && expiringCertificates.length === 0"
+              :description="t('dashboard.noExpiring')"
+              class="empty-state"
+            />
 
             <div v-else class="space-y-3">
               <div
@@ -138,14 +156,28 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
                 @click="router.push(`/certificates/${cert.id}`)"
               >
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <div
+                    class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-5 h-5 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
                     </svg>
                   </div>
                   <div>
                     <p class="font-medium">{{ cert.domain }}</p>
-                    <p class="text-sm opacity-60">{{ t('dashboard.expiryTime') }} {{ cert.notAfter }}</p>
+                    <p class="text-sm opacity-60">
+                      {{ t('dashboard.expiryTime') }} {{ cert.notAfter }}
+                    </p>
                   </div>
                 </div>
                 <n-tag :type="cert.daysLeft <= 7 ? 'error' : 'warning'" size="small">
@@ -161,7 +193,11 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
       <div>
         <n-card :title="t('dashboard.recentActivity')" size="small" class="h-full">
           <n-spin :show="isLoading">
-            <n-empty v-if="!isLoading && recentActivity.length === 0" :description="t('dashboard.noActivity')" class="empty-state" />
+            <n-empty
+              v-if="!isLoading && recentActivity.length === 0"
+              :description="t('dashboard.noActivity')"
+              class="empty-state"
+            />
 
             <n-timeline v-else>
               <n-timeline-item

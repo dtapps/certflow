@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NButton, NInput, NInputNumber, NSelect, NSwitch, NSpin, NForm, NFormItem, NTag } from 'naive-ui'
+import {
+  NCard,
+  NButton,
+  NInput,
+  NInputNumber,
+  NSelect,
+  NSwitch,
+  NSpin,
+  NForm,
+  NFormItem,
+  NTag,
+} from 'naive-ui'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import * as NotificationService from '@bindings/cnb.cool/dtapp/certflow/notificationservicewrapper'
 import * as SchedulerService from '@bindings/cnb.cool/dtapp/certflow/schedulerservicewrapper'
@@ -12,7 +23,10 @@ import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapp
 import * as WindowService from '@bindings/cnb.cool/dtapp/certflow/windowservicewrapper'
 import * as AutostartService from '@bindings/cnb.cool/dtapp/certflow/autostartservicewrapper'
 import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
-import type { Settings, DNSConfig } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
+import type {
+  Settings,
+  DNSConfig,
+} from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useThemeStore } from '../stores/theme'
 import { useI18nStore } from '../stores/i18n'
 
@@ -75,11 +89,19 @@ const logContentStyle = computed(() => ({
 
 const dnsItemStyle = computed(() => (enabled: boolean) => ({
   borderColor: enabled
-    ? (isDark.value ? '#3b82f6' : '#93c5fd')
-    : (isDark.value ? '#374151' : '#e5e7eb'),
+    ? isDark.value
+      ? '#3b82f6'
+      : '#93c5fd'
+    : isDark.value
+      ? '#374151'
+      : '#e5e7eb',
   backgroundColor: enabled
-    ? (isDark.value ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff')
-    : (isDark.value ? 'rgba(31, 41, 55, 0.5)' : '#f9fafb'),
+    ? isDark.value
+      ? 'rgba(59, 130, 246, 0.1)'
+      : '#eff6ff'
+    : isDark.value
+      ? 'rgba(31, 41, 55, 0.5)'
+      : '#f9fafb',
 }))
 
 const dnsInputStyle = computed(() => ({
@@ -104,7 +126,7 @@ const loadSettings = async () => {
     // 确保数组不为 null（Wails 生成的类型中标注为 | null）
     const safe: SafeSettings = {
       ...loaded,
-      dns_configs: (loaded.dns_configs || []).map(d => ({
+      dns_configs: (loaded.dns_configs || []).map((d) => ({
         ...d,
         servers: d.servers || [],
       })),
@@ -113,7 +135,7 @@ const loadSettings = async () => {
     }
     settings.value = safe
     // 初始化 DNS 总开关状态
-    dnsEnabled.value = safe.dns_configs.some(d => d.id !== 'default' && d.enabled)
+    dnsEnabled.value = safe.dns_configs.some((d) => d.id !== 'default' && d.enabled)
     // Sync settings -> stores on load
     if (settings.value.theme) {
       setTheme(settings.value.theme as 'dark' | 'light' | 'auto')
@@ -130,25 +152,34 @@ const loadSettings = async () => {
 }
 
 // Immediate theme switch
-watch(() => settings.value.theme, (val) => {
-  if (val) setTheme(val as 'dark' | 'light' | 'auto')
-})
+watch(
+  () => settings.value.theme,
+  (val) => {
+    if (val) setTheme(val as 'dark' | 'light' | 'auto')
+  },
+)
 
 // Immediate language switch
-watch(() => settings.value.language, (val) => {
-  if (val) setLocale(val as 'zh-CN' | 'en-US' | 'auto')
-})
+watch(
+  () => settings.value.language,
+  (val) => {
+    if (val) setLocale(val as 'zh-CN' | 'en-US' | 'auto')
+  },
+)
 
 // 用户开启通知时请求系统权限
-watch(() => settings.value.notification_enabled, async (enabled) => {
-  if (enabled) {
-    const authorized = await NotificationService.RequestPermission()
-    if (!authorized) {
-      settings.value.notification_enabled = false
-      alert(t('settings.notification.permissionDenied'))
+watch(
+  () => settings.value.notification_enabled,
+  async (enabled) => {
+    if (enabled) {
+      const authorized = await NotificationService.RequestPermission()
+      if (!authorized) {
+        settings.value.notification_enabled = false
+        alert(t('settings.notification.permissionDenied'))
+      }
     }
-  }
-})
+  },
+)
 
 // 实时设置开机自启
 watch(autostartEnabled, async (enabled) => {
@@ -198,7 +229,7 @@ const handleRunExpiryCheck = () => {
 const handleRunMonitorCheck = async () => {
   try {
     const domains = await MonitorService.List()
-    const enabled = (domains ?? []).filter(d => d !== null && d.enabled)
+    const enabled = (domains ?? []).filter((d) => d !== null && d.enabled)
     for (const d of enabled) {
       if (d) await MonitorService.CheckNow(d.id)
     }
@@ -237,7 +268,7 @@ const addCustomDNS = () => {
 
 // 移除 DNS 配置
 const removeDNS = (id: string) => {
-  const idx = settings.value.dns_configs.findIndex(d => d.id === id)
+  const idx = settings.value.dns_configs.findIndex((d) => d.id === id)
   if (idx > -1) {
     settings.value.dns_configs.splice(idx, 1)
   }
@@ -333,7 +364,9 @@ onMounted(async () => {
   // 获取版本号
   try {
     appVersion.value = await SystemService.GetVersion()
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 })
 </script>
 
@@ -356,7 +389,12 @@ onMounted(async () => {
           </n-form-item>
           <n-form-item :label="t('settings.renewal.days')">
             <div class="flex items-center gap-3">
-              <n-input-number v-model:value="settings.default_renewal_days" :min="1" :max="90" class="input-width" />
+              <n-input-number
+                v-model:value="settings.default_renewal_days"
+                :min="1"
+                :max="90"
+                class="input-width"
+              />
               <span class="text-sm opacity-60">{{ t('settings.renewal.days.desc') }}</span>
             </div>
           </n-form-item>
@@ -392,7 +430,12 @@ onMounted(async () => {
           </n-form-item>
           <n-form-item :label="t('settings.notification.interval')">
             <div class="flex items-center gap-3">
-              <n-input-number v-model:value="settings.check_interval" :min="1" :max="24" class="input-width" />
+              <n-input-number
+                v-model:value="settings.check_interval"
+                :min="1"
+                :max="24"
+                class="input-width"
+              />
               <span class="text-sm opacity-60">{{ t('settings.notification.interval.desc') }}</span>
             </div>
           </n-form-item>
@@ -409,19 +452,25 @@ onMounted(async () => {
         <n-form label-placement="top">
           <n-form-item :label="t('settings.maintenance.renewal')">
             <div class="flex items-center gap-3">
-              <n-button secondary @click="handleRunRenewal">{{ t('settings.maintenance.run') }}</n-button>
+              <n-button secondary @click="handleRunRenewal">{{
+                t('settings.maintenance.run')
+              }}</n-button>
               <span class="text-sm opacity-60">{{ t('settings.maintenance.renewal.desc') }}</span>
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.maintenance.expiry')">
             <div class="flex items-center gap-3">
-              <n-button secondary @click="handleRunExpiryCheck">{{ t('settings.maintenance.run') }}</n-button>
+              <n-button secondary @click="handleRunExpiryCheck">{{
+                t('settings.maintenance.run')
+              }}</n-button>
               <span class="text-sm opacity-60">{{ t('settings.maintenance.expiry.desc') }}</span>
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.maintenance.monitor')">
             <div class="flex items-center gap-3">
-              <n-button secondary @click="handleRunMonitorCheck">{{ t('settings.maintenance.run') }}</n-button>
+              <n-button secondary @click="handleRunMonitorCheck">{{
+                t('settings.maintenance.run')
+              }}</n-button>
               <span class="text-sm opacity-60">{{ t('settings.maintenance.monitor.desc') }}</span>
             </div>
           </n-form-item>
@@ -457,16 +506,39 @@ onMounted(async () => {
                     <n-input
                       v-if="!dns.builtin"
                       :value="(dns.servers || []).join(', ')"
-                      @update:value="(v: string) => { dns.servers = v.split(',').map(s => s.trim()).filter(Boolean) }"
+                      @update:value="
+                        (v: string) => {
+                          dns.servers = v
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                        }
+                      "
                       size="small"
                       :style="dnsInputStyle"
                       :placeholder="t('settings.network.dnsPlaceholder')"
                     />
-                    <p v-else class="text-xs font-mono mt-1 break-all opacity-50">{{ (dns.servers || []).join(', ') }}</p>
+                    <p v-else class="text-xs font-mono mt-1 break-all opacity-50">
+                      {{ (dns.servers || []).join(', ') }}
+                    </p>
                   </div>
-                  <n-button v-if="!dns.builtin" text size="tiny" type="error" @click="removeDNS(dns.id)" :title="t('settings.network.delete')">
+                  <n-button
+                    v-if="!dns.builtin"
+                    text
+                    size="tiny"
+                    type="error"
+                    @click="removeDNS(dns.id)"
+                    :title="t('settings.network.delete')"
+                  >
                     <template #icon>
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
                     </template>
                   </n-button>
                 </div>
@@ -486,18 +558,47 @@ onMounted(async () => {
               </div>
               <n-switch v-model:value="settings.proxy.enabled" />
             </div>
-            <div v-if="settings.proxy.enabled" class="grid grid-cols-2 gap-3 pl-4 border-l-2 border-blue-500">
+            <div
+              v-if="settings.proxy.enabled"
+              class="grid grid-cols-2 gap-3 pl-4 border-l-2 border-blue-500"
+            >
               <div class="col-span-2 flex items-center gap-2">
-                <n-select v-model:value="settings.proxy.protocol" :options="[
-                  { label: 'HTTP', value: 'http' },
-                  { label: 'HTTPS', value: 'https' },
-                  { label: 'SOCKS5', value: 'socks5' },
-                ]" class="proxy-protocol" size="small" />
-                <n-input v-model:value="settings.proxy.host" :placeholder="t('settings.network.hostPlaceholder')" size="small" class="flex-1" />
-                <n-input-number v-model:value="settings.proxy.port" :min="1" :max="65535" size="small" class="proxy-port" />
+                <n-select
+                  v-model:value="settings.proxy.protocol"
+                  :options="[
+                    { label: 'HTTP', value: 'http' },
+                    { label: 'HTTPS', value: 'https' },
+                    { label: 'SOCKS5', value: 'socks5' },
+                  ]"
+                  class="proxy-protocol"
+                  size="small"
+                />
+                <n-input
+                  v-model:value="settings.proxy.host"
+                  :placeholder="t('settings.network.hostPlaceholder')"
+                  size="small"
+                  class="flex-1"
+                />
+                <n-input-number
+                  v-model:value="settings.proxy.port"
+                  :min="1"
+                  :max="65535"
+                  size="small"
+                  class="proxy-port"
+                />
               </div>
-              <n-input v-model:value="settings.proxy.username" :placeholder="t('settings.network.usernamePlaceholder')" size="small" />
-              <n-input v-model:value="settings.proxy.password" type="password" :placeholder="t('settings.network.passwordPlaceholder')" size="small" show-password-on="click" />
+              <n-input
+                v-model:value="settings.proxy.username"
+                :placeholder="t('settings.network.usernamePlaceholder')"
+                size="small"
+              />
+              <n-input
+                v-model:value="settings.proxy.password"
+                type="password"
+                :placeholder="t('settings.network.passwordPlaceholder')"
+                size="small"
+                show-password-on="click"
+              />
             </div>
           </div>
         </n-form>
@@ -508,13 +609,21 @@ onMounted(async () => {
         <n-form label-placement="top">
           <n-form-item :label="t('settings.preferences.language')">
             <div class="flex items-center gap-3">
-              <n-select v-model:value="settings.language" :options="languageOptions" class="select-width" />
+              <n-select
+                v-model:value="settings.language"
+                :options="languageOptions"
+                class="select-width"
+              />
               <span class="text-sm opacity-60">{{ t('settings.preferences.language.desc') }}</span>
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.preferences.theme')">
             <div class="flex items-center gap-3">
-              <n-select v-model:value="settings.theme" :options="themeOptions" class="select-width" />
+              <n-select
+                v-model:value="settings.theme"
+                :options="themeOptions"
+                class="select-width"
+              />
               <span class="text-sm opacity-60">{{ t('settings.preferences.theme.desc') }}</span>
             </div>
           </n-form-item>
@@ -524,9 +633,18 @@ onMounted(async () => {
       <!-- 关于 -->
       <n-card :title="t('settings.about.title')" size="small" class="mt-4">
         <div class="space-y-3">
-          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.name') }}</span><span>CertFlow</span></div>
-          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.version') }}</span><span>{{ appVersion || 'unknown' }}</span></div>
-          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.datadir') }}</span><span class="text-sm font-mono">{{ settings.data_dir }}</span></div>
+          <div class="flex justify-between py-2">
+            <span class="opacity-50">{{ t('settings.about.name') }}</span
+            ><span>CertFlow</span>
+          </div>
+          <div class="flex justify-between py-2">
+            <span class="opacity-50">{{ t('settings.about.version') }}</span
+            ><span>{{ appVersion || 'unknown' }}</span>
+          </div>
+          <div class="flex justify-between py-2">
+            <span class="opacity-50">{{ t('settings.about.datadir') }}</span
+            ><span class="text-sm font-mono">{{ settings.data_dir }}</span>
+          </div>
           <div class="pt-2 border-t border-neutral-200 dark:border-neutral-700">
             <n-button secondary block @click="handleCheckUpdate">
               {{ t('settings.about.checkUpdate') }}
@@ -540,19 +658,35 @@ onMounted(async () => {
         <n-form label-placement="top">
           <n-form-item :label="t('settings.log.level')">
             <div class="flex items-center gap-3">
-              <n-select v-model:value="settings.log.level" :options="logLevelOptions" class="select-width" />
+              <n-select
+                v-model:value="settings.log.level"
+                :options="logLevelOptions"
+                class="select-width"
+              />
               <span class="text-sm opacity-60">{{ t('settings.log.levelDesc') }}</span>
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.log.maxSize')">
             <div class="flex items-center gap-2">
-              <n-input-number v-model:value="settings.log.max_mb" :min="1" :max="100" class="input-width-sm" size="small" />
+              <n-input-number
+                v-model:value="settings.log.max_mb"
+                :min="1"
+                :max="100"
+                class="input-width-sm"
+                size="small"
+              />
               <span class="text-sm opacity-50">MB</span>
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.log.maxBackups')">
             <div class="flex items-center gap-2">
-              <n-input-number v-model:value="settings.log.max_backups" :min="1" :max="20" class="input-width-sm" size="small" />
+              <n-input-number
+                v-model:value="settings.log.max_backups"
+                :min="1"
+                :max="20"
+                class="input-width-sm"
+                size="small"
+              />
               <span class="text-sm opacity-50">{{ t('common.unit') }}</span>
             </div>
           </n-form-item>
@@ -563,21 +697,66 @@ onMounted(async () => {
           <div class="flex items-center justify-between mb-3">
             <p class="font-medium text-sm">{{ t('settings.log.viewer') }}</p>
             <div class="flex items-center gap-2">
-              <n-select v-model:value="selectedLogFile" :options="logFiles.map(f => ({ label: f, value: f }))" size="small" class="log-file-select" @update:value="loadLogContent()" />
-              <n-select v-model:value="logTail" :options="logTailOptions" size="small" class="log-tail-select" @update:value="loadLogContent()" />
+              <n-select
+                v-model:value="selectedLogFile"
+                :options="logFiles.map((f) => ({ label: f, value: f }))"
+                size="small"
+                class="log-file-select"
+                @update:value="loadLogContent()"
+              />
+              <n-select
+                v-model:value="logTail"
+                :options="logTailOptions"
+                size="small"
+                class="log-tail-select"
+                @update:value="loadLogContent()"
+              />
               <n-button quaternary circle size="small" @click="refreshLogs()">
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
                 </template>
               </n-button>
-              <n-button quaternary circle size="small" @click="openLogDir()" :title="t('settings.log.openDir')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                @click="openLogDir()"
+                :title="t('settings.log.openDir')"
+              >
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
                 </template>
               </n-button>
-              <n-button quaternary circle size="small" @click="openLogFullscreen()" :title="t('settings.log.fullscreen')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                @click="openLogFullscreen()"
+                :title="t('settings.log.fullscreen')"
+              >
                 <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
+                  </svg>
                 </template>
               </n-button>
             </div>
@@ -592,7 +771,12 @@ onMounted(async () => {
 
     <!-- 保存按钮 -->
     <div class="flex justify-end">
-      <n-button type="primary" @click="handleSave" :disabled="saving || !hasChanges" :loading="saving">
+      <n-button
+        type="primary"
+        @click="handleSave"
+        :disabled="saving || !hasChanges"
+        :loading="saving"
+      >
         {{ saving ? t('settings.saving') : t('settings.save') }}
       </n-button>
     </div>

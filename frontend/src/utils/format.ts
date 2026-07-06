@@ -18,5 +18,11 @@ export function formatDateTime(ts: string) {
   if (!ts) return '--'
   const d = new Date(ts.replace(' ', 'T'))
   if (isNaN(d.getTime())) return ts
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

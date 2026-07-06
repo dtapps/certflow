@@ -21,6 +21,16 @@ ent: ## 生成 Ent ORM 代码
 dev: ## 运行 Wails 开发模式
 	wails3 dev
 
+# ==================== 格式化 ====================
+
+format: format-go format-frontend ## 格式化所有代码
+
+format-go: ## 格式化 Go 代码
+	gofmt -w -s .
+
+format-frontend: ## 格式化前端代码（Vue + TypeScript）
+	cd frontend && pnpm exec prettier --write "src/**/*.{vue,ts,js,css}"
+
 # ==================== 检查 ====================
 
 lint: ## Go 代码检查

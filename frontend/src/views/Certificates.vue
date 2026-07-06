@@ -42,14 +42,13 @@ const filteredCertificates = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(c =>
-      c.domain.toLowerCase().includes(query) ||
-      c.issuer.toLowerCase().includes(query)
+    result = result.filter(
+      (c) => c.domain.toLowerCase().includes(query) || c.issuer.toLowerCase().includes(query),
     )
   }
 
   if (statusFilter.value && statusFilter.value !== 'all') {
-    result = result.filter(c => c.status === statusFilter.value)
+    result = result.filter((c) => c.status === statusFilter.value)
   }
 
   return result
@@ -70,7 +69,7 @@ const handleDelete = async () => {
   deleteTargetId.value = null
   try {
     await CertificateService.DeleteCertificate(id)
-    certificates.value = certificates.value.filter(c => c.id !== id)
+    certificates.value = certificates.value.filter((c) => c.id !== id)
   } catch (e) {
     console.error(t('certs.deleteFailed'), e)
   }
@@ -90,17 +89,40 @@ const columns: DataTableColumns<CertificateListItem> = [
     key: 'domain',
     render(row) {
       return h('div', { class: 'flex items-center gap-3' }, [
-        h('div', { class: 'w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center' }, [
-          h('svg', { class: 'w-4 h-4 text-blue-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
-          ])
-        ]),
+        h(
+          'div',
+          {
+            class:
+              'w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center',
+          },
+          [
+            h(
+              'svg',
+              {
+                class: 'w-4 h-4 text-blue-500',
+                fill: 'none',
+                stroke: 'currentColor',
+                viewBox: '0 0 24 24',
+              },
+              [
+                h('path', {
+                  'stroke-linecap': 'round',
+                  'stroke-linejoin': 'round',
+                  'stroke-width': '2',
+                  d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+                }),
+              ],
+            ),
+          ],
+        ),
         h('div', [
           h('p', { class: 'font-medium' }, row.domain),
-          row.sans?.length ? h('p', { class: 'text-xs opacity-50' }, `+${row.sans.length} ${t('cert.san')}`) : null,
-        ])
+          row.sans?.length
+            ? h('p', { class: 'text-xs opacity-50' }, `+${row.sans.length} ${t('cert.san')}`)
+            : null,
+        ]),
       ])
-    }
+    },
   },
   {
     title: t('certs.issuer'),
@@ -111,12 +133,16 @@ const columns: DataTableColumns<CertificateListItem> = [
     key: 'status',
     render(row) {
       const badge = getStatusBadge(row.status)
-      return h(NTag, {
-        type: badge.type as any,
-        size: 'small',
-        bordered: false,
-      }, { default: () => badge.text })
-    }
+      return h(
+        NTag,
+        {
+          type: badge.type as any,
+          size: 'small',
+          bordered: false,
+        },
+        { default: () => badge.text },
+      )
+    },
   },
   {
     title: t('certs.daysLeft'),
@@ -124,17 +150,25 @@ const columns: DataTableColumns<CertificateListItem> = [
     render(row) {
       const days = getDaysLeft(row.not_after, row.status)
       if (days === null) return h('span', { class: 'opacity-50' }, '—')
-      return h('span', { class: `font-medium ${getDaysLeftClass(days)}` }, `${days} ${t('cert.daysLeft')}`)
-    }
+      return h(
+        'span',
+        { class: `font-medium ${getDaysLeftClass(days)}` },
+        `${days} ${t('cert.daysLeft')}`,
+      )
+    },
   },
   {
     title: t('certs.autoRenew'),
     key: 'auto_renew',
     render(row) {
       return row.auto_renew
-        ? h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => t('certs.enabled') })
+        ? h(
+            NTag,
+            { type: 'success', size: 'small', bordered: false },
+            { default: () => t('certs.enabled') },
+          )
         : h('span', { class: 'opacity-50' }, t('certs.disabled'))
-    }
+    },
   },
   {
     title: t('certs.actions'),
@@ -143,18 +177,63 @@ const columns: DataTableColumns<CertificateListItem> = [
     render(row) {
       return h('div', { class: 'flex items-center justify-end gap-2' }, [
         row.status === 'pending'
-          ? h(NButton, { size: 'tiny', secondary: true, onClick: (e) => { e.stopPropagation(); handleRetry(row) } }, { default: () => t('certs.continueApply') })
+          ? h(
+              NButton,
+              {
+                size: 'tiny',
+                secondary: true,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  handleRetry(row)
+                },
+              },
+              { default: () => t('certs.continueApply') },
+            )
           : null,
         row.status === 'failed'
-          ? h(NButton, { size: 'tiny', type: 'error', secondary: true, onClick: (e) => { e.stopPropagation(); handleRetry(row) } }, { default: () => t('certs.retryApply') })
+          ? h(
+              NButton,
+              {
+                size: 'tiny',
+                type: 'error',
+                secondary: true,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  handleRetry(row)
+                },
+              },
+              { default: () => t('certs.retryApply') },
+            )
           : null,
-        h(NButton, { size: 'tiny', type: 'error', quaternary: true, onClick: (e) => { e.stopPropagation(); openDeleteModal(row.id) } }, {
-          icon: () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
-          ])
-        })
+        h(
+          NButton,
+          {
+            size: 'tiny',
+            type: 'error',
+            quaternary: true,
+            onClick: (e) => {
+              e.stopPropagation()
+              openDeleteModal(row.id)
+            },
+          },
+          {
+            icon: () =>
+              h(
+                'svg',
+                { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                [
+                  h('path', {
+                    'stroke-linecap': 'round',
+                    'stroke-linejoin': 'round',
+                    'stroke-width': '2',
+                    d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+                  }),
+                ],
+              ),
+          },
+        ),
       ])
-    }
+    },
   },
 ]
 </script>
@@ -170,7 +249,12 @@ const columns: DataTableColumns<CertificateListItem> = [
       <n-button type="primary" @click="router.push('/certificates/apply')">
         <template #icon>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
         </template>
         {{ t('certs.apply') }}
@@ -187,31 +271,37 @@ const columns: DataTableColumns<CertificateListItem> = [
       >
         <template #prefix>
           <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
         </template>
       </n-input>
-      <n-select
-        v-model:value="statusFilter"
-        :options="statusOptions"
-        style="width: 150px"
-      />
+      <n-select v-model:value="statusFilter" :options="statusOptions" style="width: 150px" />
     </div>
 
     <!-- 证书列表 -->
     <n-card size="small">
       <n-spin :show="isLoading">
-        <n-empty v-if="!isLoading && filteredCertificates.length === 0" :description="t('certs.noRecords')" />
+        <n-empty
+          v-if="!isLoading && filteredCertificates.length === 0"
+          :description="t('certs.noRecords')"
+        />
         <n-data-table
           v-else
           :columns="columns"
           :data="filteredCertificates"
           :bordered="false"
           :single-line="false"
-          :row-props="(row: CertificateListItem) => ({
-            style: 'cursor: pointer;',
-            onClick: () => router.push('/certificates/' + row.id)
-          })"
+          :row-props="
+            (row: CertificateListItem) => ({
+              style: 'cursor: pointer;',
+              onClick: () => router.push('/certificates/' + row.id),
+            })
+          "
         />
       </n-spin>
     </n-card>

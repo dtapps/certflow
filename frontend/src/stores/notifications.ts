@@ -77,7 +77,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   async function markAllRead() {
     await MarkAllAsRead()
-    notifications.value.forEach(n => { n.read = true })
+    notifications.value.forEach((n) => {
+      n.read = true
+    })
     unreadCount.value = 0
   }
 
@@ -89,13 +91,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   async function remove(id: number) {
     await DeleteNotification(id)
-    notifications.value = notifications.value.filter(n => n.id !== id)
+    notifications.value = notifications.value.filter((n) => n.id !== id)
     await refreshUnread()
   }
 
   async function markRead(id: number) {
     await MarkAsRead(id)
-    const item = notifications.value.find(n => n.id === id)
+    const item = notifications.value.find((n) => n.id === id)
     if (item) item.read = true
     await refreshUnread()
   }
