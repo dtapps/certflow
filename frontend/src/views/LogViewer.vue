@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { NSelect, NButton, NSpin, NIcon } from 'naive-ui'
+import { RefreshOutline, FolderOpenOutline } from '@vicons/ionicons5'
 import * as LoggingService from '@bindings/cnb.cool/dtapp/certflow/loggingservicewrapper'
 import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapper'
-import { useI18n } from '../stores/i18n'
+import { useI18nStore } from '../stores/i18n'
+import { useThemeStore } from '../stores/theme'
 
-const { t } = useI18n()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
+
+const themeStore = useThemeStore()
+const { isDark } = storeToRefs(themeStore)
 
 // 日志文件列表
 const logFiles = ref<string[]>([])
@@ -16,11 +24,17 @@ const loading = ref(false)
 // 日志等级筛选
 const selectedLevels = ref<Set<string>>(new Set(['DEBUG', 'INFO', 'WARN', 'ERROR']))
 const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR']
-const levelColor: Record<string, string> = {
-  DEBUG: 'neutral',
+const levelColor: Record<string, 'default' | 'info' | 'warning' | 'error'> = {
+  DEBUG: 'default',
   INFO: 'info',
   WARN: 'warning',
   ERROR: 'error',
+}
+const levelLabels: Record<string, () => string> = {
+  DEBUG: () => t('settings.log.level_debug'),
+  INFO: () => t('settings.log.level_info'),
+  WARN: () => t('settings.log.level_warn'),
+  ERROR: () => t('settings.log.level_error'),
 }
 
 const toggleLevel = (level: string) => {
@@ -52,6 +66,24 @@ const highlightLine = (line: string) => {
     .replace(/\[ERROR\]/g, '<span class="log-error">[ERROR]</span>')
     .replace(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})/g, '<span class="log-time">$1</span>')
 }
+
+// 主题相关样式
+const pageStyle = computed(() => ({
+  backgroundColor: isDark.value ? '#1a1a2e' : '#ffffff',
+  color: isDark.value ? '#e5e5e5' : '#1a1a2e',
+}))
+
+const toolbarStyle = computed(() => ({
+  borderBottomColor: isDark.value ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.09)',
+}))
+
+const statusStyle = computed(() => ({
+  borderTopColor: isDark.value ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.09)',
+}))
+
+const logLineStyle = computed(() => ({
+  backgroundColor: isDark.value ? 'transparent' : 'transparent',
+}))
 
 // 加载日志文件列表
 const loadLogFiles = async () => {
@@ -102,78 +134,84 @@ onMounted(() => {
   loadLogFiles()
   loadLogContent()
 })
+
+const logTailOptions = [
+  { label: t('settings.log.last100'), value: 100 },
+  { label: t('settings.log.last500'), value: 500 },
+  { label: t('settings.log.all'), value: 0 },
+]
+
+const logFileOptions = computed(() => logFiles.value.map(f => ({ label: f, value: f })))
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-base-100">
+  <div class="flex flex-col h-screen" :style="pageStyle">
     <!-- 工具栏 -->
-    <div class="flex items-center gap-2 p-3 border-b border-base-300">
-      <select v-model="selectedLogFile" class="select select-sm select-bordered w-48">
-        <option v-for="f in logFiles" :key="f" :value="f">{{ f }}</option>
-      </select>
+    <div class="flex items-center gap-2 p-3 border-b" :style="toolbarStyle">
+      <n-select
+        v-model:value="selectedLogFile"
+        :options="logFileOptions"
+        size="small"
+        style="width: 192px"
+      />
 
-      <select v-model.number="logTail" class="select select-sm select-bordered w-28" @change="loadLogContent()">
-        <option :value="100">{{ t('settings.log.last100') }}</option>
-        <option :value="500">{{ t('settings.log.last500') }}</option>
-        <option :value="0">{{ t('settings.log.all') }}</option>
-      </select>
+      <n-select
+        v-model:value="logTail"
+        :options="logTailOptions"
+        size="small"
+        style="width: 112px"
+        @update:value="loadLogContent()"
+      />
 
       <div class="flex items-center gap-1 ml-2">
-        <button
+        <n-button
           v-for="level in levels"
           :key="level"
+          size="tiny"
+          :type="selectedLevels.has(level) ? levelColor[level] : 'default'"
           @click="toggleLevel(level)"
-          class="btn btn-xs"
-          :class="selectedLevels.has(level) ? `btn-${levelColor[level]}` : 'btn-ghost'"
         >
-          {{ level }}
-        </button>
+          {{ levelLabels[level]() }}
+        </n-button>
       </div>
 
       <div class="flex-1"></div>
 
-      <button @click="refresh" class="btn btn-ghost btn-sm" :disabled="loading">
-        <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
+      <n-button quaternary circle size="small" @click="refresh" :disabled="loading">
+        <template #icon>
+          <n-icon :size="16" :class="{ 'animate-spin': loading }"><RefreshOutline /></n-icon>
+        </template>
+      </n-button>
 
-      <button @click="openLogDir" class="btn btn-ghost btn-sm" :title="t('settings.log.openDir')">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-      </button>
+      <n-button quaternary circle size="small" @click="openLogDir" :title="t('settings.log.openDir')">
+        <template #icon>
+          <n-icon :size="16"><FolderOpenOutline /></n-icon>
+        </template>
+      </n-button>
     </div>
 
     <!-- 日志内容 -->
     <div class="flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed">
-      <div v-if="loading" class="flex items-center justify-center h-32">
-        <span class="loading loading-spinner loading-md"></span>
-      </div>
-      <div v-else-if="filteredLines.length === 0" class="flex items-center justify-center h-32 text-content-50">
-        {{ t('settings.log.noContent') }}
-      </div>
-      <div v-else class="space-y-0.5">
-        <div
-          v-for="(line, index) in filteredLines"
-          :key="index"
-          class="log-line hover:bg-base-200 px-2 py-0.5 rounded"
-          v-html="highlightLine(line)"
-        ></div>
-      </div>
+      <n-spin :show="loading">
+        <div v-if="!loading && filteredLines.length === 0" class="flex items-center justify-center h-32 opacity-50">
+          {{ t('settings.log.noContent') }}
+        </div>
+        <div v-else class="space-y-0.5">
+          <div
+            v-for="(line, index) in filteredLines"
+            :key="index"
+            class="px-2 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5"
+            style="white-space: pre-wrap; word-break: break-all;"
+            v-html="highlightLine(line)"
+          ></div>
+        </div>
+      </n-spin>
     </div>
 
     <!-- 状态栏 -->
-    <div class="flex items-center justify-between px-4 py-2 border-t border-base-300 text-xs text-content-50">
+    <div class="flex items-center justify-between px-4 py-2 border-t text-xs opacity-50" :style="statusStyle">
       <span>{{ filteredLines.length }} {{ t('common.unit') }}</span>
       <span>{{ selectedLogFile }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.log-line {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-</style>

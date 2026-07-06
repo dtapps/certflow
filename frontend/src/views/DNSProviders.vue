@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { NCard, NButton, NInput, NSelect, NSwitch, NSpin, NModal, NForm, NFormItem, NEmpty, NTag, NInputNumber } from 'naive-ui'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
 import type { DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
-import { useI18n } from '../stores/i18n'
+import { useI18nStore } from '../stores/i18n'
 
-const { t } = useI18n()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 
 const providers = ref<DNSProviderListItem[]>([])
 const isLoading = ref(false)
@@ -193,6 +195,11 @@ const providerTypes = [
   { value: 'ns1', labelKey: 'dns.type.ns1' },
 ]
 
+const providerTypeOptions = computed(() => providerTypes.map(p => ({
+  label: t(p.labelKey),
+  value: p.value,
+})))
+
 // 将配置字段同步到 JSON
 const syncConfigToMap = () => {
   const clean: Record<string, string> = {}
@@ -282,123 +289,120 @@ const getProviderLabel = (type: string) => {
   <div class="page">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-base-content">{{ t('dns.title') }}</h1>
-        <p class="text-content-70 text-sm mt-1">{{ t('dns.subtitle') }}</p>
+        <h1 class="text-2xl font-bold">{{ t('dns.title') }}</h1>
+        <p class="text-sm mt-1 opacity-60">{{ t('dns.subtitle') }}</p>
       </div>
-      <button @click="openCreate" class="btn btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+      <n-button type="primary" @click="openCreate">
+        <template #icon>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        </template>
         {{ t('dns.addProvider') }}
-      </button>
+      </n-button>
     </div>
 
-    <div class="glass-panel rounded-2xl overflow-hidden">
-      <div v-if="isLoading" class="flex items-center justify-center py-20">
-        <div class="spinner animate-spin"></div>
-      </div>
-      <div v-else-if="providers.length === 0" class="text-center py-20">
-        <svg class="w-20 h-20 mx-auto text-content-50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" /></svg>
-        <p class="text-content-70 text-lg">{{ t('dns.noProvider') }}</p>
-      </div>
-      <div v-else class="list-divider">
-        <div v-for="p in providers" :key="p.id" class="list-item">
-          <div class="flex items-center justify-between">
+    <n-card size="small">
+      <n-spin :show="isLoading">
+        <n-empty v-if="!isLoading && providers.length === 0" :description="t('dns.noProvider')" />
+
+        <div v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
+          <div v-for="p in providers" :key="p.id" class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-xl bg-success-soft flex items-center justify-center">
-                <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" /></svg>
+              <div class="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" /></svg>
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="text-base-content font-medium">{{ p.name }}</h3>
-                  <span class="badge-tag badge-tag-muted">{{ getProviderLabel(p.provider_type) }}</span>
-                  <span v-if="p.is_default" class="badge-tag badge-tag-primary">{{ t('dns.default') }}</span>
-                  <span v-if="!p.is_active" class="badge-tag badge-tag-muted">{{ t('dns.disabled') }}</span>
+                  <h3 class="font-medium">{{ p.name }}</h3>
+                  <n-tag size="small" :bordered="false">{{ getProviderLabel(p.provider_type) }}</n-tag>
+                  <n-tag v-if="p.is_default" type="primary" size="small" :bordered="false">{{ t('dns.default') }}</n-tag>
+                  <n-tag v-if="!p.is_active" size="small" :bordered="false">{{ t('dns.disabled') }}</n-tag>
                 </div>
-                <p v-if="p.comment" class="text-content-50 text-sm mt-1">{{ p.comment }}</p>
+                <p v-if="p.comment" class="text-sm mt-1 opacity-50">{{ p.comment }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <button v-if="!p.is_default" @click="handleSetDefault(p.id)" class="icon-btn" :title="t('dns.setTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </button>
-              <button @click="openEdit(p)" class="icon-btn" :title="t('dns.editTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <button @click="openDeleteModal(p.id)" class="icon-btn icon-btn-danger" :title="t('dns.deleteTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
+              <n-button v-if="!p.is_default" quaternary circle size="small" @click="handleSetDefault(p.id)" :title="t('dns.setTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" @click="openEdit(p)" :title="t('dns.editTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" type="error" @click="openDeleteModal(p.id)" :title="t('dns.deleteTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </template>
+              </n-button>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </n-spin>
+    </n-card>
 
     <!-- Modal -->
-    <div v-if="showModal" class="modal modal-open">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">{{ editingId ? t('dns.editProvider') : t('dns.addProviderTitle') }}</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="label"><span class="label-text">{{ t('dns.name') }}</span></label>
-            <input v-model="formData.name" type="text" :placeholder="t('dns.namePlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('dns.providerType') }}</span></label>
-            <select v-model="formData.provider_type" class="select select-bordered w-full">
-              <option v-for="pt in providerTypes" :key="pt.value" :value="pt.value">{{ t(pt.labelKey) }}</option>
-            </select>
-          </div>
-          <!-- 动态配置字段 -->
-          <div v-if="currentFields.length > 0" class="space-y-3">
-            <label class="label"><span class="label-text">{{ t('dns.config') }}</span></label>
-            <div v-for="field in currentFields" :key="field.key">
-              <label class="label"><span class="label-text text-xs">{{ t(field.labelKey) }}</span></label>
-              <input
-                v-model="configFields[field.key]"
-                :type="field.type"
-                :placeholder="t(field.labelKey)"
-                class="input input-bordered w-full"
-              />
+    <n-modal v-model:show="showModal" preset="card" :title="editingId ? t('dns.editProvider') : t('dns.addProviderTitle')" style="max-width: 560px;">
+      <n-form label-placement="top">
+        <n-form-item :label="t('dns.name')">
+          <n-input v-model:value="formData.name" :placeholder="t('dns.namePlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('dns.providerType')">
+          <n-select v-model:value="formData.provider_type" :options="providerTypeOptions" />
+        </n-form-item>
+        <!-- 动态配置字段 -->
+        <div v-if="currentFields.length > 0">
+          <n-form-item :label="t('dns.config')">
+            <div class="w-full space-y-3">
+              <div v-for="field in currentFields" :key="field.key">
+                <label class="block text-xs opacity-60 mb-1">{{ t(field.labelKey) }}</label>
+                <n-input
+                  v-model:value="configFields[field.key]"
+                  :type="field.type"
+                  :placeholder="t(field.labelKey)"
+                />
+              </div>
             </div>
-          </div>
-          <div v-else>
-            <label class="label"><span class="label-text">{{ t('dns.config') }}</span></label>
-            <textarea :value="JSON.stringify(formData.config, null, 2)" @input="(e: Event) => { const v = (e.target as HTMLTextAreaElement).value; try { formData.config = JSON.parse(v) } catch {} }" :placeholder="t('dns.configPlaceholder')" class="textarea textarea-bordered w-full font-mono text-sm" rows="4"></textarea>
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('dns.comment') }}</span></label>
-            <input v-model="formData.comment" type="text" :placeholder="t('dns.commentPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" class="toggle toggle-primary" v-model="formData.is_active" />
-              <span class="text-sm">{{ t('dns.enabled') }}</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" class="toggle toggle-primary" v-model="formData.is_default" />
-              <span class="text-sm">{{ t('dns.setAsDefault') }}</span>
-            </label>
-          </div>
+          </n-form-item>
         </div>
-        <div class="modal-action">
-          <button @click="showModal = false" class="btn">{{ t('dns.cancel') }}</button>
-          <button @click="handleSave" class="btn btn-primary">{{ t('dns.save') }}</button>
+        <div v-else>
+          <n-form-item :label="t('dns.config')">
+            <n-input
+              type="textarea"
+              :value="JSON.stringify(formData.config, null, 2)"
+              @update:value="(v: string) => { try { formData.config = JSON.parse(v) } catch {} }"
+              :placeholder="t('dns.configPlaceholder')"
+              :rows="4"
+              style="font-family: monospace; font-size: 12px;"
+            />
+          </n-form-item>
         </div>
-      </div>
-    </div>
+        <n-form-item :label="t('dns.comment')">
+          <n-input v-model:value="formData.comment" :placeholder="t('dns.commentPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('dns.enabled')">
+          <n-switch v-model:value="formData.is_active" />
+        </n-form-item>
+        <n-form-item :label="t('dns.setAsDefault')">
+          <n-switch v-model:value="formData.is_default" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <n-button @click="showModal = false">{{ t('dns.cancel') }}</n-button>
+          <n-button type="primary" @click="handleSave">{{ t('dns.save') }}</n-button>
+        </div>
+      </template>
+    </n-modal>
 
     <!-- 删除确认弹窗 -->
-    <dialog v-if="showDeleteModal" class="modal modal-open">
-      <div class="modal-box glass-panel">
-        <h3 class="font-bold text-lg">{{ t('dns.deleteTitle') }}</h3>
-        <p class="py-4">{{ t('dns.deleteConfirm') }}</p>
-        <div class="modal-action">
-          <button class="btn" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-error" @click="handleDelete">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button @click="showDeleteModal = false">close</button>
-      </form>
-    </dialog>
+    <n-modal v-model:show="showDeleteModal" preset="dialog" :title="t('dns.deleteTitle')">
+      <p>{{ t('dns.deleteConfirm') }}</p>
+      <template #action>
+        <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>

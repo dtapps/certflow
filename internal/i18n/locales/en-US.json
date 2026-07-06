@@ -236,6 +236,8 @@
   "notification.monitor_http_error.body": "Domain {{.Domain}} returned HTTP {{.Code}}",
   "error.get_home_dir_failed": "Failed to get home directory",
   "log.app_starting": "CertFlow starting...",
+  "log.set_window_appearance": "Setting window appearance",
+  "log.main_window_nil": "Main window reference is nil",
   "log.seed_ca_failed": "Failed to seed default CA",
   "app.title": "CertFlow",
   "app.description": "SSL Certificate Manager",

@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
+import { NInput, NSelect, NButton, NDataTable, NTag, NModal, NSpin, NEmpty } from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import type { CertificateListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
-import { useI18n } from '../stores/i18n'
+import { useI18nStore } from '../stores/i18n'
 import { getStatusBadge, getDaysLeft, getDaysLeftClass } from '../utils/certificate'
 
 const router = useRouter()
-const { t } = useI18n()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 
 const searchQuery = ref('')
-const statusFilter = ref('all')
+const statusFilter = ref<string | null>('all')
 const certificates = ref<CertificateListItem[]>([])
 const isLoading = ref(false)
+
+const statusOptions = [
+  { label: t('certs.allStatus'), value: 'all' },
+  { label: t('certs.active'), value: 'active' },
+  { label: t('certs.pending'), value: 'pending' },
+  { label: t('certs.expired'), value: 'expired' },
+  { label: t('certs.revoked'), value: 'revoked' },
+  { label: t('certs.failed'), value: 'failed' },
+]
 
 onMounted(async () => {
   isLoading.value = true
@@ -36,7 +48,7 @@ const filteredCertificates = computed(() => {
     )
   }
 
-  if (statusFilter.value !== 'all') {
+  if (statusFilter.value && statusFilter.value !== 'all') {
     result = result.filter(c => c.status === statusFilter.value)
   }
 
@@ -71,6 +83,80 @@ const handleRetry = (cert: CertificateListItem) => {
     router.push('/certificates/apply?domain=' + encodeURIComponent(cert.domain))
   }
 }
+
+const columns: DataTableColumns<CertificateListItem> = [
+  {
+    title: t('certs.domain'),
+    key: 'domain',
+    render(row) {
+      return h('div', { class: 'flex items-center gap-3' }, [
+        h('div', { class: 'w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center' }, [
+          h('svg', { class: 'w-4 h-4 text-blue-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
+          ])
+        ]),
+        h('div', [
+          h('p', { class: 'font-medium' }, row.domain),
+          row.sans?.length ? h('p', { class: 'text-xs opacity-50' }, `+${row.sans.length} ${t('cert.san')}`) : null,
+        ])
+      ])
+    }
+  },
+  {
+    title: t('certs.issuer'),
+    key: 'issuer',
+  },
+  {
+    title: t('certs.status'),
+    key: 'status',
+    render(row) {
+      const badge = getStatusBadge(row.status)
+      return h(NTag, {
+        type: badge.type as any,
+        size: 'small',
+        bordered: false,
+      }, { default: () => badge.text })
+    }
+  },
+  {
+    title: t('certs.daysLeft'),
+    key: 'daysLeft',
+    render(row) {
+      const days = getDaysLeft(row.not_after, row.status)
+      if (days === null) return h('span', { class: 'opacity-50' }, '—')
+      return h('span', { class: `font-medium ${getDaysLeftClass(days)}` }, `${days} ${t('cert.daysLeft')}`)
+    }
+  },
+  {
+    title: t('certs.autoRenew'),
+    key: 'auto_renew',
+    render(row) {
+      return row.auto_renew
+        ? h(NTag, { type: 'success', size: 'small', bordered: false }, { default: () => t('certs.enabled') })
+        : h('span', { class: 'opacity-50' }, t('certs.disabled'))
+    }
+  },
+  {
+    title: t('certs.actions'),
+    key: 'actions',
+    align: 'right',
+    render(row) {
+      return h('div', { class: 'flex items-center justify-end gap-2' }, [
+        row.status === 'pending'
+          ? h(NButton, { size: 'tiny', secondary: true, onClick: (e) => { e.stopPropagation(); handleRetry(row) } }, { default: () => t('certs.continueApply') })
+          : null,
+        row.status === 'failed'
+          ? h(NButton, { size: 'tiny', type: 'error', secondary: true, onClick: (e) => { e.stopPropagation(); handleRetry(row) } }, { default: () => t('certs.retryApply') })
+          : null,
+        h(NButton, { size: 'tiny', type: 'error', quaternary: true, onClick: (e) => { e.stopPropagation(); openDeleteModal(row.id) } }, {
+          icon: () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+          ])
+        })
+      ])
+    }
+  },
+]
 </script>
 
 <template>
@@ -78,171 +164,65 @@ const handleRetry = (cert: CertificateListItem) => {
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-base-content">{{ t('certs.title') }}</h1>
-        <p class="text-content-70 text-sm mt-1">{{ t('certs.subtitle') }}</p>
+        <h1 class="text-2xl font-bold">{{ t('certs.title') }}</h1>
+        <p class="text-sm mt-1 opacity-60">{{ t('certs.subtitle') }}</p>
       </div>
-      <button @click="router.push('/certificates/apply')" class="btn btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
+      <n-button type="primary" @click="router.push('/certificates/apply')">
+        <template #icon>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </template>
         {{ t('certs.apply') }}
-      </button>
+      </n-button>
     </div>
 
     <!-- 搜索和筛选 -->
     <div class="flex flex-col sm:flex-row gap-4">
-      <div class="relative flex-1">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          v-model="searchQuery"
-          type="text"
-          :placeholder="t('certs.search')"
-          class="input pl-10 w-full"
-        />
-      </div>
-      <select v-model="statusFilter" class="select select-bordered w-auto">
-        <option value="all">{{ t('certs.allStatus') }}</option>
-        <option value="active">{{ t('certs.active') }}</option>
-        <option value="pending">{{ t('certs.pending') }}</option>
-        <option value="expired">{{ t('certs.expired') }}</option>
-        <option value="revoked">{{ t('certs.revoked') }}</option>
-        <option value="failed">{{ t('certs.failed') }}</option>
-      </select>
+      <n-input
+        v-model:value="searchQuery"
+        :placeholder="t('certs.search')"
+        clearable
+        style="flex: 1"
+      >
+        <template #prefix>
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </template>
+      </n-input>
+      <n-select
+        v-model:value="statusFilter"
+        :options="statusOptions"
+        style="width: 150px"
+      />
     </div>
 
     <!-- 证书列表 -->
-    <div class="glass-panel rounded-2xl overflow-hidden">
-      <div v-if="isLoading" class="flex items-center justify-center py-20">
-        <div class="spinner animate-spin"></div>
-      </div>
-
-      <div v-else-if="filteredCertificates.length === 0" class="text-center py-20">
-        <svg class="w-20 h-20 mx-auto text-content-30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-        <p class="text-content-70 text-lg">{{ t('certs.noRecords') }}</p>
-        <p class="text-content-50 text-sm mt-2">{{ t('certs.noRecordsDesc') }}</p>
-      </div>
-
-      <table v-else class="w-full">
-        <thead>
-          <tr class="border-b border-base-300">
-            <th class="text-left py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.domain') }}</th>
-            <th class="text-left py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.issuer') }}</th>
-            <th class="text-left py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.status') }}</th>
-            <th class="text-left py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.daysLeft') }}</th>
-            <th class="text-left py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.autoRenew') }}</th>
-            <th class="text-right py-4 px-6 text-content-70 font-medium text-sm">{{ t('certs.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="cert in filteredCertificates"
-            :key="cert.id"
-            class="border-b border-base-300-faint hover:bg-base-300-faint transition-colors cursor-pointer"
-            @click="router.push('/certificates/' + cert.id)"
-          >
-            <td class="py-4 px-6">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-primary-soft flex items-center justify-center">
-                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-base-content font-medium">{{ cert.domain }}</p>
-                  <p v-if="cert.sans?.length" class="text-content-50 text-xs">
-                    +{{ cert.sans.length }} {{ t('cert.san') }}
-                  </p>
-                </div>
-              </div>
-            </td>
-            <td class="py-4 px-6 text-content-80">{{ cert.issuer }}</td>
-            <td class="py-4 px-6">
-              <div class="flex flex-col gap-1">
-                <span
-                  class="px-2.5 py-1 rounded-full text-xs font-medium border w-fit"
-                  :class="getStatusBadge(cert.status).class"
-                >
-                  {{ getStatusBadge(cert.status).text }}
-                </span>
-                <span
-                  v-if="cert.status === 'failed' && cert.last_error"
-                  class="text-error text-xs truncate max-w-[200px]"
-                  :title="cert.last_error"
-                >
-                  {{ cert.last_error }}
-                </span>
-              </div>
-            </td>
-            <td class="py-4 px-6">
-              <span
-                v-if="getDaysLeft(cert.not_after, cert.status) !== null"
-                class="text-sm font-medium"
-                :class="getDaysLeftClass(getDaysLeft(cert.not_after, cert.status))"
-              >
-                {{ getDaysLeft(cert.not_after, cert.status) }} {{ t('cert.daysLeft') }}
-              </span>
-              <span v-else class="text-content-50 text-sm">—</span>
-            </td>
-            <td class="py-4 px-6">
-              <span v-if="cert.auto_renew" class="text-success text-sm flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                {{ t('certs.enabled') }}
-              </span>
-              <span v-else class="text-content-50 text-sm">{{ t('certs.disabled') }}</span>
-            </td>
-            <td class="py-4 px-6">
-              <div class="flex items-center justify-end gap-2" @click.stop>
-                <button
-                  v-if="cert.status === 'pending'"
-                  @click="handleRetry(cert)"
-                  class="btn btn-xs btn-secondary"
-                  :title="t('certs.continueApply')"
-                >
-                  {{ t('certs.continueApply') }}
-                </button>
-                <button
-                  v-else-if="cert.status === 'failed'"
-                  @click="handleRetry(cert)"
-                  class="btn btn-xs btn-error"
-                  :title="t('certs.retryApply')"
-                >
-                  {{ t('certs.retryApply') }}
-                </button>
-                <button
-                  @click="openDeleteModal(cert.id)"
-                  class="icon-btn icon-btn-danger"
-                  :title="t('certs.delete')"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <n-card size="small">
+      <n-spin :show="isLoading">
+        <n-empty v-if="!isLoading && filteredCertificates.length === 0" :description="t('certs.noRecords')" />
+        <n-data-table
+          v-else
+          :columns="columns"
+          :data="filteredCertificates"
+          :bordered="false"
+          :single-line="false"
+          :row-props="(row: CertificateListItem) => ({
+            style: 'cursor: pointer;',
+            onClick: () => router.push('/certificates/' + row.id)
+          })"
+        />
+      </n-spin>
+    </n-card>
 
     <!-- 删除确认弹窗 -->
-    <dialog v-if="showDeleteModal" class="modal modal-open">
-      <div class="modal-box glass-panel">
-        <h3 class="font-bold text-lg">{{ t('certs.delete') }}</h3>
-        <p class="py-4">{{ t('certs.deleteConfirm') }}</p>
-        <div class="modal-action">
-          <button class="btn" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-error" @click="handleDelete">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button @click="showDeleteModal = false">close</button>
-      </form>
-    </dialog>
+    <n-modal v-model:show="showDeleteModal" preset="dialog" :title="t('certs.delete')">
+      <p>{{ t('certs.deleteConfirm') }}</p>
+      <template #action>
+        <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>

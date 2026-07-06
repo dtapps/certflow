@@ -1,7 +1,7 @@
-import { useI18n } from '../stores/i18n'
+import { useI18nStore } from '../stores/i18n'
 
 export function formatRelativeTime(ts: string) {
-  const { t } = useI18n()
+  const { t } = useI18nStore()
   const d = new Date(ts.replace(' ', 'T'))
   if (isNaN(d.getTime())) return ts
   const now = new Date()

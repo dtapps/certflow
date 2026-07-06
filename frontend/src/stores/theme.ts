@@ -1,74 +1,84 @@
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { defineStore } from 'pinia'
+import { darkTheme, lightTheme } from 'naive-ui'
+import type { GlobalThemeOverrides } from 'naive-ui'
 import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
-import { Events } from '@wailsio/runtime'
 
 export type ThemeMode = 'dark' | 'light' | 'auto'
 
-function getSystemThemeFallback(): 'dark' | 'light' {
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    return 'light'
+const STORAGE_KEY = 'certflow-theme'
+
+// Naive UI 主题覆盖配置
+const baseThemeOverrides: GlobalThemeOverrides = {
+  common: {
+    borderRadius: '8px',
+    fontFamily: "'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+  Card: { borderRadius: '12px' },
+  Button: { borderRadiusMedium: '8px' },
+  Input: { borderRadius: '8px' },
+  Tag: { borderRadius: '9999px' },
+}
+
+export const useThemeStore = defineStore('theme', () => {
+  // 状态
+  const theme = ref<ThemeMode>((localStorage.getItem(STORAGE_KEY) as ThemeMode) || 'auto')
+  const systemDark = ref(false)
+
+  // 计算属性
+  const isDark = computed(() => {
+    if (theme.value === 'auto') return systemDark.value
+    return theme.value === 'dark'
+  })
+
+  const naiveTheme = computed(() => isDark.value ? darkTheme : lightTheme)
+  const naiveThemeOverrides = computed(() => isDark.value ? baseThemeOverrides : baseThemeOverrides)
+
+  // 同步窗口标题栏背景色
+  async function syncWindowAppearance(dark: boolean) {
+    try {
+      await SystemService.SetWindowAppearance(dark)
+    } catch (e) {
+      console.error('[ThemeStore] Failed to set window appearance:', e)
+    }
   }
-  return 'dark'
-}
 
-const storedTheme = localStorage.getItem('certflow-theme') as ThemeMode | null
-const currentTheme = ref<ThemeMode>(storedTheme || 'auto')
-
-// 优先使用 Wails3 API，否则回退到 matchMedia
-async function getSystemTheme(): Promise<'dark' | 'light'> {
-  try {
-    const isDark = await SystemService.IsDarkMode()
-    return isDark ? 'dark' : 'light'
-  } catch {
-    return getSystemThemeFallback()
+  // 方法
+  function setTheme(mode: ThemeMode) {
+    theme.value = mode
+    localStorage.setItem(STORAGE_KEY, mode)
   }
-}
 
-function resolveTheme(theme: ThemeMode, systemDark?: 'dark' | 'light'): 'dark' | 'light' {
-  if (theme === 'auto') {
-    return systemDark || getSystemThemeFallback()
+  async function initTheme() {
+    try {
+      systemDark.value = await SystemService.IsDarkMode()
+    } catch (e) {
+      console.error('Failed to detect system theme:', e)
+    }
+    // 初始化时同步窗口外观
+    syncWindowAppearance(isDark.value)
   }
-  return theme
-}
 
-function applyTheme(theme: ThemeMode, systemDark?: 'dark' | 'light') {
-  const resolved = resolveTheme(theme, systemDark)
-  document.documentElement.setAttribute('data-theme', resolved)
-  localStorage.setItem('certflow-theme', theme)
-}
+  // 监听 isDark 变化，同步窗口外观
+  watch(isDark, (val) => {
+    syncWindowAppearance(val)
+  })
 
-// Apply on init
-applyTheme(currentTheme.value)
-
-// Listen for system theme changes from Wails3
-try {
-  Events.On('theme_changed', () => {
-    if (currentTheme.value === 'auto') {
-      applyTheme('auto')
+  // 跨窗口同步：监听 localStorage 变化
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY && e.newValue) {
+      theme.value = e.newValue as ThemeMode
     }
   })
-} catch {
-  // Fallback: use matchMedia if Wails runtime not available
-  if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (currentTheme.value === 'auto') {
-        applyTheme('auto')
-      }
-    })
-  }
-}
 
-watch(currentTheme, (val) => {
-  applyTheme(val)
-})
-
-export function useTheme() {
-  function setTheme(theme: ThemeMode) {
-    currentTheme.value = theme
-  }
+  // 初始化
+  initTheme()
 
   return {
-    theme: currentTheme,
+    theme,
+    isDark,
+    naiveTheme,
+    naiveThemeOverrides,
     setTheme,
   }
-}
+})

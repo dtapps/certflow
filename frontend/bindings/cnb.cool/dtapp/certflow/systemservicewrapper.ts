@@ -27,3 +27,17 @@ export function IsDarkMode(): $CancellablePromise<boolean> {
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(3339081910, app);
 }
+
+/**
+ * SetMainWindow 设置主窗口引用
+ */
+export function SetMainWindow(w: application$0.Window): $CancellablePromise<void> {
+    return $Call.ByID(1199370302, w);
+}
+
+/**
+ * SetWindowAppearance 设置主窗口外观（标题栏主题）
+ */
+export function SetWindowAppearance(isDark: boolean): $CancellablePromise<void> {
+    return $Call.ByID(258278425, isDark);
+}

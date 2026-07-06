@@ -8,7 +8,10 @@ import type { Events } from "@wailsio/runtime";
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "auth_verified": { [_ in string]?: string } | null;
+            "locale_changed_sync": { [_ in string]?: string } | null;
             "notification": { [_ in string]?: string } | null;
+            "theme_changed_sync": { [_ in string]?: string } | null;
             "time": string;
         }
     }

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { NCard, NButton, NInput, NInputNumber, NSelect, NSwitch, NSpin, NForm, NFormItem, NTag } from 'naive-ui'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import * as NotificationService from '@bindings/cnb.cool/dtapp/certflow/notificationservicewrapper'
 import * as SchedulerService from '@bindings/cnb.cool/dtapp/certflow/schedulerservicewrapper'
@@ -10,8 +12,8 @@ import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapp
 import * as WindowService from '@bindings/cnb.cool/dtapp/certflow/windowservicewrapper'
 import * as AutostartService from '@bindings/cnb.cool/dtapp/certflow/autostartservicewrapper'
 import type { Settings, DNSConfig } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
-import { useTheme } from '../stores/theme'
-import { useI18n } from '../stores/i18n'
+import { useThemeStore } from '../stores/theme'
+import { useI18nStore } from '../stores/i18n'
 
 // 内部使用的类型：确保数组不为 null
 type SafeDNSConfig = Omit<DNSConfig, 'servers'> & { servers: string[] }
@@ -50,13 +52,40 @@ const selectedLogFile = ref('certflow.log')
 const logTail = ref(100)
 const logContent = ref('')
 
-const { theme: currentTheme, setTheme } = useTheme()
-const { locale: currentLocale, t, setLocale } = useI18n()
+const themeStore = useThemeStore()
+const { theme: currentTheme, isDark } = storeToRefs(themeStore)
+const { setTheme } = themeStore
+
+const i18nStore = useI18nStore()
+const { locale: currentLocale } = storeToRefs(i18nStore)
+const { t, setLocale } = i18nStore
 
 // 检测是否有变更
 const hasChanges = computed(() => {
   return JSON.stringify(settings.value) !== originalSettings.value
 })
+
+// 主题相关样式
+const logContentStyle = computed(() => ({
+  backgroundColor: isDark.value ? '#1f2937' : '#f3f4f6',
+  color: isDark.value ? '#e5e5e5' : '#374151',
+}))
+
+const dnsItemStyle = computed(() => (enabled: boolean) => ({
+  borderColor: enabled
+    ? (isDark.value ? '#3b82f6' : '#93c5fd')
+    : (isDark.value ? '#374151' : '#e5e7eb'),
+  backgroundColor: enabled
+    ? (isDark.value ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff')
+    : (isDark.value ? 'rgba(31, 41, 55, 0.5)' : '#f9fafb'),
+}))
+
+const dnsInputStyle = computed(() => ({
+  backgroundColor: isDark.value ? '#111827' : '#ffffff',
+  color: isDark.value ? '#e5e5e5' : '#374151',
+  fontFamily: 'monospace',
+  fontSize: '12px',
+}))
 
 // Sync store -> settings ref when store changes (e.g. from other pages)
 watch(currentTheme, (val) => {
@@ -264,6 +293,31 @@ const openLogFullscreen = async () => {
   }
 }
 
+const logLevelOptions = [
+  { label: 'DEBUG', value: 'DEBUG' },
+  { label: 'INFO', value: 'INFO' },
+  { label: 'WARN', value: 'WARN' },
+  { label: 'ERROR', value: 'ERROR' },
+]
+
+const languageOptions = [
+  { label: t('lang.auto'), value: 'auto' },
+  { label: t('lang.zh'), value: 'zh-CN' },
+  { label: t('lang.en'), value: 'en-US' },
+]
+
+const themeOptions = [
+  { label: t('theme.auto'), value: 'auto' },
+  { label: t('theme.dark'), value: 'dark' },
+  { label: t('theme.light'), value: 'light' },
+]
+
+const logTailOptions = [
+  { label: t('settings.log.last100'), value: 100 },
+  { label: t('settings.log.last500'), value: 500 },
+  { label: t('settings.log.all'), value: 0 },
+]
+
 onMounted(async () => {
   loadSettings()
   loadLogFiles()
@@ -280,320 +334,316 @@ onMounted(async () => {
 <template>
   <div class="page">
     <div>
-      <h1 class="text-2xl font-bold text-base-content">{{ t('settings.title') }}</h1>
-      <p class="text-sm mt-1 text-content-50">{{ t('settings.subtitle') }}</p>
+      <h1 class="text-2xl font-bold">{{ t('settings.title') }}</h1>
+      <p class="text-sm mt-1 opacity-50">{{ t('settings.subtitle') }}</p>
     </div>
 
-    <!-- 续期设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-        {{ t('settings.renewal.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.renewal.auto') }}</p>
-            <p class="setting-row-desc">{{ t('settings.renewal.auto.desc') }}</p>
-          </div>
-          <input type="checkbox" class="toggle toggle-primary" v-model="settings.auto_renewal_enabled" />
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.renewal.days') }}</p>
-            <p class="setting-row-desc">{{ t('settings.renewal.days.desc') }}</p>
-          </div>
-          <div class="w-16"><input v-model.number="settings.default_renewal_days" type="number" min="1" max="90" class="input input-sm" /></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 启动设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-        {{ t('settings.autostart.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.autostart.enabled') }}</p>
-            <p class="setting-row-desc">{{ t('settings.autostart.enabled.desc') }}</p>
-          </div>
-          <input type="checkbox" class="toggle toggle-primary" v-model="autostartEnabled" />
-        </div>
-      </div>
-    </div>
-
-    <!-- 通知设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-        {{ t('settings.notification.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.notification.enabled') }}</p>
-            <p class="setting-row-desc">{{ t('settings.notification.enabled.desc') }}</p>
-          </div>
-          <input type="checkbox" class="toggle toggle-primary" v-model="settings.notification_enabled" />
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.notification.check') }}</p>
-            <p class="setting-row-desc">{{ t('settings.notification.check.desc') }}</p>
-          </div>
-          <input type="checkbox" class="toggle toggle-primary" v-model="settings.auto_check_expiry" />
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.notification.interval') }}</p>
-            <p class="setting-row-desc">{{ t('settings.notification.interval.desc') }}</p>
-          </div>
-          <div class="w-16"><input v-model.number="settings.check_interval" type="number" min="1" max="24" class="input input-sm" /></div>
-        </div>
-        <button @click="handleTestNotification" class="btn btn-secondary mt-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-          {{ t('settings.notification.test') }}
-        </button>
-      </div>
-    </div>
-
-    <!-- 维护操作 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-        {{ t('settings.maintenance.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.maintenance.renewal') }}</p>
-            <p class="setting-row-desc">{{ t('settings.maintenance.renewal.desc') }}</p>
-          </div>
-          <button @click="handleRunRenewal" class="btn btn-secondary">{{ t('settings.maintenance.run') }}</button>
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.maintenance.expiry') }}</p>
-            <p class="setting-row-desc">{{ t('settings.maintenance.expiry.desc') }}</p>
-          </div>
-          <button @click="handleRunExpiryCheck" class="btn btn-secondary">{{ t('settings.maintenance.run') }}</button>
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.maintenance.monitor') }}</p>
-            <p class="setting-row-desc">{{ t('settings.maintenance.monitor.desc') }}</p>
-          </div>
-          <button @click="handleRunMonitorCheck" class="btn btn-secondary">{{ t('settings.maintenance.run') }}</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 网络设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" /></svg>
-        {{ t('settings.network.title') }}
-      </h2>
-      <div class="space-y-5">
-        <!-- DNS 解析服务器 -->
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="font-medium text-base-content text-sm">{{ t('settings.network.customDNS') }}</p>
-              <p class="text-content-50 text-xs mt-0.5">{{ t('settings.network.customDNSDesc') }}</p>
+    <n-spin :show="loading">
+      <!-- 续期设置 -->
+      <n-card :title="t('settings.renewal.title')" size="small">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.renewal.auto')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="settings.auto_renewal_enabled" />
+              <span class="text-sm opacity-60">{{ t('settings.renewal.auto.desc') }}</span>
             </div>
-            <input type="checkbox" class="toggle toggle-primary toggle-sm" v-model="dnsEnabled" @change="toggleDNS()" />
-          </div>
-          <div v-if="dnsEnabled" class="pl-4 border-l-2 border-primary-soft">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div
-                v-for="dns in settings.dns_configs"
-                :key="dns.id"
-                class="flex items-start gap-3 p-3 rounded-xl border transition-colors"
-                :class="dns.enabled ? 'border-primary-soft bg-primary-faint' : 'border-base-300 bg-base-200-faint'"
-              >
-                <input type="checkbox" class="toggle toggle-sm toggle-primary mt-0.5" v-model="dns.enabled" />
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-base-content truncate">{{ dns.name }}</span>
-                    <span v-if="dns.builtin" class="badge-tag badge-tag-muted text-[10px] shrink-0">内置</span>
-                  </div>
-                  <input
-                    v-if="!dns.builtin"
-                    :value="(dns.servers || []).join(', ')"
-                    @change="dns.servers = ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean)"
-                    class="input input-sm w-full font-mono text-xs mt-1"
-                    :placeholder="t('settings.network.dnsPlaceholder')"
-                  />
-                  <p v-else class="text-content-50 text-xs font-mono mt-1 break-all">{{ (dns.servers || []).join(', ') }}</p>
-                </div>
-                <button v-if="!dns.builtin" @click="removeDNS(dns.id)" class="icon-btn text-content-50 hover:text-error shrink-0" :title="t('settings.network.delete')">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                </button>
+          </n-form-item>
+          <n-form-item :label="t('settings.renewal.days')">
+            <div class="flex items-center gap-3">
+              <n-input-number v-model:value="settings.default_renewal_days" :min="1" :max="90" class="input-width" />
+              <span class="text-sm opacity-60">{{ t('settings.renewal.days.desc') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 启动设置 -->
+      <n-card :title="t('settings.autostart.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.autostart.enabled')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="autostartEnabled" />
+              <span class="text-sm opacity-60">{{ t('settings.autostart.enabled.desc') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 通知设置 -->
+      <n-card :title="t('settings.notification.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.notification.enabled')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="settings.notification_enabled" />
+              <span class="text-sm opacity-60">{{ t('settings.notification.enabled.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.notification.check')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="settings.auto_check_expiry" />
+              <span class="text-sm opacity-60">{{ t('settings.notification.check.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.notification.interval')">
+            <div class="flex items-center gap-3">
+              <n-input-number v-model:value="settings.check_interval" :min="1" :max="24" class="input-width" />
+              <span class="text-sm opacity-60">{{ t('settings.notification.interval.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item label="">
+            <n-button @click="handleTestNotification">
+              {{ t('settings.notification.test') }}
+            </n-button>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 维护操作 -->
+      <n-card :title="t('settings.maintenance.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.maintenance.renewal')">
+            <div class="flex items-center gap-3">
+              <n-button secondary @click="handleRunRenewal">{{ t('settings.maintenance.run') }}</n-button>
+              <span class="text-sm opacity-60">{{ t('settings.maintenance.renewal.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.maintenance.expiry')">
+            <div class="flex items-center gap-3">
+              <n-button secondary @click="handleRunExpiryCheck">{{ t('settings.maintenance.run') }}</n-button>
+              <span class="text-sm opacity-60">{{ t('settings.maintenance.expiry.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.maintenance.monitor')">
+            <div class="flex items-center gap-3">
+              <n-button secondary @click="handleRunMonitorCheck">{{ t('settings.maintenance.run') }}</n-button>
+              <span class="text-sm opacity-60">{{ t('settings.maintenance.monitor.desc') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 网络设置 -->
+      <n-card :title="t('settings.network.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <!-- DNS 解析服务器 -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="font-medium text-sm">{{ t('settings.network.customDNS') }}</p>
+                <p class="text-xs mt-0.5 opacity-50">{{ t('settings.network.customDNSDesc') }}</p>
               </div>
+              <n-switch v-model:value="dnsEnabled" @update:value="toggleDNS()" />
             </div>
-            <button @click="addCustomDNS" class="btn btn-ghost btn-xs text-primary mt-3">
-              {{ t('settings.network.addCustomDNS') }}
-            </button>
+            <div v-if="dnsEnabled" class="pl-4 border-l-2 border-blue-500">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div
+                  v-for="dns in settings.dns_configs"
+                  :key="dns.id"
+                  class="dns-item"
+                  :style="dnsItemStyle(dns.enabled)"
+                >
+                  <n-switch v-model:value="dns.enabled" size="small" class="mt-0.5" />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium truncate">{{ dns.name }}</span>
+                      <n-tag v-if="dns.builtin" size="tiny" :bordered="false">内置</n-tag>
+                    </div>
+                    <n-input
+                      v-if="!dns.builtin"
+                      :value="(dns.servers || []).join(', ')"
+                      @update:value="(v: string) => { dns.servers = v.split(',').map(s => s.trim()).filter(Boolean) }"
+                      size="small"
+                      :style="dnsInputStyle"
+                      :placeholder="t('settings.network.dnsPlaceholder')"
+                    />
+                    <p v-else class="text-xs font-mono mt-1 break-all opacity-50">{{ (dns.servers || []).join(', ') }}</p>
+                  </div>
+                  <n-button v-if="!dns.builtin" text size="tiny" type="error" @click="removeDNS(dns.id)" :title="t('settings.network.delete')">
+                    <template #icon>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </template>
+                  </n-button>
+                </div>
+              </div>
+              <n-button text size="small" type="primary" @click="addCustomDNS" class="mt-3">
+                {{ t('settings.network.addCustomDNS') }}
+              </n-button>
+            </div>
+          </div>
+
+          <!-- 代理 -->
+          <div class="pt-3 border-t border-neutral-200 dark:border-neutral-700 mt-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="font-medium text-sm">{{ t('settings.network.httpProxy') }}</p>
+                <p class="text-xs mt-0.5 opacity-50">{{ t('settings.network.httpProxyDesc') }}</p>
+              </div>
+              <n-switch v-model:value="settings.proxy.enabled" />
+            </div>
+            <div v-if="settings.proxy.enabled" class="grid grid-cols-2 gap-3 pl-4 border-l-2 border-blue-500">
+              <div class="col-span-2 flex items-center gap-2">
+                <n-select v-model:value="settings.proxy.protocol" :options="[
+                  { label: 'HTTP', value: 'http' },
+                  { label: 'HTTPS', value: 'https' },
+                  { label: 'SOCKS5', value: 'socks5' },
+                ]" class="proxy-protocol" size="small" />
+                <n-input v-model:value="settings.proxy.host" :placeholder="t('settings.network.hostPlaceholder')" size="small" class="flex-1" />
+                <n-input-number v-model:value="settings.proxy.port" :min="1" :max="65535" size="small" class="proxy-port" />
+              </div>
+              <n-input v-model:value="settings.proxy.username" :placeholder="t('settings.network.usernamePlaceholder')" size="small" />
+              <n-input v-model:value="settings.proxy.password" type="password" :placeholder="t('settings.network.passwordPlaceholder')" size="small" show-password-on="click" />
+            </div>
+          </div>
+        </n-form>
+      </n-card>
+
+      <!-- 偏好设置 -->
+      <n-card :title="t('settings.preferences.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.preferences.language')">
+            <div class="flex items-center gap-3">
+              <n-select v-model:value="settings.language" :options="languageOptions" class="select-width" />
+              <span class="text-sm opacity-60">{{ t('settings.preferences.language.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.preferences.theme')">
+            <div class="flex items-center gap-3">
+              <n-select v-model:value="settings.theme" :options="themeOptions" class="select-width" />
+              <span class="text-sm opacity-60">{{ t('settings.preferences.theme.desc') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 关于 -->
+      <n-card :title="t('settings.about.title')" size="small" class="mt-4">
+        <div class="space-y-3">
+          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.name') }}</span><span>CertFlow</span></div>
+          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.version') }}</span><span>0.1.0 Alpha</span></div>
+          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.datadir') }}</span><span class="text-sm font-mono">{{ settings.data_dir }}</span></div>
+          <div class="pt-2 border-t border-neutral-200 dark:border-neutral-700">
+            <n-button secondary block @click="handleCheckUpdate">
+              {{ t('settings.about.checkUpdate') }}
+            </n-button>
           </div>
         </div>
+      </n-card>
 
-        <!-- 代理 -->
-        <div class="pt-3 border-t border-base-300">
+      <!-- 日志设置 -->
+      <n-card :title="t('settings.log.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.log.level')">
+            <div class="flex items-center gap-3">
+              <n-select v-model:value="settings.log.level" :options="logLevelOptions" class="select-width" />
+              <span class="text-sm opacity-60">{{ t('settings.log.levelDesc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.log.maxSize')">
+            <div class="flex items-center gap-2">
+              <n-input-number v-model:value="settings.log.max_mb" :min="1" :max="100" class="input-width-sm" size="small" />
+              <span class="text-sm opacity-50">MB</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.log.maxBackups')">
+            <div class="flex items-center gap-2">
+              <n-input-number v-model:value="settings.log.max_backups" :min="1" :max="20" class="input-width-sm" size="small" />
+              <span class="text-sm opacity-50">{{ t('common.unit') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+
+        <!-- 日志查看器 -->
+        <div class="mt-6 pt-4 border-t border-neutral-200 dark:border-neutral-700">
           <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="font-medium text-base-content text-sm">{{ t('settings.network.httpProxy') }}</p>
-              <p class="text-content-50 text-xs mt-0.5">{{ t('settings.network.httpProxyDesc') }}</p>
+            <p class="font-medium text-sm">{{ t('settings.log.viewer') }}</p>
+            <div class="flex items-center gap-2">
+              <n-select v-model:value="selectedLogFile" :options="logFiles.map(f => ({ label: f, value: f }))" size="small" class="log-file-select" @update:value="loadLogContent()" />
+              <n-select v-model:value="logTail" :options="logTailOptions" size="small" class="log-tail-select" @update:value="loadLogContent()" />
+              <n-button quaternary circle size="small" @click="refreshLogs()">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" @click="openLogDir()" :title="t('settings.log.openDir')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" @click="openLogFullscreen()" :title="t('settings.log.fullscreen')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                </template>
+              </n-button>
             </div>
-            <input type="checkbox" class="toggle toggle-primary toggle-sm" v-model="settings.proxy.enabled" />
           </div>
-          <div v-if="settings.proxy.enabled" class="grid grid-cols-2 gap-3 pl-4 border-l-2 border-primary-soft">
-            <div class="col-span-2 flex items-center gap-2">
-              <select v-model="settings.proxy.protocol" class="select select-sm select-bordered w-24 text-sm">
-                <option value="http">HTTP</option>
-                <option value="https">HTTPS</option>
-                <option value="socks5">SOCKS5</option>
-              </select>
-              <input v-model="settings.proxy.host" type="text" :placeholder="t('settings.network.hostPlaceholder')" class="input input-sm input-bordered flex-1 text-sm" />
-              <input v-model.number="settings.proxy.port" type="number" min="1" max="65535" class="input input-sm input-bordered w-20 text-sm" :placeholder="t('settings.network.portPlaceholder')" />
-            </div>
-            <input v-model="settings.proxy.username" type="text" :placeholder="t('settings.network.usernamePlaceholder')" class="input input-sm input-bordered text-sm" />
-            <input v-model="settings.proxy.password" type="password" :placeholder="t('settings.network.passwordPlaceholder')" class="input input-sm input-bordered text-sm" />
+          <div class="log-content" :style="logContentStyle">
+            <span v-if="logContent">{{ logContent }}</span>
+            <span v-else class="opacity-50">{{ t('settings.log.noContent') }}</span>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 偏好设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
-        {{ t('settings.preferences.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.preferences.language') }}</p>
-            <p class="setting-row-desc">{{ t('settings.preferences.language.desc') }}</p>
-          </div>
-          <select v-model="settings.language" class="select select-bordered w-32 text-sm">
-            <option value="auto">{{ t('lang.auto') }}</option>
-            <option value="zh-CN">{{ t('lang.zh') }}</option>
-            <option value="en-US">{{ t('lang.en') }}</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.preferences.theme') }}</p>
-            <p class="setting-row-desc">{{ t('settings.preferences.theme.desc') }}</p>
-          </div>
-          <select v-model="settings.theme" class="select select-bordered w-32 text-sm">
-            <option value="auto">{{ t('theme.auto') }}</option>
-            <option value="dark">{{ t('theme.dark') }}</option>
-            <option value="light">{{ t('theme.light') }}</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- 关于 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        {{ t('settings.about.title') }}
-      </h2>
-      <div class="space-y-3">
-        <div class="flex justify-between py-2"><span class="text-content-50">{{ t('settings.about.name') }}</span><span class="text-base-content">CertFlow</span></div>
-        <div class="flex justify-between py-2"><span class="text-content-50">{{ t('settings.about.version') }}</span><span class="text-base-content">0.1.0 Alpha</span></div>
-        <div class="flex justify-between py-2"><span class="text-content-50">{{ t('settings.about.datadir') }}</span><span class="text-base-content text-sm font-mono">{{ settings.data_dir }}</span></div>
-        <div class="pt-2 border-t border-base-300">
-          <button @click="handleCheckUpdate" class="btn btn-secondary btn-sm w-full">
-            {{ t('settings.about.checkUpdate') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 日志设置 -->
-    <div class="glass-panel rounded-2xl p-6">
-      <h2 class="section-title">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-        {{ t('settings.log.title') }}
-      </h2>
-      <div class="space-y-4">
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.log.level') }}</p>
-            <p class="setting-row-desc">{{ t('settings.log.levelDesc') }}</p>
-          </div>
-          <select v-model="settings.log.level" class="select select-bordered w-32 text-sm">
-            <option value="DEBUG">DEBUG</option>
-            <option value="INFO">INFO</option>
-            <option value="WARN">WARN</option>
-            <option value="ERROR">ERROR</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.log.maxSize') }}</p>
-            <p class="setting-row-desc">{{ t('settings.log.maxSizeDesc') }}</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <input v-model.number="settings.log.max_mb" type="number" min="1" max="100" class="input input-sm w-20" />
-            <span class="text-sm text-content-50">MB</span>
-          </div>
-        </div>
-        <div class="setting-row">
-          <div>
-            <p class="setting-row-label">{{ t('settings.log.maxBackups') }}</p>
-            <p class="setting-row-desc">{{ t('settings.log.maxBackupsDesc') }}</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <input v-model.number="settings.log.max_backups" type="number" min="1" max="20" class="input input-sm w-20" />
-            <span class="text-sm text-content-50">{{ t('common.unit') }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 日志查看器 -->
-      <div class="mt-6 pt-4 border-t border-base-300">
-        <div class="flex items-center justify-between mb-3">
-          <p class="font-medium text-base-content text-sm">{{ t('settings.log.viewer') }}</p>
-          <div class="flex items-center gap-2">
-            <select v-model="selectedLogFile" class="select select-sm select-bordered text-xs" @change="loadLogContent()">
-              <option v-for="f in logFiles" :key="f" :value="f">{{ f }}</option>
-            </select>
-            <select v-model.number="logTail" class="select select-sm select-bordered text-xs" @change="loadLogContent()">
-              <option :value="100">{{ t('settings.log.last100') }}</option>
-              <option :value="500">{{ t('settings.log.last500') }}</option>
-              <option :value="0">{{ t('settings.log.all') }}</option>
-            </select>
-            <button @click="refreshLogs()" class="btn btn-ghost btn-xs">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            </button>
-            <button @click="openLogDir()" class="icon-btn text-content-50 hover:text-primary" :title="t('settings.log.openDir')">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-            </button>
-            <button @click="openLogFullscreen()" class="icon-btn text-content-50 hover:text-primary" :title="t('settings.log.fullscreen')">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-            </button>
-          </div>
-        </div>
-        <div class="bg-base-300 rounded-lg p-3 max-h-64 overflow-auto font-mono text-xs leading-relaxed" style="white-space: pre-wrap;">
-          <span v-if="logContent" class="text-base-content">{{ logContent }}</span>
-          <span v-else class="text-content-50">{{ t('settings.log.noContent') }}</span>
-        </div>
-      </div>
-    </div>
+      </n-card>
+    </n-spin>
 
     <!-- 保存按钮 -->
     <div class="flex justify-end">
-      <button @click="handleSave" class="btn btn-primary" :disabled="saving || !hasChanges">
+      <n-button type="primary" @click="handleSave" :disabled="saving || !hasChanges" :loading="saving">
         {{ saving ? t('settings.saving') : t('settings.save') }}
-      </button>
+      </n-button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.input-width {
+  width: 100px;
+}
+
+.input-width-sm {
+  width: 80px;
+}
+
+.select-width {
+  width: 128px;
+}
+
+.dns-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid;
+  transition: all 0.15s;
+}
+
+.dns-input {
+  margin-top: 4px;
+}
+
+.proxy-protocol {
+  width: 96px;
+}
+
+.proxy-port {
+  width: 80px;
+}
+
+.log-file-select {
+  width: 192px;
+}
+
+.log-tail-select {
+  width: 112px;
+}
+
+.log-content {
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.625;
+  white-space: pre-wrap;
+}
+</style>

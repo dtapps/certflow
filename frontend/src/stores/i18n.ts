@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue'
+import { defineStore, storeToRefs } from 'pinia'
 
 export type Locale = 'zh-CN' | 'en-US' | 'auto'
 
@@ -86,6 +87,10 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'settings.log.last100': '最近 100 行',
     'settings.log.last500': '最近 500 行',
     'settings.log.all': '全部',
+    'settings.log.level_debug': '调试',
+    'settings.log.level_info': '信息',
+    'settings.log.level_warn': '警告',
+    'settings.log.level_error': '错误',
     'settings.log.noContent': '暂无日志内容',
     'settings.log.loadFailed': '读取日志失败:',
     'settings.log.loadListFailed': '加载日志文件列表失败:',
@@ -154,6 +159,7 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'dashboard.renewSuccess': '证书续期成功',
     'dashboard.renewFailed': '证书续期失败',
     'dashboard.renew': '证书续期',
+    'dashboard.noActivity': '暂无活动记录',
     'dashboard.loadFailed': '获取仪表盘数据失败:',
     'personal.title': '个人中心',
     'personal.subtitle': '管理账户安全设置',
@@ -466,6 +472,11 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'topbar.justNow': '刚刚',
     'topbar.minutesAgo': '{count} 分钟前',
     'topbar.hoursAgo': '{count} 小时前',
+    'notification.cert_applied': '申请成功',
+    'notification.cert_renewed': '续期成功',
+    'notification.cert_failed': '申请失败',
+    'notification.cert_revoked': '已吊销',
+    'notification.cert_expiring': '即将过期',
     'monitor.title': '域名监控',
     'monitor.total': '总计',
     'monitor.subtitle': '监控域名 SSL 证书状态和接口健康',
@@ -576,6 +587,10 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'settings.log.last100': 'Last 100 lines',
     'settings.log.last500': 'Last 500 lines',
     'settings.log.all': 'All',
+    'settings.log.level_debug': 'Debug',
+    'settings.log.level_info': 'Info',
+    'settings.log.level_warn': 'Warn',
+    'settings.log.level_error': 'Error',
     'settings.log.noContent': 'No log content',
     'settings.log.loadFailed': 'Failed to read log:',
     'settings.log.loadListFailed': 'Failed to load log file list:',
@@ -589,7 +604,7 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'theme.dark': 'Dark',
     'theme.light': 'Light',
     'lang.zh': '中文',
-    'lang.en': 'EN',
+    'lang.en': 'English',
     'lang.auto': 'Auto',
     'common.dashboard': 'Dashboard',
     'common.certificates': 'Certificates',
@@ -644,6 +659,7 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'dashboard.renewSuccess': 'Certificate renewal succeeded',
     'dashboard.renewFailed': 'Certificate renewal failed',
     'dashboard.renew': 'Certificate renewal',
+    'dashboard.noActivity': 'No activity records',
     'dashboard.loadFailed': 'Failed to load dashboard data:',
     'personal.title': 'Personal Center',
     'personal.subtitle': 'Manage account security settings',
@@ -956,6 +972,11 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'topbar.justNow': 'Just now',
     'topbar.minutesAgo': '{count} min ago',
     'topbar.hoursAgo': '{count}h ago',
+    'notification.cert_applied': 'Applied',
+    'notification.cert_renewed': 'Renewed',
+    'notification.cert_failed': 'Failed',
+    'notification.cert_revoked': 'Revoked',
+    'notification.cert_expiring': 'Expiring',
     'monitor.title': 'Domain Monitor',
     'monitor.total': 'Total',
     'monitor.subtitle': 'Monitor SSL certificate status and API health',
@@ -992,10 +1013,6 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
   },
 }
 
-const currentLocale = ref<Locale>(
-  (localStorage.getItem('certflow-locale') as Locale) || 'auto'
-)
-
 function resolveLocale(locale: Locale): ResolvedLocale {
   if (locale === 'auto') return getSystemLocale()
   return locale
@@ -1007,24 +1024,49 @@ function applyLocale(locale: Locale) {
   localStorage.setItem('certflow-locale', locale)
 }
 
-applyLocale(currentLocale.value)
+export const useI18nStore = defineStore('i18n', () => {
+  // 状态
+  const locale = ref<Locale>(
+    (localStorage.getItem('certflow-locale') as Locale) || 'auto'
+  )
 
-watch(currentLocale, (val) => {
-  applyLocale(val)
-})
+  const LOCALE_KEY = 'certflow-locale'
 
-export function useI18n() {
+  // 初始化
+  applyLocale(locale.value)
+
+  // 监听变化
+  watch(locale, (val) => {
+    applyLocale(val)
+  })
+
+  // 跨窗口同步：监听 localStorage 变化
+  window.addEventListener('storage', (e) => {
+    if (e.key === LOCALE_KEY && e.newValue) {
+      locale.value = e.newValue as Locale
+    }
+  })
+
+  // 方法
   function t(key: string): string {
-    return messages[resolveLocale(currentLocale.value)][key] || key
+    return messages[resolveLocale(locale.value)][key] || key
   }
 
-  function setLocale(locale: Locale) {
-    currentLocale.value = locale
+  function setLocale(newLocale: Locale) {
+    locale.value = newLocale
   }
 
   return {
-    locale: currentLocale,
+    locale,
     t,
     setLocale,
   }
+})
+
+// HMR 支持：开发环境下模块热更新时重置 store
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    const store = useI18nStore()
+    store.$dispose()
+  })
 }

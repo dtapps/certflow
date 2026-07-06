@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { NCard, NButton, NInput, NInputNumber, NSelect, NSwitch, NSpin, NModal, NForm, NFormItem, NEmpty, NTag, NStatistic } from 'naive-ui'
 import * as MonitorService from '@bindings/cnb.cool/dtapp/certflow/monitorservicewrapper'
 import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/internal/monitor/models'
-import { useI18n } from '../stores/i18n'
-import { formatDateTime } from '../utils/format'
+import { useI18nStore } from '../stores/i18n'
 
-const { t } = useI18n()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 
 const domains = ref<MonitoredDomainItem[]>([])
 const isLoading = ref(false)
@@ -102,23 +103,23 @@ const handleCheckNow = async (id: number) => {
   }
 }
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' => {
   switch (status) {
-    case 'ok': return 'text-success'
-    case 'warning': return 'text-warning'
-    case 'error': return 'text-error'
-    case 'expired': return 'text-error'
-    default: return 'text-content-50'
+    case 'ok': return 'success'
+    case 'warning': return 'warning'
+    case 'error': return 'error'
+    case 'expired': return 'error'
+    default: return 'info'
   }
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string): 'success' | 'error' | 'warning' | 'info' => {
   switch (status) {
-    case 'ok': return 'badge-tag badge-tag-primary'
-    case 'warning': return 'badge-tag badge-tag-warning'
-    case 'error': return 'badge-tag badge-tag-error'
-    case 'expired': return 'badge-tag badge-tag-error'
-    default: return 'badge-tag badge-tag-muted'
+    case 'ok': return 'success'
+    case 'warning': return 'warning'
+    case 'error': return 'error'
+    case 'expired': return 'error'
+    default: return 'info'
   }
 }
 
@@ -157,6 +158,11 @@ const totalCount = computed(() => domains.value.length)
 const okCount = computed(() => domains.value.filter(d => d.status === 'ok').length)
 const warnCount = computed(() => domains.value.filter(d => d.status === 'warning' || d.status === 'expired').length)
 const errorCount = computed(() => domains.value.filter(d => d.status === 'error').length)
+
+const checkTypeOptions = [
+  { label: 'HTTPS 健康检查', value: 'https' },
+  { label: 'HTTP 健康检查', value: 'http' },
+]
 </script>
 
 <template>
@@ -164,232 +170,207 @@ const errorCount = computed(() => domains.value.filter(d => d.status === 'error'
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-base-content">{{ t('monitor.title') }}</h1>
-        <p class="text-content-70 text-sm mt-1">{{ t('monitor.subtitle') }}</p>
+        <h1 class="text-2xl font-bold">{{ t('monitor.title') }}</h1>
+        <p class="text-sm mt-1 opacity-60">{{ t('monitor.subtitle') }}</p>
       </div>
-      <button @click="openCreate" class="btn btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
+      <n-button type="primary" @click="openCreate">
+        <template #icon>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </template>
         {{ t('monitor.add') }}
-      </button>
+      </n-button>
     </div>
 
     <!-- 概览统计 -->
     <div v-if="domains.length > 0" class="grid grid-cols-4 gap-4">
-      <div class="stat-card">
-        <p class="text-content-70 text-sm">{{ t('monitor.total') }}</p>
-        <p class="text-2xl font-bold text-base-content mt-1">{{ totalCount }}</p>
-      </div>
-      <div class="stat-card">
-        <p class="text-content-70 text-sm">{{ t('monitor.statusOk') }}</p>
-        <p class="text-2xl font-bold text-success mt-1">{{ okCount }}</p>
-      </div>
-      <div class="stat-card">
-        <p class="text-content-70 text-sm">{{ t('monitor.statusWarning') }}</p>
-        <p class="text-2xl font-bold text-warning mt-1">{{ warnCount }}</p>
-      </div>
-      <div class="stat-card">
-        <p class="text-content-70 text-sm">{{ t('monitor.statusError') }}</p>
-        <p class="text-2xl font-bold text-error mt-1">{{ errorCount }}</p>
-      </div>
+      <n-card size="small" hoverable>
+        <n-statistic :label="t('monitor.total')" :value="totalCount" />
+      </n-card>
+      <n-card size="small" hoverable>
+        <n-statistic :label="t('monitor.statusOk')" :value="okCount" />
+      </n-card>
+      <n-card size="small" hoverable>
+        <n-statistic :label="t('monitor.statusWarning')" :value="warnCount" />
+      </n-card>
+      <n-card size="small" hoverable>
+        <n-statistic :label="t('monitor.statusError')" :value="errorCount" />
+      </n-card>
     </div>
 
     <!-- 监控列表 -->
-    <div class="glass-panel rounded-2xl overflow-hidden">
-      <div v-if="isLoading" class="flex items-center justify-center py-20">
-        <div class="spinner animate-spin"></div>
-      </div>
+    <n-card size="small">
+      <n-spin :show="isLoading">
+        <n-empty v-if="!isLoading && domains.length === 0" :description="t('monitor.noRecords')">
+          <template #extra>
+            <p class="text-sm opacity-50">{{ t('monitor.noRecordsDesc') }}</p>
+          </template>
+        </n-empty>
 
-      <div v-else-if="domains.length === 0" class="text-center py-20">
-        <svg class="w-20 h-20 mx-auto text-content-30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        <p class="text-content-70 text-lg">{{ t('monitor.noRecords') }}</p>
-        <p class="text-content-50 text-sm mt-2">{{ t('monitor.noRecordsDesc') }}</p>
-      </div>
+        <div v-else class="space-y-3">
+          <div v-for="item in domains" :key="item.id" class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors cursor-pointer" @click="toggleExpand(item.id)">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="item.status === 'ok' ? 'bg-green-50 dark:bg-green-900/30' : item.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : item.status === 'error' || item.status === 'expired' ? 'bg-red-50 dark:bg-red-900/30' : 'bg-neutral-100 dark:bg-neutral-800'">
+                  <svg class="w-5 h-5" :class="getStatusColor(item.status) === 'success' ? 'text-green-500' : getStatusColor(item.status) === 'warning' ? 'text-yellow-500' : getStatusColor(item.status) === 'error' ? 'text-red-500' : 'text-neutral-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium">{{ item.domain }}</p>
+                    <n-tag :type="getStatusBadge(item.status)" size="small" :bordered="false">{{ getStatusLabel(item.status) }}</n-tag>
+                    <n-tag v-if="!item.enabled" size="tiny" :bordered="false">OFF</n-tag>
+                  </div>
+                  <div class="flex items-center gap-4 text-xs mt-1 opacity-50">
+                    <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
+                    <span v-if="item.check_interval">{{ item.check_interval }}s</span>
+                    <span v-if="item.last_check_at">{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <n-button quaternary circle size="small" @click.stop="handleCheckNow(item.id)" :disabled="checkingId === item.id" :title="t('monitor.checkNow')">
+                  <template #icon>
+                    <svg v-if="checkingId === item.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  </template>
+                </n-button>
+                <n-button quaternary circle size="small" @click.stop="openEdit(item)" :title="t('dns.editTitle')">
+                  <template #icon>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </template>
+                </n-button>
+                <n-button quaternary circle size="small" type="error" @click.stop="openDeleteModal(item.id)" :title="t('dns.deleteTitle')">
+                  <template #icon>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </template>
+                </n-button>
+              </div>
+            </div>
 
-      <div v-else class="p-4 space-y-3">
-        <div v-for="item in domains" :key="item.id" class="rounded-xl border border-base-300 p-4 hover:border-primary/30 transition-colors cursor-pointer" @click="toggleExpand(item.id)">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="item.status === 'ok' ? 'bg-success-soft' : item.status === 'warning' ? 'bg-amber-soft' : item.status === 'error' || item.status === 'expired' ? 'bg-error-soft' : 'bg-base-300'">
-                <svg class="w-5 h-5" :class="getStatusColor(item.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+            <!-- HTTPS 详情展开区 -->
+            <div v-if="expandedId === item.id && item.check_type === 'https' && item.cert_issuer" class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div>
+                <p class="opacity-50">{{ t('monitor.issuer') }}</p>
+                <p class="font-medium truncate">{{ item.cert_issuer }}</p>
               </div>
               <div>
-                <div class="flex items-center gap-2">
-                  <p class="text-base-content font-medium">{{ item.domain }}</p>
-                  <span :class="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span>
-                  <span v-if="!item.enabled" class="badge-tag badge-tag-muted text-[10px]">OFF</span>
-                </div>
-                <div class="flex items-center gap-4 text-content-50 text-xs mt-1">
-                  <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
-                  <span v-if="item.check_interval">{{ item.check_interval }}s</span>
-                  <span v-if="item.last_check_at">{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span>
-                </div>
+                <p class="opacity-50">{{ t('monitor.remainingDays') }}</p>
+                <p :class="item.cert_remaining_days <= 30 ? 'text-yellow-500 font-medium' : 'font-medium'">{{ formatRemainingDays(item.cert_remaining_days) }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('cert.detail.signatureAlgo') }}</p>
+                <p class="font-medium font-mono text-[11px]">{{ item.cert_signature_algo || '—' }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('cert.detail.publicKeyAlgo') }}</p>
+                <p class="font-medium font-mono text-[11px]">{{ item.cert_public_key_algo }} {{ item.cert_public_key_bits }}bit</p>
+              </div>
+              <div class="col-span-2">
+                <p class="opacity-50">{{ t('monitor.fingerprint') }}</p>
+                <p class="font-mono truncate text-[11px]" :title="item.cert_fingerprint">{{ truncateFingerprint(item.cert_fingerprint) }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
+                <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
+                <p class="font-mono font-medium">{{ item.http_status_code }}</p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button @click="handleCheckNow(item.id)" :disabled="checkingId === item.id" class="icon-btn" :title="t('monitor.checkNow')">
-                <svg v-if="checkingId === item.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              </button>
-              <button @click="openEdit(item)" class="icon-btn" :title="t('dns.editTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <button @click.stop="openDeleteModal(item.id)" class="icon-btn icon-btn-danger" :title="t('dns.deleteTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
-            </div>
-          </div>
 
-          <!-- HTTPS 详情展开区 -->
-          <div v-if="expandedId === item.id && item.check_type === 'https' && item.cert_issuer" class="mt-3 pt-3 border-t border-base-300 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div>
-              <p class="text-content-50">{{ t('monitor.issuer') }}</p>
-              <p class="text-base-content font-medium truncate">{{ item.cert_issuer }}</p>
+            <!-- HTTP 详情 -->
+            <div v-if="expandedId === item.id && item.check_type === 'http' && item.http_status_code > 0" class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
+                <p class="font-mono font-medium">{{ item.http_status_code }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
+                <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+              </div>
+              <div>
+                <p class="opacity-50">{{ t('monitor.lastCheck') }}</p>
+                <p class="font-medium">{{ item.last_check_at || '—' }}</p>
+              </div>
             </div>
-            <div>
-              <p class="text-content-50">{{ t('monitor.remainingDays') }}</p>
-              <p :class="item.cert_remaining_days <= 30 ? 'text-warning font-medium' : 'text-base-content font-medium'">{{ formatRemainingDays(item.cert_remaining_days) }}</p>
-            </div>
-            <div>
-              <p class="text-content-50">{{ t('cert.detail.signatureAlgo') }}</p>
-              <p class="text-base-content font-medium font-mono text-[11px]">{{ item.cert_signature_algo || '—' }}</p>
-            </div>
-            <div>
-              <p class="text-content-50">{{ t('cert.detail.publicKeyAlgo') }}</p>
-              <p class="text-base-content font-medium font-mono text-[11px]">{{ item.cert_public_key_algo }} {{ item.cert_public_key_bits }}bit</p>
-            </div>
-            <div class="col-span-2">
-              <p class="text-content-50">{{ t('monitor.fingerprint') }}</p>
-              <p class="text-base-content font-mono truncate text-[11px]" :title="item.cert_fingerprint">{{ truncateFingerprint(item.cert_fingerprint) }}</p>
-            </div>
-            <div>
-              <p class="text-content-50">{{ t('monitor.responseTime') }}</p>
-              <p class="text-base-content font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
-            </div>
-            <div>
-              <p class="text-content-50">{{ t('monitor.statusCode') }}</p>
-              <p class="text-base-content font-mono font-medium">{{ item.http_status_code }}</p>
-            </div>
-          </div>
 
-          <!-- HTTP 详情 -->
-          <div v-if="expandedId === item.id && item.check_type === 'http' && item.http_status_code > 0" class="mt-3 pt-3 border-t border-base-300 grid grid-cols-3 gap-3 text-xs">
-            <div>
-              <p class="text-content-50">{{ t('monitor.statusCode') }}</p>
-              <p class="text-base-content font-mono font-medium">{{ item.http_status_code }}</p>
+            <!-- 错误信息 -->
+            <div v-if="expandedId === item.id && item.last_check_error" class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+              <p class="text-red-500 text-xs">{{ t('monitor.error') }}: {{ item.last_check_error }}</p>
             </div>
-            <div>
-              <p class="text-content-50">{{ t('monitor.responseTime') }}</p>
-              <p class="text-base-content font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
-            </div>
-            <div>
-              <p class="text-content-50">{{ t('monitor.lastCheck') }}</p>
-              <p class="text-base-content font-medium">{{ item.last_check_at || '—' }}</p>
-            </div>
-          </div>
-
-          <!-- 错误信息 -->
-          <div v-if="expandedId === item.id && item.last_check_error" class="mt-3 pt-3 border-t border-base-300">
-            <p class="text-error text-xs">{{ t('monitor.error') }}: {{ item.last_check_error }}</p>
           </div>
         </div>
-      </div>
-    </div>
+      </n-spin>
+    </n-card>
 
     <!-- 添加弹窗 -->
-    <dialog v-if="showAddModal" class="modal modal-open">
-      <div class="modal-box glass-panel max-w-lg">
-        <h3 class="font-bold text-lg">{{ t('monitor.addDomain') }}</h3>
-        <div class="space-y-4 mt-4">
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.domain') }} *</span></label>
-            <input v-model="formData.domain" type="text" :placeholder="t('monitor.domainPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.checkType') }}</span></label>
-            <select v-model="formData.check_type" class="select select-bordered w-full">
-              <option value="https">HTTPS 健康检查</option>
-              <option value="http">HTTP 健康检查</option>
-            </select>
-          </div>
-          <div v-if="formData.check_type === 'ssl'">
-            <label class="label"><span class="label-text">{{ t('monitor.domain') }} {{ t('monitor.statusCode') }}</span></label>
-            <input v-model.number="formData.port" type="number" min="1" max="65535" class="input input-bordered w-full" />
-          </div>
-          <div v-if="formData.check_type === 'http'">
-            <label class="label"><span class="label-text">URL</span></label>
-            <input v-model="formData.url" type="text" :placeholder="t('monitor.urlPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.checkInterval') }} ({{ t('monitor.intervalHint') }})</span></label>
-            <input v-model.number="formData.check_interval" type="number" min="60" class="input input-bordered w-full" />
-          </div>
+    <n-modal v-model:show="showAddModal" preset="card" :title="t('monitor.addDomain')" style="max-width: 480px;">
+      <n-form label-placement="top">
+        <n-form-item :label="t('monitor.domain') + ' *'">
+          <n-input v-model:value="formData.domain" :placeholder="t('monitor.domainPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('monitor.checkType')">
+          <n-select v-model:value="formData.check_type" :options="checkTypeOptions" />
+        </n-form-item>
+        <n-form-item v-if="formData.check_type === 'ssl'" :label="t('monitor.domain') + ' ' + t('monitor.statusCode')">
+          <n-input-number v-model:value="formData.port" :min="1" :max="65535" style="width: 100%" />
+        </n-form-item>
+        <n-form-item v-if="formData.check_type === 'http'" label="URL">
+          <n-input v-model:value="formData.url" :placeholder="t('monitor.urlPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('monitor.checkInterval') + ' (' + t('monitor.intervalHint') + ')'">
+          <n-input-number v-model:value="formData.check_interval" :min="60" style="width: 100%" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <n-button @click="showAddModal = false">{{ t('common.cancel') }}</n-button>
+          <n-button type="primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</n-button>
         </div>
-        <div class="modal-action">
-          <button class="btn" @click="showAddModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button @click="showAddModal = false">close</button></form>
-    </dialog>
+      </template>
+    </n-modal>
 
     <!-- 编辑弹窗 -->
-    <dialog v-if="showEditModal" class="modal modal-open">
-      <div class="modal-box glass-panel max-w-lg">
-        <h3 class="font-bold text-lg">{{ t('monitor.editDomain') }}</h3>
-        <div class="space-y-4 mt-4">
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.domain') }} *</span></label>
-            <input v-model="formData.domain" type="text" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.checkType') }}</span></label>
-            <select v-model="formData.check_type" class="select select-bordered w-full">
-              <option value="https">HTTPS 健康检查</option>
-              <option value="http">HTTP 健康检查</option>
-            </select>
-          </div>
-          <div v-if="formData.check_type === 'ssl'">
-            <label class="label"><span class="label-text">Port</span></label>
-            <input v-model.number="formData.port" type="number" min="1" max="65535" class="input input-bordered w-full" />
-          </div>
-          <div v-if="formData.check_type === 'http'">
-            <label class="label"><span class="label-text">URL</span></label>
-            <input v-model="formData.url" type="text" :placeholder="t('monitor.urlPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label"><span class="label-text">{{ t('monitor.checkInterval') }} ({{ t('monitor.intervalHint') }})</span></label>
-            <input v-model.number="formData.check_interval" type="number" min="60" class="input input-bordered w-full" />
-          </div>
-          <div class="flex items-center gap-2">
-            <input type="checkbox" v-model="formData.enabled" class="toggle toggle-primary toggle-sm" />
-            <span class="text-sm">{{ t('dns.enabled') }}</span>
-          </div>
+    <n-modal v-model:show="showEditModal" preset="card" :title="t('monitor.editDomain')" style="max-width: 480px;">
+      <n-form label-placement="top">
+        <n-form-item :label="t('monitor.domain') + ' *'">
+          <n-input v-model:value="formData.domain" />
+        </n-form-item>
+        <n-form-item :label="t('monitor.checkType')">
+          <n-select v-model:value="formData.check_type" :options="checkTypeOptions" />
+        </n-form-item>
+        <n-form-item v-if="formData.check_type === 'ssl'" label="Port">
+          <n-input-number v-model:value="formData.port" :min="1" :max="65535" style="width: 100%" />
+        </n-form-item>
+        <n-form-item v-if="formData.check_type === 'http'" label="URL">
+          <n-input v-model:value="formData.url" :placeholder="t('monitor.urlPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('monitor.checkInterval') + ' (' + t('monitor.intervalHint') + ')'">
+          <n-input-number v-model:value="formData.check_interval" :min="60" style="width: 100%" />
+        </n-form-item>
+        <n-form-item :label="t('dns.enabled')">
+          <n-switch v-model:value="formData.enabled" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <n-button @click="showEditModal = false">{{ t('common.cancel') }}</n-button>
+          <n-button type="primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</n-button>
         </div>
-        <div class="modal-action">
-          <button class="btn" @click="showEditModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-primary" @click="handleSave" :disabled="!formData.domain">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button @click="showEditModal = false">close</button></form>
-    </dialog>
+      </template>
+    </n-modal>
 
     <!-- 删除确认弹窗 -->
-    <dialog v-if="showDeleteModal" class="modal modal-open">
-      <div class="modal-box glass-panel">
-        <h3 class="font-bold text-lg">{{ t('dns.deleteTitle') }}</h3>
-        <p class="py-4">{{ t('monitor.deleteConfirm') }}</p>
-        <div class="modal-action">
-          <button class="btn" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-error" @click="handleDelete">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button @click="showDeleteModal = false">close</button></form>
-    </dialog>
+    <n-modal v-model:show="showDeleteModal" preset="dialog" :title="t('dns.deleteTitle')">
+      <p>{{ t('monitor.deleteConfirm') }}</p>
+      <template #action>
+        <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>

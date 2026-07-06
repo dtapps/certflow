@@ -40,6 +40,9 @@ var githubToken = ""
 func init() {
 	application.RegisterEvent[string]("time")
 	application.RegisterEvent[map[string]string]("notification")
+	application.RegisterEvent[map[string]string]("auth_verified")
+	application.RegisterEvent[map[string]string]("theme_changed_sync")
+	application.RegisterEvent[map[string]string]("locale_changed_sync")
 }
 
 func main() {
@@ -180,9 +183,10 @@ func main() {
 				AppearsTransparent: false,
 			},
 		},
-		BackgroundType: application.BackgroundTypeTransparent,
-		URL:            "/",
-		Frameless:      false,
+		BackgroundType:   application.BackgroundTypeSolid,
+		BackgroundColour: application.RGBA{Red: 245, Green: 245, Blue: 245, Alpha: 255},
+		URL:              "/",
+		Frameless:        false,
 	})
 	mainWindow.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
 		mainWindow.Show()
@@ -192,6 +196,9 @@ func main() {
 	// 初始化系统托盘
 	systraySvc.SetMainWindow(mainWindow)
 	systraySvc.Init()
+
+	// 设置系统服务的主窗口引用
+	systemSvc.SetMainWindow(mainWindow)
 
 	// 创建应用菜单（含检查更新）
 	appMenu := app.Menu.New()

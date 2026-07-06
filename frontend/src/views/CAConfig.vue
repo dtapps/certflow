@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { NCard, NButton, NInput, NSwitch, NSpin, NModal, NForm, NFormItem, NEmpty, NTag } from 'naive-ui'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import type { CAListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
-import { useI18n } from '../stores/i18n'
+import { useI18nStore } from '../stores/i18n'
 
-const { t } = useI18n()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 
 const cas = ref<CAListItem[]>([])
 const isLoading = ref(false)
@@ -79,113 +81,97 @@ const handleSetDefault = async (id: number) => {
   <div class="page">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-base-content">{{ t('ca.title') }}</h1>
-        <p class="text-content-70 text-sm mt-1">{{ t('ca.subtitle') }}</p>
+        <h1 class="text-2xl font-bold">{{ t('ca.title') }}</h1>
+        <p class="text-sm mt-1 opacity-60">{{ t('ca.subtitle') }}</p>
       </div>
-      <button @click="openCreate" class="btn btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+      <n-button type="primary" @click="openCreate">
+        <template #icon>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        </template>
         {{ t('ca.addCA') }}
-      </button>
+      </n-button>
     </div>
 
-    <div class="glass-panel rounded-2xl overflow-hidden">
-        <div v-if="isLoading" class="flex items-center justify-center py-20">
-        <div class="spinner animate-spin"></div>
-      </div>
+    <n-card size="small">
+      <n-spin :show="isLoading">
+        <n-empty v-if="!isLoading && cas.length === 0" :description="t('ca.noCA')">
+          <template #extra>
+            <p class="text-sm opacity-50">{{ t('ca.noCADesc') }}</p>
+          </template>
+        </n-empty>
 
-      <div v-else-if="cas.length === 0" class="text-center py-20">
-        <svg class="w-20 h-20 mx-auto text-content-50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-        <p class="text-content-70 text-lg">{{ t('ca.noCA') }}</p>
-        <p class="text-content-50 text-sm mt-2">{{ t('ca.noCADesc') }}</p>
-      </div>
-
-      <div v-else class="list-divider">
-        <div v-for="ca in cas" :key="ca.id" class="list-item">
-          <div class="flex items-center justify-between">
+        <div v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
+          <div v-for="ca in cas" :key="ca.id" class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-xl bg-accent-soft flex items-center justify-center">
-                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              <div class="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="text-base-content font-medium">{{ ca.name }}</h3>
-                  <span v-if="ca.is_default" class="badge-tag badge-tag-primary">{{ t('ca.default') }}</span>
-                  <span v-if="!ca.is_active" class="badge-tag badge-tag-muted">{{ t('ca.disabled') }}</span>
+                  <h3 class="font-medium">{{ ca.name }}</h3>
+                  <n-tag v-if="ca.is_default" type="primary" size="small" :bordered="false">{{ t('ca.default') }}</n-tag>
+                  <n-tag v-if="!ca.is_active" size="small" :bordered="false">{{ t('ca.disabled') }}</n-tag>
                 </div>
-                <p class="text-content-50 text-sm mt-1">{{ ca.directory_url }}</p>
-                <p class="text-content-50 text-xs mt-1">{{ ca.account_email }}</p>
+                <p class="text-sm mt-1 opacity-50">{{ ca.directory_url }}</p>
+                <p class="text-xs mt-1 opacity-50">{{ ca.account_email }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <button v-if="!ca.is_default" @click="handleSetDefault(ca.id)" class="icon-btn" :title="t('ca.setTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </button>
-              <button @click="openEdit(ca)" class="icon-btn" :title="t('ca.editTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <button @click="openDeleteModal(ca.id)" class="icon-btn icon-btn-danger" :title="t('ca.deleteTitle')">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
+              <n-button v-if="!ca.is_default" quaternary circle size="small" @click="handleSetDefault(ca.id)" :title="t('ca.setTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" @click="openEdit(ca)" :title="t('ca.editTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </template>
+              </n-button>
+              <n-button quaternary circle size="small" type="error" @click="openDeleteModal(ca.id)" :title="t('ca.deleteTitle')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </template>
+              </n-button>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </n-spin>
+    </n-card>
 
     <!-- 模态框 -->
-    <dialog v-if="showModal" class="modal modal-open">
-      <div class="modal-box glass-panel max-w-lg">
-        <h2 class="text-xl font-bold text-base-content mb-6">{{ editingCA ? t('ca.editCA') : t('ca.addCA') }}</h2>
-        <div class="space-y-4">
-          <div>
-            <label class="label">
-              <span class="label-text text-base-content">{{ t('ca.name') }}</span>
-            </label>
-            <input v-model="formData.name" type="text" :placeholder="t('ca.namePlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label">
-              <span class="label-text text-base-content">{{ t('ca.directoryURL') }}</span>
-            </label>
-            <input v-model="formData.directory_url" type="url" :placeholder="t('ca.directoryURLPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div>
-            <label class="label">
-              <span class="label-text text-base-content">{{ t('ca.accountEmail') }}</span>
-            </label>
-            <input v-model="formData.account_email" type="email" :placeholder="t('ca.accountEmailPlaceholder')" class="input input-bordered w-full" />
-          </div>
-          <div class="flex items-center gap-6">
-            <label class="label cursor-pointer">
-              <span class="label-text text-base-content">{{ t('ca.enabled') }}</span>
-              <input v-model="formData.is_active" type="checkbox" class="checkbox checkbox-primary" />
-            </label>
-            <label class="label cursor-pointer">
-              <span class="label-text text-base-content">{{ t('ca.setAsDefault') }}</span>
-              <input v-model="formData.is_default" type="checkbox" class="checkbox checkbox-primary" />
-            </label>
-          </div>
+    <n-modal v-model:show="showModal" preset="card" :title="editingCA ? t('ca.editCA') : t('ca.addCA')" style="max-width: 480px;">
+      <n-form label-placement="top">
+        <n-form-item :label="t('ca.name')">
+          <n-input v-model:value="formData.name" :placeholder="t('ca.namePlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('ca.directoryURL')">
+          <n-input v-model:value="formData.directory_url" :placeholder="t('ca.directoryURLPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('ca.accountEmail')">
+          <n-input v-model:value="formData.account_email" :placeholder="t('ca.accountEmailPlaceholder')" />
+        </n-form-item>
+        <n-form-item :label="t('ca.enabled')">
+          <n-switch v-model:value="formData.is_active" />
+        </n-form-item>
+        <n-form-item :label="t('ca.setAsDefault')">
+          <n-switch v-model:value="formData.is_default" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <n-button @click="showModal = false">{{ t('ca.cancel') }}</n-button>
+          <n-button type="primary" @click="handleSave">{{ editingCA ? t('ca.save') : t('ca.addCA') }}</n-button>
         </div>
-        <div class="modal-action">
-          <button @click="showModal = false" class="btn btn-secondary">{{ t('ca.cancel') }}</button>
-          <button @click="handleSave" class="btn btn-primary">{{ editingCA ? t('ca.save') : t('ca.addCA') }}</button>
-        </div>
-      </div>
-    </dialog>
+      </template>
+    </n-modal>
 
     <!-- 删除确认弹窗 -->
-    <dialog v-if="showDeleteModal" class="modal modal-open">
-      <div class="modal-box glass-panel">
-        <h3 class="font-bold text-lg">{{ t('ca.deleteTitle') }}</h3>
-        <p class="py-4">{{ t('ca.deleteConfirm') }}</p>
-        <div class="modal-action">
-          <button class="btn" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
-          <button class="btn btn-error" @click="handleDelete">{{ t('common.confirm') }}</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button @click="showDeleteModal = false">close</button>
-      </form>
-    </dialog>
+    <n-modal v-model:show="showDeleteModal" preset="dialog" :title="t('ca.deleteTitle')">
+      <p>{{ t('ca.deleteConfirm') }}</p>
+      <template #action>
+        <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>

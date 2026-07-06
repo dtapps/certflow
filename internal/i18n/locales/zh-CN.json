@@ -236,6 +236,8 @@
   "notification.monitor_http_error.body": "域名 {{.Domain}} 返回 HTTP {{.Code}}",
   "error.get_home_dir_failed": "获取用户目录失败",
   "log.app_starting": "CertFlow 启动中...",
+  "log.set_window_appearance": "设置窗口外观",
+  "log.main_window_nil": "主窗口引用为空",
   "log.seed_ca_failed": "预置默认 CA 失败",
   "app.title": "CertFlow",
   "app.description": "SSL 证书管理工具",
