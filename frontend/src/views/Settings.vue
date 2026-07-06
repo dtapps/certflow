@@ -11,6 +11,7 @@ import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservic
 import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapper'
 import * as WindowService from '@bindings/cnb.cool/dtapp/certflow/windowservicewrapper'
 import * as AutostartService from '@bindings/cnb.cool/dtapp/certflow/autostartservicewrapper'
+import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
 import type { Settings, DNSConfig } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useThemeStore } from '../stores/theme'
 import { useI18nStore } from '../stores/i18n'
@@ -45,6 +46,7 @@ const autostartEnabled = ref(false)
 
 const loading = ref(false)
 const saving = ref(false)
+const appVersion = ref('')
 
 // Log viewer state
 const logFiles = ref<string[]>([])
@@ -328,6 +330,10 @@ onMounted(async () => {
   } catch (e) {
     console.error('获取开机自启状态失败:', e)
   }
+  // 获取版本号
+  try {
+    appVersion.value = await SystemService.GetVersion()
+  } catch (e) { /* ignore */ }
 })
 </script>
 
@@ -519,7 +525,7 @@ onMounted(async () => {
       <n-card :title="t('settings.about.title')" size="small" class="mt-4">
         <div class="space-y-3">
           <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.name') }}</span><span>CertFlow</span></div>
-          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.version') }}</span><span>0.1.0 Alpha</span></div>
+          <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.version') }}</span><span>{{ appVersion || 'unknown' }}</span></div>
           <div class="flex justify-between py-2"><span class="opacity-50">{{ t('settings.about.datadir') }}</span><span class="text-sm font-mono">{{ settings.data_dir }}</span></div>
           <div class="pt-2 border-t border-neutral-200 dark:border-neutral-700">
             <n-button secondary block @click="handleCheckUpdate">

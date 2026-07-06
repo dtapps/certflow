@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { h, computed } from 'vue'
+import { h, computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { NMenu, NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
+import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
 import {
   GridOutline,
   ShieldCheckmarkOutline,
@@ -24,6 +25,14 @@ const i18nStore = useI18nStore()
 const themeStore = useThemeStore()
 const { t } = i18nStore
 const { isDark } = storeToRefs(themeStore)
+
+const appVersion = ref('')
+
+onMounted(async () => {
+  try {
+    appVersion.value = await SystemService.GetVersion()
+  } catch (e) { /* ignore */ }
+})
 
 function renderIcon(icon: any) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -93,7 +102,7 @@ function handleMenuUpdate(key: string) {
 
     <!-- 版本号 -->
     <div class="sidebar-footer">
-      <p class="text-xs text-center sidebar-text-muted">v0.1.0 Alpha</p>
+      <p class="text-xs text-center sidebar-text-muted">{{ appVersion || 'unknown' }}</p>
     </div>
   </aside>
 </template>

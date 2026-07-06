@@ -37,6 +37,11 @@ func (s *SystemServiceWrapper) IsDarkMode() bool {
 	return s.app.Env.IsDarkMode()
 }
 
+// GetVersion 获取应用版本号
+func (s *SystemServiceWrapper) GetVersion() string {
+	return currentVersion
+}
+
 // SetWindowAppearance 设置主窗口外观（标题栏主题）
 func (s *SystemServiceWrapper) SetWindowAppearance(isDark bool) {
 	logging.Debug("%s: isDark=%v", i18n.T("log.set_window_appearance"), isDark)

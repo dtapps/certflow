@@ -15,6 +15,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
+ * GetVersion 获取应用版本号
+ */
+export function GetVersion(): $CancellablePromise<string> {
+    return $Call.ByID(301923417);
+}
+
+/**
  * IsDarkMode 检测系统是否深色模式
  */
 export function IsDarkMode(): $CancellablePromise<boolean> {
