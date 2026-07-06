@@ -12,7 +12,7 @@ require (
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.114
 	golang.org/x/crypto v0.53.0
-	golang.org/x/text v0.38.0
+	golang.org/x/text v0.39.0
 	modernc.org/sqlite v1.53.0
 )
 
@@ -99,9 +99,9 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.127 // indirect
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.128 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	github.com/ucloud/ucloud-sdk-go v0.22.84 // indirect
+	github.com/ucloud/ucloud-sdk-go v0.22.85 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.250 // indirect
 	github.com/vultr/govultr/v3 v3.31.2 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect

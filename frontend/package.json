@@ -13,7 +13,7 @@
     "@vicons/ionicons5": "^0.13.0",
     "@vueuse/core": "^14.3.0",
     "@wailsio/runtime": "latest",
-    "naive-ui": "^2.41.0",
+    "naive-ui": "^2.44.1",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.3.2",
     "vfonts": "^0.0.3",
