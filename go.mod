@@ -10,7 +10,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/google/uuid v1.6.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.112
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.114
 	golang.org/x/crypto v0.53.0
 	golang.org/x/text v0.38.0
 	modernc.org/sqlite v1.53.0
@@ -96,6 +96,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.127 // indirect
@@ -103,7 +104,6 @@ require (
 	github.com/ucloud/ucloud-sdk-go v0.22.84 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.250 // indirect
 	github.com/vultr/govultr/v3 v3.31.2 // indirect
-	github.com/wailsapp/wails/webview2 v1.0.27 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
