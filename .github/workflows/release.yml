@@ -76,6 +76,29 @@ jobs:
       UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
 
     steps:
+      # 检出代码（必须在版本号生成之前）
+      - name: 检出代码
+        if: ${{ matrix.enabled }}
+        uses: actions/checkout@v4
+
+      # 生成构建参数（BUILD_TIME 和 GIT_COMMIT 供后续步骤统一使用）
+      - name: 生成构建参数
+        if: ${{ matrix.enabled }}
+        id: build
+        shell: bash
+        run: |
+          echo "build_time=$(bash scripts/get-build-time.sh)" >> $GITHUB_OUTPUT
+          echo "git_commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 打印构建参数
+        if: ${{ matrix.enabled }}
+        shell: bash
+        run: |
+          echo "BUILD_TIME=${{ steps.build.outputs.build_time }}"
+          echo "VERSION=${{ inputs.version }}"
+          echo "GIT_COMMIT=${{ steps.build.outputs.git_commit }}"
+          echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
+
       - name: 打印系统信息
         if: ${{ matrix.enabled }}
         shell: bash
@@ -83,10 +106,6 @@ jobs:
           echo "操作系统: $(uname -a)"
           echo "内核版本: $(uname -r)"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
-
-      - name: 检出代码
-        if: ${{ matrix.enabled }}
-        uses: actions/checkout@v4
 
       - name: 安装系统依赖
         if: ${{ matrix.enabled && runner.os == 'Linux' }}
@@ -131,15 +150,16 @@ jobs:
           $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
+      # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task build PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
 
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task package PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
 
       - name: 重命名产物
         if: ${{ matrix.enabled }}

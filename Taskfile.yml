@@ -8,7 +8,7 @@ vars:
   GIT_COMMIT:
     sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
   BUILD_TIME:
-    sh: '{{if eq OS "windows"}}powershell.exe -NoProfile -Command \"Get-Date -Format yyyy-MM-ddTHH:mm:ssZ\"{{else}}date -u "+%Y-%m-%dT%H:%M:%SZ"{{end}}'
+    sh: bash scripts/get-build-time.sh 2>/dev/null || echo ""
 
 includes:
   common: ./build/Taskfile.yml

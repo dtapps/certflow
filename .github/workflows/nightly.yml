@@ -42,11 +42,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # 检出代码（fetch-depth: 0 确保能读取所有 tag）
       - name: 检出代码
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 生成版本号和构建参数（BUILD_TIME/GIT_COMMIT 供后续步骤统一使用）
       - name: 生成版本号
         id: version
         shell: bash
@@ -61,16 +63,28 @@ jobs:
           # 生成 nightly 版本号：基础版本-nightly.日期
           DATE=$(date +%Y%m%d)
           VERSION="${BASE_VERSION}-nightly.${DATE}"
+          BUILD_TIME=$(bash scripts/get-build-time.sh)
+          GIT_COMMIT=$(git rev-parse --short HEAD)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+          echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
           echo "Nightly 版本号: ${VERSION}"
+
+      # 打印构建参数（与实际构建使用同一份数据，方便排查）
+      - name: 打印构建参数
+        shell: bash
+        run: |
+          echo "BUILD_TIME=${{ steps.version.outputs.build_time }}"
+          echo "VERSION=${{ steps.version.outputs.version }}"
+          echo "GIT_COMMIT=${{ steps.version.outputs.git_commit }}"
+          echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
       - name: 打印系统信息
         shell: bash
         run: |
           echo "操作系统: $(uname -a)"
           echo "内核版本: $(uname -r)"
-          echo "Nightly 版本: ${{ steps.version.outputs.version }}"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
 
       - name: 安装系统依赖
@@ -111,13 +125,14 @@ jobs:
           $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
+      # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
       - name: 构建
         shell: bash
-        run: wails3 task build VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
+        run: wails3 task build BUILD_TIME=${{ steps.version.outputs.build_time }} VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
 
       - name: 打包
         shell: bash
-        run: wails3 task package VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
+        run: wails3 task package BUILD_TIME=${{ steps.version.outputs.build_time }} VERSION=${{ steps.version.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN
 
       - name: 重命名产物
         shell: bash
