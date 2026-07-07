@@ -65,9 +65,14 @@ type Logger struct {
 	maxBackups int   // 保留的最大备份数
 }
 
-// NewLogger 创建新的日志记录器
+// NewLogger 创建新的日志记录器（同时输出到控制台和文件）
 func NewLogger(logDir string, level Level, maxMB int, maxBackups int) (*Logger, error) {
-	return NewLoggerWithFilename(logDir, "certflow.log", level, maxMB, maxBackups)
+	l, err := NewLoggerWithFilename(logDir, "certflow.log", level, maxMB, maxBackups)
+	if err != nil {
+		return nil, err
+	}
+	l.output = os.Stdout // 主日志同时输出到控制台
+	return l, nil
 }
 
 // NewLoggerWithFilename 创建指定文件名的日志记录器
