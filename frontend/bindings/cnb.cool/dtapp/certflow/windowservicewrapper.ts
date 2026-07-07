@@ -32,6 +32,9 @@ export function OpenWindow(opts: $models.HTMLWindowOptions): $CancellablePromise
     return $Call.ByID(3566480882, opts);
 }
 
+/**
+ * SetApp 设置 app 引用
+ */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(1240195805, app);
 }

@@ -84,3 +84,12 @@ push: ## 推送到所有远程仓库
 	git push gitee HEAD
 	git push gitcode HEAD
 	@echo "推送完成！"
+
+push-force: ## 强制推送到所有远程仓库（忽略冲突）
+	git push --force origin HEAD
+	git push --force github HEAD
+	git push --force gitea HEAD
+	git push --force gitlab HEAD
+	git push --force gitee HEAD
+	git push --force gitcode HEAD
+	@echo "强制推送完成！"

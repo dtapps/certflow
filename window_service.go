@@ -12,12 +12,13 @@ type WindowServiceWrapper struct {
 	app *application.App
 }
 
-// NewSysTrayService 创建系统窗口服务
+// NewWindowServiceWrapper 创建系统窗口服务
 // https://v3.wails.io/features/windows/basics/
 func NewWindowServiceWrapper() *WindowServiceWrapper {
 	return &WindowServiceWrapper{}
 }
 
+// SetApp 设置 app 引用
 func (s *WindowServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }
@@ -72,7 +73,7 @@ func (s *WindowServiceWrapper) OpenWindow(opts HTMLWindowOptions) error {
 		Height:           opts.Height,
 		MinWidth:         600,
 		MinHeight:        400,
-		URL:              "/log-viewer",
+		URL:              "/log-viewer.html",
 		BackgroundType:   application.BackgroundTypeSolid,
 		BackgroundColour: application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255},
 	})

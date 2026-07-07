@@ -19,6 +19,12 @@ export default defineConfig({
   },
   build: {
     target: "es2020",
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        "log-viewer": "log-viewer.html",
+      },
+    },
   },
   esbuild: {
     drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],

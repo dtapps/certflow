@@ -13,10 +13,12 @@ type FileServiceWrapper struct {
 	app *application.App
 }
 
+// NewFileServiceWrapper 创建文件操作服务
 func NewFileServiceWrapper() *FileServiceWrapper {
 	return &FileServiceWrapper{}
 }
 
+// SetApp 设置 app 引用
 func (s *FileServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

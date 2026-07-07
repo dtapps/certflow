@@ -21,6 +21,9 @@ export function OpenDirectory(path: string): $CancellablePromise<void> {
     return $Call.ByID(4212715675, path);
 }
 
+/**
+ * SetApp 设置 app 引用
+ */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(376558635, app);
 }
