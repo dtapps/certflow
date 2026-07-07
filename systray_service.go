@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-//go:embed image/icon2.png
+//go:embed build/tray.png
 var systrayIcon []byte
 
 // SysTrayService 系统托盘服务
@@ -53,17 +53,22 @@ func (s *SysTrayService) Init() {
 
 	// 创建右键菜单
 	menu := s.app.Menu.New()
+	menu.Add(i18n.T("systray.settings")).OnClick(func(ctx *application.Context) {
+		// 显示窗口
+		s.ShowWindow()
+		// 通知前端导航到设置页面
+		s.app.Event.Emit("navigate", map[string]string{"path": "/settings"})
+	})
 	menu.Add(i18n.T("systray.checkUpdate")).OnClick(func(ctx *application.Context) {
+		// 显示窗口
 		s.ShowWindow()
 		go func() {
 			if err := s.app.Updater.CheckAndInstall(context.Background()); err != nil {
 				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
+			} else {
+				logging.Info("%s", i18n.T("log.updater_check_done"))
 			}
 		}()
-	})
-	menu.Add(i18n.T("systray.settings")).OnClick(func(ctx *application.Context) {
-		s.ShowWindow()
-		s.app.Event.Emit("navigate", "/settings")
 	})
 	menu.AddSeparator()
 	menu.Add(i18n.T("systray.quit")).OnClick(func(ctx *application.Context) {

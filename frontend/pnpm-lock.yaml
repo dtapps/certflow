@@ -16,7 +16,7 @@ importers:
         version: 14.3.0(vue@3.5.39(typescript@6.0.3))
       '@wailsio/runtime':
         specifier: latest
-        version: 3.0.0-alpha.95
+        version: 3.0.0-alpha.96
       naive-ui:
         specifier: ^2.44.1
         version: 2.44.1(vue@3.5.39(typescript@6.0.3))
@@ -466,8 +466,8 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
-  '@wailsio/runtime@3.0.0-alpha.95':
-    resolution: {integrity: sha512-ODhaZYRrtRvwi6cfGEj4L+Ut9od9zTd7GH1BrAaONxlBYM4d31d3YG982HSZiktmIE2SqvyhTciY4sV5FbIfqA==}
+  '@wailsio/runtime@3.0.0-alpha.96':
+    resolution: {integrity: sha512-Vj682pT1yzJHHNvay6D4C5Uc8KSO3rx98n5kYFeAWUt80Cm9JKmYeCaWOO3Tx/Z9cdZb7LXnJuPIQddOAb6jLQ==}
 
   acorn@8.17.0:
     resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
@@ -1331,7 +1331,7 @@ snapshots:
     dependencies:
       vue: 3.5.39(typescript@6.0.3)
 
-  '@wailsio/runtime@3.0.0-alpha.95': {}
+  '@wailsio/runtime@3.0.0-alpha.96': {}
 
   acorn@8.17.0: {}
 

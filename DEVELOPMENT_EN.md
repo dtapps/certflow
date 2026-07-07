@@ -14,7 +14,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 
 | Technology | Purpose |
 |------------|---------|
-| Go 1.27 | Backend language |
+| Go 1.26 | Backend language |
 | Wails v3 | Desktop application framework (Go + frontend hybrid) |
 | Ent (entgo.io/ent) | ORM framework (code-generation based) |
 | lego v5 (go-acme/lego) | ACME protocol client (certificate issuance/renewal) |

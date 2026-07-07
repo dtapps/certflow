@@ -43,6 +43,7 @@ func init() {
 	application.RegisterEvent[map[string]string]("auth_verified")
 	application.RegisterEvent[map[string]string]("theme_changed_sync")
 	application.RegisterEvent[map[string]string]("locale_changed_sync")
+	application.RegisterEvent[map[string]string]("navigate")
 }
 
 func main() {
@@ -207,12 +208,15 @@ func main() {
 	// 设置系统服务的主窗口引用
 	systemSvc.SetMainWindow(mainWindow)
 
-	// 创建应用菜单（含检查更新）
+	// 创建应用菜单（含检查更新和设置）
 	appMenu := app.Menu.New()
-	appMenu.AddSubmenu(i18n.T("menu.app")).
-		Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
+	appSubmenu := appMenu.AddSubmenu(i18n.T("menu.app"))
+	appSubmenu.Add(i18n.T("menu.settings")).OnClick(func(ctx *application.Context) {
+		// 通知前端导航到设置页面
+		app.Event.Emit("navigate", map[string]string{"path": "/settings"})
+	})
+	appSubmenu.Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
 		go func() {
-			logging.Info("%s", i18n.T("log.updater_check_start"))
 			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
 				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
 			} else {
@@ -220,8 +224,25 @@ func main() {
 			}
 		}()
 	})
-	appMenu.AddSubmenu(i18n.T("menu.help")).
-		Add(i18n.T("menu.about")).OnClick(func(ctx *application.Context) {})
+	appSubmenu.AddSeparator()
+	appSubmenu.Add(i18n.T("systray.quit")).OnClick(func(ctx *application.Context) {
+		app.Quit()
+	})
+
+	helpSubmenu := appMenu.AddSubmenu(i18n.T("menu.help"))
+	helpSubmenu.Add(i18n.T("menu.about")).OnClick(func(ctx *application.Context) {
+		aboutMsg := fmt.Sprintf("CertFlow\n\n%s: %s", i18n.T("settings.about.version"), currentVersion)
+		if buildTime != "" {
+			aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.buildTime"), buildTime)
+		}
+		if gitCommit != "" {
+			aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.gitCommit"), gitCommit)
+		}
+		app.Dialog.Info().
+			SetTitle(i18n.T("menu.about")).
+			SetMessage(aboutMsg).
+			Show()
+	})
 	app.Menu.SetApplicationMenu(appMenu)
 
 	// 启动域名监控后台任务

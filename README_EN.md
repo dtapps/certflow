@@ -13,6 +13,18 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 - **Auto Renewal** — Scheduled tasks to automatically renew expiring certificates
 - **Multi-Platform** — Supports macOS, Windows, and Linux
 
+## Screenshots
+
+<div align="center">
+  <img src="image/dashboard_en.jpg" width="80%" alt="Dashboard">
+  <br>
+  <img src="image/settings_en.jpg" width="80%" alt="Settings" style="margin-top: 16px;">
+  <br>
+  <img src="image/login_en.jpg" width="80%" alt="Login" style="margin-top: 16px;">
+  <br>
+  <img src="image/personal_center_en.jpg" width="80%" alt="Personal Center" style="margin-top: 16px;">
+</div>
+
 ## Quick Start
 
 ```bash
@@ -46,7 +58,7 @@ make format-frontend   # Format frontend code
 
 ## Tech Stack
 
-- **Backend**: Go 1.27 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite
+- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite
 - **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## Repositories

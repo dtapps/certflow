@@ -13,6 +13,18 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 - **自动续期** — 定时任务自动续期即将过期的证书
 - **多平台** — 支持 macOS、Windows、Linux
 
+## 截图
+
+<div align="center">
+  <img src="image/dashboard.jpg" width="80%" alt="仪表盘">
+  <br>
+  <img src="image/settings.jpg" width="80%" alt="设置" style="margin-top: 16px;">
+  <br>
+  <img src="image/login.jpg" width="80%" alt="登录" style="margin-top: 16px;">
+  <br>
+  <img src="image/personal_center.jpg" width="80%" alt="个人中心" style="margin-top: 16px;">
+</div>
+
 ## 快速开始
 
 ```bash
@@ -46,7 +58,7 @@ make format-frontend   # 格式化前端代码
 
 ## 技术栈
 
-- **后端**：Go 1.27 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite
+- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite
 - **前端**：Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## 仓库

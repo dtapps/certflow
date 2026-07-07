@@ -398,7 +398,7 @@ function handleLocaleSelect(key: string) {
 
       <!-- User -->
       <div
-        class="user-avatar no-drag"
+        class="user-avatar no-drag ml-2"
         :title="t('topbar.personalCenter')"
         @click="goToPersonalCenter"
       >

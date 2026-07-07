@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { Events } from '@wailsio/runtime'
@@ -11,13 +11,11 @@ import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapp
 import { useThemeStore } from './stores/theme'
 
 const route = useRoute()
+const router = useRouter()
 const sidebarOpen = ref(true)
 const isAuthenticated = ref(true)
 const themeStore = useThemeStore()
 const { isDark, naiveTheme, naiveThemeOverrides } = storeToRefs(themeStore)
-
-// 独立页面（不显示导航）
-const isStandalonePage = computed(() => route.path === '/log-viewer')
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
@@ -25,21 +23,17 @@ function toggleSidebar() {
 
 function handleVerified() {
   isAuthenticated.value = true
-  // 广播认证状态到其他窗口
-  Events.Emit('auth_verified', {})
 }
 
 onMounted(async () => {
+  // 清除旧的认证缓存
+  localStorage.removeItem('certflow-auth-verified')
+
   // 检查是否需要密码验证
   const needPassword = await AuthService.IsPasswordSet()
   if (needPassword) {
-    // 先检查是否已经从其他窗口同步了认证状态
-    const hasToken = localStorage.getItem('certflow-auth-verified')
-    if (hasToken) {
-      isAuthenticated.value = true
-    } else {
-      isAuthenticated.value = false
-    }
+    // 每次启动都需要密码验证
+    isAuthenticated.value = false
   } else {
     isAuthenticated.value = true
   }
@@ -48,7 +42,14 @@ onMounted(async () => {
 // 监听其他窗口的认证状态同步
 Events.On('auth_verified', () => {
   isAuthenticated.value = true
-  localStorage.setItem('certflow-auth-verified', 'true')
+})
+
+// 监听菜单导航事件
+Events.On('navigate', (ev: any) => {
+  const data = ev.data
+  if (data && data.path) {
+    router.push(data.path)
+  }
 })
 
 const mainStyle = computed(() => ({
@@ -69,11 +70,6 @@ const rootStyle = computed(() => ({
       <n-dialog-provider>
         <!-- 登录弹窗 -->
         <LoginDialog v-if="!isAuthenticated" @verified="handleVerified" />
-
-        <!-- 独立页面（不带导航） -->
-        <router-view v-else-if="isStandalonePage" v-slot="{ Component }">
-          <component :is="Component" />
-        </router-view>
 
         <!-- 主界面 -->
         <div v-else class="app-layout" :style="mainStyle">
