@@ -142,6 +142,10 @@ jobs:
         if: ${{ matrix.enabled }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
+      - name: 检查构建环境
+        if: ${{ matrix.enabled }}
+        run: wails3 doctor
+
       - name: 安装 NSIS
         if: ${{ matrix.enabled && runner.os == 'Windows' }}
         shell: pwsh
