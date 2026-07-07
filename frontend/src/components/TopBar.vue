@@ -72,6 +72,11 @@ const searchItemHoverStyle = computed(() => ({
   },
 }))
 
+const clearSearch = () => {
+  searchResults.value = []
+  showResults.value = false
+}
+
 onMounted(() => {
   notificationsStore.init()
 })
@@ -242,10 +247,7 @@ function handleLocaleSelect(key: string) {
             clearable
             class="search-input"
             @focus="searchResults.length > 0 && (showResults = true)"
-            @clear="
-              searchResults = []
-              showResults = false
-            "
+            @clear="clearSearch"
           >
             <template #prefix>
               <n-icon :size="16"><SearchOutline /></n-icon>
