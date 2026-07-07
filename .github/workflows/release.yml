@@ -210,7 +210,11 @@ jobs:
 
           # 生成本平台的 SHA256 校验和
           cd renamed
-          shasum -a 256 * > SHA256SUMS
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > SHA256SUMS
+          else
+            shasum -a 256 * > SHA256SUMS
+          fi
           echo "产物列表："
           ls -lh
           echo "SHA256SUMS："
@@ -221,7 +225,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: certflow-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: bin/renamed/
+          path: |
+            bin/renamed/*
+            !bin/renamed/SHA256SUMS
           if-no-files-found: warn
           retention-days: 1
 
@@ -249,12 +255,16 @@ jobs:
       - name: 显示发布文件
         run: ls -lh release/
 
-      - name: 合并 SHA256SUMS
+      - name: 生成 SHA256SUMS
         shell: bash
         run: |
           cd release
-          cat */SHA256SUMS > SHA256SUMS
-          echo "合并后的 SHA256SUMS："
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > SHA256SUMS
+          else
+            shasum -a 256 * > SHA256SUMS
+          fi
+          echo "SHA256SUMS："
           cat SHA256SUMS
 
       - name: 生成发布说明
