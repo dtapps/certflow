@@ -156,9 +156,11 @@ func main() {
 	autostartSvc.SetApp(app)
 
 	// 配置自更新功能
+	// https: //v3.wails.io/guides/updater/
 	gh, err := github.New(github.Config{
-		Repository: "dtapps/certflow",
-		Token:      githubToken,
+		Repository:    "dtapps/certflow",
+		Token:         githubToken,
+		ChecksumAsset: "SHA256SUMS",
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -166,6 +168,11 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
+			Window: &updater.BuiltinWindow{
+				Options: updater.WindowOptions{
+					Title: i18n.T("updater.title"), AlwaysOnTop: true,
+				},
+			},
 		}); err != nil {
 			logging.Error(i18n.T("log.updater_init_failed"), err)
 		}
@@ -205,8 +212,11 @@ func main() {
 	appMenu.AddSubmenu(i18n.T("menu.app")).
 		Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
 		go func() {
+			logging.Info("%s", i18n.T("log.updater_check_start"))
 			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
 				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
+			} else {
+				logging.Info("%s", i18n.T("log.updater_check_done"))
 			}
 		}()
 	})

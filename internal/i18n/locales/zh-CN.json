@@ -238,10 +238,14 @@
   "log.app_starting": "CertFlow 启动中...",
   "log.set_window_appearance": "设置窗口外观",
   "log.main_window_nil": "主窗口引用为空",
+  "log.updater_check_start": "开始检查更新",
+  "log.updater_check_done": "检查更新完成",
+  "log.updater_check_failed": "检查更新失败",
   "log.seed_ca_failed": "预置默认 CA 失败",
   "app.title": "CertFlow",
   "app.description": "SSL 证书管理工具",
   "app.exited": "CertFlow 已退出",
+  "updater.title": "检查更新",
   "log.export_cert_start": "导出证书: ID={{.ID}}",
   "log.export_cert_failed": "导出证书失败: ID={{.ID}}, error={{.Error}}",
   "log.export_cert_success": "导出证书成功: ID={{.ID}}",
@@ -288,6 +292,5 @@
   "log.notification_clear_failed": "清空通知失败: {{.Error}}",
   "log.auth_set_password_failed": "设置密码失败: {{.Error}}",
   "log.auth_change_password_failed": "修改密码失败: {{.Error}}",
-  "log.auth_clear_password_failed": "清除密码失败: {{.Error}}",
-  "log.export_cert_start": "导出证书: ID={{.ID}}"
+  "log.auth_clear_password_failed": "清除密码失败: {{.Error}}"
 }

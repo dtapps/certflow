@@ -178,18 +178,23 @@ jobs:
             mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
           fi
 
-          # Windows: NSIS 安装包（优先）或裸 .exe
-          if ls *-installer.exe 1>/dev/null 2>&1; then
-            for f in *-installer.exe; do
-              mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe"
-            done
-            mv CertFlow-*.exe renamed/
-          elif [ -f "certflow.exe" ]; then
+          # Windows: 便携版（updater 使用）和安装包（加 install 标识）
+          if [ -f "certflow.exe" ]; then
             mv certflow.exe "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe"
             mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe" renamed/
           fi
+          if ls *-installer.exe 1>/dev/null 2>&1; then
+            for f in *-installer.exe; do
+              mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}-install.exe"
+            done
+            mv CertFlow-*-install.exe renamed/
+          fi
 
-          # Linux: AppImage, DEB, RPM, Arch
+          # Linux: 二进制文件（updater 使用）和各格式安装包
+          if [ -f "certflow" ]; then
+            cp certflow "CertFlow-${VERSION}-${PLATFORM}-${ARCH}"
+            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}" renamed/
+          fi
           for f in *.AppImage; do
             [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.AppImage" && mv CertFlow-*.AppImage renamed/
           done
@@ -203,8 +208,13 @@ jobs:
             [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.pkg.tar.zst" && mv CertFlow-*.pkg.tar.zst renamed/
           done
 
-          echo "重命名后文件："
-          ls -lh renamed/
+          # 生成本平台的 SHA256 校验和
+          cd renamed
+          shasum -a 256 * > SHA256SUMS
+          echo "产物列表："
+          ls -lh
+          echo "SHA256SUMS："
+          cat SHA256SUMS
 
       - name: 上传产物
         if: ${{ matrix.enabled }}
@@ -239,6 +249,14 @@ jobs:
       - name: 显示发布文件
         run: ls -lh release/
 
+      - name: 合并 SHA256SUMS
+        shell: bash
+        run: |
+          cd release
+          cat */SHA256SUMS > SHA256SUMS
+          echo "合并后的 SHA256SUMS："
+          cat SHA256SUMS
+
       - name: 生成发布说明
         shell: bash
         run: |
@@ -262,6 +280,8 @@ jobs:
 
           for f in release/*; do
             fname=$(basename "$f")
+            [ "$fname" = "SHA256SUMS" ] && continue
+            [ -d "$f" ] && continue
             fsize=$(ls -lh "$f" | awk '{print $5}')
 
             # 从文件名提取平台和架构
@@ -271,7 +291,6 @@ jobs:
               *-darwin-*)  PLAT="macOS"; ARCH="${fname##*-darwin-}"; ARCH="${ARCH%%.*}" ;;
               *-windows-*) PLAT="Windows"; ARCH="${fname##*-windows-}"; ARCH="${ARCH%%.*}" ;;
               *-linux-*)   PLAT="Linux"; ARCH="${fname##*-linux-}"; ARCH="${ARCH%%.*}" ;;
-              SHA256SUMS)  PLAT="校验和"; ARCH="-" ;;
             esac
 
             case "$fname" in
@@ -279,8 +298,11 @@ jobs:
                 appname="${fname%.zip}.app"
                 echo "| ${PLAT} | ${ARCH} | [${appname}](${RELEASE_URL}/${fname}) | ${fsize} | Mac 应用 |" >> release_body.md
                 ;;
-              *.exe)
+              *-install.exe)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Windows 安装包 |" >> release_body.md
+                ;;
+              *.exe)
+                echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Windows 便携版 |" >> release_body.md
                 ;;
               *.AppImage)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | AppImage 便携版 |" >> release_body.md
@@ -294,8 +316,13 @@ jobs:
               *.pkg.tar.zst)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Arch Linux |" >> release_body.md
                 ;;
-              SHA256SUMS)
-                echo "| ${PLAT} | - | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | SHA-256 |" >> release_body.md
+              *)
+                # Linux 二进制文件（无扩展名）
+                case "$fname" in
+                  *-amd64|*-arm64)
+                    echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Linux 二进制 |" >> release_body.md
+                    ;;
+                esac
                 ;;
             esac
           done
@@ -304,14 +331,6 @@ jobs:
           echo "## 更新内容" >> release_body.md
           echo "" >> release_body.md
           echo "${CHANGES}" >> release_body.md
-
-      # 生成 SHA256 校验和文件（自更新需要）
-      - name: 生成 SHA256SUMS
-        run: |
-          cd release
-          shasum -a 256 * > SHA256SUMS
-          echo "SHA256SUMS："
-          cat SHA256SUMS
 
       - name: 发布 Release
         uses: softprops/action-gh-release@v2

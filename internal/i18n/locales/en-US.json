@@ -238,10 +238,14 @@
   "log.app_starting": "CertFlow starting...",
   "log.set_window_appearance": "Setting window appearance",
   "log.main_window_nil": "Main window reference is nil",
+  "log.updater_check_start": "Starting update check",
+  "log.updater_check_done": "Update check completed",
+  "log.updater_check_failed": "Update check failed",
   "log.seed_ca_failed": "Failed to seed default CA",
   "app.title": "CertFlow",
   "app.description": "SSL Certificate Manager",
   "app.exited": "CertFlow exited",
+  "updater.title": "Check for Updates",
   "log.export_cert_start": "Exporting certificate: ID={{.ID}}",
   "log.export_cert_failed": "Export certificate failed: ID={{.ID}}, error={{.Error}}",
   "log.export_cert_success": "Export certificate success: ID={{.ID}}",
@@ -288,6 +292,5 @@
   "log.notification_clear_failed": "Failed to clear notifications: {{.Error}}",
   "log.auth_set_password_failed": "Failed to set password: {{.Error}}",
   "log.auth_change_password_failed": "Failed to change password: {{.Error}}",
-  "log.auth_clear_password_failed": "Failed to clear password: {{.Error}}",
-  "log.export_cert_start": "Exporting certificate: ID={{.ID}}"
+  "log.auth_clear_password_failed": "Failed to clear password: {{.Error}}"
 }

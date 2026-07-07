@@ -242,7 +242,10 @@ function handleLocaleSelect(key: string) {
             clearable
             class="search-input"
             @focus="searchResults.length > 0 && (showResults = true)"
-            @clear="searchResults = []; showResults = false"
+            @clear="
+              searchResults = []
+              showResults = false
+            "
           >
             <template #prefix>
               <n-icon :size="16"><SearchOutline /></n-icon>
