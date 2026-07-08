@@ -23,13 +23,24 @@
             DOWNLOAD_DIR="dist"
             mkdir -p "${DOWNLOAD_DIR}"
 
-            # 可选：通过 CERTFLOW_GITHUB_TOKEN 环境变量传入认证令牌（提高 API 限额）
-            AUTH_HEADER=""
-            if [ -n "${CERTFLOW_GITHUB_TOKEN}" ]; then
-              AUTH_HEADER="-H \"Authorization: token ${CERTFLOW_GITHUB_TOKEN}\""
-            fi
+            # 带重试的 curl（最多 3 次，间隔 5 秒）
+            curl_retry() {
+              local max=3 i=1
+              while [ $i -le $max ]; do
+                if output=$("$@" 2>&1); then
+                  echo "$output"
+                  return 0
+                fi
+                echo "  ⚠ 第 ${i}/${max} 次失败，5 秒后重试..."
+                sleep 5
+                i=$((i + 1))
+              done
+              echo "  ✗ 重试 ${max} 次后仍然失败"
+              echo "$output"
+              return 1
+            }
 
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            HTTP_CODE=$(curl_retry curl -s -o /dev/null -w "%{http_code}" \
               -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
               "${GITHUB_API}/releases/tags/${TAG}")
 
@@ -39,7 +50,7 @@
             fi
             echo "✓ 找到 GitHub Release: ${TAG}"
 
-            RELEASE_INFO=$(curl -s \
+            RELEASE_INFO=$(curl_retry curl -s \
               -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
               "${GITHUB_API}/releases/tags/${TAG}")
             ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
@@ -54,7 +65,7 @@
               ASSET_NAME=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].name")
               ASSET_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[$i].browser_download_url")
               echo "下载 ${ASSET_NAME}..."
-              curl -sL \
+              curl_retry curl -sL \
                 -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" \
                 -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "${ASSET_URL}"
               echo "  ✓ 完成"
@@ -64,13 +75,11 @@
             echo "下载完成："
             ls -lh "${DOWNLOAD_DIR}/"
 
-        # https://docs.cnb.cool/zh/plugin/public/cnbcool/changelog.html
-        - name: 生成 Release 日志
-          image: cnbcool/changelog
-          exports:
-            latestChangeLog: LATEST_CHANGE_LOG
+            # 提取 GitHub Release 的更新日志（只取"## 更新内容"部分，跳过下载表格）
+            echo "$RELEASE_INFO" | jq -r '.body // ""' | sed -n '/^## 更新内容/,$p' | tail -n +2 | sed '/./,$!d' > github_changelog.md
+            echo "✓ 更新日志已保存到 github_changelog.md"
 
-        # 生成完整发布内容（下载表格 + 更新日志）
+        # 生成完整发布内容（下载表格 + GitHub 更新日志）
         - name: 生成发布内容
           script: |
             TAG="${INTERIOR_VERSION}"
@@ -107,16 +116,14 @@
               esac
             done
 
-            # 拼接更新日志
-            printf "\n## 更新内容\n\n" >> release_body.md
-            cat >> release_body.md << CHANGELOG
-            ${LATEST_CHANGE_LOG}
-            CHANGELOG
+            # 拼接 GitHub 更新日志
+            if [ -s github_changelog.md ]; then
+              printf "\n## 更新内容\n\n" >> release_body.md
+              cat github_changelog.md >> release_body.md
+            fi
 
             # 输出完整内容（供 git:release 引用）
             cat release_body.md
-          exports:
-            latestChangeLog: LATEST_CHANGE_LOG
 
         # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
         - name: 创建 Release
