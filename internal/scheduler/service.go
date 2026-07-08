@@ -93,7 +93,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.WithLocation(time.Local),
 	)
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("error.create_scheduler_failed"), err)
+		return fmt.Errorf(i18n.T("error.create_scheduler_failed", "Error", err))
 	}
 	s.scheduler = scheduler
 

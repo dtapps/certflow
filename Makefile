@@ -23,13 +23,20 @@ dev: ## 运行 Wails 开发模式
 
 # ==================== 格式化 ====================
 
-format: format-go format-frontend ## 格式化所有代码
+format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix ## 格式化和修复所有代码
 
-format-go: ## 格式化 Go 代码
+format-go-fmt: ## 格式化 Go 代码
 	gofmt -w -s .
+	go fmt ./...
 
-format-frontend: ## 格式化前端代码（Vue + TypeScript）
+format-go-fix: ## 修复 Go 代码
+	go fix ./...	
+
+format-frontend-write: ## 格式化前端代码（Vue + TypeScript）
 	cd frontend && pnpm exec prettier --write "src/**/*.{vue,ts,js,css}"
+
+format-frontend-fix: ## 修复前端代码（Vue + TypeScript）
+	cd frontend && pnpm exec eslint --fix "src/**/*.{vue,ts,js}"
 
 # ==================== 检查 ====================
 

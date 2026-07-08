@@ -10,7 +10,7 @@ func TestNewService(t *testing.T) {
 	dir := t.TempDir()
 	svc, err := NewService(dir)
 	if err != nil {
-		t.Fatalf("NewService: %v", err)
+		t.Fatalf("NewService: %v (dir: %s)", err, dir)
 	}
 	if svc == nil {
 		t.Fatal("expected non-nil Service")

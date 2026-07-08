@@ -59,7 +59,6 @@ const autostartEnabled = ref(false)
 const notificationEnabled = ref(false)
 
 const loading = ref(false)
-const saving = ref(false)
 const appVersion = ref('')
 
 // 日志查看器状态
@@ -100,9 +99,13 @@ const autoSave = debounce(async () => {
   }
 }, 500)
 
-watch(settings, () => {
-  if (hasChanges.value) autoSave()
-}, { deep: true })
+watch(
+  settings,
+  () => {
+    if (hasChanges.value) autoSave()
+  },
+  { deep: true },
+)
 
 // 主题相关样式
 const logContentStyle = computed(() => ({
@@ -217,19 +220,6 @@ watch(autostartEnabled, async (enabled) => {
     console.error('设置开机自启失败:', e)
   }
 })
-
-const handleSave = async () => {
-  saving.value = true
-  try {
-    await SettingsService.SaveSettings(settings.value as Settings)
-    originalSettings.value = JSON.stringify(settings.value)
-    alert(t('settings.saveSuccess'))
-  } catch (e) {
-    alert(t('settings.saveFailed') + ' ' + (e as Error).message)
-  } finally {
-    saving.value = false
-  }
-}
 
 const handleTestNotification = async () => {
   try {

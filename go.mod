@@ -6,11 +6,13 @@ ignore ./frontend
 
 require (
 	entgo.io/ent v0.14.6
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-acme/lego/v5 v5.2.2
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/google/uuid v1.6.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.115
+	github.com/spf13/viper v1.21.0
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.116
 	golang.org/x/crypto v0.53.0
 	golang.org/x/text v0.39.0
 	modernc.org/sqlite v1.53.0
@@ -68,6 +70,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/inflect v0.21.6 // indirect
 	github.com/go-resty/resty/v2 v2.17.2 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
@@ -93,14 +96,20 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/nrdcg/porkbun v0.4.0 // indirect
 	github.com/ovh/go-ovh v1.9.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.129 // indirect
+	github.com/spf13/afero v1.15.0 // indirect
+	github.com/spf13/cast v1.10.0 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.130 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ucloud/ucloud-sdk-go v0.22.85 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.250 // indirect
@@ -108,6 +117,7 @@ require (
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/image v0.43.0 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect

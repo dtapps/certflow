@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,6 +16,7 @@ import (
 type AuthService struct {
 	mu           sync.RWMutex
 	filePath     string
+	v            *viper.Viper
 	passwordHash string
 }
 
@@ -26,52 +27,38 @@ func NewAuthService(dataDir string) (*AuthService, error) {
 	}
 
 	filePath := filepath.Join(dataDir, "auth.json")
+
+	v := viper.New()
+	v.SetConfigFile(filePath)
+	v.SetConfigType("json")
+
 	s := &AuthService{
 		filePath: filePath,
+		v:        v,
 	}
 
 	// 尝试加载现有密码
-	if err := s.load(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf(i18n.T("error.load_auth_failed", "Error", err))
 		}
+		// 文件不存在，初始化空密码
+		s.passwordHash = ""
+	} else {
+		s.passwordHash = v.GetString("password_hash")
 	}
 
 	return s, nil
 }
 
-// load 从文件加载密码哈希
-func (s *AuthService) load() error {
-	data, err := os.ReadFile(s.filePath)
-	if err != nil {
-		return err
-	}
-
-	var auth struct {
-		PasswordHash string `json:"password_hash"`
-	}
-	if err := json.Unmarshal(data, &auth); err != nil {
-		return err
-	}
-
-	s.passwordHash = auth.PasswordHash
-	return nil
-}
-
 // save 保存密码哈希到文件
 func (s *AuthService) save() error {
-	data, err := json.MarshalIndent(map[string]string{
-		"password_hash": s.passwordHash,
-	}, "", "  ")
-	if err != nil {
-		return fmt.Errorf(i18n.T("error.serialize_auth_failed", "Error", err))
+	// 确保目录存在
+	if err := os.MkdirAll(filepath.Dir(s.filePath), 0755); err != nil {
+		return fmt.Errorf(i18n.T("error.create_data_dir_failed", "Error", err))
 	}
-
-	if err := os.WriteFile(s.filePath, data, 0600); err != nil {
-		return fmt.Errorf(i18n.T("error.write_auth_file_failed", "Error", err))
-	}
-
-	return nil
+	s.v.Set("password_hash", s.passwordHash)
+	return s.v.WriteConfig()
 }
 
 // IsPasswordSet 检查是否已设置密码

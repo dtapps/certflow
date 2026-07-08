@@ -2,7 +2,6 @@ package settings
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -11,8 +10,12 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 )
 
 // DNSConfig DNS解析配置
@@ -139,11 +142,11 @@ func DefaultSettings() Settings {
 		AutoRenewalEnabled: true,
 		DefaultRenewalDays: 30,
 		AutoCheckExpiry:    true,
-		CheckInterval:       6,
-		DataDir:             "~/.certflow",
-		Language:            "auto",
-		Theme:               "auto",
-		DNSConfigs:          builtinDNSConfigs(nil),
+		CheckInterval:      6,
+		DataDir:            "~/.certflow",
+		Language:           "auto",
+		Theme:              "auto",
+		DNSConfigs:         builtinDNSConfigs(nil),
 		Proxy: ProxyConfig{
 			Enabled:  false,
 			Protocol: "http",
@@ -158,11 +161,20 @@ func DefaultSettings() Settings {
 	}
 }
 
+// OnChangeFunc 配置文件变更回调
+type OnChangeFunc func(newSettings Settings)
+
 // Service 设置服务
 type Service struct {
 	mu       sync.RWMutex
 	settings Settings
+	v        *viper.Viper
 	filePath string
+	onChange OnChangeFunc
+	saving   bool // 标记正在保存，避免触发自身回调
+
+	// seeded.json 独立 Viper 实例
+	seededV *viper.Viper
 }
 
 // NewService 创建新的设置服务
@@ -172,26 +184,120 @@ func NewService(dataDir string) (*Service, error) {
 	}
 
 	filePath := filepath.Join(dataDir, "settings.json")
+
+	v := viper.New()
+	v.SetConfigFile(filePath)
+	v.SetConfigType("json")
+	v.AutomaticEnv()
+
 	s := &Service{
 		filePath: filePath,
 		settings: DefaultSettings(),
+		v:        v,
 	}
 
+	// 设置默认值
+	s.setDefaults()
+
 	// 尝试加载现有设置
-	if err := s.load(); err != nil {
-		// 如果文件不存在，使用默认设置
-		if !os.IsNotExist(err) {
+	if err := v.ReadInConfig(); err != nil {
+		// 首次运行，写入默认配置
+		if os.IsNotExist(err) {
+			if err := s.writeConfig(); err != nil {
+				return nil, fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
+			}
+		} else {
 			return nil, fmt.Errorf(i18n.T("error.load_settings_failed", "Error", err))
 		}
 	}
 
-	// 始终同步内置 DNS 条目并保存
+	// 反序列化到内存
+	if err := v.Unmarshal(&s.settings); err != nil {
+		return nil, fmt.Errorf(i18n.T("error.load_settings_failed", "Error", err))
+	}
+
+	// 同步内置 DNS 条目
 	s.updateDefaultDNS()
-	if err := s.save(); err != nil {
+	// 通过 Viper 写入，保持内部状态同步
+	if err := s.writeConfig(); err != nil {
 		return nil, fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
 	}
 
+	// 初始化 seeded.json 的 Viper 实例
+	seededPath := filepath.Join(filepath.Dir(filePath), "seeded.json")
+	seededV := viper.New()
+	seededV.SetConfigFile(seededPath)
+	seededV.SetConfigType("json")
+	s.seededV = seededV
+
+	// 启动文件监控
+	s.startWatching()
+
 	return s, nil
+}
+
+// setDefaults 设置 Viper 默认值
+func (s *Service) setDefaults() {
+	def := DefaultSettings()
+	s.v.SetDefault("auto_renewal_enabled", def.AutoRenewalEnabled)
+	s.v.SetDefault("default_renewal_days", def.DefaultRenewalDays)
+	s.v.SetDefault("auto_check_expiry", def.AutoCheckExpiry)
+	s.v.SetDefault("check_interval", def.CheckInterval)
+	s.v.SetDefault("data_dir", def.DataDir)
+	s.v.SetDefault("language", def.Language)
+	s.v.SetDefault("theme", def.Theme)
+	s.v.SetDefault("dns_configs", def.DNSConfigs)
+	s.v.SetDefault("proxy", def.Proxy)
+	s.v.SetDefault("log", def.Log)
+}
+
+// startWatching 启动配置文件监控
+func (s *Service) startWatching() {
+	var (
+		debounceTimer *time.Timer
+		timerMu       sync.Mutex
+	)
+
+	s.v.OnConfigChange(func(e fsnotify.Event) {
+		s.mu.Lock()
+		if s.saving {
+			s.mu.Unlock()
+			return
+		}
+		s.mu.Unlock()
+
+		// 防抖：500ms 内多次变更只处理最后一次
+		timerMu.Lock()
+		if debounceTimer != nil {
+			debounceTimer.Stop()
+		}
+		debounceTimer = time.AfterFunc(500*time.Millisecond, func() {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+
+			if err := s.v.Unmarshal(&s.settings); err != nil {
+				logging.Error("配置文件热重载失败: %v", err)
+				return
+			}
+			logging.Info("配置文件已热重载")
+
+			if s.onChange != nil {
+				cb := s.onChange
+				settings := s.settings
+				go cb(settings)
+			}
+		})
+		timerMu.Unlock()
+	})
+
+	s.v.WatchConfig()
+}
+
+// OnChange 注册配置变更回调
+func (s *Service) OnChange(fn OnChangeFunc) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onChange = fn
 }
 
 // updateDefaultDNS 同步内置 DNS 条目：确保所有内置条目存在且服务器列表为最新
@@ -213,23 +319,24 @@ func (s *Service) updateDefaultDNS() {
 	}
 }
 
-// load 从文件加载设置
-func (s *Service) load() error {
-	data, err := os.ReadFile(s.filePath)
-	if err != nil {
-		return err
-	}
+// writeConfig 将当前设置写入文件（内部使用，调用方需持有锁）
+func (s *Service) writeConfig() error {
+	s.saving = true
+	defer func() { s.saving = false }()
 
-	return json.Unmarshal(data, &s.settings)
-}
+	// 同步到 Viper，保持内部状态一致
+	s.v.Set("auto_renewal_enabled", s.settings.AutoRenewalEnabled)
+	s.v.Set("default_renewal_days", s.settings.DefaultRenewalDays)
+	s.v.Set("auto_check_expiry", s.settings.AutoCheckExpiry)
+	s.v.Set("check_interval", s.settings.CheckInterval)
+	s.v.Set("data_dir", s.settings.DataDir)
+	s.v.Set("language", s.settings.Language)
+	s.v.Set("theme", s.settings.Theme)
+	s.v.Set("dns_configs", s.settings.DNSConfigs)
+	s.v.Set("proxy", s.settings.Proxy)
+	s.v.Set("log", s.settings.Log)
 
-// save 将当前设置写入文件（内部使用，不加锁）
-func (s *Service) save() error {
-	data, err := json.MarshalIndent(s.settings, "", "  ")
-	if err != nil {
-		return fmt.Errorf(i18n.T("error.serialize_settings_failed", "Error", err))
-	}
-	return os.WriteFile(s.filePath, data, 0644)
+	return s.v.WriteConfig()
 }
 
 // Save 保存设置到文件
@@ -238,17 +345,7 @@ func (s *Service) Save(settings Settings) error {
 	defer s.mu.Unlock()
 
 	s.settings = settings
-
-	data, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return fmt.Errorf(i18n.T("error.serialize_settings_failed", "Error", err))
-	}
-
-	if err := os.WriteFile(s.filePath, data, 0644); err != nil {
-		return fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
-	}
-
-	return nil
+	return s.writeConfig()
 }
 
 // Get 获取当前设置
@@ -261,26 +358,14 @@ func (s *Service) Get() Settings {
 
 // IsSeeded 检查是否已预置默认数据（读取独立文件）
 func (s *Service) IsSeeded() bool {
-	seededPath := filepath.Join(filepath.Dir(s.filePath), "seeded.json")
-	data, err := os.ReadFile(seededPath)
-	if err != nil {
+	if err := s.seededV.ReadInConfig(); err != nil {
 		return false
 	}
-	var seeded struct {
-		Seeded bool `json:"seeded"`
-	}
-	if err := json.Unmarshal(data, &seeded); err != nil {
-		return false
-	}
-	return seeded.Seeded
+	return s.seededV.GetBool("seeded")
 }
 
 // MarkSeeded 标记已预置默认数据（写入独立文件）
 func (s *Service) MarkSeeded() error {
-	seededPath := filepath.Join(filepath.Dir(s.filePath), "seeded.json")
-	data, err := json.MarshalIndent(map[string]bool{"seeded": true}, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(seededPath, data, 0644)
+	s.seededV.Set("seeded", true)
+	return s.seededV.WriteConfig()
 }
