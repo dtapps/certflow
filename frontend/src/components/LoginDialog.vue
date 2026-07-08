@@ -75,16 +75,18 @@ const verify = async () => {
       emit('verified')
     } else {
       error.value = t('login.wrongPassword')
-      // 先震动，再清空密码
+      // 震动动画
       const inputEl = inputRef.value?.$el?.querySelector('input')
       inputEl?.style.setProperty('animation', 'var(--animate-shake)')
       setTimeout(() => {
         inputEl?.style.removeProperty('animation')
-        // nextTick 确保 NInput 正确同步
-        nextTick(() => {
-          password.value = ''
-        })
       }, 500)
+      // 立即清空密码并重新聚焦
+      password.value = ''
+      nextTick(() => {
+        const el = inputRef.value?.$el?.querySelector('input')
+        el?.focus()
+      })
     }
   } catch (e) {
     error.value = t('login.enterPassword')
