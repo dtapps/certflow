@@ -101,11 +101,6 @@ export interface Settings {
     "default_renewal_days": number;
 
     /**
-     * 是否启用通知
-     */
-    "notification_enabled": boolean;
-
-    /**
      * 是否自动检查过期
      */
     "auto_check_expiry": boolean;

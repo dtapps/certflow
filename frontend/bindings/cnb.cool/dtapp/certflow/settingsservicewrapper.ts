@@ -27,10 +27,3 @@ export function GetSettings(): $CancellablePromise<settings$0.Settings> {
 export function SaveSettings(input: settings$0.Settings): $CancellablePromise<void> {
     return $Call.ByID(524082881, input);
 }
-
-/**
- * UpdateNotificationEnabled 更新通知启用状态
- */
-export function UpdateNotificationEnabled(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2249682764, enabled);
-}

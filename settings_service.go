@@ -39,11 +39,6 @@ func (s *SettingsServiceWrapper) SaveSettings(input settings.Settings) error {
 	return nil
 }
 
-// UpdateNotificationEnabled 更新通知启用状态
-func (s *SettingsServiceWrapper) UpdateNotificationEnabled(enabled bool) error {
-	return s.settingsService.UpdateNotificationEnabled(enabled)
-}
-
 // ServiceStartup 实现 Wails 服务接口
 func (s *SettingsServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil

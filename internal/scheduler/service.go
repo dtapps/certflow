@@ -181,7 +181,7 @@ func (s *Scheduler) autoRenewTask() {
 				SetCompletedAt(time.Now()).
 				Save(ctx)
 			// 发送失败通知
-			if s.notifService != nil && s.settingsService != nil && s.settingsService.Get().NotificationEnabled {
+			if s.notifService != nil && s.notifService.CheckPermission() {
 				_ = s.notifService.SendCertRenewFailed(cert.Domain, err.Error())
 			}
 			continue
@@ -201,7 +201,7 @@ func (s *Scheduler) autoRenewTask() {
 		logging.Info(i18n.T("log.renewal_success", "ID", cert.ID, "Domain", cert.Domain))
 
 		// 发送续期成功通知
-		if s.notifService != nil && s.settingsService != nil && s.settingsService.Get().NotificationEnabled {
+		if s.notifService != nil && s.notifService.CheckPermission() {
 			_ = s.notifService.SendCertRenewed(cert.Domain, result.Issuer, result.NotAfter)
 		}
 	}
@@ -216,8 +216,8 @@ func (s *Scheduler) expiryCheckTask() {
 
 	logging.Info(i18n.T("log.expiry_check_start"))
 
-	// 检查通知是否启用
-	if s.settingsService != nil && !s.settingsService.Get().NotificationEnabled {
+	// 检查通知权限
+	if s.notifService != nil && !s.notifService.CheckPermission() {
 		logging.Info(i18n.T("log.notification_disabled"))
 		return
 	}

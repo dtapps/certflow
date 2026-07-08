@@ -42,7 +42,6 @@ type SafeSettings = Omit<Settings, 'dns_configs' | 'proxy' | 'log'> & {
 const defaultSettings: SafeSettings = {
   auto_renewal_enabled: true,
   default_renewal_days: 30,
-  notification_enabled: true,
   auto_check_expiry: true,
   check_interval: 6,
   data_dir: '~/.certflow',
@@ -57,12 +56,13 @@ const settings = ref<SafeSettings>({ ...defaultSettings })
 const originalSettings = ref<string>('')
 const dnsEnabled = ref(false)
 const autostartEnabled = ref(false)
+const notificationEnabled = ref(false)
 
 const loading = ref(false)
 const saving = ref(false)
 const appVersion = ref('')
 
-// Log viewer state
+// 日志查看器状态
 const logFiles = ref<string[]>([])
 const selectedLogFile = ref('certflow.log')
 const logTail = ref(100)
@@ -134,7 +134,7 @@ const dnsInputStyle = computed(() => ({
   fontSize: '12px',
 }))
 
-// Sync store -> settings ref when store changes (e.g. from other pages)
+// 同步 store -> settings（其他页面修改时）
 watch(currentTheme, (val) => {
   settings.value.theme = val
 })
@@ -174,7 +174,7 @@ const loadSettings = async () => {
   }
 }
 
-// Immediate theme switch
+// 实时切换主题
 watch(
   () => settings.value.theme,
   (val) => {
@@ -182,7 +182,7 @@ watch(
   },
 )
 
-// Immediate language switch
+// 实时切换语言
 watch(
   () => settings.value.language,
   (val) => {
@@ -190,19 +190,20 @@ watch(
   },
 )
 
-// 用户开启通知时请求系统权限
-watch(
-  () => settings.value.notification_enabled,
-  async (enabled) => {
+// 实时设置通知权限
+watch(notificationEnabled, async (enabled) => {
+  try {
     if (enabled) {
       const authorized = await NotificationService.RequestPermission()
       if (!authorized) {
-        settings.value.notification_enabled = false
+        notificationEnabled.value = false
         alert(t('settings.notification.permissionDenied'))
       }
     }
-  },
-)
+  } catch (e) {
+    console.error('设置通知权限失败:', e)
+  }
+})
 
 // 实时设置开机自启
 watch(autostartEnabled, async (enabled) => {
@@ -297,7 +298,7 @@ const removeDNS = (id: string) => {
   }
 }
 
-// Log viewer functions
+// 日志查看器方法
 const loadLogFiles = async () => {
   try {
     const files = await LoggingService.GetLogFiles()
@@ -384,6 +385,12 @@ onMounted(async () => {
   } catch (e) {
     console.error('获取开机自启状态失败:', e)
   }
+  // 获取通知权限状态
+  try {
+    notificationEnabled.value = await NotificationService.CheckPermission()
+  } catch (e) {
+    console.error('获取通知权限状态失败:', e)
+  }
   // 获取版本号
   try {
     appVersion.value = await SystemService.GetVersion()
@@ -441,7 +448,7 @@ onMounted(async () => {
         <n-form label-placement="top">
           <n-form-item :label="t('settings.notification.enabled')">
             <div class="flex items-center gap-3">
-              <n-switch v-model:value="settings.notification_enabled" />
+              <n-switch v-model:value="notificationEnabled" />
               <span class="text-sm opacity-60">{{ t('settings.notification.enabled.desc') }}</span>
             </div>
           </n-form-item>

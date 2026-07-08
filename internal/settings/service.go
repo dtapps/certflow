@@ -43,17 +43,16 @@ type LogConfig struct {
 
 // Settings 应用设置
 type Settings struct {
-	AutoRenewalEnabled  bool        `json:"auto_renewal_enabled"` // 是否启用自动续期
-	DefaultRenewalDays  int         `json:"default_renewal_days"` // 默认续期天数
-	NotificationEnabled bool        `json:"notification_enabled"` // 是否启用通知
-	AutoCheckExpiry     bool        `json:"auto_check_expiry"`    // 是否自动检查过期
-	CheckInterval       int         `json:"check_interval"`       // 检查间隔（小时）
-	DataDir             string      `json:"data_dir"`             // 数据目录
-	Language            string      `json:"language"`             // 语言：zh-CN/en-US/auto
-	Theme               string      `json:"theme"`                // 主题：dark/light/auto
-	DNSConfigs          []DNSConfig `json:"dns_configs"`          // DNS 解析配置列表
-	Proxy               ProxyConfig `json:"proxy"`                // 代理配置
-	Log                 LogConfig   `json:"log"`                  // 日志配置
+	AutoRenewalEnabled bool        `json:"auto_renewal_enabled"` // 是否启用自动续期
+	DefaultRenewalDays int         `json:"default_renewal_days"` // 默认续期天数
+	AutoCheckExpiry    bool        `json:"auto_check_expiry"`    // 是否自动检查过期
+	CheckInterval      int         `json:"check_interval"`       // 检查间隔（小时）
+	DataDir            string      `json:"data_dir"`             // 数据目录
+	Language           string      `json:"language"`             // 语言：zh-CN/en-US/auto
+	Theme              string      `json:"theme"`                // 主题：dark/light/auto
+	DNSConfigs         []DNSConfig `json:"dns_configs"`          // DNS 解析配置列表
+	Proxy              ProxyConfig `json:"proxy"`                // 代理配置
+	Log                LogConfig   `json:"log"`                  // 日志配置
 }
 
 // getSystemDNS 跨平台获取系统 DNS 服务器地址
@@ -137,10 +136,9 @@ func builtinDNSConfigs(systemDNS []string) []DNSConfig {
 // DefaultSettings 返回默认设置
 func DefaultSettings() Settings {
 	return Settings{
-		AutoRenewalEnabled:  true,
-		DefaultRenewalDays:  30,
-		NotificationEnabled: true,
-		AutoCheckExpiry:     true,
+		AutoRenewalEnabled: true,
+		DefaultRenewalDays: 30,
+		AutoCheckExpiry:    true,
 		CheckInterval:       6,
 		DataDir:             "~/.certflow",
 		Language:            "auto",
@@ -285,23 +283,4 @@ func (s *Service) MarkSeeded() error {
 		return err
 	}
 	return os.WriteFile(seededPath, data, 0644)
-}
-
-// UpdateNotificationEnabled 更新通知启用状态
-func (s *Service) UpdateNotificationEnabled(enabled bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.settings.NotificationEnabled = enabled
-
-	data, err := json.MarshalIndent(s.settings, "", "  ")
-	if err != nil {
-		return fmt.Errorf(i18n.T("error.serialize_settings_failed", "Error", err))
-	}
-
-	if err := os.WriteFile(s.filePath, data, 0644); err != nil {
-		return fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
-	}
-
-	return nil
 }

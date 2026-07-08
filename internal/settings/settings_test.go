@@ -130,30 +130,3 @@ func TestIsSeeded_MarkSeeded(t *testing.T) {
 		t.Fatal("expected IsSeeded to persist across service instances")
 	}
 }
-
-func TestUpdateNotificationEnabled(t *testing.T) {
-	svc, err := NewService(t.TempDir())
-	if err != nil {
-		t.Fatalf("NewService: %v", err)
-	}
-
-	// 默认值应为 true
-	s := svc.Get()
-	if !s.NotificationEnabled {
-		t.Fatal("expected default NotificationEnabled to be true")
-	}
-
-	if err := svc.UpdateNotificationEnabled(false); err != nil {
-		t.Fatalf("UpdateNotificationEnabled: %v", err)
-	}
-	if svc.Get().NotificationEnabled {
-		t.Error("expected NotificationEnabled to be false after update")
-	}
-
-	if err := svc.UpdateNotificationEnabled(true); err != nil {
-		t.Fatalf("UpdateNotificationEnabled: %v", err)
-	}
-	if !svc.Get().NotificationEnabled {
-		t.Error("expected NotificationEnabled to be true after re-enable")
-	}
-}
