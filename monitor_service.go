@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -40,6 +41,12 @@ func (s *MonitorServiceWrapper) Delete(id int) error {
 // CheckNow 立即执行一次检查
 func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, error) {
 	return s.monitorService.CheckNow(context.Background(), id)
+}
+
+// SetUserAgent 设置 User-Agent
+func (s *MonitorServiceWrapper) SetUserAgent(ua string) {
+	logging.Info("前端 User-Agent: %s", ua)
+	s.monitorService.SetUserAgent(ua)
 }
 
 // ServiceStartup 实现 Wails 服务接口

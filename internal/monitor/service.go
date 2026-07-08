@@ -28,6 +28,7 @@ type MonitorService struct {
 	notifService     interface {
 		SendNotification(opts notification.NotificationOption) error
 	}
+	userAgent string
 }
 
 // NewMonitorService 创建监控服务
@@ -48,6 +49,11 @@ func (s *MonitorService) SetNotificationService(ns interface {
 	SendNotification(opts notification.NotificationOption) error
 }) {
 	s.notifService = ns
+}
+
+// SetUserAgent 设置 User-Agent
+func (s *MonitorService) SetUserAgent(ua string) {
+	s.userAgent = ua
 }
 
 // MonitoredDomainItem 监控域名条目（前端展示用）
@@ -275,9 +281,18 @@ func (s *MonitorService) checkHTTPS(m *ent.MonitoredDomain) checkResult {
 	}
 
 	client := s.getHTTPClient()
-	start := time.Now()
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		result.checkError = err.Error()
+		return result
+	}
+	if s.userAgent != "" {
+		req.Header.Set("User-Agent", s.userAgent)
+	}
+
+	start := time.Now()
+	resp, err := client.Do(req)
 	if err != nil {
 		result.checkError = err.Error()
 		return result
@@ -341,9 +356,17 @@ func (s *MonitorService) checkHTTP(m *ent.MonitoredDomain) checkResult {
 
 	client := s.getHTTPClient()
 
-	start := time.Now()
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		result.checkError = err.Error()
+		return result
+	}
+	if s.userAgent != "" {
+		req.Header.Set("User-Agent", s.userAgent)
+	}
 
-	resp, err := client.Get(url)
+	start := time.Now()
+	resp, err := client.Do(req)
 	if err != nil {
 		result.checkError = err.Error()
 		return result
