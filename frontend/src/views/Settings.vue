@@ -81,6 +81,29 @@ const hasChanges = computed(() => {
   return JSON.stringify(settings.value) !== originalSettings.value
 })
 
+// 防抖工具
+const debounce = <T extends (...args: any[]) => any>(fn: T, ms: number) => {
+  let timer: ReturnType<typeof setTimeout>
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), ms)
+  }
+}
+
+// 自动保存（防抖 500ms）
+const autoSave = debounce(async () => {
+  try {
+    await SettingsService.SaveSettings(settings.value as Settings)
+    originalSettings.value = JSON.stringify(settings.value)
+  } catch (e) {
+    console.error(t('settings.saveFailed'), e)
+  }
+}, 500)
+
+watch(settings, () => {
+  if (hasChanges.value) autoSave()
+}, { deep: true })
+
 // 主题相关样式
 const logContentStyle = computed(() => ({
   backgroundColor: isDark.value ? '#1f2937' : '#f3f4f6',
@@ -768,18 +791,6 @@ onMounted(async () => {
         </div>
       </n-card>
     </n-spin>
-
-    <!-- 保存按钮 -->
-    <div class="flex justify-end">
-      <n-button
-        type="primary"
-        @click="handleSave"
-        :disabled="saving || !hasChanges"
-        :loading="saving"
-      >
-        {{ saving ? t('settings.saving') : t('settings.save') }}
-      </n-button>
-    </div>
   </div>
 </template>
 
