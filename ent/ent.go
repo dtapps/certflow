@@ -15,6 +15,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
+	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -84,6 +85,7 @@ func checkColumn(t, c string) error {
 			monitoreddomain.Table: monitoreddomain.ValidColumn,
 			notification.Table:    notification.ValidColumn,
 			renewallog.Table:      renewallog.ValidColumn,
+			scanresult.Table:      scanresult.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

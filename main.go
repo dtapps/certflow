@@ -18,6 +18,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
 	"cnb.cool/dtapp/certflow/internal/notification"
+	"cnb.cool/dtapp/certflow/internal/scanner"
 	"cnb.cool/dtapp/certflow/internal/scheduler"
 	"cnb.cool/dtapp/certflow/internal/settings"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -90,6 +91,8 @@ func main() {
 	monitorService := monitor.NewMonitorService(db.Client)
 	monitorService.SetSettingsProvider(settingsService.Get)
 	monitorService.SetNotificationService(notifService)
+	scannerService := scanner.NewScannerService(db.Client)
+	scannerService.SetSettingsProvider(settingsService.Get)
 	authService, err := auth.NewAuthService(dataDir)
 	if err != nil {
 		log.Fatalf(i18n.T("error.load_auth_failed")+": %v", err)
@@ -128,6 +131,7 @@ func main() {
 			application.NewService(NewLoggingServiceWrapper()),
 			application.NewService(NewAuthServiceWrapper(authService)),
 			application.NewService(NewMonitorServiceWrapper(monitorService)),
+			application.NewService(NewScannerServiceWrapper(scannerService)),
 			application.NewService(clipboardSvc),
 			application.NewService(browserSvc),
 			application.NewService(systemSvc),

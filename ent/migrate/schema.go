@@ -159,6 +159,34 @@ var (
 			},
 		},
 	}
+	// ScanResultsColumns holds the columns for the "scan_results" table.
+	ScanResultsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "domain", Type: field.TypeString},
+		{Name: "port", Type: field.TypeInt, Default: 443},
+		{Name: "scan_type", Type: field.TypeEnum, Enums: []string{"https", "http"}, Default: "https"},
+		{Name: "scanned_at", Type: field.TypeTime},
+		{Name: "response_time_ms", Type: field.TypeInt, Default: 0},
+		{Name: "cert_issuer", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cert_subject", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cert_not_before", Type: field.TypeTime, Nullable: true},
+		{Name: "cert_not_after", Type: field.TypeTime, Nullable: true},
+		{Name: "cert_remaining_days", Type: field.TypeInt, Default: 0},
+		{Name: "cert_fingerprint", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cert_signature_algo", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cert_public_key_algo", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cert_public_key_bits", Type: field.TypeInt, Default: 0},
+		{Name: "cert_sans", Type: field.TypeJSON, Nullable: true},
+		{Name: "cert_serial_number", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// ScanResultsTable holds the schema information for the "scan_results" table.
+	ScanResultsTable = &schema.Table{
+		Name:       "scan_results",
+		Columns:    ScanResultsColumns,
+		PrimaryKey: []*schema.Column{ScanResultsColumns[0]},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		CasTable,
@@ -167,6 +195,7 @@ var (
 		MonitoredDomainsTable,
 		NotificationsTable,
 		RenewalLogsTable,
+		ScanResultsTable,
 	}
 )
 

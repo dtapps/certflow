@@ -24,6 +24,8 @@ type Tx struct {
 	Notification *NotificationClient
 	// RenewalLog is the client for interacting with the RenewalLog builders.
 	RenewalLog *RenewalLogClient
+	// ScanResult is the client for interacting with the ScanResult builders.
+	ScanResult *ScanResultClient
 
 	// lazily loaded.
 	client     *Client
@@ -161,6 +163,7 @@ func (tx *Tx) init() {
 	tx.MonitoredDomain = NewMonitoredDomainClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.RenewalLog = NewRenewalLogClient(tx.config)
+	tx.ScanResult = NewScanResultClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

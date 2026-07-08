@@ -11,6 +11,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
+	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"cnb.cool/dtapp/certflow/ent/schema"
 )
 
@@ -158,4 +159,34 @@ func init() {
 	renewallogDescCreatedAt := renewallogFields[6].Descriptor()
 	// renewallog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	renewallog.DefaultCreatedAt = renewallogDescCreatedAt.Default.(func() time.Time)
+	scanresultFields := schema.ScanResult{}.Fields()
+	_ = scanresultFields
+	// scanresultDescDomain is the schema descriptor for domain field.
+	scanresultDescDomain := scanresultFields[0].Descriptor()
+	// scanresult.DomainValidator is a validator for the "domain" field. It is called by the builders before save.
+	scanresult.DomainValidator = scanresultDescDomain.Validators[0].(func(string) error)
+	// scanresultDescPort is the schema descriptor for port field.
+	scanresultDescPort := scanresultFields[1].Descriptor()
+	// scanresult.DefaultPort holds the default value on creation for the port field.
+	scanresult.DefaultPort = scanresultDescPort.Default.(int)
+	// scanresultDescScannedAt is the schema descriptor for scanned_at field.
+	scanresultDescScannedAt := scanresultFields[3].Descriptor()
+	// scanresult.DefaultScannedAt holds the default value on creation for the scanned_at field.
+	scanresult.DefaultScannedAt = scanresultDescScannedAt.Default.(func() time.Time)
+	// scanresultDescResponseTimeMs is the schema descriptor for response_time_ms field.
+	scanresultDescResponseTimeMs := scanresultFields[4].Descriptor()
+	// scanresult.DefaultResponseTimeMs holds the default value on creation for the response_time_ms field.
+	scanresult.DefaultResponseTimeMs = scanresultDescResponseTimeMs.Default.(int)
+	// scanresultDescCertRemainingDays is the schema descriptor for cert_remaining_days field.
+	scanresultDescCertRemainingDays := scanresultFields[9].Descriptor()
+	// scanresult.DefaultCertRemainingDays holds the default value on creation for the cert_remaining_days field.
+	scanresult.DefaultCertRemainingDays = scanresultDescCertRemainingDays.Default.(int)
+	// scanresultDescCertPublicKeyBits is the schema descriptor for cert_public_key_bits field.
+	scanresultDescCertPublicKeyBits := scanresultFields[13].Descriptor()
+	// scanresult.DefaultCertPublicKeyBits holds the default value on creation for the cert_public_key_bits field.
+	scanresult.DefaultCertPublicKeyBits = scanresultDescCertPublicKeyBits.Default.(int)
+	// scanresultDescCreatedAt is the schema descriptor for created_at field.
+	scanresultDescCreatedAt := scanresultFields[17].Descriptor()
+	// scanresult.DefaultCreatedAt holds the default value on creation for the created_at field.
+	scanresult.DefaultCreatedAt = scanresultDescCreatedAt.Default.(func() time.Time)
 }

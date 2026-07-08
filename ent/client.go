@@ -17,6 +17,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
+	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -40,6 +41,8 @@ type Client struct {
 	Notification *NotificationClient
 	// RenewalLog is the client for interacting with the RenewalLog builders.
 	RenewalLog *RenewalLogClient
+	// ScanResult is the client for interacting with the ScanResult builders.
+	ScanResult *ScanResultClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -57,6 +60,7 @@ func (c *Client) init() {
 	c.MonitoredDomain = NewMonitoredDomainClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.RenewalLog = NewRenewalLogClient(c.config)
+	c.ScanResult = NewScanResultClient(c.config)
 }
 
 type (
@@ -155,6 +159,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		MonitoredDomain: NewMonitoredDomainClient(cfg),
 		Notification:    NewNotificationClient(cfg),
 		RenewalLog:      NewRenewalLogClient(cfg),
+		ScanResult:      NewScanResultClient(cfg),
 	}, nil
 }
 
@@ -180,6 +185,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		MonitoredDomain: NewMonitoredDomainClient(cfg),
 		Notification:    NewNotificationClient(cfg),
 		RenewalLog:      NewRenewalLogClient(cfg),
+		ScanResult:      NewScanResultClient(cfg),
 	}, nil
 }
 
@@ -210,7 +216,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain, c.Notification,
-		c.RenewalLog,
+		c.RenewalLog, c.ScanResult,
 	} {
 		n.Use(hooks...)
 	}
@@ -221,7 +227,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain, c.Notification,
-		c.RenewalLog,
+		c.RenewalLog, c.ScanResult,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -242,6 +248,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Notification.mutate(ctx, m)
 	case *RenewalLogMutation:
 		return c.RenewalLog.mutate(ctx, m)
+	case *ScanResultMutation:
+		return c.ScanResult.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -1141,14 +1149,147 @@ func (c *RenewalLogClient) mutate(ctx context.Context, m *RenewalLogMutation) (V
 	}
 }
 
+// ScanResultClient is a client for the ScanResult schema.
+type ScanResultClient struct {
+	config
+}
+
+// NewScanResultClient returns a client for the ScanResult from the given config.
+func NewScanResultClient(c config) *ScanResultClient {
+	return &ScanResultClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `scanresult.Hooks(f(g(h())))`.
+func (c *ScanResultClient) Use(hooks ...Hook) {
+	c.hooks.ScanResult = append(c.hooks.ScanResult, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `scanresult.Intercept(f(g(h())))`.
+func (c *ScanResultClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ScanResult = append(c.inters.ScanResult, interceptors...)
+}
+
+// Create returns a builder for creating a ScanResult entity.
+func (c *ScanResultClient) Create() *ScanResultCreate {
+	mutation := newScanResultMutation(c.config, OpCreate)
+	return &ScanResultCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ScanResult entities.
+func (c *ScanResultClient) CreateBulk(builders ...*ScanResultCreate) *ScanResultCreateBulk {
+	return &ScanResultCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ScanResultClient) MapCreateBulk(slice any, setFunc func(*ScanResultCreate, int)) *ScanResultCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ScanResultCreateBulk{err: fmt.Errorf("calling to ScanResultClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ScanResultCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ScanResultCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ScanResult.
+func (c *ScanResultClient) Update() *ScanResultUpdate {
+	mutation := newScanResultMutation(c.config, OpUpdate)
+	return &ScanResultUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ScanResultClient) UpdateOne(_m *ScanResult) *ScanResultUpdateOne {
+	mutation := newScanResultMutation(c.config, OpUpdateOne, withScanResult(_m))
+	return &ScanResultUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ScanResultClient) UpdateOneID(id int) *ScanResultUpdateOne {
+	mutation := newScanResultMutation(c.config, OpUpdateOne, withScanResultID(id))
+	return &ScanResultUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ScanResult.
+func (c *ScanResultClient) Delete() *ScanResultDelete {
+	mutation := newScanResultMutation(c.config, OpDelete)
+	return &ScanResultDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ScanResultClient) DeleteOne(_m *ScanResult) *ScanResultDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ScanResultClient) DeleteOneID(id int) *ScanResultDeleteOne {
+	builder := c.Delete().Where(scanresult.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ScanResultDeleteOne{builder}
+}
+
+// Query returns a query builder for ScanResult.
+func (c *ScanResultClient) Query() *ScanResultQuery {
+	return &ScanResultQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeScanResult},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ScanResult entity by its id.
+func (c *ScanResultClient) Get(ctx context.Context, id int) (*ScanResult, error) {
+	return c.Query().Where(scanresult.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ScanResultClient) GetX(ctx context.Context, id int) *ScanResult {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ScanResultClient) Hooks() []Hook {
+	return c.hooks.ScanResult
+}
+
+// Interceptors returns the client interceptors.
+func (c *ScanResultClient) Interceptors() []Interceptor {
+	return c.inters.ScanResult
+}
+
+func (c *ScanResultClient) mutate(ctx context.Context, m *ScanResultMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ScanResultCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ScanResultUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ScanResultUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ScanResultDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ScanResult mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		CA, Certificate, DNSProvider, MonitoredDomain, Notification,
-		RenewalLog []ent.Hook
+		CA, Certificate, DNSProvider, MonitoredDomain, Notification, RenewalLog,
+		ScanResult []ent.Hook
 	}
 	inters struct {
-		CA, Certificate, DNSProvider, MonitoredDomain, Notification,
-		RenewalLog []ent.Interceptor
+		CA, Certificate, DNSProvider, MonitoredDomain, Notification, RenewalLog,
+		ScanResult []ent.Interceptor
 	}
 )

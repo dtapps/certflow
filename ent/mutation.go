@@ -16,6 +16,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
+	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"cnb.cool/dtapp/certflow/ent/schema"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -36,6 +37,7 @@ const (
 	TypeMonitoredDomain = "MonitoredDomain"
 	TypeNotification    = "Notification"
 	TypeRenewalLog      = "RenewalLog"
+	TypeScanResult      = "ScanResult"
 )
 
 // CAMutation represents an operation that mutates the CA nodes in the graph.
@@ -6553,4 +6555,1593 @@ func (m *RenewalLogMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown RenewalLog edge %s", name)
+}
+
+// ScanResultMutation represents an operation that mutates the ScanResult nodes in the graph.
+type ScanResultMutation struct {
+	config
+	op                      Op
+	typ                     string
+	id                      *int
+	domain                  *string
+	port                    *int
+	addport                 *int
+	scan_type               *scanresult.ScanType
+	scanned_at              *time.Time
+	response_time_ms        *int
+	addresponse_time_ms     *int
+	cert_issuer             *string
+	cert_subject            *string
+	cert_not_before         *time.Time
+	cert_not_after          *time.Time
+	cert_remaining_days     *int
+	addcert_remaining_days  *int
+	cert_fingerprint        *string
+	cert_signature_algo     *string
+	cert_public_key_algo    *string
+	cert_public_key_bits    *int
+	addcert_public_key_bits *int
+	cert_sans               *[]string
+	appendcert_sans         []string
+	cert_serial_number      *string
+	error_message           *string
+	created_at              *time.Time
+	clearedFields           map[string]struct{}
+	done                    bool
+	oldValue                func(context.Context) (*ScanResult, error)
+	predicates              []predicate.ScanResult
+}
+
+var _ ent.Mutation = (*ScanResultMutation)(nil)
+
+// scanresultOption allows management of the mutation configuration using functional options.
+type scanresultOption func(*ScanResultMutation)
+
+// newScanResultMutation creates new mutation for the ScanResult entity.
+func newScanResultMutation(c config, op Op, opts ...scanresultOption) *ScanResultMutation {
+	m := &ScanResultMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeScanResult,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withScanResultID sets the ID field of the mutation.
+func withScanResultID(id int) scanresultOption {
+	return func(m *ScanResultMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ScanResult
+		)
+		m.oldValue = func(ctx context.Context) (*ScanResult, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ScanResult.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withScanResult sets the old ScanResult of the mutation.
+func withScanResult(node *ScanResult) scanresultOption {
+	return func(m *ScanResultMutation) {
+		m.oldValue = func(context.Context) (*ScanResult, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ScanResultMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ScanResultMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ScanResultMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ScanResultMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ScanResult.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetDomain sets the "domain" field.
+func (m *ScanResultMutation) SetDomain(s string) {
+	m.domain = &s
+}
+
+// Domain returns the value of the "domain" field in the mutation.
+func (m *ScanResultMutation) Domain() (r string, exists bool) {
+	v := m.domain
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDomain returns the old "domain" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldDomain(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDomain is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDomain requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDomain: %w", err)
+	}
+	return oldValue.Domain, nil
+}
+
+// ResetDomain resets all changes to the "domain" field.
+func (m *ScanResultMutation) ResetDomain() {
+	m.domain = nil
+}
+
+// SetPort sets the "port" field.
+func (m *ScanResultMutation) SetPort(i int) {
+	m.port = &i
+	m.addport = nil
+}
+
+// Port returns the value of the "port" field in the mutation.
+func (m *ScanResultMutation) Port() (r int, exists bool) {
+	v := m.port
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPort returns the old "port" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldPort(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPort is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPort requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPort: %w", err)
+	}
+	return oldValue.Port, nil
+}
+
+// AddPort adds i to the "port" field.
+func (m *ScanResultMutation) AddPort(i int) {
+	if m.addport != nil {
+		*m.addport += i
+	} else {
+		m.addport = &i
+	}
+}
+
+// AddedPort returns the value that was added to the "port" field in this mutation.
+func (m *ScanResultMutation) AddedPort() (r int, exists bool) {
+	v := m.addport
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPort resets all changes to the "port" field.
+func (m *ScanResultMutation) ResetPort() {
+	m.port = nil
+	m.addport = nil
+}
+
+// SetScanType sets the "scan_type" field.
+func (m *ScanResultMutation) SetScanType(st scanresult.ScanType) {
+	m.scan_type = &st
+}
+
+// ScanType returns the value of the "scan_type" field in the mutation.
+func (m *ScanResultMutation) ScanType() (r scanresult.ScanType, exists bool) {
+	v := m.scan_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScanType returns the old "scan_type" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldScanType(ctx context.Context) (v scanresult.ScanType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScanType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScanType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScanType: %w", err)
+	}
+	return oldValue.ScanType, nil
+}
+
+// ResetScanType resets all changes to the "scan_type" field.
+func (m *ScanResultMutation) ResetScanType() {
+	m.scan_type = nil
+}
+
+// SetScannedAt sets the "scanned_at" field.
+func (m *ScanResultMutation) SetScannedAt(t time.Time) {
+	m.scanned_at = &t
+}
+
+// ScannedAt returns the value of the "scanned_at" field in the mutation.
+func (m *ScanResultMutation) ScannedAt() (r time.Time, exists bool) {
+	v := m.scanned_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScannedAt returns the old "scanned_at" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldScannedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScannedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScannedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScannedAt: %w", err)
+	}
+	return oldValue.ScannedAt, nil
+}
+
+// ResetScannedAt resets all changes to the "scanned_at" field.
+func (m *ScanResultMutation) ResetScannedAt() {
+	m.scanned_at = nil
+}
+
+// SetResponseTimeMs sets the "response_time_ms" field.
+func (m *ScanResultMutation) SetResponseTimeMs(i int) {
+	m.response_time_ms = &i
+	m.addresponse_time_ms = nil
+}
+
+// ResponseTimeMs returns the value of the "response_time_ms" field in the mutation.
+func (m *ScanResultMutation) ResponseTimeMs() (r int, exists bool) {
+	v := m.response_time_ms
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResponseTimeMs returns the old "response_time_ms" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldResponseTimeMs(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResponseTimeMs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResponseTimeMs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResponseTimeMs: %w", err)
+	}
+	return oldValue.ResponseTimeMs, nil
+}
+
+// AddResponseTimeMs adds i to the "response_time_ms" field.
+func (m *ScanResultMutation) AddResponseTimeMs(i int) {
+	if m.addresponse_time_ms != nil {
+		*m.addresponse_time_ms += i
+	} else {
+		m.addresponse_time_ms = &i
+	}
+}
+
+// AddedResponseTimeMs returns the value that was added to the "response_time_ms" field in this mutation.
+func (m *ScanResultMutation) AddedResponseTimeMs() (r int, exists bool) {
+	v := m.addresponse_time_ms
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetResponseTimeMs resets all changes to the "response_time_ms" field.
+func (m *ScanResultMutation) ResetResponseTimeMs() {
+	m.response_time_ms = nil
+	m.addresponse_time_ms = nil
+}
+
+// SetCertIssuer sets the "cert_issuer" field.
+func (m *ScanResultMutation) SetCertIssuer(s string) {
+	m.cert_issuer = &s
+}
+
+// CertIssuer returns the value of the "cert_issuer" field in the mutation.
+func (m *ScanResultMutation) CertIssuer() (r string, exists bool) {
+	v := m.cert_issuer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertIssuer returns the old "cert_issuer" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertIssuer(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertIssuer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertIssuer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertIssuer: %w", err)
+	}
+	return oldValue.CertIssuer, nil
+}
+
+// ClearCertIssuer clears the value of the "cert_issuer" field.
+func (m *ScanResultMutation) ClearCertIssuer() {
+	m.cert_issuer = nil
+	m.clearedFields[scanresult.FieldCertIssuer] = struct{}{}
+}
+
+// CertIssuerCleared returns if the "cert_issuer" field was cleared in this mutation.
+func (m *ScanResultMutation) CertIssuerCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertIssuer]
+	return ok
+}
+
+// ResetCertIssuer resets all changes to the "cert_issuer" field.
+func (m *ScanResultMutation) ResetCertIssuer() {
+	m.cert_issuer = nil
+	delete(m.clearedFields, scanresult.FieldCertIssuer)
+}
+
+// SetCertSubject sets the "cert_subject" field.
+func (m *ScanResultMutation) SetCertSubject(s string) {
+	m.cert_subject = &s
+}
+
+// CertSubject returns the value of the "cert_subject" field in the mutation.
+func (m *ScanResultMutation) CertSubject() (r string, exists bool) {
+	v := m.cert_subject
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertSubject returns the old "cert_subject" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertSubject(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertSubject is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertSubject requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertSubject: %w", err)
+	}
+	return oldValue.CertSubject, nil
+}
+
+// ClearCertSubject clears the value of the "cert_subject" field.
+func (m *ScanResultMutation) ClearCertSubject() {
+	m.cert_subject = nil
+	m.clearedFields[scanresult.FieldCertSubject] = struct{}{}
+}
+
+// CertSubjectCleared returns if the "cert_subject" field was cleared in this mutation.
+func (m *ScanResultMutation) CertSubjectCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertSubject]
+	return ok
+}
+
+// ResetCertSubject resets all changes to the "cert_subject" field.
+func (m *ScanResultMutation) ResetCertSubject() {
+	m.cert_subject = nil
+	delete(m.clearedFields, scanresult.FieldCertSubject)
+}
+
+// SetCertNotBefore sets the "cert_not_before" field.
+func (m *ScanResultMutation) SetCertNotBefore(t time.Time) {
+	m.cert_not_before = &t
+}
+
+// CertNotBefore returns the value of the "cert_not_before" field in the mutation.
+func (m *ScanResultMutation) CertNotBefore() (r time.Time, exists bool) {
+	v := m.cert_not_before
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertNotBefore returns the old "cert_not_before" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertNotBefore(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertNotBefore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertNotBefore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertNotBefore: %w", err)
+	}
+	return oldValue.CertNotBefore, nil
+}
+
+// ClearCertNotBefore clears the value of the "cert_not_before" field.
+func (m *ScanResultMutation) ClearCertNotBefore() {
+	m.cert_not_before = nil
+	m.clearedFields[scanresult.FieldCertNotBefore] = struct{}{}
+}
+
+// CertNotBeforeCleared returns if the "cert_not_before" field was cleared in this mutation.
+func (m *ScanResultMutation) CertNotBeforeCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertNotBefore]
+	return ok
+}
+
+// ResetCertNotBefore resets all changes to the "cert_not_before" field.
+func (m *ScanResultMutation) ResetCertNotBefore() {
+	m.cert_not_before = nil
+	delete(m.clearedFields, scanresult.FieldCertNotBefore)
+}
+
+// SetCertNotAfter sets the "cert_not_after" field.
+func (m *ScanResultMutation) SetCertNotAfter(t time.Time) {
+	m.cert_not_after = &t
+}
+
+// CertNotAfter returns the value of the "cert_not_after" field in the mutation.
+func (m *ScanResultMutation) CertNotAfter() (r time.Time, exists bool) {
+	v := m.cert_not_after
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertNotAfter returns the old "cert_not_after" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertNotAfter(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertNotAfter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertNotAfter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertNotAfter: %w", err)
+	}
+	return oldValue.CertNotAfter, nil
+}
+
+// ClearCertNotAfter clears the value of the "cert_not_after" field.
+func (m *ScanResultMutation) ClearCertNotAfter() {
+	m.cert_not_after = nil
+	m.clearedFields[scanresult.FieldCertNotAfter] = struct{}{}
+}
+
+// CertNotAfterCleared returns if the "cert_not_after" field was cleared in this mutation.
+func (m *ScanResultMutation) CertNotAfterCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertNotAfter]
+	return ok
+}
+
+// ResetCertNotAfter resets all changes to the "cert_not_after" field.
+func (m *ScanResultMutation) ResetCertNotAfter() {
+	m.cert_not_after = nil
+	delete(m.clearedFields, scanresult.FieldCertNotAfter)
+}
+
+// SetCertRemainingDays sets the "cert_remaining_days" field.
+func (m *ScanResultMutation) SetCertRemainingDays(i int) {
+	m.cert_remaining_days = &i
+	m.addcert_remaining_days = nil
+}
+
+// CertRemainingDays returns the value of the "cert_remaining_days" field in the mutation.
+func (m *ScanResultMutation) CertRemainingDays() (r int, exists bool) {
+	v := m.cert_remaining_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertRemainingDays returns the old "cert_remaining_days" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertRemainingDays(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertRemainingDays is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertRemainingDays requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertRemainingDays: %w", err)
+	}
+	return oldValue.CertRemainingDays, nil
+}
+
+// AddCertRemainingDays adds i to the "cert_remaining_days" field.
+func (m *ScanResultMutation) AddCertRemainingDays(i int) {
+	if m.addcert_remaining_days != nil {
+		*m.addcert_remaining_days += i
+	} else {
+		m.addcert_remaining_days = &i
+	}
+}
+
+// AddedCertRemainingDays returns the value that was added to the "cert_remaining_days" field in this mutation.
+func (m *ScanResultMutation) AddedCertRemainingDays() (r int, exists bool) {
+	v := m.addcert_remaining_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCertRemainingDays resets all changes to the "cert_remaining_days" field.
+func (m *ScanResultMutation) ResetCertRemainingDays() {
+	m.cert_remaining_days = nil
+	m.addcert_remaining_days = nil
+}
+
+// SetCertFingerprint sets the "cert_fingerprint" field.
+func (m *ScanResultMutation) SetCertFingerprint(s string) {
+	m.cert_fingerprint = &s
+}
+
+// CertFingerprint returns the value of the "cert_fingerprint" field in the mutation.
+func (m *ScanResultMutation) CertFingerprint() (r string, exists bool) {
+	v := m.cert_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertFingerprint returns the old "cert_fingerprint" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertFingerprint: %w", err)
+	}
+	return oldValue.CertFingerprint, nil
+}
+
+// ClearCertFingerprint clears the value of the "cert_fingerprint" field.
+func (m *ScanResultMutation) ClearCertFingerprint() {
+	m.cert_fingerprint = nil
+	m.clearedFields[scanresult.FieldCertFingerprint] = struct{}{}
+}
+
+// CertFingerprintCleared returns if the "cert_fingerprint" field was cleared in this mutation.
+func (m *ScanResultMutation) CertFingerprintCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertFingerprint]
+	return ok
+}
+
+// ResetCertFingerprint resets all changes to the "cert_fingerprint" field.
+func (m *ScanResultMutation) ResetCertFingerprint() {
+	m.cert_fingerprint = nil
+	delete(m.clearedFields, scanresult.FieldCertFingerprint)
+}
+
+// SetCertSignatureAlgo sets the "cert_signature_algo" field.
+func (m *ScanResultMutation) SetCertSignatureAlgo(s string) {
+	m.cert_signature_algo = &s
+}
+
+// CertSignatureAlgo returns the value of the "cert_signature_algo" field in the mutation.
+func (m *ScanResultMutation) CertSignatureAlgo() (r string, exists bool) {
+	v := m.cert_signature_algo
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertSignatureAlgo returns the old "cert_signature_algo" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertSignatureAlgo(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertSignatureAlgo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertSignatureAlgo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertSignatureAlgo: %w", err)
+	}
+	return oldValue.CertSignatureAlgo, nil
+}
+
+// ClearCertSignatureAlgo clears the value of the "cert_signature_algo" field.
+func (m *ScanResultMutation) ClearCertSignatureAlgo() {
+	m.cert_signature_algo = nil
+	m.clearedFields[scanresult.FieldCertSignatureAlgo] = struct{}{}
+}
+
+// CertSignatureAlgoCleared returns if the "cert_signature_algo" field was cleared in this mutation.
+func (m *ScanResultMutation) CertSignatureAlgoCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertSignatureAlgo]
+	return ok
+}
+
+// ResetCertSignatureAlgo resets all changes to the "cert_signature_algo" field.
+func (m *ScanResultMutation) ResetCertSignatureAlgo() {
+	m.cert_signature_algo = nil
+	delete(m.clearedFields, scanresult.FieldCertSignatureAlgo)
+}
+
+// SetCertPublicKeyAlgo sets the "cert_public_key_algo" field.
+func (m *ScanResultMutation) SetCertPublicKeyAlgo(s string) {
+	m.cert_public_key_algo = &s
+}
+
+// CertPublicKeyAlgo returns the value of the "cert_public_key_algo" field in the mutation.
+func (m *ScanResultMutation) CertPublicKeyAlgo() (r string, exists bool) {
+	v := m.cert_public_key_algo
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertPublicKeyAlgo returns the old "cert_public_key_algo" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertPublicKeyAlgo(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertPublicKeyAlgo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertPublicKeyAlgo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertPublicKeyAlgo: %w", err)
+	}
+	return oldValue.CertPublicKeyAlgo, nil
+}
+
+// ClearCertPublicKeyAlgo clears the value of the "cert_public_key_algo" field.
+func (m *ScanResultMutation) ClearCertPublicKeyAlgo() {
+	m.cert_public_key_algo = nil
+	m.clearedFields[scanresult.FieldCertPublicKeyAlgo] = struct{}{}
+}
+
+// CertPublicKeyAlgoCleared returns if the "cert_public_key_algo" field was cleared in this mutation.
+func (m *ScanResultMutation) CertPublicKeyAlgoCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertPublicKeyAlgo]
+	return ok
+}
+
+// ResetCertPublicKeyAlgo resets all changes to the "cert_public_key_algo" field.
+func (m *ScanResultMutation) ResetCertPublicKeyAlgo() {
+	m.cert_public_key_algo = nil
+	delete(m.clearedFields, scanresult.FieldCertPublicKeyAlgo)
+}
+
+// SetCertPublicKeyBits sets the "cert_public_key_bits" field.
+func (m *ScanResultMutation) SetCertPublicKeyBits(i int) {
+	m.cert_public_key_bits = &i
+	m.addcert_public_key_bits = nil
+}
+
+// CertPublicKeyBits returns the value of the "cert_public_key_bits" field in the mutation.
+func (m *ScanResultMutation) CertPublicKeyBits() (r int, exists bool) {
+	v := m.cert_public_key_bits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertPublicKeyBits returns the old "cert_public_key_bits" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertPublicKeyBits(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertPublicKeyBits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertPublicKeyBits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertPublicKeyBits: %w", err)
+	}
+	return oldValue.CertPublicKeyBits, nil
+}
+
+// AddCertPublicKeyBits adds i to the "cert_public_key_bits" field.
+func (m *ScanResultMutation) AddCertPublicKeyBits(i int) {
+	if m.addcert_public_key_bits != nil {
+		*m.addcert_public_key_bits += i
+	} else {
+		m.addcert_public_key_bits = &i
+	}
+}
+
+// AddedCertPublicKeyBits returns the value that was added to the "cert_public_key_bits" field in this mutation.
+func (m *ScanResultMutation) AddedCertPublicKeyBits() (r int, exists bool) {
+	v := m.addcert_public_key_bits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCertPublicKeyBits resets all changes to the "cert_public_key_bits" field.
+func (m *ScanResultMutation) ResetCertPublicKeyBits() {
+	m.cert_public_key_bits = nil
+	m.addcert_public_key_bits = nil
+}
+
+// SetCertSans sets the "cert_sans" field.
+func (m *ScanResultMutation) SetCertSans(s []string) {
+	m.cert_sans = &s
+	m.appendcert_sans = nil
+}
+
+// CertSans returns the value of the "cert_sans" field in the mutation.
+func (m *ScanResultMutation) CertSans() (r []string, exists bool) {
+	v := m.cert_sans
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertSans returns the old "cert_sans" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertSans(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertSans is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertSans requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertSans: %w", err)
+	}
+	return oldValue.CertSans, nil
+}
+
+// AppendCertSans adds s to the "cert_sans" field.
+func (m *ScanResultMutation) AppendCertSans(s []string) {
+	m.appendcert_sans = append(m.appendcert_sans, s...)
+}
+
+// AppendedCertSans returns the list of values that were appended to the "cert_sans" field in this mutation.
+func (m *ScanResultMutation) AppendedCertSans() ([]string, bool) {
+	if len(m.appendcert_sans) == 0 {
+		return nil, false
+	}
+	return m.appendcert_sans, true
+}
+
+// ClearCertSans clears the value of the "cert_sans" field.
+func (m *ScanResultMutation) ClearCertSans() {
+	m.cert_sans = nil
+	m.appendcert_sans = nil
+	m.clearedFields[scanresult.FieldCertSans] = struct{}{}
+}
+
+// CertSansCleared returns if the "cert_sans" field was cleared in this mutation.
+func (m *ScanResultMutation) CertSansCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertSans]
+	return ok
+}
+
+// ResetCertSans resets all changes to the "cert_sans" field.
+func (m *ScanResultMutation) ResetCertSans() {
+	m.cert_sans = nil
+	m.appendcert_sans = nil
+	delete(m.clearedFields, scanresult.FieldCertSans)
+}
+
+// SetCertSerialNumber sets the "cert_serial_number" field.
+func (m *ScanResultMutation) SetCertSerialNumber(s string) {
+	m.cert_serial_number = &s
+}
+
+// CertSerialNumber returns the value of the "cert_serial_number" field in the mutation.
+func (m *ScanResultMutation) CertSerialNumber() (r string, exists bool) {
+	v := m.cert_serial_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertSerialNumber returns the old "cert_serial_number" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCertSerialNumber(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertSerialNumber is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertSerialNumber requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertSerialNumber: %w", err)
+	}
+	return oldValue.CertSerialNumber, nil
+}
+
+// ClearCertSerialNumber clears the value of the "cert_serial_number" field.
+func (m *ScanResultMutation) ClearCertSerialNumber() {
+	m.cert_serial_number = nil
+	m.clearedFields[scanresult.FieldCertSerialNumber] = struct{}{}
+}
+
+// CertSerialNumberCleared returns if the "cert_serial_number" field was cleared in this mutation.
+func (m *ScanResultMutation) CertSerialNumberCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldCertSerialNumber]
+	return ok
+}
+
+// ResetCertSerialNumber resets all changes to the "cert_serial_number" field.
+func (m *ScanResultMutation) ResetCertSerialNumber() {
+	m.cert_serial_number = nil
+	delete(m.clearedFields, scanresult.FieldCertSerialNumber)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *ScanResultMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *ScanResultMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldErrorMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *ScanResultMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[scanresult.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *ScanResultMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[scanresult.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *ScanResultMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, scanresult.FieldErrorMessage)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ScanResultMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ScanResultMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ScanResult entity.
+// If the ScanResult object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScanResultMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ScanResultMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the ScanResultMutation builder.
+func (m *ScanResultMutation) Where(ps ...predicate.ScanResult) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ScanResultMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScanResultMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ScanResult, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ScanResultMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScanResultMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ScanResult).
+func (m *ScanResultMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ScanResultMutation) Fields() []string {
+	fields := make([]string, 0, 18)
+	if m.domain != nil {
+		fields = append(fields, scanresult.FieldDomain)
+	}
+	if m.port != nil {
+		fields = append(fields, scanresult.FieldPort)
+	}
+	if m.scan_type != nil {
+		fields = append(fields, scanresult.FieldScanType)
+	}
+	if m.scanned_at != nil {
+		fields = append(fields, scanresult.FieldScannedAt)
+	}
+	if m.response_time_ms != nil {
+		fields = append(fields, scanresult.FieldResponseTimeMs)
+	}
+	if m.cert_issuer != nil {
+		fields = append(fields, scanresult.FieldCertIssuer)
+	}
+	if m.cert_subject != nil {
+		fields = append(fields, scanresult.FieldCertSubject)
+	}
+	if m.cert_not_before != nil {
+		fields = append(fields, scanresult.FieldCertNotBefore)
+	}
+	if m.cert_not_after != nil {
+		fields = append(fields, scanresult.FieldCertNotAfter)
+	}
+	if m.cert_remaining_days != nil {
+		fields = append(fields, scanresult.FieldCertRemainingDays)
+	}
+	if m.cert_fingerprint != nil {
+		fields = append(fields, scanresult.FieldCertFingerprint)
+	}
+	if m.cert_signature_algo != nil {
+		fields = append(fields, scanresult.FieldCertSignatureAlgo)
+	}
+	if m.cert_public_key_algo != nil {
+		fields = append(fields, scanresult.FieldCertPublicKeyAlgo)
+	}
+	if m.cert_public_key_bits != nil {
+		fields = append(fields, scanresult.FieldCertPublicKeyBits)
+	}
+	if m.cert_sans != nil {
+		fields = append(fields, scanresult.FieldCertSans)
+	}
+	if m.cert_serial_number != nil {
+		fields = append(fields, scanresult.FieldCertSerialNumber)
+	}
+	if m.error_message != nil {
+		fields = append(fields, scanresult.FieldErrorMessage)
+	}
+	if m.created_at != nil {
+		fields = append(fields, scanresult.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ScanResultMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case scanresult.FieldDomain:
+		return m.Domain()
+	case scanresult.FieldPort:
+		return m.Port()
+	case scanresult.FieldScanType:
+		return m.ScanType()
+	case scanresult.FieldScannedAt:
+		return m.ScannedAt()
+	case scanresult.FieldResponseTimeMs:
+		return m.ResponseTimeMs()
+	case scanresult.FieldCertIssuer:
+		return m.CertIssuer()
+	case scanresult.FieldCertSubject:
+		return m.CertSubject()
+	case scanresult.FieldCertNotBefore:
+		return m.CertNotBefore()
+	case scanresult.FieldCertNotAfter:
+		return m.CertNotAfter()
+	case scanresult.FieldCertRemainingDays:
+		return m.CertRemainingDays()
+	case scanresult.FieldCertFingerprint:
+		return m.CertFingerprint()
+	case scanresult.FieldCertSignatureAlgo:
+		return m.CertSignatureAlgo()
+	case scanresult.FieldCertPublicKeyAlgo:
+		return m.CertPublicKeyAlgo()
+	case scanresult.FieldCertPublicKeyBits:
+		return m.CertPublicKeyBits()
+	case scanresult.FieldCertSans:
+		return m.CertSans()
+	case scanresult.FieldCertSerialNumber:
+		return m.CertSerialNumber()
+	case scanresult.FieldErrorMessage:
+		return m.ErrorMessage()
+	case scanresult.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ScanResultMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case scanresult.FieldDomain:
+		return m.OldDomain(ctx)
+	case scanresult.FieldPort:
+		return m.OldPort(ctx)
+	case scanresult.FieldScanType:
+		return m.OldScanType(ctx)
+	case scanresult.FieldScannedAt:
+		return m.OldScannedAt(ctx)
+	case scanresult.FieldResponseTimeMs:
+		return m.OldResponseTimeMs(ctx)
+	case scanresult.FieldCertIssuer:
+		return m.OldCertIssuer(ctx)
+	case scanresult.FieldCertSubject:
+		return m.OldCertSubject(ctx)
+	case scanresult.FieldCertNotBefore:
+		return m.OldCertNotBefore(ctx)
+	case scanresult.FieldCertNotAfter:
+		return m.OldCertNotAfter(ctx)
+	case scanresult.FieldCertRemainingDays:
+		return m.OldCertRemainingDays(ctx)
+	case scanresult.FieldCertFingerprint:
+		return m.OldCertFingerprint(ctx)
+	case scanresult.FieldCertSignatureAlgo:
+		return m.OldCertSignatureAlgo(ctx)
+	case scanresult.FieldCertPublicKeyAlgo:
+		return m.OldCertPublicKeyAlgo(ctx)
+	case scanresult.FieldCertPublicKeyBits:
+		return m.OldCertPublicKeyBits(ctx)
+	case scanresult.FieldCertSans:
+		return m.OldCertSans(ctx)
+	case scanresult.FieldCertSerialNumber:
+		return m.OldCertSerialNumber(ctx)
+	case scanresult.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case scanresult.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ScanResult field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScanResultMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case scanresult.FieldDomain:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDomain(v)
+		return nil
+	case scanresult.FieldPort:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPort(v)
+		return nil
+	case scanresult.FieldScanType:
+		v, ok := value.(scanresult.ScanType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScanType(v)
+		return nil
+	case scanresult.FieldScannedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScannedAt(v)
+		return nil
+	case scanresult.FieldResponseTimeMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResponseTimeMs(v)
+		return nil
+	case scanresult.FieldCertIssuer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertIssuer(v)
+		return nil
+	case scanresult.FieldCertSubject:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertSubject(v)
+		return nil
+	case scanresult.FieldCertNotBefore:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertNotBefore(v)
+		return nil
+	case scanresult.FieldCertNotAfter:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertNotAfter(v)
+		return nil
+	case scanresult.FieldCertRemainingDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertRemainingDays(v)
+		return nil
+	case scanresult.FieldCertFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertFingerprint(v)
+		return nil
+	case scanresult.FieldCertSignatureAlgo:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertSignatureAlgo(v)
+		return nil
+	case scanresult.FieldCertPublicKeyAlgo:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertPublicKeyAlgo(v)
+		return nil
+	case scanresult.FieldCertPublicKeyBits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertPublicKeyBits(v)
+		return nil
+	case scanresult.FieldCertSans:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertSans(v)
+		return nil
+	case scanresult.FieldCertSerialNumber:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertSerialNumber(v)
+		return nil
+	case scanresult.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case scanresult.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScanResult field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ScanResultMutation) AddedFields() []string {
+	var fields []string
+	if m.addport != nil {
+		fields = append(fields, scanresult.FieldPort)
+	}
+	if m.addresponse_time_ms != nil {
+		fields = append(fields, scanresult.FieldResponseTimeMs)
+	}
+	if m.addcert_remaining_days != nil {
+		fields = append(fields, scanresult.FieldCertRemainingDays)
+	}
+	if m.addcert_public_key_bits != nil {
+		fields = append(fields, scanresult.FieldCertPublicKeyBits)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ScanResultMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case scanresult.FieldPort:
+		return m.AddedPort()
+	case scanresult.FieldResponseTimeMs:
+		return m.AddedResponseTimeMs()
+	case scanresult.FieldCertRemainingDays:
+		return m.AddedCertRemainingDays()
+	case scanresult.FieldCertPublicKeyBits:
+		return m.AddedCertPublicKeyBits()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScanResultMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case scanresult.FieldPort:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPort(v)
+		return nil
+	case scanresult.FieldResponseTimeMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddResponseTimeMs(v)
+		return nil
+	case scanresult.FieldCertRemainingDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCertRemainingDays(v)
+		return nil
+	case scanresult.FieldCertPublicKeyBits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCertPublicKeyBits(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScanResult numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ScanResultMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(scanresult.FieldCertIssuer) {
+		fields = append(fields, scanresult.FieldCertIssuer)
+	}
+	if m.FieldCleared(scanresult.FieldCertSubject) {
+		fields = append(fields, scanresult.FieldCertSubject)
+	}
+	if m.FieldCleared(scanresult.FieldCertNotBefore) {
+		fields = append(fields, scanresult.FieldCertNotBefore)
+	}
+	if m.FieldCleared(scanresult.FieldCertNotAfter) {
+		fields = append(fields, scanresult.FieldCertNotAfter)
+	}
+	if m.FieldCleared(scanresult.FieldCertFingerprint) {
+		fields = append(fields, scanresult.FieldCertFingerprint)
+	}
+	if m.FieldCleared(scanresult.FieldCertSignatureAlgo) {
+		fields = append(fields, scanresult.FieldCertSignatureAlgo)
+	}
+	if m.FieldCleared(scanresult.FieldCertPublicKeyAlgo) {
+		fields = append(fields, scanresult.FieldCertPublicKeyAlgo)
+	}
+	if m.FieldCleared(scanresult.FieldCertSans) {
+		fields = append(fields, scanresult.FieldCertSans)
+	}
+	if m.FieldCleared(scanresult.FieldCertSerialNumber) {
+		fields = append(fields, scanresult.FieldCertSerialNumber)
+	}
+	if m.FieldCleared(scanresult.FieldErrorMessage) {
+		fields = append(fields, scanresult.FieldErrorMessage)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ScanResultMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ScanResultMutation) ClearField(name string) error {
+	switch name {
+	case scanresult.FieldCertIssuer:
+		m.ClearCertIssuer()
+		return nil
+	case scanresult.FieldCertSubject:
+		m.ClearCertSubject()
+		return nil
+	case scanresult.FieldCertNotBefore:
+		m.ClearCertNotBefore()
+		return nil
+	case scanresult.FieldCertNotAfter:
+		m.ClearCertNotAfter()
+		return nil
+	case scanresult.FieldCertFingerprint:
+		m.ClearCertFingerprint()
+		return nil
+	case scanresult.FieldCertSignatureAlgo:
+		m.ClearCertSignatureAlgo()
+		return nil
+	case scanresult.FieldCertPublicKeyAlgo:
+		m.ClearCertPublicKeyAlgo()
+		return nil
+	case scanresult.FieldCertSans:
+		m.ClearCertSans()
+		return nil
+	case scanresult.FieldCertSerialNumber:
+		m.ClearCertSerialNumber()
+		return nil
+	case scanresult.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	}
+	return fmt.Errorf("unknown ScanResult nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ScanResultMutation) ResetField(name string) error {
+	switch name {
+	case scanresult.FieldDomain:
+		m.ResetDomain()
+		return nil
+	case scanresult.FieldPort:
+		m.ResetPort()
+		return nil
+	case scanresult.FieldScanType:
+		m.ResetScanType()
+		return nil
+	case scanresult.FieldScannedAt:
+		m.ResetScannedAt()
+		return nil
+	case scanresult.FieldResponseTimeMs:
+		m.ResetResponseTimeMs()
+		return nil
+	case scanresult.FieldCertIssuer:
+		m.ResetCertIssuer()
+		return nil
+	case scanresult.FieldCertSubject:
+		m.ResetCertSubject()
+		return nil
+	case scanresult.FieldCertNotBefore:
+		m.ResetCertNotBefore()
+		return nil
+	case scanresult.FieldCertNotAfter:
+		m.ResetCertNotAfter()
+		return nil
+	case scanresult.FieldCertRemainingDays:
+		m.ResetCertRemainingDays()
+		return nil
+	case scanresult.FieldCertFingerprint:
+		m.ResetCertFingerprint()
+		return nil
+	case scanresult.FieldCertSignatureAlgo:
+		m.ResetCertSignatureAlgo()
+		return nil
+	case scanresult.FieldCertPublicKeyAlgo:
+		m.ResetCertPublicKeyAlgo()
+		return nil
+	case scanresult.FieldCertPublicKeyBits:
+		m.ResetCertPublicKeyBits()
+		return nil
+	case scanresult.FieldCertSans:
+		m.ResetCertSans()
+		return nil
+	case scanresult.FieldCertSerialNumber:
+		m.ResetCertSerialNumber()
+		return nil
+	case scanresult.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case scanresult.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ScanResult field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ScanResultMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ScanResultMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ScanResultMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ScanResultMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ScanResultMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ScanResultMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ScanResultMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ScanResult unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ScanResultMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ScanResult edge %s", name)
 }

@@ -39,6 +39,11 @@ const router = createRouter({
       component: () => import('../views/Monitor.vue'),
     },
     {
+      path: '/scan',
+      name: 'scan',
+      component: () => import('../views/Scan.vue'),
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/Settings.vue'),

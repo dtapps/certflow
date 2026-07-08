@@ -13,6 +13,7 @@ import * as FileServiceWrapper from "./fileservicewrapper.js";
 import * as LoggingServiceWrapper from "./loggingservicewrapper.js";
 import * as MonitorServiceWrapper from "./monitorservicewrapper.js";
 import * as NotificationServiceWrapper from "./notificationservicewrapper.js";
+import * as ScannerServiceWrapper from "./scannerservicewrapper.js";
 import * as SchedulerServiceWrapper from "./schedulerservicewrapper.js";
 import * as SettingsServiceWrapper from "./settingsservicewrapper.js";
 import * as SysTrayService from "./systrayservice.js";
@@ -31,6 +32,7 @@ export {
     LoggingServiceWrapper,
     MonitorServiceWrapper,
     NotificationServiceWrapper,
+    ScannerServiceWrapper,
     SchedulerServiceWrapper,
     SettingsServiceWrapper,
     SysTrayService,

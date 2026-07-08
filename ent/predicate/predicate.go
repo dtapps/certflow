@@ -23,3 +23,6 @@ type Notification func(*sql.Selector)
 
 // RenewalLog is the predicate function for renewallog builders.
 type RenewalLog func(*sql.Selector)
+
+// ScanResult is the predicate function for scanresult builders.
+type ScanResult func(*sql.Selector)
