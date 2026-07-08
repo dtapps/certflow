@@ -161,7 +161,7 @@ const loadSettings = async () => {
     }
     settings.value = safe
     // 初始化 DNS 总开关状态
-    dnsEnabled.value = safe.dns_configs.some((d) => d.id !== 'default' && d.enabled)
+    dnsEnabled.value = safe.dns_configs.some((d) => d.enabled)
     // 同步 settings -> stores
     if (settings.value.theme) {
       setTheme(settings.value.theme as 'dark' | 'light' | 'auto')
@@ -267,6 +267,18 @@ const handleCheckUpdate = async () => {
 const toggleDNS = () => {
   // dnsEnabled 仅控制列表显示，不修改各条目的 enabled 状态
 }
+
+// 同步 dnsEnabled 状态（有任何启用的 DNS 条目就开启）
+const syncDnsEnabled = () => {
+  dnsEnabled.value = settings.value.dns_configs.some((d) => d.enabled)
+}
+
+watch(
+  () => settings.value.dns_configs.map((d) => `${d.id}:${d.enabled}`).join(','),
+  () => {
+    syncDnsEnabled()
+  },
+)
 
 // 添加自定义 DNS
 const addCustomDNS = () => {
