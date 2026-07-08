@@ -17,7 +17,7 @@ const { isDark } = storeToRefs(themeStore)
 // 日志文件列表
 const logFiles = ref<string[]>([])
 const selectedLogFile = ref('')
-const logTail = ref(100)
+const logTail = ref('today')
 const logContent = ref('')
 const loading = ref(false)
 
@@ -46,14 +46,59 @@ const toggleLevel = (level: string) => {
   selectedLevels.value = new Set(selectedLevels.value)
 }
 
+// 按日期获取日期字符串
+const getDateString = (daysAgo: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  return d.toISOString().slice(0, 10)
+}
+
+// 获取时间阈值（毫秒）
+const getThreshold = (hoursAgo: number) => {
+  return Date.now() - hoursAgo * 3600 * 1000
+}
+
+// 解析日志行时间戳
+const parseLogTime = (line: string): number => {
+  const match = line.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+  if (!match) return 0
+  return new Date(match[1]).getTime()
+}
+
 // 过滤后的日志行
 const filteredLines = computed(() => {
   const lines = logContent.value.split('\n').filter((line) => line.trim())
   return lines.filter((line) => {
+    // 等级筛选
+    let levelOk = false
     for (const level of selectedLevels.value) {
-      if (line.includes(`[${level}]`)) return true
+      if (line.includes(`[${level}]`)) {
+        levelOk = true
+        break
+      }
     }
-    return false
+    if (!levelOk) return false
+
+    // 时间筛选
+    const v = logTail.value
+    if (v === 'all') return true
+
+    // 小时级别筛选
+    if (v === '1h') return parseLogTime(line) >= getThreshold(1)
+    if (v === '6h') return parseLogTime(line) >= getThreshold(6)
+    if (v === '12h') return parseLogTime(line) >= getThreshold(12)
+    if (v === '24h') return parseLogTime(line) >= getThreshold(24)
+    if (v === '3d') return parseLogTime(line) >= getThreshold(72)
+    if (v === '7d') return parseLogTime(line) >= getThreshold(168)
+
+    // 日期级别筛选
+    const match = line.match(/^\[(\d{4}-\d{2}-\d{2})/)
+    if (!match) return true
+    const lineDate = match[1]
+    if (v === 'today') return lineDate === getDateString(0)
+    if (v === 'yesterday') return lineDate === getDateString(1)
+    if (v === 'before') return lineDate === getDateString(2)
+    return true
   })
 })
 
@@ -103,7 +148,7 @@ const loadLogContent = async () => {
   if (!selectedLogFile.value) return
   loading.value = true
   try {
-    const content = await LoggingService.ReadLog(selectedLogFile.value, logTail.value)
+    const content = await LoggingService.ReadLog(selectedLogFile.value, 0)
     logContent.value = content || ''
   } catch (e) {
     console.error(t('settings.log.loadFailed'), e)
@@ -136,9 +181,16 @@ onMounted(() => {
 })
 
 const logTailOptions = [
-  { label: t('settings.log.last100'), value: 100 },
-  { label: t('settings.log.last500'), value: 500 },
-  { label: t('settings.log.all'), value: 0 },
+  { label: t('settings.log.last1Hour'), value: '1h' },
+  { label: t('settings.log.last6Hours'), value: '6h' },
+  { label: t('settings.log.last12Hours'), value: '12h' },
+  { label: t('settings.log.last24Hours'), value: '24h' },
+  { label: t('settings.log.last3Days'), value: '3d' },
+  { label: t('settings.log.last7Days'), value: '7d' },
+  { label: t('settings.log.today'), value: 'today' },
+  { label: t('settings.log.yesterday'), value: 'yesterday' },
+  { label: t('settings.log.beforeYesterday'), value: 'before' },
+  { label: t('settings.log.all'), value: 'all' },
 ]
 
 const logFileOptions = computed(() => logFiles.value.map((f) => ({ label: f, value: f })))
