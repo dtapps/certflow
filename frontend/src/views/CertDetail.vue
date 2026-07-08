@@ -55,6 +55,7 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
+  loadCertDetails()
 })
 
 const daysLeft = computed(() => {
