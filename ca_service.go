@@ -171,7 +171,7 @@ func (s *CAServiceWrapper) ServiceName() string {
 	return "CAService"
 }
 
-// Ensure CAServiceWrapper implements service interfaces
+// 确保 CAServiceWrapper 实现服务接口
 var _ application.ServiceName = (*CAServiceWrapper)(nil)
 var _ application.ServiceStartup = (*CAServiceWrapper)(nil)
 var _ application.ServiceShutdown = (*CAServiceWrapper)(nil)

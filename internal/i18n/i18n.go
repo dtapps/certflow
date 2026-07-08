@@ -55,7 +55,7 @@ func localizer() *i18n.Localizer {
 	return i18n.NewLocalizer(bundle, string(locale))
 }
 
-// SetLocale sets the current locale
+// SetLocale 设置当前语言环境
 func SetLocale(l string) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -67,7 +67,7 @@ func SetLocale(l string) {
 	}
 }
 
-// GetLocale returns the current locale string
+// GetLocale 返回当前语言环境字符串
 func GetLocale() string {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -106,7 +106,7 @@ func T(key string, templateData ...any) string {
 	return msg
 }
 
-// TWithLocale translates a key for a specific locale
+// TWithLocale 使用指定语言环境翻译 key
 func TWithLocale(loc string, key string, templateData ...any) string {
 	mu.Lock()
 	saved := locale
@@ -125,7 +125,7 @@ func TWithLocale(loc string, key string, templateData ...any) string {
 	return result
 }
 
-// ResolveLocale converts frontend locale to backend locale
+// ResolveLocale 将前端语言环境转换为后端语言环境
 func ResolveLocale(loc string) string {
 	if loc == "en-US" {
 		return "en-US"
@@ -133,12 +133,12 @@ func ResolveLocale(loc string) string {
 	return "zh-CN"
 }
 
-// SupportedLocales returns all supported locale codes
+// SupportedLocales 返回所有支持的语言环境代码
 func SupportedLocales() []string {
 	return []string{"zh-CN", "en-US"}
 }
 
-// GetCurrentLocale returns the current locale string
+// GetCurrentLocale 返回当前语言环境字符串
 func GetCurrentLocale() string {
 	mu.RLock()
 	defer mu.RUnlock()

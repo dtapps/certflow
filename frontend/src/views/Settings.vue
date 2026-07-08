@@ -159,7 +159,7 @@ const loadSettings = async () => {
     settings.value = safe
     // 初始化 DNS 总开关状态
     dnsEnabled.value = safe.dns_configs.some((d) => d.id !== 'default' && d.enabled)
-    // Sync settings -> stores on load
+    // 同步 settings -> stores
     if (settings.value.theme) {
       setTheme(settings.value.theme as 'dark' | 'light' | 'auto')
     }
@@ -346,15 +346,15 @@ const openLogFullscreen = async () => {
       FontSize: 13,
     })
   } catch (e) {
-    console.error('Failed to open log window', e)
+    console.error('打开日志窗口失败:', e)
   }
 }
 
 const logLevelOptions = [
-  { label: 'DEBUG', value: 'DEBUG' },
-  { label: 'INFO', value: 'INFO' },
-  { label: 'WARN', value: 'WARN' },
-  { label: 'ERROR', value: 'ERROR' },
+  { label: t('settings.log.level_debug'), value: 'DEBUG' },
+  { label: t('settings.log.level_info'), value: 'INFO' },
+  { label: t('settings.log.level_warn'), value: 'WARN' },
+  { label: t('settings.log.level_error'), value: 'ERROR' },
 ]
 
 const languageOptions = [
