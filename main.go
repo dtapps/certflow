@@ -217,7 +217,9 @@ func main() {
 	appSubmenu := appMenu.AddSubmenu(i18n.T("menu.app"))
 	appSubmenu.Add(i18n.T("menu.settings")).OnClick(func(ctx *application.Context) {
 		// 通知前端导航到设置页面
-		app.Event.Emit("navigate", map[string]string{"path": "/settings"})
+		if ok := app.Event.Emit("navigate", map[string]string{"path": "/settings"}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
 	})
 	appSubmenu.Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
 		go func() {
@@ -227,6 +229,19 @@ func main() {
 				logging.Info("%s", i18n.T("log.updater_check_done"))
 			}
 		}()
+	})
+	appSubmenu.AddSeparator()
+	appSubmenu.Add(i18n.T("systray.applyCert")).OnClick(func(ctx *application.Context) {
+		// 通知前端导航到申请证书页面
+		if ok := app.Event.Emit("navigate", map[string]string{"path": "/certificates/apply"}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
+	})
+	appSubmenu.Add(i18n.T("systray.scan")).OnClick(func(ctx *application.Context) {
+		// 通知前端导航到证书扫描页面
+		if ok := app.Event.Emit("navigate", map[string]string{"path": "/scan"}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
 	})
 	appSubmenu.AddSeparator()
 	appSubmenu.Add(i18n.T("systray.quit")).OnClick(func(ctx *application.Context) {
@@ -256,7 +271,9 @@ func main() {
 	// 监听系统主题变化，通知前端
 	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(event *application.ApplicationEvent) {
 		isDark := app.Env.IsDarkMode()
-		app.Event.Emit("theme_changed", map[string]bool{"dark": isDark})
+		if ok := app.Event.Emit("theme_changed", map[string]bool{"dark": isDark}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
 	})
 
 	// 启动定时任务调度器
@@ -292,10 +309,12 @@ func checkUpdateOnStart(app *application.App) {
 			return // 没有更新
 		}
 		// 发送桌面通知
-		app.Event.Emit("notification", map[string]string{
+		if ok := app.Event.Emit("notification", map[string]string{
 			"title":    i18n.T("notification.update_available_title"),
 			"subtitle": i18n.T("notification.update_available_subtitle", "version", rel.Version),
 			"category": "system",
-		})
+		}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
 	}()
 }

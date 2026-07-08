@@ -100,11 +100,13 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 
 	// 向前端发送通知事件
 	if s.app != nil {
-		s.app.Event.Emit("notification", map[string]string{
+		if ok := s.app.Event.Emit("notification", map[string]string{
 			"title":    opt.Title,
 			"body":     opt.Body,
 			"category": opt.Category,
-		})
+		}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
 	}
 
 	return err

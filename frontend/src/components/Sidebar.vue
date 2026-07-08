@@ -46,8 +46,8 @@ const menuOptions = computed<MenuOption[]>(() => [
   { label: t('nav.certificates'), key: '/certificates', icon: renderIcon(ShieldCheckmarkOutline) },
   { label: t('nav.ca'), key: '/ca', icon: renderIcon(BusinessOutline) },
   { label: t('nav.dns'), key: '/dns', icon: renderIcon(GlobeOutline) },
-  { label: t('nav.monitor'), key: '/monitor', icon: renderIcon(TrendingUpOutline) },
   { label: t('nav.scan'), key: '/scan', icon: renderIcon(SearchOutline) },
+  { label: t('nav.monitor'), key: '/monitor', icon: renderIcon(TrendingUpOutline) },
   { label: t('nav.settings'), key: '/settings', icon: renderIcon(SettingsOutline) },
 ])
 
