@@ -9,13 +9,16 @@ import (
 	"reflect"
 	"sync"
 
+	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/ent/passkeycredential"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
 	"cnb.cool/dtapp/certflow/ent/scanresult"
+	"cnb.cool/dtapp/certflow/ent/totpcredential"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -79,13 +82,16 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			ca.Table:              ca.ValidColumn,
-			certificate.Table:     certificate.ValidColumn,
-			dnsprovider.Table:     dnsprovider.ValidColumn,
-			monitoreddomain.Table: monitoreddomain.ValidColumn,
-			notification.Table:    notification.ValidColumn,
-			renewallog.Table:      renewallog.ValidColumn,
-			scanresult.Table:      scanresult.ValidColumn,
+			authmethod.Table:        authmethod.ValidColumn,
+			ca.Table:                ca.ValidColumn,
+			certificate.Table:       certificate.ValidColumn,
+			dnsprovider.Table:       dnsprovider.ValidColumn,
+			monitoreddomain.Table:   monitoreddomain.ValidColumn,
+			notification.Table:      notification.ValidColumn,
+			passkeycredential.Table: passkeycredential.ValidColumn,
+			renewallog.Table:        renewallog.ValidColumn,
+			scanresult.Table:        scanresult.ValidColumn,
+			totpcredential.Table:    totpcredential.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

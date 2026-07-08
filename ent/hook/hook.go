@@ -9,6 +9,18 @@ import (
 	"cnb.cool/dtapp/certflow/ent"
 )
 
+// The AuthMethodFunc type is an adapter to allow the use of ordinary
+// function as AuthMethod mutator.
+type AuthMethodFunc func(context.Context, *ent.AuthMethodMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AuthMethodFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AuthMethodMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthMethodMutation", m)
+}
+
 // The CAFunc type is an adapter to allow the use of ordinary
 // function as CA mutator.
 type CAFunc func(context.Context, *ent.CAMutation) (ent.Value, error)
@@ -69,6 +81,18 @@ func (f NotificationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.NotificationMutation", m)
 }
 
+// The PasskeyCredentialFunc type is an adapter to allow the use of ordinary
+// function as PasskeyCredential mutator.
+type PasskeyCredentialFunc func(context.Context, *ent.PasskeyCredentialMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PasskeyCredentialFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PasskeyCredentialMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PasskeyCredentialMutation", m)
+}
+
 // The RenewalLogFunc type is an adapter to allow the use of ordinary
 // function as RenewalLog mutator.
 type RenewalLogFunc func(context.Context, *ent.RenewalLogMutation) (ent.Value, error)
@@ -91,6 +115,18 @@ func (f ScanResultFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScanResultMutation", m)
+}
+
+// The TOTPCredentialFunc type is an adapter to allow the use of ordinary
+// function as TOTPCredential mutator.
+type TOTPCredentialFunc func(context.Context, *ent.TOTPCredentialMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TOTPCredentialFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TOTPCredentialMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TOTPCredentialMutation", m)
 }
 
 // Condition is a hook condition function.

@@ -38,6 +38,10 @@ on:
         description: 'Windows ARM64'
         type: boolean
         default: true
+      biometric:
+        description: '启用生物识别认证（Touch ID / Windows Hello）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -161,16 +165,59 @@ jobs:
           $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
+      # 编译 Windows 生物识别 Helper（仅在启用 biometric 且为 Windows 平台时）
+      - name: 安装 .NET SDK
+        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          choco install dotnet-sdk -y
+          # 刷新 PATH
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+      - name: 编译 Windows 生物识别 Helper
+        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          cd native/windows
+          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true
+          # 复制到目标目录
+          $targetDir = "../../internal/biometric/binaries/windows"
+          if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force }
+          Copy-Item "bin/Release/net6.0/win-x64/publish/biometric_helper.exe" -Destination $targetDir -Force
+          Write-Host "Windows biometric helper compiled and copied to $targetDir"
+
+      # 编译 macOS 生物识别 Helper（仅在启用 biometric 且为 macOS 平台时）
+      - name: 编译 macOS 生物识别 Helper
+        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'macOS' }}
+        shell: bash
+        run: |
+          cd native/macos
+          swiftc -o biometric_helper biometric_helper.swift -framework LocalAuthentication
+          # 复制到目标目录
+          mkdir -p ../../internal/biometric/binaries/macos
+          cp biometric_helper ../../internal/biometric/binaries/macos/
+          echo "macOS biometric helper compiled and copied"
+
       # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ inputs.biometric }}" = "true" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=biometric"
+          fi
+          wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $EXTRA_ARGS
 
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
-        run: wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN 
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ inputs.biometric }}" = "true" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=biometric"
+          fi
+          wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $EXTRA_ARGS
 
       - name: 重命名产物
         if: ${{ matrix.enabled }}

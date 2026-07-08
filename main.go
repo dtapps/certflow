@@ -93,10 +93,7 @@ func main() {
 	monitorService.SetNotificationService(notifService)
 	scannerService := scanner.NewScannerService(db.Client)
 	scannerService.SetSettingsProvider(settingsService.Get)
-	authService, err := auth.NewAuthService(dataDir)
-	if err != nil {
-		log.Fatalf(i18n.T("error.load_auth_failed")+": %v", err)
-	}
+	authService := auth.NewAuthService(db.Client)
 
 	// 设置通知服务的数据库客户端
 	notifService.SetDB(db.Client)

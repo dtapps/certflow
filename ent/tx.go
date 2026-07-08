@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AuthMethod is the client for interacting with the AuthMethod builders.
+	AuthMethod *AuthMethodClient
 	// CA is the client for interacting with the CA builders.
 	CA *CAClient
 	// Certificate is the client for interacting with the Certificate builders.
@@ -22,10 +24,14 @@ type Tx struct {
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
 	Notification *NotificationClient
+	// PasskeyCredential is the client for interacting with the PasskeyCredential builders.
+	PasskeyCredential *PasskeyCredentialClient
 	// RenewalLog is the client for interacting with the RenewalLog builders.
 	RenewalLog *RenewalLogClient
 	// ScanResult is the client for interacting with the ScanResult builders.
 	ScanResult *ScanResultClient
+	// TOTPCredential is the client for interacting with the TOTPCredential builders.
+	TOTPCredential *TOTPCredentialClient
 
 	// lazily loaded.
 	client     *Client
@@ -157,13 +163,16 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AuthMethod = NewAuthMethodClient(tx.config)
 	tx.CA = NewCAClient(tx.config)
 	tx.Certificate = NewCertificateClient(tx.config)
 	tx.DNSProvider = NewDNSProviderClient(tx.config)
 	tx.MonitoredDomain = NewMonitoredDomainClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
+	tx.PasskeyCredential = NewPasskeyCredentialClient(tx.config)
 	tx.RenewalLog = NewRenewalLogClient(tx.config)
 	tx.ScanResult = NewScanResultClient(tx.config)
+	tx.TOTPCredential = NewTOTPCredentialClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -173,7 +182,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: CA.QueryXXX(), the query will be executed
+// applies a query, for example: AuthMethod.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

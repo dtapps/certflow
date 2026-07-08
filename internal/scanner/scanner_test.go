@@ -215,7 +215,7 @@ func TestClearHistory(t *testing.T) {
 	ctx := context.Background()
 
 	// 插入多条记录
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		client.ScanResult.Create().
 			SetDomain("example.com").
 			SetPort(443).

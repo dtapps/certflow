@@ -9,15 +9,18 @@ import (
 	"sync"
 	"time"
 
+	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/ent/passkeycredential"
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
 	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"cnb.cool/dtapp/certflow/ent/schema"
+	"cnb.cool/dtapp/certflow/ent/totpcredential"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
@@ -31,14 +34,757 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeCA              = "CA"
-	TypeCertificate     = "Certificate"
-	TypeDNSProvider     = "DNSProvider"
-	TypeMonitoredDomain = "MonitoredDomain"
-	TypeNotification    = "Notification"
-	TypeRenewalLog      = "RenewalLog"
-	TypeScanResult      = "ScanResult"
+	TypeAuthMethod        = "AuthMethod"
+	TypeCA                = "CA"
+	TypeCertificate       = "Certificate"
+	TypeDNSProvider       = "DNSProvider"
+	TypeMonitoredDomain   = "MonitoredDomain"
+	TypeNotification      = "Notification"
+	TypePasskeyCredential = "PasskeyCredential"
+	TypeRenewalLog        = "RenewalLog"
+	TypeScanResult        = "ScanResult"
+	TypeTOTPCredential    = "TOTPCredential"
 )
+
+// AuthMethodMutation represents an operation that mutates the AuthMethod nodes in the graph.
+type AuthMethodMutation struct {
+	config
+	op                         Op
+	typ                        string
+	id                         *int
+	method                     *string
+	is_active                  *bool
+	password_hash              *string
+	created_at                 *time.Time
+	updated_at                 *time.Time
+	clearedFields              map[string]struct{}
+	totp_credentials           map[int]struct{}
+	removedtotp_credentials    map[int]struct{}
+	clearedtotp_credentials    bool
+	passkey_credentials        map[int]struct{}
+	removedpasskey_credentials map[int]struct{}
+	clearedpasskey_credentials bool
+	done                       bool
+	oldValue                   func(context.Context) (*AuthMethod, error)
+	predicates                 []predicate.AuthMethod
+}
+
+var _ ent.Mutation = (*AuthMethodMutation)(nil)
+
+// authmethodOption allows management of the mutation configuration using functional options.
+type authmethodOption func(*AuthMethodMutation)
+
+// newAuthMethodMutation creates new mutation for the AuthMethod entity.
+func newAuthMethodMutation(c config, op Op, opts ...authmethodOption) *AuthMethodMutation {
+	m := &AuthMethodMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAuthMethod,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAuthMethodID sets the ID field of the mutation.
+func withAuthMethodID(id int) authmethodOption {
+	return func(m *AuthMethodMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AuthMethod
+		)
+		m.oldValue = func(ctx context.Context) (*AuthMethod, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AuthMethod.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAuthMethod sets the old AuthMethod of the mutation.
+func withAuthMethod(node *AuthMethod) authmethodOption {
+	return func(m *AuthMethodMutation) {
+		m.oldValue = func(context.Context) (*AuthMethod, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AuthMethodMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AuthMethodMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AuthMethodMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AuthMethodMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AuthMethod.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetMethod sets the "method" field.
+func (m *AuthMethodMutation) SetMethod(s string) {
+	m.method = &s
+}
+
+// Method returns the value of the "method" field in the mutation.
+func (m *AuthMethodMutation) Method() (r string, exists bool) {
+	v := m.method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMethod returns the old "method" field's value of the AuthMethod entity.
+// If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthMethodMutation) OldMethod(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMethod: %w", err)
+	}
+	return oldValue.Method, nil
+}
+
+// ResetMethod resets all changes to the "method" field.
+func (m *AuthMethodMutation) ResetMethod() {
+	m.method = nil
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *AuthMethodMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *AuthMethodMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the AuthMethod entity.
+// If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthMethodMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *AuthMethodMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetPasswordHash sets the "password_hash" field.
+func (m *AuthMethodMutation) SetPasswordHash(s string) {
+	m.password_hash = &s
+}
+
+// PasswordHash returns the value of the "password_hash" field in the mutation.
+func (m *AuthMethodMutation) PasswordHash() (r string, exists bool) {
+	v := m.password_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPasswordHash returns the old "password_hash" field's value of the AuthMethod entity.
+// If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthMethodMutation) OldPasswordHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPasswordHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPasswordHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPasswordHash: %w", err)
+	}
+	return oldValue.PasswordHash, nil
+}
+
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (m *AuthMethodMutation) ClearPasswordHash() {
+	m.password_hash = nil
+	m.clearedFields[authmethod.FieldPasswordHash] = struct{}{}
+}
+
+// PasswordHashCleared returns if the "password_hash" field was cleared in this mutation.
+func (m *AuthMethodMutation) PasswordHashCleared() bool {
+	_, ok := m.clearedFields[authmethod.FieldPasswordHash]
+	return ok
+}
+
+// ResetPasswordHash resets all changes to the "password_hash" field.
+func (m *AuthMethodMutation) ResetPasswordHash() {
+	m.password_hash = nil
+	delete(m.clearedFields, authmethod.FieldPasswordHash)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AuthMethodMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AuthMethodMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AuthMethod entity.
+// If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthMethodMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AuthMethodMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AuthMethodMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AuthMethodMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AuthMethod entity.
+// If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthMethodMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AuthMethodMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// AddTotpCredentialIDs adds the "totp_credentials" edge to the TOTPCredential entity by ids.
+func (m *AuthMethodMutation) AddTotpCredentialIDs(ids ...int) {
+	if m.totp_credentials == nil {
+		m.totp_credentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.totp_credentials[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTotpCredentials clears the "totp_credentials" edge to the TOTPCredential entity.
+func (m *AuthMethodMutation) ClearTotpCredentials() {
+	m.clearedtotp_credentials = true
+}
+
+// TotpCredentialsCleared reports if the "totp_credentials" edge to the TOTPCredential entity was cleared.
+func (m *AuthMethodMutation) TotpCredentialsCleared() bool {
+	return m.clearedtotp_credentials
+}
+
+// RemoveTotpCredentialIDs removes the "totp_credentials" edge to the TOTPCredential entity by IDs.
+func (m *AuthMethodMutation) RemoveTotpCredentialIDs(ids ...int) {
+	if m.removedtotp_credentials == nil {
+		m.removedtotp_credentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.totp_credentials, ids[i])
+		m.removedtotp_credentials[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTotpCredentials returns the removed IDs of the "totp_credentials" edge to the TOTPCredential entity.
+func (m *AuthMethodMutation) RemovedTotpCredentialsIDs() (ids []int) {
+	for id := range m.removedtotp_credentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TotpCredentialsIDs returns the "totp_credentials" edge IDs in the mutation.
+func (m *AuthMethodMutation) TotpCredentialsIDs() (ids []int) {
+	for id := range m.totp_credentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTotpCredentials resets all changes to the "totp_credentials" edge.
+func (m *AuthMethodMutation) ResetTotpCredentials() {
+	m.totp_credentials = nil
+	m.clearedtotp_credentials = false
+	m.removedtotp_credentials = nil
+}
+
+// AddPasskeyCredentialIDs adds the "passkey_credentials" edge to the PasskeyCredential entity by ids.
+func (m *AuthMethodMutation) AddPasskeyCredentialIDs(ids ...int) {
+	if m.passkey_credentials == nil {
+		m.passkey_credentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.passkey_credentials[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPasskeyCredentials clears the "passkey_credentials" edge to the PasskeyCredential entity.
+func (m *AuthMethodMutation) ClearPasskeyCredentials() {
+	m.clearedpasskey_credentials = true
+}
+
+// PasskeyCredentialsCleared reports if the "passkey_credentials" edge to the PasskeyCredential entity was cleared.
+func (m *AuthMethodMutation) PasskeyCredentialsCleared() bool {
+	return m.clearedpasskey_credentials
+}
+
+// RemovePasskeyCredentialIDs removes the "passkey_credentials" edge to the PasskeyCredential entity by IDs.
+func (m *AuthMethodMutation) RemovePasskeyCredentialIDs(ids ...int) {
+	if m.removedpasskey_credentials == nil {
+		m.removedpasskey_credentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.passkey_credentials, ids[i])
+		m.removedpasskey_credentials[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPasskeyCredentials returns the removed IDs of the "passkey_credentials" edge to the PasskeyCredential entity.
+func (m *AuthMethodMutation) RemovedPasskeyCredentialsIDs() (ids []int) {
+	for id := range m.removedpasskey_credentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PasskeyCredentialsIDs returns the "passkey_credentials" edge IDs in the mutation.
+func (m *AuthMethodMutation) PasskeyCredentialsIDs() (ids []int) {
+	for id := range m.passkey_credentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPasskeyCredentials resets all changes to the "passkey_credentials" edge.
+func (m *AuthMethodMutation) ResetPasskeyCredentials() {
+	m.passkey_credentials = nil
+	m.clearedpasskey_credentials = false
+	m.removedpasskey_credentials = nil
+}
+
+// Where appends a list predicates to the AuthMethodMutation builder.
+func (m *AuthMethodMutation) Where(ps ...predicate.AuthMethod) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AuthMethodMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AuthMethodMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AuthMethod, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AuthMethodMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AuthMethodMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AuthMethod).
+func (m *AuthMethodMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AuthMethodMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.method != nil {
+		fields = append(fields, authmethod.FieldMethod)
+	}
+	if m.is_active != nil {
+		fields = append(fields, authmethod.FieldIsActive)
+	}
+	if m.password_hash != nil {
+		fields = append(fields, authmethod.FieldPasswordHash)
+	}
+	if m.created_at != nil {
+		fields = append(fields, authmethod.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, authmethod.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AuthMethodMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case authmethod.FieldMethod:
+		return m.Method()
+	case authmethod.FieldIsActive:
+		return m.IsActive()
+	case authmethod.FieldPasswordHash:
+		return m.PasswordHash()
+	case authmethod.FieldCreatedAt:
+		return m.CreatedAt()
+	case authmethod.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AuthMethodMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case authmethod.FieldMethod:
+		return m.OldMethod(ctx)
+	case authmethod.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case authmethod.FieldPasswordHash:
+		return m.OldPasswordHash(ctx)
+	case authmethod.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case authmethod.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AuthMethod field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthMethodMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case authmethod.FieldMethod:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMethod(v)
+		return nil
+	case authmethod.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case authmethod.FieldPasswordHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPasswordHash(v)
+		return nil
+	case authmethod.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case authmethod.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AuthMethod field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AuthMethodMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AuthMethodMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthMethodMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AuthMethod numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AuthMethodMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(authmethod.FieldPasswordHash) {
+		fields = append(fields, authmethod.FieldPasswordHash)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AuthMethodMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AuthMethodMutation) ClearField(name string) error {
+	switch name {
+	case authmethod.FieldPasswordHash:
+		m.ClearPasswordHash()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthMethod nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AuthMethodMutation) ResetField(name string) error {
+	switch name {
+	case authmethod.FieldMethod:
+		m.ResetMethod()
+		return nil
+	case authmethod.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case authmethod.FieldPasswordHash:
+		m.ResetPasswordHash()
+		return nil
+	case authmethod.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case authmethod.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthMethod field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AuthMethodMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.totp_credentials != nil {
+		edges = append(edges, authmethod.EdgeTotpCredentials)
+	}
+	if m.passkey_credentials != nil {
+		edges = append(edges, authmethod.EdgePasskeyCredentials)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AuthMethodMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case authmethod.EdgeTotpCredentials:
+		ids := make([]ent.Value, 0, len(m.totp_credentials))
+		for id := range m.totp_credentials {
+			ids = append(ids, id)
+		}
+		return ids
+	case authmethod.EdgePasskeyCredentials:
+		ids := make([]ent.Value, 0, len(m.passkey_credentials))
+		for id := range m.passkey_credentials {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AuthMethodMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedtotp_credentials != nil {
+		edges = append(edges, authmethod.EdgeTotpCredentials)
+	}
+	if m.removedpasskey_credentials != nil {
+		edges = append(edges, authmethod.EdgePasskeyCredentials)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AuthMethodMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case authmethod.EdgeTotpCredentials:
+		ids := make([]ent.Value, 0, len(m.removedtotp_credentials))
+		for id := range m.removedtotp_credentials {
+			ids = append(ids, id)
+		}
+		return ids
+	case authmethod.EdgePasskeyCredentials:
+		ids := make([]ent.Value, 0, len(m.removedpasskey_credentials))
+		for id := range m.removedpasskey_credentials {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AuthMethodMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedtotp_credentials {
+		edges = append(edges, authmethod.EdgeTotpCredentials)
+	}
+	if m.clearedpasskey_credentials {
+		edges = append(edges, authmethod.EdgePasskeyCredentials)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AuthMethodMutation) EdgeCleared(name string) bool {
+	switch name {
+	case authmethod.EdgeTotpCredentials:
+		return m.clearedtotp_credentials
+	case authmethod.EdgePasskeyCredentials:
+		return m.clearedpasskey_credentials
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AuthMethodMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AuthMethod unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AuthMethodMutation) ResetEdge(name string) error {
+	switch name {
+	case authmethod.EdgeTotpCredentials:
+		m.ResetTotpCredentials()
+		return nil
+	case authmethod.EdgePasskeyCredentials:
+		m.ResetPasskeyCredentials()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthMethod edge %s", name)
+}
 
 // CAMutation represents an operation that mutates the CA nodes in the graph.
 type CAMutation struct {
@@ -5761,6 +6507,860 @@ func (m *NotificationMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Notification edge %s", name)
 }
 
+// PasskeyCredentialMutation represents an operation that mutates the PasskeyCredential nodes in the graph.
+type PasskeyCredentialMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *int
+	credential_id            *[]byte
+	public_key               *[]byte
+	sign_count               *uint64
+	addsign_count            *int64
+	attestation_type         *string
+	authenticator_aaguid     *string
+	authenticator_public_key *[]byte
+	created_at               *time.Time
+	clearedFields            map[string]struct{}
+	auth_method              *int
+	clearedauth_method       bool
+	done                     bool
+	oldValue                 func(context.Context) (*PasskeyCredential, error)
+	predicates               []predicate.PasskeyCredential
+}
+
+var _ ent.Mutation = (*PasskeyCredentialMutation)(nil)
+
+// passkeycredentialOption allows management of the mutation configuration using functional options.
+type passkeycredentialOption func(*PasskeyCredentialMutation)
+
+// newPasskeyCredentialMutation creates new mutation for the PasskeyCredential entity.
+func newPasskeyCredentialMutation(c config, op Op, opts ...passkeycredentialOption) *PasskeyCredentialMutation {
+	m := &PasskeyCredentialMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePasskeyCredential,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPasskeyCredentialID sets the ID field of the mutation.
+func withPasskeyCredentialID(id int) passkeycredentialOption {
+	return func(m *PasskeyCredentialMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PasskeyCredential
+		)
+		m.oldValue = func(ctx context.Context) (*PasskeyCredential, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PasskeyCredential.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPasskeyCredential sets the old PasskeyCredential of the mutation.
+func withPasskeyCredential(node *PasskeyCredential) passkeycredentialOption {
+	return func(m *PasskeyCredentialMutation) {
+		m.oldValue = func(context.Context) (*PasskeyCredential, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PasskeyCredentialMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PasskeyCredentialMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PasskeyCredentialMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PasskeyCredentialMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PasskeyCredential.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (m *PasskeyCredentialMutation) SetCredentialID(b []byte) {
+	m.credential_id = &b
+}
+
+// CredentialID returns the value of the "credential_id" field in the mutation.
+func (m *PasskeyCredentialMutation) CredentialID() (r []byte, exists bool) {
+	v := m.credential_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialID returns the old "credential_id" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldCredentialID(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialID: %w", err)
+	}
+	return oldValue.CredentialID, nil
+}
+
+// ResetCredentialID resets all changes to the "credential_id" field.
+func (m *PasskeyCredentialMutation) ResetCredentialID() {
+	m.credential_id = nil
+}
+
+// SetPublicKey sets the "public_key" field.
+func (m *PasskeyCredentialMutation) SetPublicKey(b []byte) {
+	m.public_key = &b
+}
+
+// PublicKey returns the value of the "public_key" field in the mutation.
+func (m *PasskeyCredentialMutation) PublicKey() (r []byte, exists bool) {
+	v := m.public_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublicKey returns the old "public_key" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldPublicKey(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublicKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublicKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublicKey: %w", err)
+	}
+	return oldValue.PublicKey, nil
+}
+
+// ResetPublicKey resets all changes to the "public_key" field.
+func (m *PasskeyCredentialMutation) ResetPublicKey() {
+	m.public_key = nil
+}
+
+// SetSignCount sets the "sign_count" field.
+func (m *PasskeyCredentialMutation) SetSignCount(u uint64) {
+	m.sign_count = &u
+	m.addsign_count = nil
+}
+
+// SignCount returns the value of the "sign_count" field in the mutation.
+func (m *PasskeyCredentialMutation) SignCount() (r uint64, exists bool) {
+	v := m.sign_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSignCount returns the old "sign_count" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldSignCount(ctx context.Context) (v uint64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSignCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSignCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSignCount: %w", err)
+	}
+	return oldValue.SignCount, nil
+}
+
+// AddSignCount adds u to the "sign_count" field.
+func (m *PasskeyCredentialMutation) AddSignCount(u int64) {
+	if m.addsign_count != nil {
+		*m.addsign_count += u
+	} else {
+		m.addsign_count = &u
+	}
+}
+
+// AddedSignCount returns the value that was added to the "sign_count" field in this mutation.
+func (m *PasskeyCredentialMutation) AddedSignCount() (r int64, exists bool) {
+	v := m.addsign_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSignCount resets all changes to the "sign_count" field.
+func (m *PasskeyCredentialMutation) ResetSignCount() {
+	m.sign_count = nil
+	m.addsign_count = nil
+}
+
+// SetAttestationType sets the "attestation_type" field.
+func (m *PasskeyCredentialMutation) SetAttestationType(s string) {
+	m.attestation_type = &s
+}
+
+// AttestationType returns the value of the "attestation_type" field in the mutation.
+func (m *PasskeyCredentialMutation) AttestationType() (r string, exists bool) {
+	v := m.attestation_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttestationType returns the old "attestation_type" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldAttestationType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttestationType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttestationType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttestationType: %w", err)
+	}
+	return oldValue.AttestationType, nil
+}
+
+// ClearAttestationType clears the value of the "attestation_type" field.
+func (m *PasskeyCredentialMutation) ClearAttestationType() {
+	m.attestation_type = nil
+	m.clearedFields[passkeycredential.FieldAttestationType] = struct{}{}
+}
+
+// AttestationTypeCleared returns if the "attestation_type" field was cleared in this mutation.
+func (m *PasskeyCredentialMutation) AttestationTypeCleared() bool {
+	_, ok := m.clearedFields[passkeycredential.FieldAttestationType]
+	return ok
+}
+
+// ResetAttestationType resets all changes to the "attestation_type" field.
+func (m *PasskeyCredentialMutation) ResetAttestationType() {
+	m.attestation_type = nil
+	delete(m.clearedFields, passkeycredential.FieldAttestationType)
+}
+
+// SetAuthenticatorAaguid sets the "authenticator_aaguid" field.
+func (m *PasskeyCredentialMutation) SetAuthenticatorAaguid(s string) {
+	m.authenticator_aaguid = &s
+}
+
+// AuthenticatorAaguid returns the value of the "authenticator_aaguid" field in the mutation.
+func (m *PasskeyCredentialMutation) AuthenticatorAaguid() (r string, exists bool) {
+	v := m.authenticator_aaguid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthenticatorAaguid returns the old "authenticator_aaguid" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldAuthenticatorAaguid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthenticatorAaguid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthenticatorAaguid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthenticatorAaguid: %w", err)
+	}
+	return oldValue.AuthenticatorAaguid, nil
+}
+
+// ClearAuthenticatorAaguid clears the value of the "authenticator_aaguid" field.
+func (m *PasskeyCredentialMutation) ClearAuthenticatorAaguid() {
+	m.authenticator_aaguid = nil
+	m.clearedFields[passkeycredential.FieldAuthenticatorAaguid] = struct{}{}
+}
+
+// AuthenticatorAaguidCleared returns if the "authenticator_aaguid" field was cleared in this mutation.
+func (m *PasskeyCredentialMutation) AuthenticatorAaguidCleared() bool {
+	_, ok := m.clearedFields[passkeycredential.FieldAuthenticatorAaguid]
+	return ok
+}
+
+// ResetAuthenticatorAaguid resets all changes to the "authenticator_aaguid" field.
+func (m *PasskeyCredentialMutation) ResetAuthenticatorAaguid() {
+	m.authenticator_aaguid = nil
+	delete(m.clearedFields, passkeycredential.FieldAuthenticatorAaguid)
+}
+
+// SetAuthenticatorPublicKey sets the "authenticator_public_key" field.
+func (m *PasskeyCredentialMutation) SetAuthenticatorPublicKey(b []byte) {
+	m.authenticator_public_key = &b
+}
+
+// AuthenticatorPublicKey returns the value of the "authenticator_public_key" field in the mutation.
+func (m *PasskeyCredentialMutation) AuthenticatorPublicKey() (r []byte, exists bool) {
+	v := m.authenticator_public_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthenticatorPublicKey returns the old "authenticator_public_key" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldAuthenticatorPublicKey(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthenticatorPublicKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthenticatorPublicKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthenticatorPublicKey: %w", err)
+	}
+	return oldValue.AuthenticatorPublicKey, nil
+}
+
+// ClearAuthenticatorPublicKey clears the value of the "authenticator_public_key" field.
+func (m *PasskeyCredentialMutation) ClearAuthenticatorPublicKey() {
+	m.authenticator_public_key = nil
+	m.clearedFields[passkeycredential.FieldAuthenticatorPublicKey] = struct{}{}
+}
+
+// AuthenticatorPublicKeyCleared returns if the "authenticator_public_key" field was cleared in this mutation.
+func (m *PasskeyCredentialMutation) AuthenticatorPublicKeyCleared() bool {
+	_, ok := m.clearedFields[passkeycredential.FieldAuthenticatorPublicKey]
+	return ok
+}
+
+// ResetAuthenticatorPublicKey resets all changes to the "authenticator_public_key" field.
+func (m *PasskeyCredentialMutation) ResetAuthenticatorPublicKey() {
+	m.authenticator_public_key = nil
+	delete(m.clearedFields, passkeycredential.FieldAuthenticatorPublicKey)
+}
+
+// SetAuthMethodID sets the "auth_method_id" field.
+func (m *PasskeyCredentialMutation) SetAuthMethodID(i int) {
+	m.auth_method = &i
+}
+
+// AuthMethodID returns the value of the "auth_method_id" field in the mutation.
+func (m *PasskeyCredentialMutation) AuthMethodID() (r int, exists bool) {
+	v := m.auth_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthMethodID returns the old "auth_method_id" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldAuthMethodID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthMethodID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthMethodID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthMethodID: %w", err)
+	}
+	return oldValue.AuthMethodID, nil
+}
+
+// ResetAuthMethodID resets all changes to the "auth_method_id" field.
+func (m *PasskeyCredentialMutation) ResetAuthMethodID() {
+	m.auth_method = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PasskeyCredentialMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PasskeyCredentialMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the PasskeyCredential entity.
+// If the PasskeyCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PasskeyCredentialMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PasskeyCredentialMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearAuthMethod clears the "auth_method" edge to the AuthMethod entity.
+func (m *PasskeyCredentialMutation) ClearAuthMethod() {
+	m.clearedauth_method = true
+	m.clearedFields[passkeycredential.FieldAuthMethodID] = struct{}{}
+}
+
+// AuthMethodCleared reports if the "auth_method" edge to the AuthMethod entity was cleared.
+func (m *PasskeyCredentialMutation) AuthMethodCleared() bool {
+	return m.clearedauth_method
+}
+
+// AuthMethodIDs returns the "auth_method" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AuthMethodID instead. It exists only for internal usage by the builders.
+func (m *PasskeyCredentialMutation) AuthMethodIDs() (ids []int) {
+	if id := m.auth_method; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAuthMethod resets all changes to the "auth_method" edge.
+func (m *PasskeyCredentialMutation) ResetAuthMethod() {
+	m.auth_method = nil
+	m.clearedauth_method = false
+}
+
+// Where appends a list predicates to the PasskeyCredentialMutation builder.
+func (m *PasskeyCredentialMutation) Where(ps ...predicate.PasskeyCredential) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PasskeyCredentialMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PasskeyCredentialMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PasskeyCredential, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PasskeyCredentialMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PasskeyCredentialMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PasskeyCredential).
+func (m *PasskeyCredentialMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PasskeyCredentialMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.credential_id != nil {
+		fields = append(fields, passkeycredential.FieldCredentialID)
+	}
+	if m.public_key != nil {
+		fields = append(fields, passkeycredential.FieldPublicKey)
+	}
+	if m.sign_count != nil {
+		fields = append(fields, passkeycredential.FieldSignCount)
+	}
+	if m.attestation_type != nil {
+		fields = append(fields, passkeycredential.FieldAttestationType)
+	}
+	if m.authenticator_aaguid != nil {
+		fields = append(fields, passkeycredential.FieldAuthenticatorAaguid)
+	}
+	if m.authenticator_public_key != nil {
+		fields = append(fields, passkeycredential.FieldAuthenticatorPublicKey)
+	}
+	if m.auth_method != nil {
+		fields = append(fields, passkeycredential.FieldAuthMethodID)
+	}
+	if m.created_at != nil {
+		fields = append(fields, passkeycredential.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PasskeyCredentialMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case passkeycredential.FieldCredentialID:
+		return m.CredentialID()
+	case passkeycredential.FieldPublicKey:
+		return m.PublicKey()
+	case passkeycredential.FieldSignCount:
+		return m.SignCount()
+	case passkeycredential.FieldAttestationType:
+		return m.AttestationType()
+	case passkeycredential.FieldAuthenticatorAaguid:
+		return m.AuthenticatorAaguid()
+	case passkeycredential.FieldAuthenticatorPublicKey:
+		return m.AuthenticatorPublicKey()
+	case passkeycredential.FieldAuthMethodID:
+		return m.AuthMethodID()
+	case passkeycredential.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PasskeyCredentialMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case passkeycredential.FieldCredentialID:
+		return m.OldCredentialID(ctx)
+	case passkeycredential.FieldPublicKey:
+		return m.OldPublicKey(ctx)
+	case passkeycredential.FieldSignCount:
+		return m.OldSignCount(ctx)
+	case passkeycredential.FieldAttestationType:
+		return m.OldAttestationType(ctx)
+	case passkeycredential.FieldAuthenticatorAaguid:
+		return m.OldAuthenticatorAaguid(ctx)
+	case passkeycredential.FieldAuthenticatorPublicKey:
+		return m.OldAuthenticatorPublicKey(ctx)
+	case passkeycredential.FieldAuthMethodID:
+		return m.OldAuthMethodID(ctx)
+	case passkeycredential.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown PasskeyCredential field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PasskeyCredentialMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case passkeycredential.FieldCredentialID:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialID(v)
+		return nil
+	case passkeycredential.FieldPublicKey:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublicKey(v)
+		return nil
+	case passkeycredential.FieldSignCount:
+		v, ok := value.(uint64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSignCount(v)
+		return nil
+	case passkeycredential.FieldAttestationType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttestationType(v)
+		return nil
+	case passkeycredential.FieldAuthenticatorAaguid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthenticatorAaguid(v)
+		return nil
+	case passkeycredential.FieldAuthenticatorPublicKey:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthenticatorPublicKey(v)
+		return nil
+	case passkeycredential.FieldAuthMethodID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthMethodID(v)
+		return nil
+	case passkeycredential.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PasskeyCredentialMutation) AddedFields() []string {
+	var fields []string
+	if m.addsign_count != nil {
+		fields = append(fields, passkeycredential.FieldSignCount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PasskeyCredentialMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case passkeycredential.FieldSignCount:
+		return m.AddedSignCount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PasskeyCredentialMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case passkeycredential.FieldSignCount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSignCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PasskeyCredentialMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(passkeycredential.FieldAttestationType) {
+		fields = append(fields, passkeycredential.FieldAttestationType)
+	}
+	if m.FieldCleared(passkeycredential.FieldAuthenticatorAaguid) {
+		fields = append(fields, passkeycredential.FieldAuthenticatorAaguid)
+	}
+	if m.FieldCleared(passkeycredential.FieldAuthenticatorPublicKey) {
+		fields = append(fields, passkeycredential.FieldAuthenticatorPublicKey)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PasskeyCredentialMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PasskeyCredentialMutation) ClearField(name string) error {
+	switch name {
+	case passkeycredential.FieldAttestationType:
+		m.ClearAttestationType()
+		return nil
+	case passkeycredential.FieldAuthenticatorAaguid:
+		m.ClearAuthenticatorAaguid()
+		return nil
+	case passkeycredential.FieldAuthenticatorPublicKey:
+		m.ClearAuthenticatorPublicKey()
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PasskeyCredentialMutation) ResetField(name string) error {
+	switch name {
+	case passkeycredential.FieldCredentialID:
+		m.ResetCredentialID()
+		return nil
+	case passkeycredential.FieldPublicKey:
+		m.ResetPublicKey()
+		return nil
+	case passkeycredential.FieldSignCount:
+		m.ResetSignCount()
+		return nil
+	case passkeycredential.FieldAttestationType:
+		m.ResetAttestationType()
+		return nil
+	case passkeycredential.FieldAuthenticatorAaguid:
+		m.ResetAuthenticatorAaguid()
+		return nil
+	case passkeycredential.FieldAuthenticatorPublicKey:
+		m.ResetAuthenticatorPublicKey()
+		return nil
+	case passkeycredential.FieldAuthMethodID:
+		m.ResetAuthMethodID()
+		return nil
+	case passkeycredential.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PasskeyCredentialMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.auth_method != nil {
+		edges = append(edges, passkeycredential.EdgeAuthMethod)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PasskeyCredentialMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case passkeycredential.EdgeAuthMethod:
+		if id := m.auth_method; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PasskeyCredentialMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PasskeyCredentialMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PasskeyCredentialMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedauth_method {
+		edges = append(edges, passkeycredential.EdgeAuthMethod)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PasskeyCredentialMutation) EdgeCleared(name string) bool {
+	switch name {
+	case passkeycredential.EdgeAuthMethod:
+		return m.clearedauth_method
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PasskeyCredentialMutation) ClearEdge(name string) error {
+	switch name {
+	case passkeycredential.EdgeAuthMethod:
+		m.ClearAuthMethod()
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PasskeyCredentialMutation) ResetEdge(name string) error {
+	switch name {
+	case passkeycredential.EdgeAuthMethod:
+		m.ResetAuthMethod()
+		return nil
+	}
+	return fmt.Errorf("unknown PasskeyCredential edge %s", name)
+}
+
 // RenewalLogMutation represents an operation that mutates the RenewalLog nodes in the graph.
 type RenewalLogMutation struct {
 	config
@@ -8144,4 +9744,603 @@ func (m *ScanResultMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ScanResultMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ScanResult edge %s", name)
+}
+
+// TOTPCredentialMutation represents an operation that mutates the TOTPCredential nodes in the graph.
+type TOTPCredentialMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *int
+	secret             *string
+	issuer             *string
+	account_name       *string
+	created_at         *time.Time
+	clearedFields      map[string]struct{}
+	auth_method        *int
+	clearedauth_method bool
+	done               bool
+	oldValue           func(context.Context) (*TOTPCredential, error)
+	predicates         []predicate.TOTPCredential
+}
+
+var _ ent.Mutation = (*TOTPCredentialMutation)(nil)
+
+// totpcredentialOption allows management of the mutation configuration using functional options.
+type totpcredentialOption func(*TOTPCredentialMutation)
+
+// newTOTPCredentialMutation creates new mutation for the TOTPCredential entity.
+func newTOTPCredentialMutation(c config, op Op, opts ...totpcredentialOption) *TOTPCredentialMutation {
+	m := &TOTPCredentialMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTOTPCredential,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTOTPCredentialID sets the ID field of the mutation.
+func withTOTPCredentialID(id int) totpcredentialOption {
+	return func(m *TOTPCredentialMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TOTPCredential
+		)
+		m.oldValue = func(ctx context.Context) (*TOTPCredential, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TOTPCredential.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTOTPCredential sets the old TOTPCredential of the mutation.
+func withTOTPCredential(node *TOTPCredential) totpcredentialOption {
+	return func(m *TOTPCredentialMutation) {
+		m.oldValue = func(context.Context) (*TOTPCredential, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TOTPCredentialMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TOTPCredentialMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TOTPCredentialMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TOTPCredentialMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TOTPCredential.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetSecret sets the "secret" field.
+func (m *TOTPCredentialMutation) SetSecret(s string) {
+	m.secret = &s
+}
+
+// Secret returns the value of the "secret" field in the mutation.
+func (m *TOTPCredentialMutation) Secret() (r string, exists bool) {
+	v := m.secret
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecret returns the old "secret" field's value of the TOTPCredential entity.
+// If the TOTPCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TOTPCredentialMutation) OldSecret(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecret is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecret requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecret: %w", err)
+	}
+	return oldValue.Secret, nil
+}
+
+// ResetSecret resets all changes to the "secret" field.
+func (m *TOTPCredentialMutation) ResetSecret() {
+	m.secret = nil
+}
+
+// SetIssuer sets the "issuer" field.
+func (m *TOTPCredentialMutation) SetIssuer(s string) {
+	m.issuer = &s
+}
+
+// Issuer returns the value of the "issuer" field in the mutation.
+func (m *TOTPCredentialMutation) Issuer() (r string, exists bool) {
+	v := m.issuer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIssuer returns the old "issuer" field's value of the TOTPCredential entity.
+// If the TOTPCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TOTPCredentialMutation) OldIssuer(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIssuer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIssuer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIssuer: %w", err)
+	}
+	return oldValue.Issuer, nil
+}
+
+// ResetIssuer resets all changes to the "issuer" field.
+func (m *TOTPCredentialMutation) ResetIssuer() {
+	m.issuer = nil
+}
+
+// SetAccountName sets the "account_name" field.
+func (m *TOTPCredentialMutation) SetAccountName(s string) {
+	m.account_name = &s
+}
+
+// AccountName returns the value of the "account_name" field in the mutation.
+func (m *TOTPCredentialMutation) AccountName() (r string, exists bool) {
+	v := m.account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountName returns the old "account_name" field's value of the TOTPCredential entity.
+// If the TOTPCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TOTPCredentialMutation) OldAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
+	}
+	return oldValue.AccountName, nil
+}
+
+// ResetAccountName resets all changes to the "account_name" field.
+func (m *TOTPCredentialMutation) ResetAccountName() {
+	m.account_name = nil
+}
+
+// SetAuthMethodID sets the "auth_method_id" field.
+func (m *TOTPCredentialMutation) SetAuthMethodID(i int) {
+	m.auth_method = &i
+}
+
+// AuthMethodID returns the value of the "auth_method_id" field in the mutation.
+func (m *TOTPCredentialMutation) AuthMethodID() (r int, exists bool) {
+	v := m.auth_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthMethodID returns the old "auth_method_id" field's value of the TOTPCredential entity.
+// If the TOTPCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TOTPCredentialMutation) OldAuthMethodID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthMethodID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthMethodID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthMethodID: %w", err)
+	}
+	return oldValue.AuthMethodID, nil
+}
+
+// ResetAuthMethodID resets all changes to the "auth_method_id" field.
+func (m *TOTPCredentialMutation) ResetAuthMethodID() {
+	m.auth_method = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *TOTPCredentialMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *TOTPCredentialMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the TOTPCredential entity.
+// If the TOTPCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TOTPCredentialMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *TOTPCredentialMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearAuthMethod clears the "auth_method" edge to the AuthMethod entity.
+func (m *TOTPCredentialMutation) ClearAuthMethod() {
+	m.clearedauth_method = true
+	m.clearedFields[totpcredential.FieldAuthMethodID] = struct{}{}
+}
+
+// AuthMethodCleared reports if the "auth_method" edge to the AuthMethod entity was cleared.
+func (m *TOTPCredentialMutation) AuthMethodCleared() bool {
+	return m.clearedauth_method
+}
+
+// AuthMethodIDs returns the "auth_method" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AuthMethodID instead. It exists only for internal usage by the builders.
+func (m *TOTPCredentialMutation) AuthMethodIDs() (ids []int) {
+	if id := m.auth_method; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAuthMethod resets all changes to the "auth_method" edge.
+func (m *TOTPCredentialMutation) ResetAuthMethod() {
+	m.auth_method = nil
+	m.clearedauth_method = false
+}
+
+// Where appends a list predicates to the TOTPCredentialMutation builder.
+func (m *TOTPCredentialMutation) Where(ps ...predicate.TOTPCredential) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TOTPCredentialMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TOTPCredentialMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TOTPCredential, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TOTPCredentialMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TOTPCredentialMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TOTPCredential).
+func (m *TOTPCredentialMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TOTPCredentialMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.secret != nil {
+		fields = append(fields, totpcredential.FieldSecret)
+	}
+	if m.issuer != nil {
+		fields = append(fields, totpcredential.FieldIssuer)
+	}
+	if m.account_name != nil {
+		fields = append(fields, totpcredential.FieldAccountName)
+	}
+	if m.auth_method != nil {
+		fields = append(fields, totpcredential.FieldAuthMethodID)
+	}
+	if m.created_at != nil {
+		fields = append(fields, totpcredential.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TOTPCredentialMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case totpcredential.FieldSecret:
+		return m.Secret()
+	case totpcredential.FieldIssuer:
+		return m.Issuer()
+	case totpcredential.FieldAccountName:
+		return m.AccountName()
+	case totpcredential.FieldAuthMethodID:
+		return m.AuthMethodID()
+	case totpcredential.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TOTPCredentialMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case totpcredential.FieldSecret:
+		return m.OldSecret(ctx)
+	case totpcredential.FieldIssuer:
+		return m.OldIssuer(ctx)
+	case totpcredential.FieldAccountName:
+		return m.OldAccountName(ctx)
+	case totpcredential.FieldAuthMethodID:
+		return m.OldAuthMethodID(ctx)
+	case totpcredential.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown TOTPCredential field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TOTPCredentialMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case totpcredential.FieldSecret:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecret(v)
+		return nil
+	case totpcredential.FieldIssuer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIssuer(v)
+		return nil
+	case totpcredential.FieldAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountName(v)
+		return nil
+	case totpcredential.FieldAuthMethodID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthMethodID(v)
+		return nil
+	case totpcredential.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TOTPCredential field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TOTPCredentialMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TOTPCredentialMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TOTPCredentialMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown TOTPCredential numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TOTPCredentialMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TOTPCredentialMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TOTPCredentialMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown TOTPCredential nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TOTPCredentialMutation) ResetField(name string) error {
+	switch name {
+	case totpcredential.FieldSecret:
+		m.ResetSecret()
+		return nil
+	case totpcredential.FieldIssuer:
+		m.ResetIssuer()
+		return nil
+	case totpcredential.FieldAccountName:
+		m.ResetAccountName()
+		return nil
+	case totpcredential.FieldAuthMethodID:
+		m.ResetAuthMethodID()
+		return nil
+	case totpcredential.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown TOTPCredential field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TOTPCredentialMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.auth_method != nil {
+		edges = append(edges, totpcredential.EdgeAuthMethod)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TOTPCredentialMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case totpcredential.EdgeAuthMethod:
+		if id := m.auth_method; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TOTPCredentialMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TOTPCredentialMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TOTPCredentialMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedauth_method {
+		edges = append(edges, totpcredential.EdgeAuthMethod)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TOTPCredentialMutation) EdgeCleared(name string) bool {
+	switch name {
+	case totpcredential.EdgeAuthMethod:
+		return m.clearedauth_method
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TOTPCredentialMutation) ClearEdge(name string) error {
+	switch name {
+	case totpcredential.EdgeAuthMethod:
+		m.ClearAuthMethod()
+		return nil
+	}
+	return fmt.Errorf("unknown TOTPCredential unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TOTPCredentialMutation) ResetEdge(name string) error {
+	switch name {
+	case totpcredential.EdgeAuthMethod:
+		m.ResetAuthMethod()
+		return nil
+	}
+	return fmt.Errorf("unknown TOTPCredential edge %s", name)
 }

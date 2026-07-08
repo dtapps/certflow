@@ -8,6 +8,21 @@ import (
 )
 
 var (
+	// AuthMethodsColumns holds the columns for the "auth_methods" table.
+	AuthMethodsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "method", Type: field.TypeString},
+		{Name: "is_active", Type: field.TypeBool, Default: false},
+		{Name: "password_hash", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// AuthMethodsTable holds the schema information for the "auth_methods" table.
+	AuthMethodsTable = &schema.Table{
+		Name:       "auth_methods",
+		Columns:    AuthMethodsColumns,
+		PrimaryKey: []*schema.Column{AuthMethodsColumns[0]},
+	}
 	// CasColumns holds the columns for the "cas" table.
 	CasColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -133,6 +148,32 @@ var (
 		Columns:    NotificationsColumns,
 		PrimaryKey: []*schema.Column{NotificationsColumns[0]},
 	}
+	// PasskeyCredentialsColumns holds the columns for the "passkey_credentials" table.
+	PasskeyCredentialsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "credential_id", Type: field.TypeBytes},
+		{Name: "public_key", Type: field.TypeBytes},
+		{Name: "sign_count", Type: field.TypeUint64, Default: 0},
+		{Name: "attestation_type", Type: field.TypeString, Nullable: true},
+		{Name: "authenticator_aaguid", Type: field.TypeString, Nullable: true},
+		{Name: "authenticator_public_key", Type: field.TypeBytes, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "auth_method_id", Type: field.TypeInt},
+	}
+	// PasskeyCredentialsTable holds the schema information for the "passkey_credentials" table.
+	PasskeyCredentialsTable = &schema.Table{
+		Name:       "passkey_credentials",
+		Columns:    PasskeyCredentialsColumns,
+		PrimaryKey: []*schema.Column{PasskeyCredentialsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "passkey_credentials_auth_methods_passkey_credentials",
+				Columns:    []*schema.Column{PasskeyCredentialsColumns[8]},
+				RefColumns: []*schema.Column{AuthMethodsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// RenewalLogsColumns holds the columns for the "renewal_logs" table.
 	RenewalLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -187,20 +228,48 @@ var (
 		Columns:    ScanResultsColumns,
 		PrimaryKey: []*schema.Column{ScanResultsColumns[0]},
 	}
+	// TotpCredentialsColumns holds the columns for the "totp_credentials" table.
+	TotpCredentialsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "secret", Type: field.TypeString},
+		{Name: "issuer", Type: field.TypeString, Default: "CertFlow"},
+		{Name: "account_name", Type: field.TypeString, Default: "user"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "auth_method_id", Type: field.TypeInt},
+	}
+	// TotpCredentialsTable holds the schema information for the "totp_credentials" table.
+	TotpCredentialsTable = &schema.Table{
+		Name:       "totp_credentials",
+		Columns:    TotpCredentialsColumns,
+		PrimaryKey: []*schema.Column{TotpCredentialsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "totp_credentials_auth_methods_totp_credentials",
+				Columns:    []*schema.Column{TotpCredentialsColumns[5]},
+				RefColumns: []*schema.Column{AuthMethodsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AuthMethodsTable,
 		CasTable,
 		CertificatesTable,
 		DNSProvidersTable,
 		MonitoredDomainsTable,
 		NotificationsTable,
+		PasskeyCredentialsTable,
 		RenewalLogsTable,
 		ScanResultsTable,
+		TotpCredentialsTable,
 	}
 )
 
 func init() {
 	CertificatesTable.ForeignKeys[0].RefTable = CasTable
 	CertificatesTable.ForeignKeys[1].RefTable = DNSProvidersTable
+	PasskeyCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable
 	RenewalLogsTable.ForeignKeys[0].RefTable = CertificatesTable
+	TotpCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable
 }

@@ -276,10 +276,10 @@ func (s *Service) startWatching() {
 			defer s.mu.Unlock()
 
 			if err := s.v.Unmarshal(&s.settings); err != nil {
-				logging.Error("配置文件热重载失败: %v", err)
+				logging.Error(i18n.T("log.settings_reload_failed", "Error", err))
 				return
 			}
-			logging.Info("配置文件已热重载")
+			logging.Info(i18n.T("log.settings_reloaded"))
 
 			if s.onChange != nil {
 				cb := s.onChange

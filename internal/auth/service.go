@@ -1,71 +1,42 @@
 package auth
 
 import (
+	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 
+	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthService 认证服务
 type AuthService struct {
-	mu           sync.RWMutex
-	filePath     string
-	v            *viper.Viper
-	passwordHash string
+	mu sync.RWMutex
+	db *ent.Client
 }
 
 // NewAuthService 创建新的认证服务
-func NewAuthService(dataDir string) (*AuthService, error) {
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.create_data_dir_failed", "Error", err))
-	}
-
-	filePath := filepath.Join(dataDir, "auth.json")
-
-	v := viper.New()
-	v.SetConfigFile(filePath)
-	v.SetConfigType("json")
-
-	s := &AuthService{
-		filePath: filePath,
-		v:        v,
-	}
-
-	// 尝试加载现有密码
-	if err := v.ReadInConfig(); err != nil {
-		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf(i18n.T("error.load_auth_failed", "Error", err))
-		}
-		// 文件不存在，初始化空密码
-		s.passwordHash = ""
-	} else {
-		s.passwordHash = v.GetString("password_hash")
-	}
-
-	return s, nil
-}
-
-// save 保存密码哈希到文件
-func (s *AuthService) save() error {
-	// 确保目录存在
-	if err := os.MkdirAll(filepath.Dir(s.filePath), 0755); err != nil {
-		return fmt.Errorf(i18n.T("error.create_data_dir_failed", "Error", err))
-	}
-	s.v.Set("password_hash", s.passwordHash)
-	return s.v.WriteConfig()
+func NewAuthService(db *ent.Client) *AuthService {
+	return &AuthService{db: db}
 }
 
 // IsPasswordSet 检查是否已设置密码
 func (s *AuthService) IsPasswordSet() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.passwordHash != ""
+
+	ctx := context.Background()
+	exists, err := s.db.AuthMethod.Query().
+		Where(authmethod.MethodEQ("password")).
+		Exist(ctx)
+	if err != nil {
+		logging.Error(i18n.T("log.auth_query_password_failed", "Error", err))
+		return false
+	}
+	return exists
 }
 
 // SetPassword 设置密码（明文传入，内部哈希存储）
@@ -82,8 +53,32 @@ func (s *AuthService) SetPassword(plainPassword string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.passwordHash = string(hash)
-	return s.save()
+	ctx := context.Background()
+
+	// 检查是否已存在密码认证方式
+	exists, err := s.db.AuthMethod.Query().
+		Where(authmethod.MethodEQ("password")).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+	}
+
+	if exists {
+		// 更新现有的密码
+		_, err = s.db.AuthMethod.Update().
+			Where(authmethod.MethodEQ("password")).
+			SetPasswordHash(string(hash)).
+			Save(ctx)
+	} else {
+		// 创建新的密码认证方式
+		_, err = s.db.AuthMethod.Create().
+			SetMethod("password").
+			SetIsActive(true).
+			SetPasswordHash(string(hash)).
+			Save(ctx)
+	}
+
+	return err
 }
 
 // VerifyPassword 验证密码
@@ -91,12 +86,27 @@ func (s *AuthService) VerifyPassword(plainPassword string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.passwordHash == "" {
+	ctx := context.Background()
+
+	// 获取密码认证方式
+	am, err := s.db.AuthMethod.Query().
+		Where(authmethod.MethodEQ("password")).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			logging.Debug(i18n.T("log.auth_no_password_set"))
+			return true // 未设置密码时，验证通过
+		}
+		logging.Error(i18n.T("log.auth_query_password_failed", "Error", err))
+		return false
+	}
+
+	if am.PasswordHash == "" {
 		logging.Debug(i18n.T("log.auth_no_password_set"))
 		return true // 未设置密码时，验证通过
 	}
 
-	result := bcrypt.CompareHashAndPassword([]byte(s.passwordHash), []byte(plainPassword)) == nil
+	result := bcrypt.CompareHashAndPassword([]byte(am.PasswordHash), []byte(plainPassword)) == nil
 	if !result {
 		logging.Warn(i18n.T("log.auth_password_wrong"))
 	}
@@ -121,6 +131,106 @@ func (s *AuthService) ClearPassword() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.passwordHash = ""
-	return s.save()
+	ctx := context.Background()
+
+	// 删除密码认证方式
+	_, err := s.db.AuthMethod.Delete().
+		Where(authmethod.MethodEQ("password")).
+		Exec(ctx)
+	return err
+}
+
+// GetActiveMethod 获取当前激活的认证方式
+func (s *AuthService) GetActiveMethod() (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ctx := context.Background()
+
+	am, err := s.db.AuthMethod.Query().
+		Where(authmethod.IsActiveEQ(true)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", nil // 没有激活的认证方式
+		}
+		return "", fmt.Errorf(i18n.T("error.load_auth_failed"))
+	}
+	return am.Method, nil
+}
+
+// SetActiveMethod 设置激活的认证方式
+func (s *AuthService) SetActiveMethod(method string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ctx := context.Background()
+
+	// 验证方法是否有效
+	if method != "password" && method != "totp" && method != "passkey" && method != "biometric" {
+		return fmt.Errorf(i18n.T("error.auth_method_invalid", "Method", method))
+	}
+
+	// 检查该方法是否已配置
+	exists, err := s.db.AuthMethod.Query().
+		Where(authmethod.MethodEQ(method)).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+	}
+	if !exists {
+		return fmt.Errorf(i18n.T("error.auth_method_not_configured", "Method", method))
+	}
+
+	// 取消所有方法的激活状态
+	_, err = s.db.AuthMethod.Update().
+		SetIsActive(false).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+	}
+
+	// 激活指定方法
+	_, err = s.db.AuthMethod.Update().
+		Where(authmethod.MethodEQ(method)).
+		SetIsActive(true).
+		Save(ctx)
+	return err
+}
+
+// GetAvailableMethods 获取已配置的认证方式列表
+func (s *AuthService) GetAvailableMethods() ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ctx := context.Background()
+
+	methods, err := s.db.AuthMethod.Query().
+		Select(authmethod.FieldMethod).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(i18n.T("error.load_auth_failed"))
+	}
+
+	result := make([]string, len(methods))
+	for i, m := range methods {
+		result[i] = m.Method
+	}
+	return result, nil
+}
+
+// Authenticate 统一验证方法
+func (s *AuthService) Authenticate(method, credential string) (bool, error) {
+	switch method {
+	case "password":
+		return s.VerifyPassword(credential), nil
+	case "totp":
+		return s.VerifyTOTP(credential), nil
+	case "passkey":
+		return s.FinishPasskeyLogin(credential)
+	case "biometric":
+		return s.authenticateBiometric(credential), nil
+	default:
+		return false, fmt.Errorf(i18n.T("error.auth_method_invalid", "Method", method))
+	}
 }

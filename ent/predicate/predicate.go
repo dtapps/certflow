@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AuthMethod is the predicate function for authmethod builders.
+type AuthMethod func(*sql.Selector)
+
 // CA is the predicate function for ca builders.
 type CA func(*sql.Selector)
 
@@ -21,8 +24,14 @@ type MonitoredDomain func(*sql.Selector)
 // Notification is the predicate function for notification builders.
 type Notification func(*sql.Selector)
 
+// PasskeyCredential is the predicate function for passkeycredential builders.
+type PasskeyCredential func(*sql.Selector)
+
 // RenewalLog is the predicate function for renewallog builders.
 type RenewalLog func(*sql.Selector)
 
 // ScanResult is the predicate function for scanresult builders.
 type ScanResult func(*sql.Selector)
+
+// TOTPCredential is the predicate function for totpcredential builders.
+type TOTPCredential func(*sql.Selector)

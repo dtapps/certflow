@@ -10,11 +10,43 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as auth$0 from "./internal/auth/models.js";
+
+/**
+ * Authenticate 统一验证方法
+ */
+export function Authenticate(method: string, credential: string): $CancellablePromise<boolean> {
+    return $Call.ByID(761062097, method, credential);
+}
+
 /**
  * ChangePassword 修改密码
  */
 export function ChangePassword(oldPassword: string, newPassword: string): $CancellablePromise<void> {
     return $Call.ByID(3225391533, oldPassword, newPassword);
+}
+
+/**
+ * CheckBiometricSupport 检查设备是否支持生物识别
+ */
+export function CheckBiometricSupport(): $CancellablePromise<boolean> {
+    return $Call.ByID(4032157405);
+}
+
+/**
+ * ClearBiometric 清除生物识别设置
+ */
+export function ClearBiometric(): $CancellablePromise<void> {
+    return $Call.ByID(1987371273);
+}
+
+/**
+ * ClearPasskey 清除 Passkey 设置
+ */
+export function ClearPasskey(): $CancellablePromise<void> {
+    return $Call.ByID(4140499539);
 }
 
 /**
@@ -25,10 +57,73 @@ export function ClearPassword(): $CancellablePromise<void> {
 }
 
 /**
+ * ClearTOTP 清除 TOTP 设置
+ */
+export function ClearTOTP(): $CancellablePromise<void> {
+    return $Call.ByID(232272356);
+}
+
+/**
+ * FinishPasskeyLogin 完成 Passkey 登录
+ */
+export function FinishPasskeyLogin(data: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2267805074, data);
+}
+
+/**
+ * FinishPasskeyRegistration 完成 Passkey 注册
+ */
+export function FinishPasskeyRegistration(data: string): $CancellablePromise<void> {
+    return $Call.ByID(2632846936, data);
+}
+
+/**
+ * GetActiveMethod 获取当前激活的认证方式
+ */
+export function GetActiveMethod(): $CancellablePromise<string> {
+    return $Call.ByID(2330744143);
+}
+
+/**
+ * GetAvailableMethods 获取已配置的认证方式列表
+ */
+export function GetAvailableMethods(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2154735987);
+}
+
+/**
+ * GetBiometricInfo 获取生物识别信息
+ */
+export function GetBiometricInfo(): $CancellablePromise<auth$0.BiometricInfo | null> {
+    return $Call.ByID(2145665186);
+}
+
+/**
+ * GetPasskeyInfo 获取 Passkey 信息
+ */
+export function GetPasskeyInfo(): $CancellablePromise<auth$0.PasskeyInfo | null> {
+    return $Call.ByID(1177881220);
+}
+
+/**
+ * GetTOTPInfo 获取 TOTP 信息
+ */
+export function GetTOTPInfo(): $CancellablePromise<auth$0.TOTPInfo | null> {
+    return $Call.ByID(277771085);
+}
+
+/**
  * IsPasswordSet 检查是否已设置密码
  */
 export function IsPasswordSet(): $CancellablePromise<boolean> {
     return $Call.ByID(1884537699);
+}
+
+/**
+ * SetActiveMethod 设置激活的认证方式
+ */
+export function SetActiveMethod(method: string): $CancellablePromise<void> {
+    return $Call.ByID(1242079179, method);
 }
 
 /**
@@ -39,8 +134,57 @@ export function SetPassword(password: string): $CancellablePromise<void> {
 }
 
 /**
+ * SetupBiometric 设置生物识别认证
+ */
+export function SetupBiometric(): $CancellablePromise<void> {
+    return $Call.ByID(1125719073);
+}
+
+/**
+ * SetupTOTP 生成 TOTP 密钥
+ */
+export function SetupTOTP(): $CancellablePromise<auth$0.TOTPSetupResult | null> {
+    return $Call.ByID(633444892);
+}
+
+/**
+ * StartPasskeyLogin 开始 Passkey 登录
+ */
+export function StartPasskeyLogin(): $CancellablePromise<auth$0.PasskeyAuthenticationResponse | null> {
+    return $Call.ByID(3503471261);
+}
+
+/**
+ * StartPasskeyRegistration 开始 Passkey 注册
+ */
+export function StartPasskeyRegistration(): $CancellablePromise<auth$0.PasskeyRegistrationResponse | null> {
+    return $Call.ByID(2733158049);
+}
+
+/**
+ * VerifyBiometric 验证生物识别
+ */
+export function VerifyBiometric(reason: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3879194729, reason);
+}
+
+/**
  * VerifyPassword 验证密码
  */
 export function VerifyPassword(password: string): $CancellablePromise<boolean> {
     return $Call.ByID(4287357532, password);
+}
+
+/**
+ * VerifyTOTP 验证 TOTP 码
+ */
+export function VerifyTOTP(code: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3374874116, code);
+}
+
+/**
+ * VerifyTOTPSetup 验证 TOTP 设置码
+ */
+export function VerifyTOTPSetup(code: string): $CancellablePromise<void> {
+    return $Call.ByID(2973887441, code);
 }

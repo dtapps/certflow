@@ -1,89 +1,62 @@
 package auth
 
 import (
-	"os"
-	"path/filepath"
+	"context"
 	"testing"
+
+	"cnb.cool/dtapp/certflow/ent"
+	"entgo.io/ent/dialect"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func newTestService(t *testing.T) (*AuthService, string) {
 	t.Helper()
 	dir := t.TempDir()
-	svc, err := NewAuthService(dir)
+
+	// 创建内存数据库用于测试
+	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
 	if err != nil {
-		t.Fatalf("NewAuthService: %v", err)
+		t.Fatalf("ent.Open: %v", err)
 	}
+	t.Cleanup(func() { client.Close() })
+
+	// 运行迁移
+	if err := client.Schema.Create(context.Background()); err != nil {
+		t.Fatalf("Schema.Create: %v", err)
+	}
+
+	svc := NewAuthService(client)
 	return svc, dir
 }
 
 func TestNewAuthService(t *testing.T) {
-	dir := t.TempDir()
-	svc, err := NewAuthService(dir)
+	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
 	if err != nil {
-		t.Fatalf("NewAuthService failed: %v", err)
+		t.Fatalf("ent.Open: %v", err)
 	}
+	t.Cleanup(func() { client.Close() })
+
+	if err := client.Schema.Create(context.Background()); err != nil {
+		t.Fatalf("Schema.Create: %v", err)
+	}
+
+	svc := NewAuthService(client)
 	if svc == nil {
 		t.Fatal("expected non-nil AuthService")
 	}
 	if svc.IsPasswordSet() {
 		t.Fatal("expected no password set initially")
 	}
-
-	// 数据目录应该存在
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Fatal("expected data directory to be created")
-	}
-
-	// auth.json 此时不应存在
-	authFile := filepath.Join(dir, "auth.json")
-	if _, err := os.Stat(authFile); !os.IsNotExist(err) {
-		t.Fatal("expected auth.json to not exist before setting password")
-	}
-}
-
-func TestNewAuthService_LoadsExistingPassword(t *testing.T) {
-	dir := t.TempDir()
-
-	// 创建第一个服务并设置密码
-	svc1, err := NewAuthService(dir)
-	if err != nil {
-		t.Fatalf("NewAuthService: %v", err)
-	}
-	if err := svc1.SetPassword("secret123"); err != nil {
-		t.Fatalf("SetPassword: %v", err)
-	}
-
-	// 从同一目录创建第二个服务 — 应加载已保存的哈希
-	svc2, err := NewAuthService(dir)
-	if err != nil {
-		t.Fatalf("NewAuthService (load): %v", err)
-	}
-	if !svc2.IsPasswordSet() {
-		t.Fatal("expected password to be loaded from file")
-	}
-	if !svc2.VerifyPassword("secret123") {
-		t.Fatal("expected loaded password to verify")
-	}
 }
 
 func TestSetPassword(t *testing.T) {
-	svc, dir := newTestService(t)
+	svc, _ := newTestService(t)
 
 	if err := svc.SetPassword("password123"); err != nil {
 		t.Fatalf("SetPassword: %v", err)
 	}
 	if !svc.IsPasswordSet() {
 		t.Fatal("expected IsPasswordSet to return true after SetPassword")
-	}
-
-	// auth.json 应该已创建且包含哈希值
-	authFile := filepath.Join(dir, "auth.json")
-	data, err := os.ReadFile(authFile)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
-	}
-	if len(data) == 0 {
-		t.Fatal("expected auth.json to have content")
 	}
 }
 
@@ -214,12 +187,17 @@ func TestClearPassword(t *testing.T) {
 }
 
 func TestIsPasswordSet_Persistence(t *testing.T) {
-	dir := t.TempDir()
-
-	svc, err := NewAuthService(dir)
+	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
 	if err != nil {
-		t.Fatalf("NewAuthService: %v", err)
+		t.Fatalf("ent.Open: %v", err)
 	}
+	t.Cleanup(func() { client.Close() })
+
+	if err := client.Schema.Create(context.Background()); err != nil {
+		t.Fatalf("Schema.Create: %v", err)
+	}
+
+	svc := NewAuthService(client)
 
 	if svc.IsPasswordSet() {
 		t.Fatal("expected false before setting")
@@ -237,5 +215,102 @@ func TestIsPasswordSet_Persistence(t *testing.T) {
 	}
 	if svc.IsPasswordSet() {
 		t.Fatal("expected false after clearing")
+	}
+}
+
+func TestGetActiveMethod(t *testing.T) {
+	svc, _ := newTestService(t)
+
+	// 初始状态应该没有激活的方法
+	method, err := svc.GetActiveMethod()
+	if err != nil {
+		t.Fatalf("GetActiveMethod: %v", err)
+	}
+	if method != "" {
+		t.Fatalf("expected empty method, got %s", method)
+	}
+
+	// 设置密码后，密码应该是激活的方法
+	if err := svc.SetPassword("testpass"); err != nil {
+		t.Fatalf("SetPassword: %v", err)
+	}
+
+	method, err = svc.GetActiveMethod()
+	if err != nil {
+		t.Fatalf("GetActiveMethod: %v", err)
+	}
+	if method != "password" {
+		t.Fatalf("expected 'password', got %s", method)
+	}
+}
+
+func TestGetAvailableMethods(t *testing.T) {
+	svc, _ := newTestService(t)
+
+	// 初始状态应该没有可用的方法
+	methods, err := svc.GetAvailableMethods()
+	if err != nil {
+		t.Fatalf("GetAvailableMethods: %v", err)
+	}
+	if len(methods) != 0 {
+		t.Fatalf("expected 0 methods, got %d", len(methods))
+	}
+
+	// 设置密码后，应该有一个可用的方法
+	if err := svc.SetPassword("testpass"); err != nil {
+		t.Fatalf("SetPassword: %v", err)
+	}
+
+	methods, err = svc.GetAvailableMethods()
+	if err != nil {
+		t.Fatalf("GetAvailableMethods: %v", err)
+	}
+	if len(methods) != 1 {
+		t.Fatalf("expected 1 method, got %d", len(methods))
+	}
+	if methods[0] != "password" {
+		t.Fatalf("expected 'password', got %s", methods[0])
+	}
+}
+
+func TestAuthenticate(t *testing.T) {
+	svc, _ := newTestService(t)
+
+	// 未设置密码时，任何密码都应该验证通过
+	result, err := svc.Authenticate("password", "anything")
+	if err != nil {
+		t.Fatalf("Authenticate: %v", err)
+	}
+	if !result {
+		t.Fatal("expected true when no password is set")
+	}
+
+	// 设置密码后
+	if err := svc.SetPassword("testpass"); err != nil {
+		t.Fatalf("SetPassword: %v", err)
+	}
+
+	// 正确密码
+	result, err = svc.Authenticate("password", "testpass")
+	if err != nil {
+		t.Fatalf("Authenticate: %v", err)
+	}
+	if !result {
+		t.Fatal("expected true for correct password")
+	}
+
+	// 错误密码
+	result, err = svc.Authenticate("password", "wrongpass")
+	if err != nil {
+		t.Fatalf("Authenticate: %v", err)
+	}
+	if result {
+		t.Fatal("expected false for wrong password")
+	}
+
+	// 不支持的方法
+	result, err = svc.Authenticate("unsupported", "test")
+	if err == nil {
+		t.Fatal("expected error for unsupported method")
 	}
 }

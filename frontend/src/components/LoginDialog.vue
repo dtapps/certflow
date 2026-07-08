@@ -13,10 +13,15 @@ const emit = defineEmits<{
 }>()
 
 const password = ref('')
+const totpCode = ref('')
 const error = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const inputRef = ref<InstanceType<typeof NInput> | null>(null)
+
+// 认证方式
+const activeMethod = ref('')
+const availableMethods = ref<string[]>([])
 
 const themeStore = useThemeStore()
 const { theme, isDark } = storeToRefs(themeStore)
@@ -53,15 +58,29 @@ const dividerStyle = computed(() => ({
   background: isDark.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
 }))
 
-// 自动聚焦输入框
-onMounted(() => {
-  nextTick(() => {
-    const inputEl = inputRef.value?.$el?.querySelector('input')
-    inputEl?.focus()
-  })
+// 初始化
+onMounted(async () => {
+  // 获取当前激活的认证方式
+  activeMethod.value = await AuthService.GetActiveMethod()
+  availableMethods.value = await AuthService.GetAvailableMethods()
+
+  // 如果没有激活的认证方式，直接进入
+  if (!activeMethod.value) {
+    emit('verified')
+    return
+  }
+
+  // 聚焦输入框（Passkey 不需要）
+  if (activeMethod.value !== 'passkey') {
+    nextTick(() => {
+      const inputEl = inputRef.value?.$el?.querySelector('input')
+      inputEl?.focus()
+    })
+  }
 })
 
-const verify = async () => {
+// 密码登录
+const verifyPassword = async () => {
   error.value = ''
   if (!password.value) {
     error.value = t('login.enterPassword')
@@ -90,6 +109,148 @@ const verify = async () => {
     }
   } catch (e) {
     error.value = t('login.enterPassword')
+  } finally {
+    loading.value = false
+  }
+}
+
+// TOTP 登录
+const verifyTOTP = async () => {
+  error.value = ''
+  if (!totpCode.value || totpCode.value.length !== 6) {
+    error.value = t('login.enterTOTPCode')
+    return
+  }
+
+  loading.value = true
+  try {
+    if (await AuthService.VerifyTOTP(totpCode.value)) {
+      emit('verified')
+    } else {
+      error.value = t('login.totpFailed')
+      totpCode.value = ''
+      nextTick(() => {
+        const el = inputRef.value?.$el?.querySelector('input')
+        el?.focus()
+      })
+    }
+  } catch (e) {
+    error.value = t('login.totpFailed')
+  } finally {
+    loading.value = false
+  }
+}
+
+// Passkey 登录
+// URL-safe base64 编码
+const bufferToBase64url = (buffer: ArrayBuffer) => {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+// URL-safe base64 解码
+const base64urlToBuffer = (base64url: string) => {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+  const binary = atob(padded)
+  const buffer = new ArrayBuffer(binary.length)
+  const bytes = new Uint8Array(buffer)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return buffer
+}
+
+const loginWithPasskey = async () => {
+  loading.value = true
+  error.value = ''
+
+  // 检查 WebAuthn API 是否可用
+  if (!window.PublicKeyCredential) {
+    error.value = t('login.passkeyNotSupported')
+    loading.value = false
+    return
+  }
+
+  try {
+    // 获取后端的认证选项
+    const response = await AuthService.StartPasskeyLogin()
+    const options = JSON.parse(response.credentialRequestOptions)
+
+    // 调用浏览器 WebAuthn API
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge: base64urlToBuffer(options.challenge),
+        timeout: options.timeout || 60000,
+        rpId: options.rpId,
+        allowCredentials: options.allowCredentials?.map((cred: any) => ({
+          id: base64urlToBuffer(cred.id),
+          type: cred.type,
+          transports: cred.transports,
+        })),
+        userVerification: options.userVerification,
+      },
+    })
+
+    if (!credential) {
+      error.value = t('login.passkeyFailed')
+      loading.value = false
+      return
+    }
+
+    // 将凭据数据转换为 JSON 传递给后端验证（使用 URL-safe base64）
+    const passkeyData = JSON.stringify({
+      id: credential.id,
+      rawId: bufferToBase64url(credential.rawId),
+      type: credential.type,
+      response: {
+        authenticatorData: bufferToBase64url((credential.response as any).authenticatorData),
+        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+        signature: bufferToBase64url((credential.response as any).signature),
+      },
+    })
+
+    if (await AuthService.FinishPasskeyLogin(passkeyData)) {
+      emit('verified')
+    } else {
+      error.value = t('login.passkeyFailed')
+    }
+  } catch (e: any) {
+    console.error('Passkey login failed:', e)
+    // 提供更具体的错误信息
+    if (e.name === 'NotAllowedError') {
+      error.value = t('login.passkeyNotAllowed')
+    } else if (e.name === 'SecurityError') {
+      error.value = t('login.passkeySecurityError')
+    } else {
+      error.value = t('login.passkeyFailed')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 生物识别登录
+const loginWithBiometric = async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    // 调用后端生物识别验证
+    const success = await AuthService.VerifyBiometric(t('login.biometricPrompt'))
+
+    if (success) {
+      emit('verified')
+    } else {
+      error.value = t('login.biometricFailed')
+    }
+  } catch (e: any) {
+    console.error('Biometric login failed:', e)
+    error.value = t('login.biometricFailed')
   } finally {
     loading.value = false
   }
@@ -158,8 +319,8 @@ function toggleLocale() {
         <p class="text-sm mt-1" :style="subtitleStyle">{{ t('login.accessPassword') }}</p>
       </div>
 
-      <!-- 密码表单 -->
-      <form @submit.prevent="verify" class="space-y-4">
+      <!-- 密码登录 -->
+      <form v-if="activeMethod === 'password'" @submit.prevent="verifyPassword" class="space-y-4">
         <div>
           <n-input
             ref="inputRef"
@@ -219,6 +380,66 @@ function toggleLocale() {
           {{ t('login.verify') }}
         </n-button>
       </form>
+
+      <!-- TOTP 登录 -->
+      <form v-else-if="activeMethod === 'totp'" @submit.prevent="verifyTOTP" class="space-y-4">
+        <div>
+          <n-input
+            ref="inputRef"
+            v-model:value="totpCode"
+            type="text"
+            :placeholder="t('login.enterTOTPCode')"
+            :disabled="loading"
+            size="large"
+            maxlength="6"
+          />
+          <p v-if="error" class="text-red-500 text-xs mt-2">{{ error }}</p>
+        </div>
+
+        <n-button
+          type="primary"
+          block
+          size="large"
+          :loading="loading"
+          :disabled="loading"
+          attr-type="submit"
+        >
+          {{ t('login.verify') }}
+        </n-button>
+      </form>
+
+      <!-- Passkey 登录 -->
+      <div v-else-if="activeMethod === 'passkey'" class="space-y-4">
+        <p v-if="error" class="text-red-500 text-xs">{{ error }}</p>
+
+        <n-button
+          type="primary"
+          block
+          size="large"
+          :loading="loading"
+          :disabled="loading"
+          @click="loginWithPasskey"
+        >
+          {{ t('login.usePasskey') }}
+        </n-button>
+      </div>
+
+      <!-- 生物识别登录 -->
+      <div v-else-if="activeMethod === 'biometric'" class="space-y-4">
+        <p class="text-sm text-center text-gray-600">{{ t('login.biometricPrompt') }}</p>
+        <p v-if="error" class="text-red-500 text-xs">{{ error }}</p>
+
+        <n-button
+          type="primary"
+          block
+          size="large"
+          :loading="loading"
+          :disabled="loading"
+          @click="loginWithBiometric"
+        >
+          {{ t('login.useBiometric') }}
+        </n-button>
+      </div>
 
       <!-- 主题 & 语言切换 -->
       <div

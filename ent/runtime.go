@@ -5,20 +5,43 @@ package ent
 import (
 	"time"
 
+	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/ent/passkeycredential"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
 	"cnb.cool/dtapp/certflow/ent/scanresult"
 	"cnb.cool/dtapp/certflow/ent/schema"
+	"cnb.cool/dtapp/certflow/ent/totpcredential"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	authmethodFields := schema.AuthMethod{}.Fields()
+	_ = authmethodFields
+	// authmethodDescMethod is the schema descriptor for method field.
+	authmethodDescMethod := authmethodFields[0].Descriptor()
+	// authmethod.MethodValidator is a validator for the "method" field. It is called by the builders before save.
+	authmethod.MethodValidator = authmethodDescMethod.Validators[0].(func(string) error)
+	// authmethodDescIsActive is the schema descriptor for is_active field.
+	authmethodDescIsActive := authmethodFields[1].Descriptor()
+	// authmethod.DefaultIsActive holds the default value on creation for the is_active field.
+	authmethod.DefaultIsActive = authmethodDescIsActive.Default.(bool)
+	// authmethodDescCreatedAt is the schema descriptor for created_at field.
+	authmethodDescCreatedAt := authmethodFields[3].Descriptor()
+	// authmethod.DefaultCreatedAt holds the default value on creation for the created_at field.
+	authmethod.DefaultCreatedAt = authmethodDescCreatedAt.Default.(func() time.Time)
+	// authmethodDescUpdatedAt is the schema descriptor for updated_at field.
+	authmethodDescUpdatedAt := authmethodFields[4].Descriptor()
+	// authmethod.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	authmethod.DefaultUpdatedAt = authmethodDescUpdatedAt.Default.(func() time.Time)
+	// authmethod.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	authmethod.UpdateDefaultUpdatedAt = authmethodDescUpdatedAt.UpdateDefault.(func() time.Time)
 	caFields := schema.CA{}.Fields()
 	_ = caFields
 	// caDescName is the schema descriptor for name field.
@@ -153,6 +176,24 @@ func init() {
 	notificationDescCreatedAt := notificationFields[4].Descriptor()
 	// notification.DefaultCreatedAt holds the default value on creation for the created_at field.
 	notification.DefaultCreatedAt = notificationDescCreatedAt.Default.(func() time.Time)
+	passkeycredentialFields := schema.PasskeyCredential{}.Fields()
+	_ = passkeycredentialFields
+	// passkeycredentialDescCredentialID is the schema descriptor for credential_id field.
+	passkeycredentialDescCredentialID := passkeycredentialFields[0].Descriptor()
+	// passkeycredential.CredentialIDValidator is a validator for the "credential_id" field. It is called by the builders before save.
+	passkeycredential.CredentialIDValidator = passkeycredentialDescCredentialID.Validators[0].(func([]byte) error)
+	// passkeycredentialDescPublicKey is the schema descriptor for public_key field.
+	passkeycredentialDescPublicKey := passkeycredentialFields[1].Descriptor()
+	// passkeycredential.PublicKeyValidator is a validator for the "public_key" field. It is called by the builders before save.
+	passkeycredential.PublicKeyValidator = passkeycredentialDescPublicKey.Validators[0].(func([]byte) error)
+	// passkeycredentialDescSignCount is the schema descriptor for sign_count field.
+	passkeycredentialDescSignCount := passkeycredentialFields[2].Descriptor()
+	// passkeycredential.DefaultSignCount holds the default value on creation for the sign_count field.
+	passkeycredential.DefaultSignCount = passkeycredentialDescSignCount.Default.(uint64)
+	// passkeycredentialDescCreatedAt is the schema descriptor for created_at field.
+	passkeycredentialDescCreatedAt := passkeycredentialFields[7].Descriptor()
+	// passkeycredential.DefaultCreatedAt holds the default value on creation for the created_at field.
+	passkeycredential.DefaultCreatedAt = passkeycredentialDescCreatedAt.Default.(func() time.Time)
 	renewallogFields := schema.RenewalLog{}.Fields()
 	_ = renewallogFields
 	// renewallogDescCreatedAt is the schema descriptor for created_at field.
@@ -189,4 +230,22 @@ func init() {
 	scanresultDescCreatedAt := scanresultFields[17].Descriptor()
 	// scanresult.DefaultCreatedAt holds the default value on creation for the created_at field.
 	scanresult.DefaultCreatedAt = scanresultDescCreatedAt.Default.(func() time.Time)
+	totpcredentialFields := schema.TOTPCredential{}.Fields()
+	_ = totpcredentialFields
+	// totpcredentialDescSecret is the schema descriptor for secret field.
+	totpcredentialDescSecret := totpcredentialFields[0].Descriptor()
+	// totpcredential.SecretValidator is a validator for the "secret" field. It is called by the builders before save.
+	totpcredential.SecretValidator = totpcredentialDescSecret.Validators[0].(func(string) error)
+	// totpcredentialDescIssuer is the schema descriptor for issuer field.
+	totpcredentialDescIssuer := totpcredentialFields[1].Descriptor()
+	// totpcredential.DefaultIssuer holds the default value on creation for the issuer field.
+	totpcredential.DefaultIssuer = totpcredentialDescIssuer.Default.(string)
+	// totpcredentialDescAccountName is the schema descriptor for account_name field.
+	totpcredentialDescAccountName := totpcredentialFields[2].Descriptor()
+	// totpcredential.DefaultAccountName holds the default value on creation for the account_name field.
+	totpcredential.DefaultAccountName = totpcredentialDescAccountName.Default.(string)
+	// totpcredentialDescCreatedAt is the schema descriptor for created_at field.
+	totpcredentialDescCreatedAt := totpcredentialFields[4].Descriptor()
+	// totpcredential.DefaultCreatedAt holds the default value on creation for the created_at field.
+	totpcredential.DefaultCreatedAt = totpcredentialDescCreatedAt.Default.(func() time.Time)
 }

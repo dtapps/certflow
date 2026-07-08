@@ -11,13 +11,16 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent/migrate"
 
+	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/ent/passkeycredential"
 	"cnb.cool/dtapp/certflow/ent/renewallog"
 	"cnb.cool/dtapp/certflow/ent/scanresult"
+	"cnb.cool/dtapp/certflow/ent/totpcredential"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -29,6 +32,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AuthMethod is the client for interacting with the AuthMethod builders.
+	AuthMethod *AuthMethodClient
 	// CA is the client for interacting with the CA builders.
 	CA *CAClient
 	// Certificate is the client for interacting with the Certificate builders.
@@ -39,10 +44,14 @@ type Client struct {
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
 	Notification *NotificationClient
+	// PasskeyCredential is the client for interacting with the PasskeyCredential builders.
+	PasskeyCredential *PasskeyCredentialClient
 	// RenewalLog is the client for interacting with the RenewalLog builders.
 	RenewalLog *RenewalLogClient
 	// ScanResult is the client for interacting with the ScanResult builders.
 	ScanResult *ScanResultClient
+	// TOTPCredential is the client for interacting with the TOTPCredential builders.
+	TOTPCredential *TOTPCredentialClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -54,13 +63,16 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AuthMethod = NewAuthMethodClient(c.config)
 	c.CA = NewCAClient(c.config)
 	c.Certificate = NewCertificateClient(c.config)
 	c.DNSProvider = NewDNSProviderClient(c.config)
 	c.MonitoredDomain = NewMonitoredDomainClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
+	c.PasskeyCredential = NewPasskeyCredentialClient(c.config)
 	c.RenewalLog = NewRenewalLogClient(c.config)
 	c.ScanResult = NewScanResultClient(c.config)
+	c.TOTPCredential = NewTOTPCredentialClient(c.config)
 }
 
 type (
@@ -151,15 +163,18 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		CA:              NewCAClient(cfg),
-		Certificate:     NewCertificateClient(cfg),
-		DNSProvider:     NewDNSProviderClient(cfg),
-		MonitoredDomain: NewMonitoredDomainClient(cfg),
-		Notification:    NewNotificationClient(cfg),
-		RenewalLog:      NewRenewalLogClient(cfg),
-		ScanResult:      NewScanResultClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthMethod:        NewAuthMethodClient(cfg),
+		CA:                NewCAClient(cfg),
+		Certificate:       NewCertificateClient(cfg),
+		DNSProvider:       NewDNSProviderClient(cfg),
+		MonitoredDomain:   NewMonitoredDomainClient(cfg),
+		Notification:      NewNotificationClient(cfg),
+		PasskeyCredential: NewPasskeyCredentialClient(cfg),
+		RenewalLog:        NewRenewalLogClient(cfg),
+		ScanResult:        NewScanResultClient(cfg),
+		TOTPCredential:    NewTOTPCredentialClient(cfg),
 	}, nil
 }
 
@@ -177,22 +192,25 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		CA:              NewCAClient(cfg),
-		Certificate:     NewCertificateClient(cfg),
-		DNSProvider:     NewDNSProviderClient(cfg),
-		MonitoredDomain: NewMonitoredDomainClient(cfg),
-		Notification:    NewNotificationClient(cfg),
-		RenewalLog:      NewRenewalLogClient(cfg),
-		ScanResult:      NewScanResultClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthMethod:        NewAuthMethodClient(cfg),
+		CA:                NewCAClient(cfg),
+		Certificate:       NewCertificateClient(cfg),
+		DNSProvider:       NewDNSProviderClient(cfg),
+		MonitoredDomain:   NewMonitoredDomainClient(cfg),
+		Notification:      NewNotificationClient(cfg),
+		PasskeyCredential: NewPasskeyCredentialClient(cfg),
+		RenewalLog:        NewRenewalLogClient(cfg),
+		ScanResult:        NewScanResultClient(cfg),
+		TOTPCredential:    NewTOTPCredentialClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		CA.
+//		AuthMethod.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -215,8 +233,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain, c.Notification,
-		c.RenewalLog, c.ScanResult,
+		c.AuthMethod, c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain,
+		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
+		c.TOTPCredential,
 	} {
 		n.Use(hooks...)
 	}
@@ -226,8 +245,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain, c.Notification,
-		c.RenewalLog, c.ScanResult,
+		c.AuthMethod, c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain,
+		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
+		c.TOTPCredential,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -236,6 +256,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AuthMethodMutation:
+		return c.AuthMethod.mutate(ctx, m)
 	case *CAMutation:
 		return c.CA.mutate(ctx, m)
 	case *CertificateMutation:
@@ -246,12 +268,181 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MonitoredDomain.mutate(ctx, m)
 	case *NotificationMutation:
 		return c.Notification.mutate(ctx, m)
+	case *PasskeyCredentialMutation:
+		return c.PasskeyCredential.mutate(ctx, m)
 	case *RenewalLogMutation:
 		return c.RenewalLog.mutate(ctx, m)
 	case *ScanResultMutation:
 		return c.ScanResult.mutate(ctx, m)
+	case *TOTPCredentialMutation:
+		return c.TOTPCredential.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AuthMethodClient is a client for the AuthMethod schema.
+type AuthMethodClient struct {
+	config
+}
+
+// NewAuthMethodClient returns a client for the AuthMethod from the given config.
+func NewAuthMethodClient(c config) *AuthMethodClient {
+	return &AuthMethodClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `authmethod.Hooks(f(g(h())))`.
+func (c *AuthMethodClient) Use(hooks ...Hook) {
+	c.hooks.AuthMethod = append(c.hooks.AuthMethod, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `authmethod.Intercept(f(g(h())))`.
+func (c *AuthMethodClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AuthMethod = append(c.inters.AuthMethod, interceptors...)
+}
+
+// Create returns a builder for creating a AuthMethod entity.
+func (c *AuthMethodClient) Create() *AuthMethodCreate {
+	mutation := newAuthMethodMutation(c.config, OpCreate)
+	return &AuthMethodCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AuthMethod entities.
+func (c *AuthMethodClient) CreateBulk(builders ...*AuthMethodCreate) *AuthMethodCreateBulk {
+	return &AuthMethodCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AuthMethodClient) MapCreateBulk(slice any, setFunc func(*AuthMethodCreate, int)) *AuthMethodCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AuthMethodCreateBulk{err: fmt.Errorf("calling to AuthMethodClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AuthMethodCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AuthMethodCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AuthMethod.
+func (c *AuthMethodClient) Update() *AuthMethodUpdate {
+	mutation := newAuthMethodMutation(c.config, OpUpdate)
+	return &AuthMethodUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AuthMethodClient) UpdateOne(_m *AuthMethod) *AuthMethodUpdateOne {
+	mutation := newAuthMethodMutation(c.config, OpUpdateOne, withAuthMethod(_m))
+	return &AuthMethodUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AuthMethodClient) UpdateOneID(id int) *AuthMethodUpdateOne {
+	mutation := newAuthMethodMutation(c.config, OpUpdateOne, withAuthMethodID(id))
+	return &AuthMethodUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AuthMethod.
+func (c *AuthMethodClient) Delete() *AuthMethodDelete {
+	mutation := newAuthMethodMutation(c.config, OpDelete)
+	return &AuthMethodDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AuthMethodClient) DeleteOne(_m *AuthMethod) *AuthMethodDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AuthMethodClient) DeleteOneID(id int) *AuthMethodDeleteOne {
+	builder := c.Delete().Where(authmethod.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AuthMethodDeleteOne{builder}
+}
+
+// Query returns a query builder for AuthMethod.
+func (c *AuthMethodClient) Query() *AuthMethodQuery {
+	return &AuthMethodQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAuthMethod},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AuthMethod entity by its id.
+func (c *AuthMethodClient) Get(ctx context.Context, id int) (*AuthMethod, error) {
+	return c.Query().Where(authmethod.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AuthMethodClient) GetX(ctx context.Context, id int) *AuthMethod {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTotpCredentials queries the totp_credentials edge of a AuthMethod.
+func (c *AuthMethodClient) QueryTotpCredentials(_m *AuthMethod) *TOTPCredentialQuery {
+	query := (&TOTPCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(authmethod.Table, authmethod.FieldID, id),
+			sqlgraph.To(totpcredential.Table, totpcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, authmethod.TotpCredentialsTable, authmethod.TotpCredentialsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPasskeyCredentials queries the passkey_credentials edge of a AuthMethod.
+func (c *AuthMethodClient) QueryPasskeyCredentials(_m *AuthMethod) *PasskeyCredentialQuery {
+	query := (&PasskeyCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(authmethod.Table, authmethod.FieldID, id),
+			sqlgraph.To(passkeycredential.Table, passkeycredential.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, authmethod.PasskeyCredentialsTable, authmethod.PasskeyCredentialsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AuthMethodClient) Hooks() []Hook {
+	return c.hooks.AuthMethod
+}
+
+// Interceptors returns the client interceptors.
+func (c *AuthMethodClient) Interceptors() []Interceptor {
+	return c.inters.AuthMethod
+}
+
+func (c *AuthMethodClient) mutate(ctx context.Context, m *AuthMethodMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AuthMethodCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AuthMethodUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AuthMethodUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AuthMethodDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AuthMethod mutation op: %q", m.Op())
 	}
 }
 
@@ -1000,6 +1191,155 @@ func (c *NotificationClient) mutate(ctx context.Context, m *NotificationMutation
 	}
 }
 
+// PasskeyCredentialClient is a client for the PasskeyCredential schema.
+type PasskeyCredentialClient struct {
+	config
+}
+
+// NewPasskeyCredentialClient returns a client for the PasskeyCredential from the given config.
+func NewPasskeyCredentialClient(c config) *PasskeyCredentialClient {
+	return &PasskeyCredentialClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `passkeycredential.Hooks(f(g(h())))`.
+func (c *PasskeyCredentialClient) Use(hooks ...Hook) {
+	c.hooks.PasskeyCredential = append(c.hooks.PasskeyCredential, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `passkeycredential.Intercept(f(g(h())))`.
+func (c *PasskeyCredentialClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PasskeyCredential = append(c.inters.PasskeyCredential, interceptors...)
+}
+
+// Create returns a builder for creating a PasskeyCredential entity.
+func (c *PasskeyCredentialClient) Create() *PasskeyCredentialCreate {
+	mutation := newPasskeyCredentialMutation(c.config, OpCreate)
+	return &PasskeyCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PasskeyCredential entities.
+func (c *PasskeyCredentialClient) CreateBulk(builders ...*PasskeyCredentialCreate) *PasskeyCredentialCreateBulk {
+	return &PasskeyCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PasskeyCredentialClient) MapCreateBulk(slice any, setFunc func(*PasskeyCredentialCreate, int)) *PasskeyCredentialCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PasskeyCredentialCreateBulk{err: fmt.Errorf("calling to PasskeyCredentialClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PasskeyCredentialCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PasskeyCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PasskeyCredential.
+func (c *PasskeyCredentialClient) Update() *PasskeyCredentialUpdate {
+	mutation := newPasskeyCredentialMutation(c.config, OpUpdate)
+	return &PasskeyCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PasskeyCredentialClient) UpdateOne(_m *PasskeyCredential) *PasskeyCredentialUpdateOne {
+	mutation := newPasskeyCredentialMutation(c.config, OpUpdateOne, withPasskeyCredential(_m))
+	return &PasskeyCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PasskeyCredentialClient) UpdateOneID(id int) *PasskeyCredentialUpdateOne {
+	mutation := newPasskeyCredentialMutation(c.config, OpUpdateOne, withPasskeyCredentialID(id))
+	return &PasskeyCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PasskeyCredential.
+func (c *PasskeyCredentialClient) Delete() *PasskeyCredentialDelete {
+	mutation := newPasskeyCredentialMutation(c.config, OpDelete)
+	return &PasskeyCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PasskeyCredentialClient) DeleteOne(_m *PasskeyCredential) *PasskeyCredentialDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PasskeyCredentialClient) DeleteOneID(id int) *PasskeyCredentialDeleteOne {
+	builder := c.Delete().Where(passkeycredential.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PasskeyCredentialDeleteOne{builder}
+}
+
+// Query returns a query builder for PasskeyCredential.
+func (c *PasskeyCredentialClient) Query() *PasskeyCredentialQuery {
+	return &PasskeyCredentialQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePasskeyCredential},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PasskeyCredential entity by its id.
+func (c *PasskeyCredentialClient) Get(ctx context.Context, id int) (*PasskeyCredential, error) {
+	return c.Query().Where(passkeycredential.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PasskeyCredentialClient) GetX(ctx context.Context, id int) *PasskeyCredential {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAuthMethod queries the auth_method edge of a PasskeyCredential.
+func (c *PasskeyCredentialClient) QueryAuthMethod(_m *PasskeyCredential) *AuthMethodQuery {
+	query := (&AuthMethodClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(passkeycredential.Table, passkeycredential.FieldID, id),
+			sqlgraph.To(authmethod.Table, authmethod.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, passkeycredential.AuthMethodTable, passkeycredential.AuthMethodColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PasskeyCredentialClient) Hooks() []Hook {
+	return c.hooks.PasskeyCredential
+}
+
+// Interceptors returns the client interceptors.
+func (c *PasskeyCredentialClient) Interceptors() []Interceptor {
+	return c.inters.PasskeyCredential
+}
+
+func (c *PasskeyCredentialClient) mutate(ctx context.Context, m *PasskeyCredentialMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PasskeyCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PasskeyCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PasskeyCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PasskeyCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PasskeyCredential mutation op: %q", m.Op())
+	}
+}
+
 // RenewalLogClient is a client for the RenewalLog schema.
 type RenewalLogClient struct {
 	config
@@ -1282,14 +1622,163 @@ func (c *ScanResultClient) mutate(ctx context.Context, m *ScanResultMutation) (V
 	}
 }
 
+// TOTPCredentialClient is a client for the TOTPCredential schema.
+type TOTPCredentialClient struct {
+	config
+}
+
+// NewTOTPCredentialClient returns a client for the TOTPCredential from the given config.
+func NewTOTPCredentialClient(c config) *TOTPCredentialClient {
+	return &TOTPCredentialClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `totpcredential.Hooks(f(g(h())))`.
+func (c *TOTPCredentialClient) Use(hooks ...Hook) {
+	c.hooks.TOTPCredential = append(c.hooks.TOTPCredential, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `totpcredential.Intercept(f(g(h())))`.
+func (c *TOTPCredentialClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TOTPCredential = append(c.inters.TOTPCredential, interceptors...)
+}
+
+// Create returns a builder for creating a TOTPCredential entity.
+func (c *TOTPCredentialClient) Create() *TOTPCredentialCreate {
+	mutation := newTOTPCredentialMutation(c.config, OpCreate)
+	return &TOTPCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TOTPCredential entities.
+func (c *TOTPCredentialClient) CreateBulk(builders ...*TOTPCredentialCreate) *TOTPCredentialCreateBulk {
+	return &TOTPCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TOTPCredentialClient) MapCreateBulk(slice any, setFunc func(*TOTPCredentialCreate, int)) *TOTPCredentialCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TOTPCredentialCreateBulk{err: fmt.Errorf("calling to TOTPCredentialClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TOTPCredentialCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TOTPCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TOTPCredential.
+func (c *TOTPCredentialClient) Update() *TOTPCredentialUpdate {
+	mutation := newTOTPCredentialMutation(c.config, OpUpdate)
+	return &TOTPCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TOTPCredentialClient) UpdateOne(_m *TOTPCredential) *TOTPCredentialUpdateOne {
+	mutation := newTOTPCredentialMutation(c.config, OpUpdateOne, withTOTPCredential(_m))
+	return &TOTPCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TOTPCredentialClient) UpdateOneID(id int) *TOTPCredentialUpdateOne {
+	mutation := newTOTPCredentialMutation(c.config, OpUpdateOne, withTOTPCredentialID(id))
+	return &TOTPCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TOTPCredential.
+func (c *TOTPCredentialClient) Delete() *TOTPCredentialDelete {
+	mutation := newTOTPCredentialMutation(c.config, OpDelete)
+	return &TOTPCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TOTPCredentialClient) DeleteOne(_m *TOTPCredential) *TOTPCredentialDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TOTPCredentialClient) DeleteOneID(id int) *TOTPCredentialDeleteOne {
+	builder := c.Delete().Where(totpcredential.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TOTPCredentialDeleteOne{builder}
+}
+
+// Query returns a query builder for TOTPCredential.
+func (c *TOTPCredentialClient) Query() *TOTPCredentialQuery {
+	return &TOTPCredentialQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTOTPCredential},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TOTPCredential entity by its id.
+func (c *TOTPCredentialClient) Get(ctx context.Context, id int) (*TOTPCredential, error) {
+	return c.Query().Where(totpcredential.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TOTPCredentialClient) GetX(ctx context.Context, id int) *TOTPCredential {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAuthMethod queries the auth_method edge of a TOTPCredential.
+func (c *TOTPCredentialClient) QueryAuthMethod(_m *TOTPCredential) *AuthMethodQuery {
+	query := (&AuthMethodClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(totpcredential.Table, totpcredential.FieldID, id),
+			sqlgraph.To(authmethod.Table, authmethod.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, totpcredential.AuthMethodTable, totpcredential.AuthMethodColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TOTPCredentialClient) Hooks() []Hook {
+	return c.hooks.TOTPCredential
+}
+
+// Interceptors returns the client interceptors.
+func (c *TOTPCredentialClient) Interceptors() []Interceptor {
+	return c.inters.TOTPCredential
+}
+
+func (c *TOTPCredentialClient) mutate(ctx context.Context, m *TOTPCredentialMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TOTPCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TOTPCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TOTPCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TOTPCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TOTPCredential mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		CA, Certificate, DNSProvider, MonitoredDomain, Notification, RenewalLog,
-		ScanResult []ent.Hook
+		AuthMethod, CA, Certificate, DNSProvider, MonitoredDomain, Notification,
+		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Hook
 	}
 	inters struct {
-		CA, Certificate, DNSProvider, MonitoredDomain, Notification, RenewalLog,
-		ScanResult []ent.Interceptor
+		AuthMethod, CA, Certificate, DNSProvider, MonitoredDomain, Notification,
+		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Interceptor
 	}
 )
