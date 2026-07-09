@@ -11,6 +11,7 @@ import {
   ClearAllNotifications,
 } from '../../bindings/cnb.cool/dtapp/certflow/notificationservicewrapper'
 import * as $models from '../../bindings/cnb.cool/dtapp/certflow/models'
+import { EventNotification } from '../utils/events'
 
 export interface NotificationItem {
   id: number
@@ -62,7 +63,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   function setupEventListener() {
     if (eventListenerRegistered) return
     eventListenerRegistered = true
-    Events.On('notification', () => {
+    Events.On(EventNotification, (ev) => {
+      console.log(t('event.received').replace('{name}', EventNotification).replace('{data}', JSON.stringify(ev.data)))
       refreshList()
       refreshUnread()
     })

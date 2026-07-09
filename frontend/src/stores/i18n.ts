@@ -668,6 +668,7 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'scan.statusExpired': '已过期',
     'scan.statusValid': '有效',
     'scan.noMatch': '无匹配的扫描记录',
+    'event.received': '[事件] {name} 参数: {data}',
   },
   'en-US': {
     'settings.title': 'Settings',
@@ -1335,6 +1336,7 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'scan.statusExpired': 'Expired',
     'scan.statusValid': 'Valid',
     'scan.noMatch': 'No matching scan records',
+    'event.received': '[Event] {name} data: {data}',
   },
 }
 

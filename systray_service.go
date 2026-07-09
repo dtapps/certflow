@@ -4,10 +4,11 @@ import (
 	"context"
 	_ "embed"
 
+	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
+	wailsEvents "github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed build/tray.png
@@ -53,46 +54,57 @@ func (s *SysTrayService) Init() {
 
 	// 创建右键菜单
 	menu := s.app.Menu.New()
-	menu.Add(i18n.T("systray.settings")).OnClick(func(ctx *application.Context) {
-		// 显示窗口
-		s.ShowWindow()
-		// 通知前端导航到设置页面
-		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/settings"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
-	menu.Add(i18n.T("systray.checkUpdate")).OnClick(func(ctx *application.Context) {
-		// 显示窗口
-		s.ShowWindow()
-		go func() {
-			if err := s.app.Updater.CheckAndInstall(context.Background()); err != nil {
-				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
-			} else {
-				logging.Info("%s", i18n.T("log.updater_check_done"))
+	menu.Add(i18n.T("systray.settings")).
+		OnClick(func(ctx *application.Context) {
+			// 显示窗口
+			s.ShowWindow()
+			// 通知前端导航到设置页面
+			if ok := s.app.Event.Emit(events.EventNavigate, events.NavigatePayload{
+				Path: "/settings",
+			}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
 			}
-		}()
-	})
+		})
+	menu.Add(i18n.T("systray.checkUpdate")).
+		OnClick(func(ctx *application.Context) {
+			// 显示窗口
+			s.ShowWindow()
+			go func() {
+				if err := s.app.Updater.CheckAndInstall(context.Background()); err != nil {
+					logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
+				} else {
+					logging.Info("%s", i18n.T("log.updater_check_done"))
+				}
+			}()
+		})
 	menu.AddSeparator()
-	menu.Add(i18n.T("systray.applyCert")).OnClick(func(ctx *application.Context) {
-		// 显示窗口
-		s.ShowWindow()
-		// 通知前端导航到申请证书页面
-		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/certificates/apply"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
-	menu.Add(i18n.T("systray.scan")).OnClick(func(ctx *application.Context) {
-		// 显示窗口
-		s.ShowWindow()
-		// 通知前端导航到证书扫描页面
-		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/scan"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
+	menu.Add(i18n.T("systray.applyCert")).
+		OnClick(func(ctx *application.Context) {
+			// 显示窗口
+			s.ShowWindow()
+			// 通知前端导航到申请证书页面
+			if ok := s.app.Event.Emit(events.EventNavigate, events.NavigatePayload{
+				Path: "/certificates/apply",
+			}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
+			}
+		})
+	menu.Add(i18n.T("systray.scan")).
+		OnClick(func(ctx *application.Context) {
+			// 显示窗口
+			s.ShowWindow()
+			// 通知前端导航到证书扫描页面
+			if ok := s.app.Event.Emit(events.EventNavigate, events.NavigatePayload{
+				Path: "/scan",
+			}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
+			}
+		})
 	menu.AddSeparator()
-	menu.Add(i18n.T("systray.quit")).OnClick(func(ctx *application.Context) {
-		s.app.Quit()
-	})
+	menu.Add(i18n.T("systray.quit")).
+		OnClick(func(ctx *application.Context) {
+			s.app.Quit()
+		})
 	s.systemTray.SetMenu(menu)
 
 	// 关联窗口 - 用于定位
@@ -104,7 +116,7 @@ func (s *SysTrayService) Init() {
 	})
 
 	// 窗口关闭时隐藏到托盘而不是退出
-	s.mainWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+	s.mainWindow.RegisterHook(wailsEvents.Common.WindowClosing, func(e *application.WindowEvent) {
 		s.mainWindow.Hide()
 		e.Cancel()
 	})

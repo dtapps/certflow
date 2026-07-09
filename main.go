@@ -17,6 +17,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/db"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
@@ -25,7 +26,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/scheduler"
 	"cnb.cool/dtapp/certflow/internal/settings"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
+	wailsEvents "github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
@@ -45,12 +46,12 @@ var gitCommit = ""
 var githubToken = ""
 
 func init() {
-	application.RegisterEvent[string]("time")
-	application.RegisterEvent[map[string]string]("notification")
-	application.RegisterEvent[map[string]string]("auth_verified")
-	application.RegisterEvent[map[string]string]("theme_changed_sync")
-	application.RegisterEvent[map[string]string]("locale_changed_sync")
-	application.RegisterEvent[map[string]string]("navigate")
+	application.RegisterEvent[events.TimePayload](events.EventTime)
+	application.RegisterEvent[events.NotificationPayload](events.EventNotification)
+	application.RegisterEvent[struct{}](events.EventAuthVerified)
+	application.RegisterEvent[events.ThemeChangedPayload](events.EventThemeChanged)
+	application.RegisterEvent[events.LocaleChangedPayload](events.EventLocaleChanged)
+	application.RegisterEvent[events.NavigatePayload](events.EventNavigate)
 }
 
 func main() {
@@ -168,8 +169,8 @@ func main() {
 	gh, err := github.New(github.Config{
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
-		ChecksumAsset: "SHA256SUMS",
 		Prerelease:    settingsService.Get().Prerelease,
+		ChecksumAsset: "SHA256SUMS",
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -180,7 +181,8 @@ func main() {
 			PublicKey:      updaterPublicKey,
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
-					Title: i18n.T("updater.title"), AlwaysOnTop: true,
+					Title:       i18n.T("updater.title"),
+					AlwaysOnTop: true,
 				},
 			},
 		}); err != nil {
@@ -205,7 +207,7 @@ func main() {
 		URL:              "/",
 		Frameless:        false,
 	})
-	mainWindow.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
+	mainWindow.OnWindowEvent(wailsEvents.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
 		mainWindow.Show()
 		mainWindow.Focus()
 	})
@@ -220,53 +222,63 @@ func main() {
 	// 创建应用菜单（含检查更新和设置）
 	appMenu := app.Menu.New()
 	appSubmenu := appMenu.AddSubmenu(i18n.T("menu.app"))
-	appSubmenu.Add(i18n.T("menu.settings")).OnClick(func(ctx *application.Context) {
-		// 通知前端导航到设置页面
-		if ok := app.Event.Emit("navigate", map[string]string{"path": "/settings"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
-	appSubmenu.Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
-		go func() {
-			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
-				logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
-			} else {
-				logging.Info("%s", i18n.T("log.updater_check_done"))
+	appSubmenu.Add(i18n.T("menu.settings")).
+		OnClick(func(ctx *application.Context) {
+			// 通知前端导航到设置页面
+			if ok := app.Event.Emit(events.EventNavigate, events.NavigatePayload{
+				Path: "/settings",
+			}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
 			}
-		}()
-	})
+		})
+	appSubmenu.Add(i18n.T("menu.checkUpdate")).
+		OnClick(func(ctx *application.Context) {
+			go func() {
+				if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
+					logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
+				} else {
+					logging.Info("%s", i18n.T("log.updater_check_done"))
+				}
+			}()
+		})
 	appSubmenu.AddSeparator()
-	appSubmenu.Add(i18n.T("systray.applyCert")).OnClick(func(ctx *application.Context) {
-		// 通知前端导航到申请证书页面
-		if ok := app.Event.Emit("navigate", map[string]string{"path": "/certificates/apply"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
-	appSubmenu.Add(i18n.T("systray.scan")).OnClick(func(ctx *application.Context) {
-		// 通知前端导航到证书扫描页面
-		if ok := app.Event.Emit("navigate", map[string]string{"path": "/scan"}); !ok {
-			logging.Warn("%s", i18n.T("error.navigate_failed"))
-		}
-	})
+	appSubmenu.Add(i18n.T("systray.applyCert")).
+		OnClick(func(ctx *application.Context) {
+			// 通知前端导航到申请证书页面
+			if ok := app.Event.Emit(events.EventNavigate, events.NavigatePayload{
+				Path: "/certificates/apply",
+			}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
+			}
+		})
+	appSubmenu.Add(i18n.T("systray.scan")).
+		OnClick(func(ctx *application.Context) {
+			// 通知前端导航到证书扫描页面
+			if ok := app.Event.Emit(events.EventNavigate, events.NavigatePayload{Path: "/scan"}); !ok {
+				logging.Warn("%s", i18n.T("error.navigate_failed"))
+			}
+		})
 	appSubmenu.AddSeparator()
-	appSubmenu.Add(i18n.T("systray.quit")).OnClick(func(ctx *application.Context) {
-		app.Quit()
-	})
+	appSubmenu.Add(i18n.T("systray.quit")).
+		OnClick(func(ctx *application.Context) {
+			app.Quit()
+		})
 
 	helpSubmenu := appMenu.AddSubmenu(i18n.T("menu.help"))
-	helpSubmenu.Add(i18n.T("menu.about")).OnClick(func(ctx *application.Context) {
-		aboutMsg := fmt.Sprintf("CertFlow\n\n%s: %s", i18n.T("settings.about.version"), currentVersion)
-		if buildTime != "" {
-			aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.buildTime"), buildTime)
-		}
-		if gitCommit != "" {
-			aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.gitCommit"), gitCommit)
-		}
-		app.Dialog.Info().
-			SetTitle(i18n.T("menu.about")).
-			SetMessage(aboutMsg).
-			Show()
-	})
+	helpSubmenu.Add(i18n.T("menu.about")).
+		OnClick(func(ctx *application.Context) {
+			aboutMsg := fmt.Sprintf("CertFlow\n\n%s: %s", i18n.T("settings.about.version"), currentVersion)
+			if buildTime != "" {
+				aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.buildTime"), buildTime)
+			}
+			if gitCommit != "" {
+				aboutMsg += fmt.Sprintf("\n%s: %s", i18n.T("settings.about.gitCommit"), gitCommit)
+			}
+			app.Dialog.Info().
+				SetTitle(i18n.T("menu.about")).
+				SetMessage(aboutMsg).
+				Show()
+		})
 	app.Menu.SetApplicationMenu(appMenu)
 
 	// 启动域名监控后台任务
@@ -299,9 +311,10 @@ func main() {
 	})
 
 	// 监听系统主题变化，通知前端
-	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(event *application.ApplicationEvent) {
-		isDark := app.Env.IsDarkMode()
-		if ok := app.Event.Emit("theme_changed", map[string]bool{"dark": isDark}); !ok {
+	app.Event.OnApplicationEvent(wailsEvents.Common.ThemeChanged, func(event *application.ApplicationEvent) {
+		if ok := app.Event.Emit(events.EventThemeChanged, events.ThemeChangedPayload{
+			Dark: app.Env.IsDarkMode(),
+		}); !ok {
 			logging.Warn("%s", i18n.T("error.theme_notify_failed"))
 		}
 	})
@@ -335,10 +348,10 @@ func checkUpdateOnStart(app *application.App) {
 			return // 没有更新
 		}
 		// 发送桌面通知
-		if ok := app.Event.Emit("notification", map[string]string{
-			"title":    i18n.T("notification.update_available_title"),
-			"subtitle": i18n.T("notification.update_available_subtitle", "version", rel.Version),
-			"category": "system",
+		if ok := app.Event.Emit(events.EventNotification, events.NotificationPayload{
+			Title:    i18n.T("notification.update_available_title"),
+			Subtitle: i18n.T("notification.update_available_subtitle", "version", rel.Version),
+			Category: "system",
 		}); !ok {
 			logging.Warn("%s", i18n.T("error.notification_failed"))
 		}

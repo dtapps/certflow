@@ -5,15 +5,19 @@
 // @ts-ignore: Unused imports
 import type { Events } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as events$0 from "../../../../../cnb.cool/dtapp/certflow/internal/events/models.js";
+
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "auth_verified": { [_ in string]?: string } | null;
-            "locale_changed_sync": { [_ in string]?: string } | null;
-            "navigate": { [_ in string]?: string } | null;
-            "notification": { [_ in string]?: string } | null;
-            "theme_changed_sync": { [_ in string]?: string } | null;
-            "time": string;
+            "auth_verified": {};
+            "locale_changed": events$0.LocaleChangedPayload;
+            "navigate": events$0.NavigatePayload;
+            "notification": events$0.NotificationPayload;
+            "theme_changed": events$0.ThemeChangedPayload;
+            "time": events$0.TimePayload;
         }
     }
 }

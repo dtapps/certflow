@@ -9,6 +9,8 @@ import TopBar from './components/TopBar.vue'
 import LoginDialog from './components/LoginDialog.vue'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
 import { useThemeStore } from './stores/theme'
+import { useI18nStore } from './stores/i18n'
+import { EventAuthVerified, EventNavigate } from './utils/events'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +18,7 @@ const sidebarOpen = ref(true)
 const isAuthenticated = ref(true)
 const themeStore = useThemeStore()
 const { isDark, naiveTheme, naiveThemeOverrides } = storeToRefs(themeStore)
+const { t } = useI18nStore()
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
@@ -40,14 +43,16 @@ onMounted(async () => {
 })
 
 // 监听其他窗口的认证状态同步
-Events.On('auth_verified', () => {
+Events.On(EventAuthVerified, (ev) => {
+  console.log(t('event.received').replace('{name}', EventAuthVerified).replace('{data}', JSON.stringify(ev.data)))
   isAuthenticated.value = true
 })
 
 // 监听菜单导航事件
-Events.On('navigate', (ev: any) => {
-  const data = ev.data
-  if (data && data.path) {
+Events.On(EventNavigate, (ev) => {
+  const data = ev.data as { path: string } | undefined
+  console.log(t('event.received').replace('{name}', EventNavigate).replace('{data}', JSON.stringify(data)))
+  if (data?.path) {
     router.push(data.path)
   }
 })
