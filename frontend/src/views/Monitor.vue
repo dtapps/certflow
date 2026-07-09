@@ -198,6 +198,32 @@ const toggleExpand = (id: number) => {
   expandedId.value = expandedId.value === id ? null : id
 }
 
+const searchQuery = ref('')
+const statusFilter = ref('all')
+
+const statusOptions = computed(() => [
+  { label: t('monitor.allStatus'), value: 'all' },
+  { label: t('monitor.statusOk'), value: 'ok' },
+  { label: t('monitor.statusWarning'), value: 'warning' },
+  { label: t('monitor.statusError'), value: 'error' },
+  { label: t('monitor.statusExpired'), value: 'expired' },
+])
+
+const filteredDomains = computed(() => {
+  let list = domains.value
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter((item) => item.domain.toLowerCase().includes(q))
+  }
+
+  if (statusFilter.value !== 'all') {
+    list = list.filter((item) => item.status === statusFilter.value)
+  }
+
+  return list
+})
+
 const totalCount = computed(() => domains.value.length)
 const okCount = computed(() => domains.value.filter((d) => d.status === 'ok').length)
 const warnCount = computed(
@@ -259,100 +285,58 @@ const checkTypeOptions = [
           </template>
         </n-empty>
 
-        <div v-else class="space-y-3">
-          <div
-            v-for="item in domains"
-            :key="item.id"
-            class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors cursor-pointer"
-            @click="toggleExpand(item.id)"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center"
-                  :class="
-                    item.status === 'ok'
-                      ? 'bg-green-50 dark:bg-green-900/30'
-                      : item.status === 'warning'
-                        ? 'bg-yellow-50 dark:bg-yellow-900/30'
-                        : item.status === 'error' || item.status === 'expired'
-                          ? 'bg-red-50 dark:bg-red-900/30'
-                          : 'bg-neutral-100 dark:bg-neutral-800'
-                  "
-                >
-                  <svg
-                    class="w-5 h-5"
+        <template v-else>
+          <!-- 搜索和状态筛选 -->
+          <div class="flex items-center gap-3 mb-3">
+            <n-input
+              v-model:value="searchQuery"
+              :placeholder="t('monitor.searchPlaceholder')"
+              size="small"
+              clearable
+              class="flex-1"
+            />
+            <n-select
+              v-model:value="statusFilter"
+              :options="statusOptions"
+              size="small"
+              style="width: 130px"
+            />
+          </div>
+
+          <n-empty v-if="filteredDomains.length === 0" :description="t('monitor.noMatch')" />
+
+          <div v-else class="space-y-3">
+            <div
+              v-for="item in filteredDomains"
+              :key="item.id"
+              class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors cursor-pointer"
+              @click="toggleExpand(item.id)"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-lg flex items-center justify-center"
                     :class="
-                      getStatusColor(item.status) === 'success'
-                        ? 'text-green-500'
-                        : getStatusColor(item.status) === 'warning'
-                          ? 'text-yellow-500'
-                          : getStatusColor(item.status) === 'error'
-                            ? 'text-red-500'
-                            : 'text-neutral-500'
+                      item.status === 'ok'
+                        ? 'bg-green-50 dark:bg-green-900/30'
+                        : item.status === 'warning'
+                          ? 'bg-yellow-50 dark:bg-yellow-900/30'
+                          : item.status === 'error' || item.status === 'expired'
+                            ? 'bg-red-50 dark:bg-red-900/30'
+                            : 'bg-neutral-100 dark:bg-neutral-800'
                     "
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <p class="font-medium">{{ item.domain }}</p>
-                    <n-tag :type="getStatusBadge(item.status)" size="small" :bordered="false">{{
-                      getStatusLabel(item.status)
-                    }}</n-tag>
-                    <n-tag v-if="!item.enabled" size="tiny" :bordered="false">OFF</n-tag>
-                  </div>
-                  <div class="flex items-center gap-4 text-xs mt-1 opacity-50">
-                    <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
-                    <span v-if="item.check_interval">{{ item.check_interval }}s</span>
-                    <span v-if="item.last_check_at"
-                      >{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <n-button
-                  quaternary
-                  circle
-                  size="small"
-                  @click.stop="handleCheckNow(item.id)"
-                  :disabled="checkingId === item.id"
-                  :title="t('monitor.checkNow')"
-                >
-                  <template #icon>
                     <svg
-                      v-if="checkingId === item.id"
-                      class="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      ></path>
-                    </svg>
-                    <svg
-                      v-else
-                      class="w-4 h-4"
+                      class="w-5 h-5"
+                      :class="
+                        getStatusColor(item.status) === 'success'
+                          ? 'text-green-500'
+                          : getStatusColor(item.status) === 'warning'
+                            ? 'text-yellow-500'
+                            : getStatusColor(item.status) === 'error'
+                              ? 'text-red-500'
+                              : 'text-neutral-500'
+                      "
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -361,130 +345,193 @@ const checkTypeOptions = [
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                       />
                     </svg>
-                  </template>
-                </n-button>
-                <n-button
-                  quaternary
-                  circle
-                  size="small"
-                  @click.stop="openEdit(item)"
-                  :title="t('dns.editTitle')"
-                >
-                  <template #icon>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </template>
-                </n-button>
-                <n-button
-                  quaternary
-                  circle
-                  size="small"
-                  type="error"
-                  @click.stop="openDeleteModal(item.id)"
-                  :title="t('dns.deleteTitle')"
-                >
-                  <template #icon>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </template>
-                </n-button>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <p class="font-medium">{{ item.domain }}</p>
+                      <n-tag :type="getStatusBadge(item.status)" size="small" :bordered="false">{{
+                        getStatusLabel(item.status)
+                      }}</n-tag>
+                      <n-tag v-if="!item.enabled" size="tiny" :bordered="false">OFF</n-tag>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs mt-1 opacity-50">
+                      <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
+                      <span v-if="item.check_interval">{{ item.check_interval }}s</span>
+                      <span v-if="item.last_check_at"
+                        >{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <n-button
+                    quaternary
+                    circle
+                    size="small"
+                    @click.stop="handleCheckNow(item.id)"
+                    :disabled="checkingId === item.id"
+                    :title="t('monitor.checkNow')"
+                  >
+                    <template #icon>
+                      <svg
+                        v-if="checkingId === item.id"
+                        class="w-4 h-4 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </template>
+                  </n-button>
+                  <n-button
+                    quaternary
+                    circle
+                    size="small"
+                    @click.stop="openEdit(item)"
+                    :title="t('dns.editTitle')"
+                  >
+                    <template #icon>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </template>
+                  </n-button>
+                  <n-button
+                    quaternary
+                    circle
+                    size="small"
+                    type="error"
+                    @click.stop="openDeleteModal(item.id)"
+                    :title="t('dns.deleteTitle')"
+                  >
+                    <template #icon>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </template>
+                  </n-button>
+                </div>
               </div>
-            </div>
 
-            <!-- HTTPS 详情展开区 -->
-            <div
-              v-if="expandedId === item.id && item.check_type === 'https' && item.cert_issuer"
-              class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs"
-            >
-              <div>
-                <p class="opacity-50">{{ t('monitor.issuer') }}</p>
-                <p class="font-medium truncate">{{ item.cert_issuer }}</p>
+              <!-- HTTPS 详情展开区 -->
+              <div
+                v-if="expandedId === item.id && item.check_type === 'https' && item.cert_issuer"
+                class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs"
+              >
+                <div>
+                  <p class="opacity-50">{{ t('monitor.issuer') }}</p>
+                  <p class="font-medium truncate">{{ item.cert_issuer }}</p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('monitor.remainingDays') }}</p>
+                  <p
+                    :class="
+                      item.cert_remaining_days <= 30 ? 'text-yellow-500 font-medium' : 'font-medium'
+                    "
+                  >
+                    {{ formatRemainingDays(item.cert_remaining_days) }}
+                  </p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('cert.detail.signatureAlgo') }}</p>
+                  <p class="font-medium font-mono text-[11px]">
+                    {{ item.cert_signature_algo || '—' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('cert.detail.publicKeyAlgo') }}</p>
+                  <p class="font-medium font-mono text-[11px]">
+                    {{ item.cert_public_key_algo }} {{ item.cert_public_key_bits }}bit
+                  </p>
+                </div>
+                <div class="col-span-2">
+                  <p class="opacity-50">{{ t('monitor.fingerprint') }}</p>
+                  <p class="font-mono truncate text-[11px]" :title="item.cert_fingerprint">
+                    {{ truncateFingerprint(item.cert_fingerprint) }}
+                  </p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
+                  <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
+                  <p class="font-mono font-medium">{{ item.http_status_code }}</p>
+                </div>
               </div>
-              <div>
-                <p class="opacity-50">{{ t('monitor.remainingDays') }}</p>
-                <p
-                  :class="
-                    item.cert_remaining_days <= 30 ? 'text-yellow-500 font-medium' : 'font-medium'
-                  "
-                >
-                  {{ formatRemainingDays(item.cert_remaining_days) }}
-                </p>
-              </div>
-              <div>
-                <p class="opacity-50">{{ t('cert.detail.signatureAlgo') }}</p>
-                <p class="font-medium font-mono text-[11px]">
-                  {{ item.cert_signature_algo || '—' }}
-                </p>
-              </div>
-              <div>
-                <p class="opacity-50">{{ t('cert.detail.publicKeyAlgo') }}</p>
-                <p class="font-medium font-mono text-[11px]">
-                  {{ item.cert_public_key_algo }} {{ item.cert_public_key_bits }}bit
-                </p>
-              </div>
-              <div class="col-span-2">
-                <p class="opacity-50">{{ t('monitor.fingerprint') }}</p>
-                <p class="font-mono truncate text-[11px]" :title="item.cert_fingerprint">
-                  {{ truncateFingerprint(item.cert_fingerprint) }}
-                </p>
-              </div>
-              <div>
-                <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
-                <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
-              </div>
-              <div>
-                <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
-                <p class="font-mono font-medium">{{ item.http_status_code }}</p>
-              </div>
-            </div>
 
-            <!-- HTTP 详情 -->
-            <div
-              v-if="
-                expandedId === item.id && item.check_type === 'http' && item.http_status_code > 0
-              "
-              class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-3 gap-3 text-xs"
-            >
-              <div>
-                <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
-                <p class="font-mono font-medium">{{ item.http_status_code }}</p>
+              <!-- HTTP 详情 -->
+              <div
+                v-if="
+                  expandedId === item.id && item.check_type === 'http' && item.http_status_code > 0
+                "
+                class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-3 gap-3 text-xs"
+              >
+                <div>
+                  <p class="opacity-50">{{ t('monitor.statusCode') }}</p>
+                  <p class="font-mono font-medium">{{ item.http_status_code }}</p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
+                  <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
+                </div>
+                <div>
+                  <p class="opacity-50">{{ t('monitor.lastCheck') }}</p>
+                  <p class="font-medium">{{ item.last_check_at || '—' }}</p>
+                </div>
               </div>
-              <div>
-                <p class="opacity-50">{{ t('monitor.responseTime') }}</p>
-                <p class="font-medium">{{ formatResponseTime(item.response_time_ms) }}</p>
-              </div>
-              <div>
-                <p class="opacity-50">{{ t('monitor.lastCheck') }}</p>
-                <p class="font-medium">{{ item.last_check_at || '—' }}</p>
-              </div>
-            </div>
 
-            <!-- 错误信息 -->
-            <div
-              v-if="expandedId === item.id && item.last_check_error"
-              class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700"
-            >
-              <p class="text-red-500 text-xs">
-                {{ t('monitor.error') }}: {{ item.last_check_error }}
-              </p>
+              <!-- 错误信息 -->
+              <div
+                v-if="expandedId === item.id && item.last_check_error"
+                class="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700"
+              >
+                <p class="text-red-500 text-xs">
+                  {{ t('monitor.error') }}: {{ item.last_check_error }}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </n-spin>
     </n-card>
 
