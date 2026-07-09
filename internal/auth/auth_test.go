@@ -309,7 +309,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	// 不支持的方法
-	result, err = svc.Authenticate("unsupported", "test")
+	_, err = svc.Authenticate("unsupported", "test")
 	if err == nil {
 		t.Fatal("expected error for unsupported method")
 	}
