@@ -219,6 +219,29 @@ jobs:
           fi
           wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $EXTRA_ARGS
 
+      # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
+      - name: macOS 签名与公证
+        if: ${{ matrix.enabled && runner.os == 'macOS' && env.APPLE_DEVELOPER_ID_CERTIFICATE != '' }}
+        env:
+          APPLE_DEVELOPER_ID_CERTIFICATE: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE }}
+          APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          APPLE_NOTARIZER_KEYCHAIN_PROFILE: ${{ secrets.APPLE_NOTARIZER_KEYCHAIN_PROFILE }}
+        shell: bash
+        run: |
+          wails3 task darwin:sign:notarize
+
+      # Windows: Authenticode 签名（解决同目录文件占用问题）
+      - name: Windows 签名
+        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        env:
+          SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
+          SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
+          SIGN_THUMBPRINT: ${{ secrets.WINDOWS_SIGN_THUMBPRINT }}
+          TIMESTAMP_SERVER: ${{ secrets.WINDOWS_TIMESTAMP_SERVER }}
+        shell: bash
+        run: |
+          wails3 task windows:sign
+
       - name: 重命名产物
         if: ${{ matrix.enabled }}
         shell: bash

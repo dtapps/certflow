@@ -13,3 +13,6 @@ build/android/gen/
 .mimocode/
 AGENTS.md
 image/systray*
+
+# Updater signing keys (private key must never be committed)
+build/updater.key

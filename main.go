@@ -30,6 +30,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/updater.key.pub
+var updaterPublicKey []byte
+
 // 当前版本号（构建时通过 -ldflags 覆盖）
 var currentVersion = "dev"
 
@@ -158,7 +161,7 @@ func main() {
 	autostartSvc.SetApp(app)
 
 	// 配置自更新功能
-	// https: //v3.wails.io/guides/updater/
+	// https://v3.wails.io/guides/updater/
 	gh, err := github.New(github.Config{
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
@@ -170,6 +173,7 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
+			PublicKey:       updaterPublicKey,
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
 					Title: i18n.T("updater.title"), AlwaysOnTop: true,

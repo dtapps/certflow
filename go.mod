@@ -15,7 +15,7 @@ require (
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.116
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117
 	golang.org/x/crypto v0.53.0
 	golang.org/x/text v0.39.0
 	modernc.org/sqlite v1.53.0
