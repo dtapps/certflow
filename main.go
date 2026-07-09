@@ -220,7 +220,7 @@ func main() {
 	appSubmenu.Add(i18n.T("menu.settings")).OnClick(func(ctx *application.Context) {
 		// 通知前端导航到设置页面
 		if ok := app.Event.Emit("navigate", map[string]string{"path": "/settings"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	appSubmenu.Add(i18n.T("menu.checkUpdate")).OnClick(func(ctx *application.Context) {
@@ -236,13 +236,13 @@ func main() {
 	appSubmenu.Add(i18n.T("systray.applyCert")).OnClick(func(ctx *application.Context) {
 		// 通知前端导航到申请证书页面
 		if ok := app.Event.Emit("navigate", map[string]string{"path": "/certificates/apply"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	appSubmenu.Add(i18n.T("systray.scan")).OnClick(func(ctx *application.Context) {
 		// 通知前端导航到证书扫描页面
 		if ok := app.Event.Emit("navigate", map[string]string{"path": "/scan"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	appSubmenu.AddSeparator()
@@ -299,7 +299,7 @@ func main() {
 	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(event *application.ApplicationEvent) {
 		isDark := app.Env.IsDarkMode()
 		if ok := app.Event.Emit("theme_changed", map[string]bool{"dark": isDark}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.theme_notify_failed"))
 		}
 	})
 
@@ -333,7 +333,7 @@ func checkUpdateOnStart(app *application.App) {
 			"subtitle": i18n.T("notification.update_available_subtitle", "version", rel.Version),
 			"category": "system",
 		}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.notification_failed"))
 		}
 	}()
 }

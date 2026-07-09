@@ -105,7 +105,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 			"body":     opt.Body,
 			"category": opt.Category,
 		}); !ok {
-			logging.Warn(i18n.T("error.emit_failed"))
+			logging.Warn(i18n.T("error.notification_failed"))
 		}
 	}
 

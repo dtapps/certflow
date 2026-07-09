@@ -58,7 +58,7 @@ func (s *SysTrayService) Init() {
 		s.ShowWindow()
 		// 通知前端导航到设置页面
 		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/settings"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	menu.Add(i18n.T("systray.checkUpdate")).OnClick(func(ctx *application.Context) {
@@ -78,7 +78,7 @@ func (s *SysTrayService) Init() {
 		s.ShowWindow()
 		// 通知前端导航到申请证书页面
 		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/certificates/apply"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	menu.Add(i18n.T("systray.scan")).OnClick(func(ctx *application.Context) {
@@ -86,7 +86,7 @@ func (s *SysTrayService) Init() {
 		s.ShowWindow()
 		// 通知前端导航到证书扫描页面
 		if ok := s.app.Event.Emit("navigate", map[string]string{"path": "/scan"}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
+			logging.Warn("%s", i18n.T("error.navigate_failed"))
 		}
 	})
 	menu.AddSeparator()
