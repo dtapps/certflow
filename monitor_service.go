@@ -33,6 +33,11 @@ func (s *MonitorServiceWrapper) Update(id int, input monitor.CreateInput) (*moni
 	return s.monitorService.Update(context.Background(), id, input)
 }
 
+// ToggleEnabled 切换监控域名的启用状态
+func (s *MonitorServiceWrapper) ToggleEnabled(id int) (*monitor.MonitoredDomainItem, error) {
+	return s.monitorService.ToggleEnabled(context.Background(), id)
+}
+
 // Delete 删除监控域名
 func (s *MonitorServiceWrapper) Delete(id int) error {
 	return s.monitorService.Delete(context.Background(), id)

@@ -50,6 +50,13 @@ export function SetUserAgent(ua: string): $CancellablePromise<void> {
 }
 
 /**
+ * ToggleEnabled 切换监控域名的启用状态
+ */
+export function ToggleEnabled(id: number): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
+    return $Call.ByID(2247204237, id);
+}
+
+/**
  * Update 更新监控域名
  */
 export function Update(id: number, input: monitor$0.CreateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {

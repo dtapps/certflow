@@ -184,6 +184,21 @@ func (s *MonitorService) Update(ctx context.Context, id int, input CreateInput) 
 	return toItem(m), nil
 }
 
+// ToggleEnabled 切换监控域名的启用状态
+func (s *MonitorService) ToggleEnabled(ctx context.Context, id int) (*MonitoredDomainItem, error) {
+	m, err := s.db.MonitoredDomain.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := s.db.MonitoredDomain.UpdateOneID(id).
+		SetEnabled(!m.Enabled).
+		Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return toItem(updated), nil
+}
+
 // Delete 删除监控域名
 func (s *MonitorService) Delete(ctx context.Context, id int) error {
 	logging.Info(i18n.T("log.monitor_delete", "ID", id))

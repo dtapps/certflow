@@ -235,6 +235,24 @@ const checkTypeOptions = [
   { label: 'HTTPS 健康检查', value: 'https' },
   { label: 'HTTP 健康检查', value: 'http' },
 ]
+
+const togglingId = ref<number | null>(null)
+const handleToggleEnabled = async (id: number) => {
+  togglingId.value = id
+  try {
+    const updated = await MonitorService.ToggleEnabled(id)
+    if (updated) {
+      const idx = domains.value.findIndex((d) => d.id === id)
+      if (idx !== -1) {
+        domains.value[idx].enabled = updated.enabled
+      }
+    }
+  } catch (e) {
+    showMessage(t('monitor.toggleFailed') + ' ' + e, 'error')
+  } finally {
+    togglingId.value = null
+  }
+}
 </script>
 
 <template>
@@ -355,7 +373,6 @@ const checkTypeOptions = [
                       <n-tag :type="getStatusBadge(item.status)" size="small" :bordered="false">{{
                         getStatusLabel(item.status)
                       }}</n-tag>
-                      <n-tag v-if="!item.enabled" size="tiny" :bordered="false">OFF</n-tag>
                     </div>
                     <div class="flex items-center gap-4 text-xs mt-1 opacity-50">
                       <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
@@ -366,7 +383,14 @@ const checkTypeOptions = [
                     </div>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2" @click.stop>
+                  <n-switch
+                    :value="item.enabled"
+                    :loading="togglingId === item.id"
+                    size="small"
+                    @update:value="handleToggleEnabled(item.id)"
+                    :title="item.enabled ? t('monitor.disable') : t('monitor.enable')"
+                  />
                   <n-button
                     quaternary
                     circle
