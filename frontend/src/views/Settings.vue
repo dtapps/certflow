@@ -47,6 +47,7 @@ const defaultSettings: SafeSettings = {
   data_dir: '~/.certflow',
   language: 'auto',
   theme: 'auto',
+  prerelease: false,
   dns_configs: [],
   proxy: { enabled: false, protocol: 'http', host: '', port: 8080 },
   log: { level: 'INFO', max_mb: 10, max_backups: 5 },
@@ -676,6 +677,13 @@ onMounted(async () => {
           <div class="flex justify-between py-2">
             <span class="opacity-50">{{ t('settings.about.datadir') }}</span
             ><span class="text-sm font-mono">{{ settings.data_dir }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <div>
+              <span class="opacity-50">{{ t('settings.about.prerelease') }}</span>
+              <p class="text-xs opacity-40 mt-0.5">{{ t('settings.about.prerelease.desc') }}</p>
+            </div>
+            <n-switch v-model:value="settings.prerelease" />
           </div>
           <div class="pt-2 border-t border-neutral-200 dark:border-neutral-700">
             <n-button secondary block @click="handleCheckUpdate">

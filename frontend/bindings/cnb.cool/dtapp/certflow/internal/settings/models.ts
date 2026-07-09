@@ -126,6 +126,11 @@ export interface Settings {
     "theme": string;
 
     /**
+     * 是否检查预发布版本
+     */
+    "prerelease": boolean;
+
+    /**
      * DNS 解析配置列表
      */
     "dns_configs": DNSConfig[] | null;

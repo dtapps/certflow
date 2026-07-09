@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -167,6 +169,7 @@ func main() {
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
 		ChecksumAsset: "SHA256SUMS",
+		Prerelease:    settingsService.Get().Prerelease,
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -317,8 +320,12 @@ func main() {
 // checkUpdateOnStart 启动后异步检查更新，有更新时发通知
 func checkUpdateOnStart(app *application.App) {
 	go func() {
-		// 延迟 3 秒，等界面加载完成
-		time.Sleep(3 * time.Second)
+		// 生成 1 到 3 分钟之间的随机持续时间
+		minDuration := 1 * time.Minute
+		maxDuration := 3 * time.Minute
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(maxDuration-minDuration)))
+		randomDuration := minDuration + time.Duration(n.Int64())
+		time.Sleep(randomDuration)
 		rel, err := app.Updater.Check(context.Background())
 		if err != nil {
 			logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)

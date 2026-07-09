@@ -53,6 +53,7 @@ type Settings struct {
 	DataDir            string      `json:"data_dir" mapstructure:"data_dir"`                         // 数据目录
 	Language           string      `json:"language" mapstructure:"language"`                         // 语言：zh-CN/en-US/auto
 	Theme              string      `json:"theme" mapstructure:"theme"`                               // 主题：dark/light/auto
+	Prerelease         bool        `json:"prerelease" mapstructure:"prerelease"`                     // 是否检查预发布版本
 	DNSConfigs         []DNSConfig `json:"dns_configs" mapstructure:"dns_configs"`                   // DNS 解析配置列表
 	Proxy              ProxyConfig `json:"proxy" mapstructure:"proxy"`                               // 代理配置
 	Log                LogConfig   `json:"log" mapstructure:"log"`                                   // 日志配置
@@ -146,6 +147,7 @@ func DefaultSettings() Settings {
 		DataDir:            "~/.certflow",
 		Language:           "auto",
 		Theme:              "auto",
+		Prerelease:         false,
 		DNSConfigs:         builtinDNSConfigs(nil),
 		Proxy: ProxyConfig{
 			Enabled:  false,
@@ -246,6 +248,7 @@ func (s *Service) setDefaults() {
 	s.v.SetDefault("data_dir", def.DataDir)
 	s.v.SetDefault("language", def.Language)
 	s.v.SetDefault("theme", def.Theme)
+	s.v.SetDefault("prerelease", def.Prerelease)
 	s.v.SetDefault("dns_configs", def.DNSConfigs)
 	s.v.SetDefault("proxy", def.Proxy)
 	s.v.SetDefault("log", def.Log)
@@ -332,6 +335,7 @@ func (s *Service) writeConfig() error {
 	s.v.Set("data_dir", s.settings.DataDir)
 	s.v.Set("language", s.settings.Language)
 	s.v.Set("theme", s.settings.Theme)
+	s.v.Set("prerelease", s.settings.Prerelease)
 	s.v.Set("dns_configs", s.settings.DNSConfigs)
 	s.v.Set("proxy", s.settings.Proxy)
 	s.v.Set("log", s.settings.Log)
