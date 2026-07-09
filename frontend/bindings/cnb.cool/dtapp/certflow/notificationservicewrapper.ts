@@ -71,7 +71,7 @@ export function RequestPermission(): $CancellablePromise<boolean> {
 }
 
 /**
- * SendTestNotification 发送测试通知
+ * SendTestNotification 发送测试通知（不写数据库）
  */
 export function SendTestNotification(): $CancellablePromise<void> {
     return $Call.ByID(2590084522);

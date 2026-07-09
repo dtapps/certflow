@@ -31,9 +31,13 @@ type NotificationItem struct {
 	CreatedAt string `json:"created_at"` // 创建时间
 }
 
-// SendTestNotification 发送测试通知
+// SendTestNotification 发送测试通知（不写数据库）
 func (s *NotificationServiceWrapper) SendTestNotification() error {
-	return s.notifService.SendCertApplied("test.example.com", "Let's Encrypt")
+	return s.notifService.SendNotification(notification.NotificationOption{
+		Title:  i18n.T("notification.test.title"),
+		Body:   i18n.T("notification.test.body"),
+		SkipDB: true,
+	})
 }
 
 // CheckPermission 检查通知权限是否已授权

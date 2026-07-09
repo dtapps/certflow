@@ -45,6 +45,7 @@ type NotificationOption struct {
 	Body     string
 	Category string
 	Data     map[string]any
+	SkipDB   bool // 跳过数据库保存（用于测试通知）
 }
 
 // Init 初始化通知服务（需要在 Wails 应用启动时调用）
@@ -86,8 +87,8 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 
 	err := s.notifService.SendNotification(options)
 
-	// 保存到数据库
-	if s.db != nil {
+	// 保存到数据库（测试通知跳过）
+	if s.db != nil && !opt.SkipDB {
 		_, dbErr := s.db.Notification.Create().
 			SetTitle(opt.Title).
 			SetBody(opt.Body).
@@ -176,7 +177,7 @@ func (s *NotificationService) SendCertApplied(domain, issuer string) error {
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.cert_applied.title"),
 		Body:     i18n.T("notification.cert_applied.body", "Domain", domain, "Issuer", issuer),
-		Category: "cert_applied",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 
@@ -185,7 +186,7 @@ func (s *NotificationService) SendCertRenewed(domain, issuer, notAfter string) e
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.cert_renewed.title"),
 		Body:     i18n.T("notification.cert_renewed.body", "Domain", domain, "Issuer", issuer, "ValidUntil", notAfter),
-		Category: "cert_renewed",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 
@@ -194,7 +195,7 @@ func (s *NotificationService) SendCertRevoked(domain string) error {
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.cert_revoked.title"),
 		Body:     i18n.T("notification.cert_revoked.body", "Domain", domain),
-		Category: "cert_revoked",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 
@@ -208,7 +209,7 @@ func (s *NotificationService) SendCertExpiring(domain string, daysLeft int) erro
 		Title:    i18n.T("notification.cert_expiring.title"),
 		Subtitle: subtitle,
 		Body:     i18n.T("notification.cert_expiring.body", "Domain", domain, "Days", daysLeft),
-		Category: "cert_expiring",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 
@@ -217,7 +218,7 @@ func (s *NotificationService) SendCertApplyFailed(domain, reason string) error {
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.cert_apply_failed.title"),
 		Body:     i18n.T("notification.cert_apply_failed.body", "Domain", domain, "Error", reason),
-		Category: "cert_failed",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 
@@ -226,7 +227,7 @@ func (s *NotificationService) SendCertRenewFailed(domain, reason string) error {
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.cert_renew_failed.title"),
 		Body:     i18n.T("notification.cert_renew_failed.body", "Domain", domain, "Error", reason),
-		Category: "cert_failed",
+		Category: entnotification.CategoryCert.String(),
 	})
 }
 

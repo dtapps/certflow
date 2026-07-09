@@ -1,4 +1,6 @@
 {
+  "notification.test.title": "Test Notification",
+  "notification.test.body": "This is a test notification. If you can see it, notifications are working correctly.",
   "notification.cert_applied.title": "Certificate Applied",
   "notification.cert_applied.body": "Certificate for {{.Domain}} has been successfully applied. Issuer: {{.Issuer}}",
   "notification.cert_renewed.title": "Certificate Renewed",

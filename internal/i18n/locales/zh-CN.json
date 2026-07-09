@@ -1,4 +1,6 @@
 {
+  "notification.test.title": "测试通知",
+  "notification.test.body": "这是一条测试通知，如果您能看到它，说明通知功能正常工作。",
   "notification.cert_applied.title": "证书申请成功",
   "notification.cert_applied.body": "域名 {{.Domain}} 的证书已成功申请，颁发者: {{.Issuer}}",
   "notification.cert_renewed.title": "证书续期成功",
