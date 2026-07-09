@@ -94,7 +94,7 @@ const handleDelete = async () => {
     await CAService.DeleteCA(id)
     cas.value = cas.value.filter((c) => c.id !== id)
   } catch (e) {
-    console.error('Failed to delete CA', e)
+    console.error(t('ca.deleteFailed'), e)
   }
 }
 

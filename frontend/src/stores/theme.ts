@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { darkTheme, lightTheme } from 'naive-ui'
 import type { GlobalThemeOverrides } from 'naive-ui'
 import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
+import { useI18nStore } from './i18n'
 
 export type ThemeMode = 'dark' | 'light' | 'auto'
 
@@ -21,6 +22,7 @@ const baseThemeOverrides: GlobalThemeOverrides = {
 }
 
 export const useThemeStore = defineStore('theme', () => {
+  const { t } = useI18nStore()
   // 状态
   const theme = ref<ThemeMode>((localStorage.getItem(STORAGE_KEY) as ThemeMode) || 'auto')
   const systemDark = ref(false)
@@ -41,7 +43,7 @@ export const useThemeStore = defineStore('theme', () => {
     try {
       await SystemService.SetWindowAppearance(dark)
     } catch (e) {
-      console.error('[ThemeStore] Failed to set window appearance:', e)
+      console.error(t('theme.windowAppearanceFailed'), e)
     }
   }
 
@@ -55,7 +57,7 @@ export const useThemeStore = defineStore('theme', () => {
     try {
       systemDark.value = await SystemService.IsDarkMode()
     } catch (e) {
-      console.error('Failed to detect system theme:', e)
+      console.error(t('theme.detectSystemThemeFailed'), e)
     }
     // 初始化时同步窗口外观
     syncWindowAppearance(isDark.value)

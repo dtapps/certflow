@@ -81,7 +81,7 @@ watch(totpSetupResult, async (newVal) => {
         },
       })
     } catch (err) {
-      console.error('Failed to generate QR code:', err)
+      console.error(t('personal.qrCodeGenerateFailed'), err)
     }
   } else {
     totpQRCode.value = ''
@@ -111,7 +111,7 @@ const loadAuthInfo = async () => {
     activeMethod.value = await AuthService.GetActiveMethod()
     availableMethods.value = await AuthService.GetAvailableMethods()
   } catch (e) {
-    console.error('Failed to load auth info:', e)
+    console.error(t('personal.authLoadFailed'), e)
   }
 }
 
@@ -277,7 +277,7 @@ const registerPasskey = async () => {
     message.value = { type: 'success', text: t('personal.passkeyRegisterSuccess') }
     await loadAuthInfo()
   } catch (e: any) {
-    console.error('Passkey registration failed:', e)
+    console.error(t('personal.passkeyRegisterFailed'), e)
     // 提供更具体的错误信息
     if (e.name === 'NotAllowedError') {
       message.value = { type: 'error', text: t('personal.passkeyNotAllowed') }

@@ -308,7 +308,7 @@ const handleDelete = async () => {
     await DNSProviderService.DeleteDNSProvider(id)
     providers.value = providers.value.filter((p) => p.id !== id)
   } catch (e) {
-    console.error('Failed to delete DNS provider', e)
+    console.error(t('dns.deleteProviderFailed'), e)
   }
 }
 

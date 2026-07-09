@@ -51,7 +51,7 @@ onMounted(async () => {
     }
     renewalLogs.value = logs ?? []
   } catch (e) {
-    console.error('Failed to load certificate details:', e)
+    console.error(t('certDetail.loadFailed'), e)
   } finally {
     isLoading.value = false
   }
@@ -77,7 +77,7 @@ const handleRevoke = async () => {
     await CertificateService.RevokeCertificate(certId.value)
     certificate.value = await CertificateService.GetCertificateInfo(certId.value)
   } catch (e) {
-    console.error('Failed to revoke certificate', e)
+    console.error(t('certDetail.revokeFailed'), e)
   }
 }
 
@@ -87,7 +87,7 @@ const handleDelete = async () => {
     await CertificateService.DeleteCertificate(certId.value)
     router.push('/certificates')
   } catch (e) {
-    console.error('Failed to delete certificate', e)
+    console.error(t('certDetail.deleteFailed'), e)
   }
 }
 
@@ -124,7 +124,7 @@ const loadCertDetails = async () => {
   try {
     certDetails.value = await CertificateService.ParseCertificateDetails(certId.value)
   } catch (e) {
-    console.error('Failed to parse certificate details', e)
+    console.error(t('certDetail.parseFailed'), e)
   }
 }
 </script>

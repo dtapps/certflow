@@ -220,7 +220,7 @@ const loginWithPasskey = async () => {
       error.value = t('login.passkeyFailed')
     }
   } catch (e: any) {
-    console.error('Passkey login failed:', e)
+    console.error(t('login.passkeyFailed'), e)
     // 提供更具体的错误信息
     if (e.name === 'NotAllowedError') {
       error.value = t('login.passkeyNotAllowed')
@@ -249,7 +249,7 @@ const loginWithBiometric = async () => {
       error.value = t('login.biometricFailed')
     }
   } catch (e: any) {
-    console.error('Biometric login failed:', e)
+    console.error(t('login.biometricFailed'), e)
     error.value = t('login.biometricFailed')
   } finally {
     loading.value = false

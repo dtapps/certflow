@@ -47,7 +47,7 @@ const loadDomains = async () => {
       (item): item is MonitoredDomainItem => item !== null,
     )
   } catch (e) {
-    console.error('Failed to load domains:', e)
+    console.error(t('monitor.loadDomainsFailed'), e)
   } finally {
     isLoading.value = false
   }
@@ -92,7 +92,7 @@ const handleSave = async () => {
     showEditModal.value = false
     await loadDomains()
   } catch (e) {
-    console.error('Failed to save:', e)
+    console.error(t('monitor.saveFailed'), e)
   }
 }
 
@@ -110,7 +110,7 @@ const handleDelete = async () => {
     await MonitorService.Delete(id)
     await loadDomains()
   } catch (e) {
-    console.error('Failed to delete:', e)
+    console.error(t('monitor.deleteFailed'), e)
   }
 }
 
@@ -120,7 +120,7 @@ const handleCheckNow = async (id: number) => {
     await MonitorService.CheckNow(id)
     await loadDomains()
   } catch (e) {
-    console.error('Failed to check:', e)
+    console.error(t('monitor.checkFailed'), e)
   } finally {
     checkingId.value = null
   }

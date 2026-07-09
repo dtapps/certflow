@@ -205,7 +205,7 @@ watch(notificationEnabled, async (enabled) => {
       }
     }
   } catch (e) {
-    console.error('设置通知权限失败:', e)
+    console.error(t('settings.notification.permissionFailed'), e)
   }
 })
 
@@ -218,7 +218,7 @@ watch(autostartEnabled, async (enabled) => {
       await AutostartService.Disable()
     }
   } catch (e) {
-    console.error('设置开机自启失败:', e)
+    console.error(t('settings.autostart.setFailed'), e)
   }
 })
 
@@ -349,7 +349,7 @@ const openLogFullscreen = async () => {
       FontSize: 13,
     })
   } catch (e) {
-    console.error('打开日志窗口失败:', e)
+    console.error(t('settings.log.openWindowFailed'), e)
   }
 }
 
@@ -386,13 +386,13 @@ onMounted(async () => {
   try {
     autostartEnabled.value = await AutostartService.IsEnabled()
   } catch (e) {
-    console.error('获取开机自启状态失败:', e)
+    console.error(t('settings.autostart.getStatusFailed'), e)
   }
   // 获取通知权限状态
   try {
     notificationEnabled.value = await NotificationService.CheckPermission()
   } catch (e) {
-    console.error('获取通知权限状态失败:', e)
+    console.error(t('settings.notification.getPermissionFailed'), e)
   }
   // 获取版本号
   try {

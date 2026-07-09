@@ -41,7 +41,7 @@ const handleScan = async () => {
     if (result) expandedId.value = result.id
     await loadHistory()
   } catch (e) {
-    console.error('Scan failed:', e)
+    console.error(t('scan.scanFailed'), e)
   } finally {
     isScanning.value = false
   }
@@ -52,7 +52,7 @@ const loadHistory = async () => {
   try {
     history.value = ((await ScannerService.ListHistory()) ?? []).filter(Boolean) as ScanResultItem[]
   } catch (e) {
-    console.error('Failed to load history:', e)
+    console.error(t('scan.loadHistoryFailed'), e)
   } finally {
     isLoadingHistory.value = false
   }
@@ -76,7 +76,7 @@ const handleDelete = async () => {
     }
     await loadHistory()
   } catch (e) {
-    console.error('Failed to delete:', e)
+    console.error(t('scan.deleteFailed'), e)
   }
 }
 
@@ -86,7 +86,7 @@ const handleClearHistory = async () => {
     expandedId.value = null
     await loadHistory()
   } catch (e) {
-    console.error('Failed to clear history:', e)
+    console.error(t('scan.clearHistoryFailed'), e)
   }
 }
 

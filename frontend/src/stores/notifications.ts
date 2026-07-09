@@ -1,6 +1,7 @@
 import { ref, onMounted } from 'vue'
 import { defineStore } from 'pinia'
 import { Events } from '@wailsio/runtime'
+import { useI18nStore } from './i18n'
 import {
   ListNotifications,
   CountUnread,
@@ -21,6 +22,7 @@ export interface NotificationItem {
 }
 
 export const useNotificationsStore = defineStore('notifications', () => {
+  const { t } = useI18nStore()
   // 状态
   const notifications = ref<NotificationItem[]>([])
   const unreadCount = ref(0)
@@ -44,7 +46,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         created_at: item.created_at,
       }))
     } catch (e) {
-      console.error('加载通知列表失败:', e)
+      console.error(t('notifications.loadListFailed'), e)
     }
   }
 
@@ -53,7 +55,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       const count = await CountUnread()
       unreadCount.value = count
     } catch (e) {
-      console.error('获取未读数量失败:', e)
+      console.error(t('notifications.getUnreadCountFailed'), e)
     }
   }
 
