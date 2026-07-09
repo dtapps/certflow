@@ -13,8 +13,6 @@ import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import {
   MenuOutline,
-  ChevronBackOutline,
-  ChevronForwardOutline,
   SearchOutline,
   MoonOutline,
   SunnyOutline,
@@ -61,10 +59,12 @@ const searchDropdownStyle = computed(() => ({
   backgroundColor: isDark.value ? '#1a1a2e' : '#ffffff',
 }))
 
-// 侧边栏图标：展开时显示收起图标，收起时显示展开图标
-const sidebarIcon = computed(() => {
-  return props.sidebarOpen ? ChevronBackOutline : ChevronForwardOutline
-})
+// 侧边栏图标
+const sidebarIcon = MenuOutline
+const sidebarIconStyle = computed(() => ({
+  transition: 'transform 0.2s ease',
+  transform: props.sidebarOpen ? 'rotate(0deg)' : 'rotate(90deg)',
+}))
 
 const searchItemHoverStyle = computed(() => ({
   ':hover': {
@@ -234,7 +234,7 @@ function handleLocaleSelect(key: string) {
     <div class="flex items-center gap-4">
       <n-button quaternary circle size="small" class="no-drag" @click="$emit('toggleSidebar')">
         <template #icon>
-          <n-icon :size="20"><component :is="sidebarIcon" /></n-icon>
+          <n-icon :size="20" :style="sidebarIconStyle"><component :is="sidebarIcon" /></n-icon>
         </template>
       </n-button>
 
