@@ -60,13 +60,12 @@ jobs:
           fi
           # 提取基础版本号（去掉 v 前缀）
           BASE_VERSION="${PREV_TAG#v}"
-          # 生成 nightly 版本号：基础版本-nightly.日期
-          DATE=$(date +%Y%m%d)
-          VERSION="${BASE_VERSION}-nightly.${DATE}"
+          # 生成 nightly 版本号：基础版本-nightly
+          VERSION="${BASE_VERSION}-nightly"
           BUILD_TIME=$(bash scripts/get-build-time.sh)
           GIT_COMMIT=$(git rev-parse --short HEAD)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=nightly" >> $GITHUB_OUTPUT
           echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
           echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
           echo "Nightly 版本号: ${VERSION}"
@@ -246,10 +245,9 @@ jobs:
             PREV_TAG="v0.0.0"
           fi
           BASE_VERSION="${PREV_TAG#v}"
-          DATE=$(date +%Y%m%d)
-          VERSION="${BASE_VERSION}-nightly.${DATE}"
+          VERSION="${BASE_VERSION}-nightly"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=nightly" >> $GITHUB_OUTPUT
 
       - name: 下载所有产物
         uses: actions/download-artifact@v4
@@ -368,7 +366,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Nightly ${{ steps.version.outputs.version }}
+          name: Nightly Build
           draft: false
           prerelease: true
           body_path: release_body.md
