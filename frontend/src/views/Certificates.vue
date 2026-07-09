@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
-import { NInput, NSelect, NButton, NDataTable, NTag, NModal, NSpin, NEmpty, useMessage } from 'naive-ui'
+import {
+  NInput,
+  NSelect,
+  NButton,
+  NDataTable,
+  NTag,
+  NModal,
+  NSpin,
+  NEmpty,
+  useMessage,
+} from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import type { CertificateListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
