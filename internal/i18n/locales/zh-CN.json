@@ -275,6 +275,7 @@
   "log.updater_check_done": "检查更新完成",
   "log.updater_init_failed": "初始化更新服务失败",
   "log.updater_check_failed": "检查更新失败",
+  "log.updater_ready": "更新就绪，准备重启",
   "log.seed_ca_failed": "预置默认 CA 失败",
   "app.title": "CertFlow",
   "app.description": "SSL 证书管理工具",

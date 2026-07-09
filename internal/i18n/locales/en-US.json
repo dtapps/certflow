@@ -275,6 +275,7 @@
   "log.updater_check_done": "Update check completed",
   "log.updater_init_failed": "Failed to initialize updater",
   "log.updater_check_failed": "Failed to check for updates",
+  "log.updater_ready": "Update ready, preparing to restart",
   "log.seed_ca_failed": "Failed to seed default CA",
   "app.title": "CertFlow",
   "app.description": "SSL Certificate Manager",

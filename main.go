@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/auth"
@@ -173,7 +174,7 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
-			PublicKey:       updaterPublicKey,
+			PublicKey:      updaterPublicKey,
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
 					Title: i18n.T("updater.title"), AlwaysOnTop: true,
@@ -269,14 +270,6 @@ func main() {
 	monitorService.Start()
 	defer monitorService.Stop()
 
-	// 监听系统主题变化，通知前端
-	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(event *application.ApplicationEvent) {
-		isDark := app.Env.IsDarkMode()
-		if ok := app.Event.Emit("theme_changed", map[string]bool{"dark": isDark}); !ok {
-			logging.Warn("%s", i18n.T("error.emit_failed"))
-		}
-	})
-
 	// 启动定时任务调度器
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -284,6 +277,31 @@ func main() {
 		<-ctx.Done()
 		schedulerService.Stop()
 	}()
+
+	// updater 重启前主动释放资源，确保进程快速退出
+	// Windows 上 helper 需要替换 exe 文件，如果父进程退不掉会导致文件占用
+	var cleanupOnce sync.Once
+	cleanup := func() {
+		cleanupOnce.Do(func() {
+			schedulerService.Stop()
+			monitorService.Stop()
+			cancel()
+			db.Close()
+		})
+	}
+
+	app.Event.On(updater.EventUpdateReady, func(e *application.CustomEvent) {
+		logging.Info(i18n.T("log.updater_ready"))
+		cleanup()
+	})
+
+	// 监听系统主题变化，通知前端
+	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(event *application.ApplicationEvent) {
+		isDark := app.Env.IsDarkMode()
+		if ok := app.Event.Emit("theme_changed", map[string]bool{"dark": isDark}); !ok {
+			logging.Warn("%s", i18n.T("error.emit_failed"))
+		}
+	})
 
 	// 启动后异步检查更新
 	checkUpdateOnStart(app)
