@@ -327,20 +327,25 @@ func (s *Service) writeConfig() error {
 	s.saving = true
 	defer func() { s.saving = false }()
 
-	// 同步到 Viper，保持内部状态一致
-	s.v.Set("auto_renewal_enabled", s.settings.AutoRenewalEnabled)
-	s.v.Set("default_renewal_days", s.settings.DefaultRenewalDays)
-	s.v.Set("auto_check_expiry", s.settings.AutoCheckExpiry)
-	s.v.Set("check_interval", s.settings.CheckInterval)
-	s.v.Set("data_dir", s.settings.DataDir)
-	s.v.Set("language", s.settings.Language)
-	s.v.Set("theme", s.settings.Theme)
-	s.v.Set("prerelease", s.settings.Prerelease)
-	s.v.Set("dns_configs", s.settings.DNSConfigs)
-	s.v.Set("proxy", s.settings.Proxy)
-	s.v.Set("log", s.settings.Log)
+	// 创建新的 Viper 实例，避免残留已删除的旧 key
+	v := viper.New()
+	v.SetConfigType("json")
+	v.SetConfigFile(s.filePath)
 
-	return s.v.WriteConfig()
+	// 只写入已知字段，不保留已删除的旧 key
+	v.Set("auto_renewal_enabled", s.settings.AutoRenewalEnabled)
+	v.Set("default_renewal_days", s.settings.DefaultRenewalDays)
+	v.Set("auto_check_expiry", s.settings.AutoCheckExpiry)
+	v.Set("check_interval", s.settings.CheckInterval)
+	v.Set("data_dir", s.settings.DataDir)
+	v.Set("language", s.settings.Language)
+	v.Set("theme", s.settings.Theme)
+	v.Set("prerelease", s.settings.Prerelease)
+	v.Set("dns_configs", s.settings.DNSConfigs)
+	v.Set("proxy", s.settings.Proxy)
+	v.Set("log", s.settings.Log)
+
+	return v.WriteConfig()
 }
 
 // Save 保存设置到文件
