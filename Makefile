@@ -21,7 +21,7 @@ ent: ## 生成 Ent ORM 代码
 dev: ## 运行 Wails 开发模式
 	wails3 dev
 
-# ==================== 格式化 ====================
+# ==================== 格式化 / 修复 ====================
 
 format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix ## 格式化和修复所有代码
 

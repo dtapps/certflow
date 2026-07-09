@@ -20,42 +20,42 @@ import (
 
 // DNSConfig DNS解析配置
 type DNSConfig struct {
-	ID      string   `json:"id"`      // 唯一标识
-	Name    string   `json:"name"`    // 显示名称
-	Enabled bool     `json:"enabled"` // 是否启用
-	Builtin bool     `json:"builtin"` // 是否内置（不可删除）
-	Servers []string `json:"servers"` // DNS 服务器地址列表
+	ID      string   `json:"id" mapstructure:"id"`           // 唯一标识
+	Name    string   `json:"name" mapstructure:"name"`       // 显示名称
+	Enabled bool     `json:"enabled" mapstructure:"enabled"` // 是否启用
+	Builtin bool     `json:"builtin" mapstructure:"builtin"` // 是否内置（不可删除）
+	Servers []string `json:"servers" mapstructure:"servers"` // DNS 服务器地址列表
 }
 
 // ProxyConfig 代理配置
 type ProxyConfig struct {
-	Enabled  bool   `json:"enabled"`            // 是否启用代理
-	Protocol string `json:"protocol"`           // 代理协议：http/https/socks5
-	Host     string `json:"host"`               // 代理主机地址
-	Port     int    `json:"port"`               // 代理端口
-	Username string `json:"username,omitempty"` // 代理用户名
-	Password string `json:"password,omitempty"` // 代理密码
+	Enabled  bool   `json:"enabled" mapstructure:"enabled"`             // 是否启用代理
+	Protocol string `json:"protocol" mapstructure:"protocol"`           // 代理协议：http/https/socks5
+	Host     string `json:"host" mapstructure:"host"`                   // 代理主机地址
+	Port     int    `json:"port" mapstructure:"port"`                   // 代理端口
+	Username string `json:"username,omitempty" mapstructure:"username"` // 代理用户名
+	Password string `json:"password,omitempty" mapstructure:"password"` // 代理密码
 }
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level      string `json:"level"`       // 日志级别：DEBUG/INFO/WARN/ERROR
-	MaxMB      int    `json:"max_mb"`      // 单个日志文件最大大小（MB）
-	MaxBackups int    `json:"max_backups"` // 保留的备份数量
+	Level      string `json:"level" mapstructure:"level"`             // 日志级别：DEBUG/INFO/WARN/ERROR
+	MaxMB      int    `json:"max_mb" mapstructure:"max_mb"`           // 单个日志文件最大大小（MB）
+	MaxBackups int    `json:"max_backups" mapstructure:"max_backups"` // 保留的备份数量
 }
 
 // Settings 应用设置
 type Settings struct {
-	AutoRenewalEnabled bool        `json:"auto_renewal_enabled"` // 是否启用自动续期
-	DefaultRenewalDays int         `json:"default_renewal_days"` // 默认续期天数
-	AutoCheckExpiry    bool        `json:"auto_check_expiry"`    // 是否自动检查过期
-	CheckInterval      int         `json:"check_interval"`       // 检查间隔（小时）
-	DataDir            string      `json:"data_dir"`             // 数据目录
-	Language           string      `json:"language"`             // 语言：zh-CN/en-US/auto
-	Theme              string      `json:"theme"`                // 主题：dark/light/auto
-	DNSConfigs         []DNSConfig `json:"dns_configs"`          // DNS 解析配置列表
-	Proxy              ProxyConfig `json:"proxy"`                // 代理配置
-	Log                LogConfig   `json:"log"`                  // 日志配置
+	AutoRenewalEnabled bool        `json:"auto_renewal_enabled" mapstructure:"auto_renewal_enabled"` // 是否启用自动续期
+	DefaultRenewalDays int         `json:"default_renewal_days" mapstructure:"default_renewal_days"` // 默认续期天数
+	AutoCheckExpiry    bool        `json:"auto_check_expiry" mapstructure:"auto_check_expiry"`       // 是否自动检查过期
+	CheckInterval      int         `json:"check_interval" mapstructure:"check_interval"`             // 检查间隔（小时）
+	DataDir            string      `json:"data_dir" mapstructure:"data_dir"`                         // 数据目录
+	Language           string      `json:"language" mapstructure:"language"`                         // 语言：zh-CN/en-US/auto
+	Theme              string      `json:"theme" mapstructure:"theme"`                               // 主题：dark/light/auto
+	DNSConfigs         []DNSConfig `json:"dns_configs" mapstructure:"dns_configs"`                   // DNS 解析配置列表
+	Proxy              ProxyConfig `json:"proxy" mapstructure:"proxy"`                               // 代理配置
+	Log                LogConfig   `json:"log" mapstructure:"log"`                                   // 日志配置
 }
 
 // getSystemDNS 跨平台获取系统 DNS 服务器地址
