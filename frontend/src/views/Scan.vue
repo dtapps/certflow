@@ -10,15 +10,19 @@ import {
   NEmpty,
   NModal,
   NTag,
+  useMessage,
 } from 'naive-ui'
 import * as ScannerService from '@bindings/cnb.cool/dtapp/certflow/scannerservicewrapper'
 import type { ScanResultItem } from '@bindings/cnb.cool/dtapp/certflow/internal/scanner/models'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { storeToRefs } from 'pinia'
+import { initMessage, showMessage } from '../utils/message'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
 
@@ -75,8 +79,9 @@ const handleDelete = async () => {
       expandedId.value = null
     }
     await loadHistory()
+    showMessage(t('scan.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('scan.deleteFailed'), e)
+    showMessage(t('scan.deleteFailed') + ' ' + e, 'error')
   }
 }
 
@@ -85,8 +90,9 @@ const handleClearHistory = async () => {
     await ScannerService.ClearHistory()
     expandedId.value = null
     await loadHistory()
+    showMessage(t('scan.clearSuccess'), 'success')
   } catch (e) {
-    console.error(t('scan.clearHistoryFailed'), e)
+    showMessage(t('scan.clearHistoryFailed') + ' ' + e, 'error')
   }
 }
 

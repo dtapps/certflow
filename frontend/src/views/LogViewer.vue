@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NSelect, NButton, NSpin, NIcon } from 'naive-ui'
+import { NSelect, NButton, NSpin, NIcon, useMessage } from 'naive-ui'
 import { RefreshOutline, FolderOpenOutline } from '@vicons/ionicons5'
 import * as LoggingService from '@bindings/cnb.cool/dtapp/certflow/loggingservicewrapper'
 import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapper'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
+import { initMessage, showMessage } from '../utils/message'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
@@ -160,8 +163,12 @@ const loadLogContent = async () => {
 
 // 打开日志目录
 const openLogDir = async () => {
-  const dir = await LoggingService.GetLogDir()
-  if (dir) await FileService.OpenDirectory(dir)
+  try {
+    const dir = await LoggingService.GetLogDir()
+    if (dir) await FileService.OpenDirectory(dir)
+  } catch (e) {
+    showMessage(t('settings.log.openWindowFailed') + ' ' + e, 'error')
+  }
 }
 
 // 刷新

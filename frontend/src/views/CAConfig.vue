@@ -11,13 +11,17 @@ import {
   NFormItem,
   NEmpty,
   NTag,
+  useMessage,
 } from 'naive-ui'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import type { CAListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
+import { initMessage, showMessage } from '../utils/message'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const cas = ref<CAListItem[]>([])
 const isLoading = ref(false)
@@ -68,13 +72,18 @@ const openEdit = (ca: (typeof cas.value)[0]) => {
 }
 
 const handleSave = async () => {
-  if (editingCA.value) {
-    await CAService.UpdateCA(editingCA.value, formData.value)
-  } else {
-    await CAService.CreateCA(formData.value)
+  try {
+    if (editingCA.value) {
+      await CAService.UpdateCA(editingCA.value, formData.value)
+    } else {
+      await CAService.CreateCA(formData.value)
+    }
+    showModal.value = false
+    cas.value = (await CAService.ListCA()) ?? []
+    showMessage(t('ca.saveSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('ca.saveFailed') + ' ' + e, 'error')
   }
-  showModal.value = false
-  cas.value = (await CAService.ListCA()) ?? []
 }
 
 const showDeleteModal = ref(false)
@@ -93,14 +102,20 @@ const handleDelete = async () => {
   try {
     await CAService.DeleteCA(id)
     cas.value = cas.value.filter((c) => c.id !== id)
+    showMessage(t('ca.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('ca.deleteFailed'), e)
+    showMessage(t('ca.deleteFailed') + ' ' + e, 'error')
   }
 }
 
 const handleSetDefault = async (id: number) => {
-  await CAService.SetDefaultCA(id)
-  cas.value = (await CAService.ListCA()) ?? []
+  try {
+    await CAService.SetDefaultCA(id)
+    cas.value = (await CAService.ListCA()) ?? []
+    showMessage(t('ca.setDefaultSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('ca.setDefaultFailed') + ' ' + e, 'error')
+  }
 }
 </script>
 

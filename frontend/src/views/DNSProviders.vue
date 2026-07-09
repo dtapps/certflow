@@ -13,13 +13,17 @@ import {
   NEmpty,
   NTag,
   NInputNumber,
+  useMessage,
 } from 'naive-ui'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
 import type { DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
+import { initMessage, showMessage } from '../utils/message'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const providers = ref<DNSProviderListItem[]>([])
 const isLoading = ref(false)
@@ -281,14 +285,19 @@ const openEdit = (p: (typeof providers.value)[0]) => {
 }
 
 const handleSave = async () => {
-  syncConfigToMap()
-  if (editingId.value) {
-    await DNSProviderService.UpdateDNSProvider(editingId.value, formData.value)
-  } else {
-    await DNSProviderService.CreateDNSProvider(formData.value)
+  try {
+    syncConfigToMap()
+    if (editingId.value) {
+      await DNSProviderService.UpdateDNSProvider(editingId.value, formData.value)
+    } else {
+      await DNSProviderService.CreateDNSProvider(formData.value)
+    }
+    showModal.value = false
+    providers.value = (await DNSProviderService.ListDNSProviders()) ?? []
+    showMessage(t('dns.saveSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('dns.saveFailed') + ' ' + e, 'error')
   }
-  showModal.value = false
-  providers.value = (await DNSProviderService.ListDNSProviders()) ?? []
 }
 
 const showDeleteModal = ref(false)
@@ -307,14 +316,20 @@ const handleDelete = async () => {
   try {
     await DNSProviderService.DeleteDNSProvider(id)
     providers.value = providers.value.filter((p) => p.id !== id)
+    showMessage(t('dns.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('dns.deleteProviderFailed'), e)
+    showMessage(t('dns.deleteProviderFailed') + ' ' + e, 'error')
   }
 }
 
 const handleSetDefault = async (id: number) => {
-  await DNSProviderService.SetDefaultDNSProvider(id)
-  providers.value = (await DNSProviderService.ListDNSProviders()) ?? []
+  try {
+    await DNSProviderService.SetDefaultDNSProvider(id)
+    providers.value = (await DNSProviderService.ListDNSProviders()) ?? []
+    showMessage(t('dns.setDefaultSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('dns.setDefaultFailed') + ' ' + e, 'error')
+  }
 }
 
 const getProviderLabel = (type: string) => {

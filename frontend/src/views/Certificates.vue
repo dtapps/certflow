@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
-import { NInput, NSelect, NButton, NDataTable, NTag, NModal, NSpin, NEmpty } from 'naive-ui'
+import { NInput, NSelect, NButton, NDataTable, NTag, NModal, NSpin, NEmpty, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import type { CertificateListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { getStatusBadge, getDaysLeft, getDaysLeftClass } from '../utils/certificate'
+import { initMessage, showMessage } from '../utils/message'
 
 const router = useRouter()
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const searchQuery = ref('')
 const statusFilter = ref<string | null>('all')
@@ -70,8 +73,9 @@ const handleDelete = async () => {
   try {
     await CertificateService.DeleteCertificate(id)
     certificates.value = certificates.value.filter((c) => c.id !== id)
+    showMessage(t('certs.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('certs.deleteFailed'), e)
+    showMessage(t('certs.deleteFailed') + ' ' + e, 'error')
   }
 }
 

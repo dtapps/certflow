@@ -48,3 +48,10 @@ export function SetMainWindow(w: application$0.Window): $CancellablePromise<void
 export function SetWindowAppearance(isDark: boolean): $CancellablePromise<void> {
     return $Call.ByID(258278425, isDark);
 }
+
+/**
+ * ShowMessage 显示原生对话框（前端调用）
+ */
+export function ShowMessage(title: string, message: string, msgType: string): $CancellablePromise<void> {
+    return $Call.ByID(1931405787, title, message, msgType);
+}

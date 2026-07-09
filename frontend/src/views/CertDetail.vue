@@ -13,6 +13,7 @@ import {
   NModal,
   NDescriptions,
   NDescriptionsItem,
+  useMessage,
 } from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import * as SchedulerService from '@bindings/cnb.cool/dtapp/certflow/schedulerservicewrapper'
@@ -20,11 +21,14 @@ import type { CertificateListItem, RenewalLogItem } from '@bindings/cnb.cool/dta
 import { useI18nStore } from '../stores/i18n'
 import { getStatusBadge, getDaysLeft, getDaysLeftClass } from '../utils/certificate'
 import { formatDateTime } from '../utils/format'
+import { initMessage, showMessage } from '../utils/message'
 
 const route = useRoute()
 const router = useRouter()
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const certId = computed(() => Number(route.params.id))
 
@@ -64,8 +68,13 @@ const daysLeft = computed(() => {
 })
 
 const handleRenew = async () => {
-  await CertificateService.RenewCertificate(certId.value)
-  certificate.value = await CertificateService.GetCertificateInfo(certId.value)
+  try {
+    await CertificateService.RenewCertificate(certId.value)
+    certificate.value = await CertificateService.GetCertificateInfo(certId.value)
+    showMessage(t('certDetail.renewSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('certDetail.renewFailed') + ' ' + e, 'error')
+  }
 }
 
 const showRevokeModal = ref(false)
@@ -76,8 +85,9 @@ const handleRevoke = async () => {
   try {
     await CertificateService.RevokeCertificate(certId.value)
     certificate.value = await CertificateService.GetCertificateInfo(certId.value)
+    showMessage(t('certDetail.revokeSuccess'), 'success')
   } catch (e) {
-    console.error(t('certDetail.revokeFailed'), e)
+    showMessage(t('certDetail.revokeFailed') + ' ' + e, 'error')
   }
 }
 
@@ -86,8 +96,9 @@ const handleDelete = async () => {
   try {
     await CertificateService.DeleteCertificate(certId.value)
     router.push('/certificates')
+    showMessage(t('certDetail.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('certDetail.deleteFailed'), e)
+    showMessage(t('certDetail.deleteFailed') + ' ' + e, 'error')
   }
 }
 
@@ -102,13 +113,18 @@ const cancelEditSettings = () => {
 }
 
 const saveSettings = async () => {
-  await CertificateService.UpdateCertificateSettings(
-    certId.value,
-    editAutoRenew.value,
-    editRenewalDays.value,
-  )
-  certificate.value = await CertificateService.GetCertificateInfo(certId.value)
-  editingSettings.value = false
+  try {
+    await CertificateService.UpdateCertificateSettings(
+      certId.value,
+      editAutoRenew.value,
+      editRenewalDays.value,
+    )
+    certificate.value = await CertificateService.GetCertificateInfo(certId.value)
+    editingSettings.value = false
+    showMessage(t('certDetail.settingsSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('certDetail.settingsFailed') + ' ' + e, 'error')
+  }
 }
 
 const copyToClipboard = async (text: string, field: string) => {

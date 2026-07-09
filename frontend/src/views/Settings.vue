@@ -12,6 +12,7 @@ import {
   NForm,
   NFormItem,
   NTag,
+  useMessage,
 } from 'naive-ui'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import * as NotificationService from '@bindings/cnb.cool/dtapp/certflow/notificationservicewrapper'
@@ -29,6 +30,7 @@ import type {
 } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useThemeStore } from '../stores/theme'
 import { useI18nStore } from '../stores/i18n'
+import { initMessage, showMessage } from '../utils/message'
 
 // 内部使用的类型：确保数组不为 null
 type SafeDNSConfig = Omit<DNSConfig, 'servers'> & { servers: string[] }
@@ -75,6 +77,9 @@ const { setTheme } = themeStore
 const i18nStore = useI18nStore()
 const { locale: currentLocale } = storeToRefs(i18nStore)
 const { t, setLocale } = i18nStore
+
+const message = useMessage()
+initMessage(message)
 
 // 检测是否有变更
 const hasChanges = computed(() => {
@@ -201,7 +206,7 @@ watch(notificationEnabled, async (enabled) => {
       const authorized = await NotificationService.RequestPermission()
       if (!authorized) {
         notificationEnabled.value = false
-        alert(t('settings.notification.permissionDenied'))
+        showMessage(t('settings.notification.permissionDenied'), 'warning')
       }
     }
   } catch (e) {
@@ -225,20 +230,20 @@ watch(autostartEnabled, async (enabled) => {
 const handleTestNotification = async () => {
   try {
     await NotificationService.SendTestNotification()
-    alert(t('settings.testNotificationSent'))
+    showMessage(t('settings.testNotificationSent'), 'success')
   } catch (e) {
-    alert(t('settings.testNotificationFailed'))
+    showMessage(t('settings.testNotificationFailed'), 'error')
   }
 }
 
 const handleRunRenewal = () => {
   SchedulerService.RunRenewalNow()
-  alert(t('settings.renewalStarted'))
+  showMessage(t('settings.renewalStarted'), 'success')
 }
 
 const handleRunExpiryCheck = () => {
   SchedulerService.RunExpiryCheckNow()
-  alert(t('settings.expiryCheckStarted'))
+  showMessage(t('settings.expiryCheckStarted'), 'success')
 }
 
 const handleRunMonitorCheck = async () => {
@@ -248,9 +253,9 @@ const handleRunMonitorCheck = async () => {
     for (const d of enabled) {
       if (d) await MonitorService.CheckNow(d.id)
     }
-    alert(t('settings.monitorCheckStarted'))
+    showMessage(t('settings.monitorCheckStarted'), 'success')
   } catch (e) {
-    alert(t('settings.monitorCheckFailed'))
+    showMessage(t('settings.monitorCheckFailed'), 'error')
   }
 }
 

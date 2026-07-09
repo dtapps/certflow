@@ -14,13 +14,17 @@ import {
   NEmpty,
   NTag,
   NStatistic,
+  useMessage,
 } from 'naive-ui'
 import * as MonitorService from '@bindings/cnb.cool/dtapp/certflow/monitorservicewrapper'
 import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/internal/monitor/models'
 import { useI18nStore } from '../stores/i18n'
+import { initMessage, showMessage } from '../utils/message'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
+const message = useMessage()
+initMessage(message)
 
 const domains = ref<MonitoredDomainItem[]>([])
 const isLoading = ref(false)
@@ -91,8 +95,9 @@ const handleSave = async () => {
     showAddModal.value = false
     showEditModal.value = false
     await loadDomains()
+    showMessage(t('monitor.saveSuccess'), 'success')
   } catch (e) {
-    console.error(t('monitor.saveFailed'), e)
+    showMessage(t('monitor.saveFailed') + ' ' + e, 'error')
   }
 }
 
@@ -109,8 +114,9 @@ const handleDelete = async () => {
   try {
     await MonitorService.Delete(id)
     await loadDomains()
+    showMessage(t('monitor.deleteSuccess'), 'success')
   } catch (e) {
-    console.error(t('monitor.deleteFailed'), e)
+    showMessage(t('monitor.deleteFailed') + ' ' + e, 'error')
   }
 }
 
@@ -119,8 +125,9 @@ const handleCheckNow = async (id: number) => {
   try {
     await MonitorService.CheckNow(id)
     await loadDomains()
+    showMessage(t('monitor.checkSuccess'), 'success')
   } catch (e) {
-    console.error(t('monitor.checkFailed'), e)
+    showMessage(t('monitor.checkFailed') + ' ' + e, 'error')
   } finally {
     checkingId.value = null
   }

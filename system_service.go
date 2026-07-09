@@ -56,6 +56,21 @@ func (s *SystemServiceWrapper) SetWindowAppearance(isDark bool) {
 	}
 }
 
+// ShowMessage 显示原生对话框（前端调用）
+func (s *SystemServiceWrapper) ShowMessage(title, message, msgType string) {
+	if s.app == nil {
+		return
+	}
+	switch msgType {
+	case "warning":
+		s.app.Dialog.Warning().SetTitle(title).SetMessage(message).Show()
+	case "error":
+		s.app.Dialog.Error().SetTitle(title).SetMessage(message).Show()
+	default:
+		s.app.Dialog.Info().SetTitle(title).SetMessage(message).Show()
+	}
+}
+
 // ServiceStartup 实现 Wails 服务接口
 func (s *SystemServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil
