@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   NCard,
   NInput,
@@ -35,6 +35,50 @@ const isLoadingHistory = ref(false)
 const expandedId = ref<number | null>(null)
 const showDeleteModal = ref(false)
 const deleteTargetId = ref(0)
+const searchQuery = ref('')
+const statusFilter = ref('all')
+
+const statusOptions = computed(() => [
+  { label: t('scan.allStatus'), value: 'all' },
+  { label: t('scan.statusError'), value: 'error' },
+  { label: t('scan.statusExpiring'), value: 'expiring' },
+  { label: t('scan.statusExpired'), value: 'expired' },
+  { label: t('scan.statusValid'), value: 'valid' },
+])
+
+const filteredHistory = computed(() => {
+  let list = history.value
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(
+      (item) =>
+        item.domain.toLowerCase().includes(q) ||
+        (item.cert_issuer && item.cert_issuer.toLowerCase().includes(q)),
+    )
+  }
+
+  if (statusFilter.value !== 'all') {
+    list = list.filter((item) => {
+      switch (statusFilter.value) {
+        case 'error':
+          return !!item.error_message
+        case 'expired':
+          return !item.error_message && item.cert_remaining_days <= 0
+        case 'expiring':
+          return (
+            !item.error_message && item.cert_remaining_days > 0 && item.cert_remaining_days <= 30
+          )
+        case 'valid':
+          return !item.error_message && item.cert_remaining_days > 30
+        default:
+          return true
+      }
+    })
+  }
+
+  return list
+})
 
 const handleScan = async () => {
   const domain = domainInput.value.trim()
@@ -164,10 +208,27 @@ onMounted(loadHistory)
         </n-button>
       </div>
 
+      <!-- 搜索和状态筛选 -->
+      <div v-if="history.length > 0" class="flex items-center gap-3 mb-3">
+        <n-input
+          v-model:value="searchQuery"
+          :placeholder="t('scan.searchPlaceholder')"
+          size="small"
+          clearable
+          class="flex-1"
+        />
+        <n-select
+          v-model:value="statusFilter"
+          :options="statusOptions"
+          size="small"
+          style="width: 130px"
+        />
+      </div>
+
       <n-spin :show="isLoadingHistory">
-        <div v-if="history.length > 0" class="space-y-3">
+        <div v-if="filteredHistory.length > 0" class="space-y-3">
           <div
-            v-for="item in history"
+            v-for="item in filteredHistory"
             :key="item.id"
             class="p-4 rounded-xl border transition-colors cursor-pointer"
             :class="
@@ -308,6 +369,10 @@ onMounted(loadHistory)
             </div>
           </div>
         </div>
+        <n-empty
+          v-else-if="history.length > 0 && filteredHistory.length === 0"
+          :description="t('scan.noMatch')"
+        />
         <n-empty v-else :description="t('scan.noHistoryDesc')" />
       </n-spin>
     </div>

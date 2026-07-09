@@ -654,6 +654,13 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'scan.scanTime': '扫描时间',
     'scan.port': '端口',
     'scan.scanType': '扫描类型',
+    'scan.searchPlaceholder': '搜索域名、颁发者...',
+    'scan.allStatus': '全部状态',
+    'scan.statusError': '错误',
+    'scan.statusExpiring': '即将过期',
+    'scan.statusExpired': '已过期',
+    'scan.statusValid': '有效',
+    'scan.noMatch': '无匹配的扫描记录',
   },
   'en-US': {
     'settings.title': 'Settings',
@@ -1307,6 +1314,13 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'scan.scanTime': 'Scan Time',
     'scan.port': 'Port',
     'scan.scanType': 'Scan Type',
+    'scan.searchPlaceholder': 'Search domain, issuer...',
+    'scan.allStatus': 'All Status',
+    'scan.statusError': 'Error',
+    'scan.statusExpiring': 'Expiring',
+    'scan.statusExpired': 'Expired',
+    'scan.statusValid': 'Valid',
+    'scan.noMatch': 'No matching scan records',
   },
 }
 
