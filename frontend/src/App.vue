@@ -44,14 +44,20 @@ onMounted(async () => {
 
 // 监听其他窗口的认证状态同步
 Events.On(EventAuthVerified, (ev) => {
-  console.log(t('event.received').replace('{name}', EventAuthVerified).replace('{data}', JSON.stringify(ev.data)))
+  console.log(
+    t('event.received')
+      .replace('{name}', EventAuthVerified)
+      .replace('{data}', JSON.stringify(ev.data)),
+  )
   isAuthenticated.value = true
 })
 
 // 监听菜单导航事件
 Events.On(EventNavigate, (ev) => {
   const data = ev.data as { path: string } | undefined
-  console.log(t('event.received').replace('{name}', EventNavigate).replace('{data}', JSON.stringify(data)))
+  console.log(
+    t('event.received').replace('{name}', EventNavigate).replace('{data}', JSON.stringify(data)),
+  )
   if (data?.path) {
     router.push(data.path)
   }

@@ -64,7 +64,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
     if (eventListenerRegistered) return
     eventListenerRegistered = true
     Events.On(EventNotification, (ev) => {
-      console.log(t('event.received').replace('{name}', EventNotification).replace('{data}', JSON.stringify(ev.data)))
+      console.log(
+        t('event.received')
+          .replace('{name}', EventNotification)
+          .replace('{data}', JSON.stringify(ev.data)),
+      )
       refreshList()
       refreshUnread()
     })
