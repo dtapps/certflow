@@ -11,6 +11,10 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 - **证书管理** — 申请、续期、撤销 SSL 证书，支持 30+ DNS 提供商自动验证
 - **域名监控** — HTTPS/HTTP 健康检查，证书过期预警
 - **自动续期** — 定时任务自动续期即将过期的证书
+- **证书扫描** — 扫描并归集证书，统一查看有效期与到期预警
+- **账户与安全** — 登录认证、TOTP 双因素（2FA）、Passkey / 生物识别（Touch ID、Windows Hello）
+- **应用内更新** — 启动后自动检查并安装新版本（基于 GitHub Release 校验和）
+- **系统托盘** — 后台常驻，菜单快速操作（检查更新、申请证书、退出）
 - **多平台** — 支持 macOS、Windows、Linux
 
 ## 截图
@@ -45,9 +49,9 @@ make package VERSION=1.0.0
 
 ```bash
 make help              # 查看所有命令
-make lint              # Go 代码检查
-make lint-fix          # Go 代码检查（自动修复）
-make check             # 前端 TypeScript 类型检查
+make lint-go           # Go 代码检查（golangci-lint）
+make lint-go-fix       # Go 代码检查（自动修复）
+make check             # 代码检查与测试（golangci-lint + 前端类型检查 + 单测）
 make test              # Go 后端测试
 make bindings          # 生成 Wails TypeScript 绑定
 make ent               # 生成 Ent ORM 代码
@@ -58,7 +62,7 @@ make format-frontend   # 格式化前端代码
 
 ## 技术栈
 
-- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite
+- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite；认证使用 go-webauthn + pquerna/otp（2FA）
 - **前端**：Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## 仓库
@@ -74,7 +78,9 @@ make format-frontend   # 格式化前端代码
 
 ## 发布
 
-在任意平台的手动触发工作流中输入版本号即可发布，构建产物从 GitHub Actions 下载。
+- **正式发布**：在 GitHub Actions 的 Release 工作流中手动输入版本号，六个平台并行构建并发布 GitHub Release
+- **每日构建（Nightly）**：GitHub Actions 每日 UTC 00:00 自动构建 `X.Y.Z-nightly` 预发布版本
+- 构建产物也从 GitHub Release 下载，供 CNB 等平台发布
 
 ## 开发文档
 

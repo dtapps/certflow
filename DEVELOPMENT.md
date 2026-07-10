@@ -21,6 +21,11 @@ CertFlow 是一个 SSL 证书管理工具，支持证书申请、续期、过期
 | gocron/v2 | 定时任务调度（自动续期、过期检查） |
 | modernc.org/sqlite | 嵌入式数据库（纯 Go，无需 CGO） |
 | golang.org/x/crypto | 密码学工具（bcrypt 等） |
+| go-webauthn/webauthn | Passkey / WebAuthn 认证 |
+| pquerna/otp | TOTP 双因素认证（2FA） |
+| google/uuid | 唯一标识生成（v7） |
+| spf13/viper | 配置管理 |
+| fsnotify/fsnotify | 文件系统监听 |
 
 ### 前端
 
@@ -36,6 +41,7 @@ CertFlow 是一个 SSL 证书管理工具，支持证书申请、续期、过期
 | @vicons/ionicons5 | 图标库 |
 | @vueuse/core | Vue 组合式 API 工具集 |
 | @wailsio/runtime | Wails 前后端通信运行时 |
+| qrcode | TOTP 二维码生成 |
 
 ### 构建与部署
 
@@ -54,17 +60,26 @@ CertFlow 是一个 SSL 证书管理工具，支持证书申请、续期、过期
 
 ```
 certflow/
-├── main.go                    # 入口文件
-├── system_service.go          # 系统服务（主题/窗口管理）
-├── cert_service.go            # 证书服务（Wails 包装层）
-├── ca_service.go              # CA 管理服务
-├── dns_service.go             # DNS 提供商服务
-├── auth_service.go            # 认证服务
-├── scheduler_service.go       # 定时任务服务
-├── monitor_service.go         # 域名监控服务
-├── notification_service_wrapper.go  # 通知服务
-├── settings_service.go        # 设置服务
-├── logging_service_wrapper.go # 日志服务
+├── main.go                    # 入口文件（版本/构建信息注入、应用装配、自更新）
+├── *_service.go               # Wails 服务包装层（每个业务一个文件）
+│   ├── system_service.go      # 系统服务（主题/窗口/菜单）
+│   ├── cert_service.go        # 证书服务
+│   ├── ca_service.go          # CA 管理服务
+│   ├── dns_service.go         # DNS 提供商服务
+│   ├── auth_service.go        # 认证服务
+│   ├── scheduler_service.go   # 定时任务服务
+│   ├── monitor_service.go     # 域名监控服务
+│   ├── scanner_service.go     # 证书扫描服务
+│   ├── notification_service_wrapper.go # 通知服务
+│   ├── settings_service.go    # 设置服务
+│   ├── logging_service_wrapper.go # 日志服务
+│   ├── clipboard_service.go   # 剪贴板服务
+│   ├── browser_service.go     # 浏览器打开服务
+│   ├── file_service.go        # 文件选择服务
+│   ├── dock_service.go        # macOS Dock 服务
+│   ├── window_service.go      # 窗口服务
+│   ├── systray_service.go     # 系统托盘服务
+│   └── autostart_service.go   # 开机自启动服务
 ├── ent/                       # Ent ORM 生成的代码
 │   ├── schema/                # 数据库模型定义
 │   │   ├── ca.go              # CA 实体
@@ -72,34 +87,44 @@ certflow/
 │   │   ├── dns_provider.go    # DNS 提供商实体
 │   │   ├── monitored_domain.go # 监控域名实体
 │   │   ├── notification.go    # 通知实体
-│   │   └── renewal_log.go     # 续期日志实体
+│   │   ├── renewal_log.go     # 续期日志实体
+│   │   ├── auth_method.go     # 认证方式实体
+│   │   ├── totp_credential.go # TOTP 凭据实体（2FA）
+│   │   ├── passkey_credential.go # Passkey 凭据实体（WebAuthn）
+│   │   └── scan_result.go     # 扫描结果实体
 │   └── ...
 ├── internal/                  # 内部实现
-│   ├── auth/                  # 认证服务
+│   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
+│   ├── biometric/             # 生物识别 Helper 二进制（Touch ID/Windows Hello）
 │   ├── ca/                    # CA 管理
+│   ├── cert/                  # 证书解析/工具
 │   ├── certificate/           # 证书申请/续期/撤销
-│   ├── dnsprovider/           # DNS 提供商管理
 │   ├── db/                    # 数据库初始化
+│   ├── dns/                   # DNS 工具
+│   ├── dnsprovider/           # DNS 提供商管理
+│   ├── events/                # 前后端事件定义
 │   ├── i18n/                  # 国际化（嵌入式语言文件）
 │   ├── logging/               # 日志系统（轮转/压缩）
 │   ├── monitor/               # 域名监控
 │   ├── network/               # 网络工具（DNS/代理）
 │   ├── notification/          # 通知服务
+│   ├── scanner/               # 证书扫描
 │   ├── scheduler/             # 定时任务调度
 │   └── settings/              # 应用设置
 ├── frontend/                  # 前端应用
 │   ├── src/
 │   │   ├── views/             # 页面视图
-│   │   │   ├── Dashboard.vue
-│   │   │   ├── Certificates.vue
-│   │   │   ├── CertApply.vue
-│   │   │   ├── CertDetail.vue
-│   │   │   ├── CAConfig.vue
-│   │   │   ├── DNSProviders.vue
-│   │   │   ├── Monitor.vue
-│   │   │   ├── Settings.vue
-│   │   │   ├── PersonalCenter.vue
-│   │   │   └── LogViewer.vue
+│   │   │   ├── Dashboard.vue          # 仪表盘（总览/统计）
+│   │   │   ├── Certificates.vue        # 证书列表（管理/续期/撤销）
+│   │   │   ├── CertApply.vue           # 证书申请（表单/提交）
+│   │   │   ├── CertDetail.vue          # 证书详情（查看/导出/部署）
+│   │   │   ├── CAConfig.vue            # CA 配置（私有 CA 管理）
+│   │   │   ├── DNSProviders.vue        # DNS 提供商（凭证管理/验证）
+│   │   │   ├── Monitor.vue             # 域名监控（健康检查/过期预警）
+│   │   │   ├── Scan.vue                # 证书扫描（归集/有效期）
+│   │   │   ├── Settings.vue            # 设置（应用/更新/关于）
+│   │   │   ├── PersonalCenter.vue      # 个人中心（账户/2FA/Passkey）
+│   │   │   └── LogViewer.vue           # 日志查看（运行/续期日志）
 │   │   ├── components/        # 公共组件
 │   │   │   ├── TitleBar.vue   # 自定义标题栏（窗口控制）
 │   │   │   ├── Sidebar.vue    # 侧边栏导航
@@ -119,13 +144,14 @@ certflow/
 ├── build/                     # 构建配置
 │   ├── config.yml             # Wails 应用配置
 │   ├── Taskfile.yml           # 公共构建任务
-│   ├── darwin/                # macOS 构建
-│   ├── windows/               # Windows 构建
-│   └── linux/                 # Linux 构建
+│   ├── darwin/                # macOS 构建/签名
+│   ├── windows/               # Windows 构建/签名
+│   └── linux/                 # Linux 构建/签名
 ├── .github/workflows/         # GitHub Actions 工作流
-│   └── release.yml            # 六平台发布
+│   ├── release.yml            # 正式发布（六平台）
+│   └── nightly.yml            # 每日构建（nightly 预发布）
 ├── .cnb/workflows/            # CNB 工作流
-│   └── release.yml            # 从 GitHub 下载发布
+│   └── release.yml            # 从 GitHub Release 下载产物并发布到 CNB
 ├── .golangci.yml              # Go 代码检查配置
 ├── Makefile                   # Make 命令
 ├── Taskfile.yml               # Task 构建入口
@@ -141,11 +167,12 @@ make help              # 查看所有命令
 make deps              # 安装所有依赖（Go + 前端）
 make dev               # 启动 Wails 开发模式
 make build             # 构建生产包（make build VERSION=1.0.0）
-make package           # 打包 macOS 应用（make package VERSION=1.0.0）
+make package           # 打包应用（make package VERSION=1.0.0）
 make go-build          # 快速编译（仅 Go 后端）
-make lint              # Go 代码检查（golangci-lint）
-make lint-fix          # Go 代码检查（自动修复）
-make check             # 前端 TypeScript 类型检查
+make lint-go           # Go 代码检查（golangci-lint）
+make lint-go-fix       # Go 代码检查（自动修复）
+make lint-frontend     # 前端 TypeScript 类型检查（vue-tsc）
+make check             # 代码检查与测试（lint-go + lint-frontend + test-go）
 make test              # Go 后端测试
 make bindings          # 生成 Wails TypeScript 绑定
 make ent               # 生成 Ent ORM 代码
@@ -160,7 +187,7 @@ make push              # 推送到所有远程仓库
 
 ## 版本号注入
 
-构建时通过 Taskfile 的 BUILD_FLAGS 注入版本号、构建时间和 Git 提交 ID：
+构建时通过各平台 Taskfile 的 `-ldflags -X` 注入版本号、构建时间、Git 提交 ID 与更新令牌（默认值 `dev` / 空字符串），由 `wails3 task build VERSION=x BUILD_TIME=... GIT_COMMIT=... GITHUB_TOKEN=...` 控制：
 
 ```bash
 # 通过 wails3 task（推荐）
@@ -174,6 +201,7 @@ make build VERSION=1.0.0
 - `currentVersion` — 版本号（默认 `dev`）
 - `buildTime` — 构建时间（UTC）
 - `gitCommit` — Git 短提交 ID
+- `githubToken` — 自更新用的 GitHub Token（CI 注入，本地为空）
 
 ---
 
@@ -187,8 +215,19 @@ make build VERSION=1.0.0
 
 ### 发布工作流
 
-- **GitHub Actions**：手动输入版本号，六个平台并行构建，发布 GitHub Release
+- **GitHub Actions（Release）**：手动输入版本号，六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release
+- **GitHub Actions（Nightly）**：每日 UTC 00:00 自动构建 `X.Y.Z-nightly` 预发布版本（tag 为 `nightly`）
 - **CNB**：手动输入版本号，从 GitHub Release 下载产物并发布
+
+### 代码签名
+
+CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配置了对应 Secret 时执行，未配置则步骤自动跳过，不影响构建**：
+
+- **macOS**：Apple Developer ID 证书 + 公证（`darwin:sign:notarize`），依赖 `APPLE_DEVELOPER_ID_CERTIFICATE` / `APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD` / `APPLE_NOTARIZER_KEYCHAIN_PROFILE` 三个 Secret。未签名+公证的应用会被 Gatekeeper 拦截（"无法验证开发者 / 文件已损坏"）
+- **Windows**：Authenticode 签名，先签名安装包（`windows:sign:installer`）再签名独立 exe（`windows:sign`），依赖 `WINDOWS_SIGN_CERTIFICATE`（.pfx 的 base64）/ `WINDOWS_SIGN_CERTIFICATE_PASSWORD` / `WINDOWS_SIGN_THUMBPRINT` / `WINDOWS_TIMESTAMP_SERVER` 四个 Secret，用于缓解 SmartScreen 拦截
+- **Linux**：操作系统不强制验签，无需代码签名
+
+> 自动更新仅依赖 GitHub Release 的 `SHA256SUMS` 校验和验证（wails 原生支持），不对更新包做 ed25519 签名验签
 
 ---
 
@@ -229,8 +268,8 @@ make format-frontend   # 格式化前端代码（Prettier）
 ## 代码检查
 
 ```bash
-make lint              # 运行 golangci-lint
-make lint-fix          # 自动修复
+make lint-go           # 运行 golangci-lint
+make lint-go-fix       # 自动修复
 ```
 
 启用的检查器：errcheck、govet、staticcheck、ineffassign、misspell、unconvert、nilerr、errorlint、bodyclose、contextcheck、noctx、gosec。
@@ -243,7 +282,7 @@ make lint-fix          # 自动修复
 make test              # 运行所有测试
 ```
 
-12 个包均有测试覆盖：auth、ca、certificate、db、dnsprovider、i18n、logging、monitor、network、notification、scheduler、settings。
+13 个包均有测试覆盖：auth、ca、certificate、db、dnsprovider、i18n、logging、monitor、network、notification、scanner、scheduler、settings。
 
 ---
 
@@ -275,7 +314,7 @@ localStorage.removeItem('debug-platform')
 
 1. **Ent 代码生成**：修改 `ent/schema/` 后需要运行 `make ent` 重新生成 ORM 代码
 2. **绑定生成**：修改 Go 服务后需要运行 `make bindings` 重新生成前端绑定代码
-3. **`wails3 build` 不支持 `-ldflags`**：版本号通过 Taskfile BUILD_FLAGS 注入
+3. **版本号注入方式**：`wails3 task build` 不接受裸 `-ldflags` 参数，需通过 `VERSION=` 等 Task 变量传入，由各平台 Taskfile 自动拼接成 `-ldflags "-X main.currentVersion=..."`
 4. **Linux 交叉编译**：从 macOS 无法交叉编译 Linux（需要 CGO + webkit2gtk），使用 GitHub Actions 构建
 5. **Naive UI 按需引入**：直接在模板中使用 `<n-xxx>` 组件，无需全局注册
 6. **Pinia 状态管理**：使用 `useXxxStore()` 获取 store，`storeToRefs()` 解构响应式属性

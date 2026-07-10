@@ -11,6 +11,10 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 - **Certificate Management** — Issue, renew, and revoke SSL certificates with 30+ DNS provider auto-verification
 - **Domain Monitoring** — HTTPS/HTTP health checks and certificate expiration alerts
 - **Auto Renewal** — Scheduled tasks to automatically renew expiring certificates
+- **Certificate Scanning** — Scan and aggregate certificates, view validity and expiration warnings in one place
+- **Account & Security** — Login authentication, TOTP two-factor (2FA), Passkey / biometrics (Touch ID, Windows Hello)
+- **In-App Updates** — Automatically check for and install new versions on launch (via GitHub Release checksums)
+- **System Tray** — Runs in the background with a menu for quick actions (check update, apply cert, quit)
 - **Multi-Platform** — Supports macOS, Windows, and Linux
 
 ## Screenshots
@@ -45,9 +49,9 @@ make package VERSION=1.0.0
 
 ```bash
 make help              # View all commands
-make lint              # Go code linting
-make lint-fix          # Go code linting (auto-fix)
-make check             # Frontend TypeScript type checking
+make lint-go           # Go code linting (golangci-lint)
+make lint-go-fix       # Go code linting (auto-fix)
+make check             # Lint and test (golangci-lint + frontend type check + unit tests)
 make test              # Go backend tests
 make bindings          # Generate Wails TypeScript bindings
 make ent               # Generate Ent ORM code
@@ -58,7 +62,7 @@ make format-frontend   # Format frontend code
 
 ## Tech Stack
 
-- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite
+- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite; auth uses go-webauthn + pquerna/otp (2FA)
 - **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## Repositories
@@ -74,7 +78,9 @@ make format-frontend   # Format frontend code
 
 ## Release
 
-Trigger the manual workflow on any platform with a version number. Build artifacts are downloaded from GitHub Actions.
+- **Stable Release**: Trigger the GitHub Actions Release workflow manually with a version number; six platforms build in parallel and publish a GitHub Release
+- **Nightly Build**: GitHub Actions automatically builds a `X.Y.Z-nightly` pre-release every day at UTC 00:00
+- Build artifacts are also downloaded from GitHub Release for publishing on platforms like CNB
 
 ## Development Documentation
 
