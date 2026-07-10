@@ -31,13 +31,13 @@ func (_u *AuthMethodUpdate) Where(ps ...predicate.AuthMethod) *AuthMethodUpdate 
 }
 
 // SetMethod sets the "method" field.
-func (_u *AuthMethodUpdate) SetMethod(v string) *AuthMethodUpdate {
+func (_u *AuthMethodUpdate) SetMethod(v authmethod.Method) *AuthMethodUpdate {
 	_u.mutation.SetMethod(v)
 	return _u
 }
 
 // SetNillableMethod sets the "method" field if the given value is not nil.
-func (_u *AuthMethodUpdate) SetNillableMethod(v *string) *AuthMethodUpdate {
+func (_u *AuthMethodUpdate) SetNillableMethod(v *authmethod.Method) *AuthMethodUpdate {
 	if v != nil {
 		_u.SetMethod(*v)
 	}
@@ -220,7 +220,7 @@ func (_u *AuthMethodUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 	}
 	if value, ok := _u.mutation.Method(); ok {
-		_spec.SetField(authmethod.FieldMethod, field.TypeString, value)
+		_spec.SetField(authmethod.FieldMethod, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(authmethod.FieldIsActive, field.TypeBool, value)
@@ -345,13 +345,13 @@ type AuthMethodUpdateOne struct {
 }
 
 // SetMethod sets the "method" field.
-func (_u *AuthMethodUpdateOne) SetMethod(v string) *AuthMethodUpdateOne {
+func (_u *AuthMethodUpdateOne) SetMethod(v authmethod.Method) *AuthMethodUpdateOne {
 	_u.mutation.SetMethod(v)
 	return _u
 }
 
 // SetNillableMethod sets the "method" field if the given value is not nil.
-func (_u *AuthMethodUpdateOne) SetNillableMethod(v *string) *AuthMethodUpdateOne {
+func (_u *AuthMethodUpdateOne) SetNillableMethod(v *authmethod.Method) *AuthMethodUpdateOne {
 	if v != nil {
 		_u.SetMethod(*v)
 	}
@@ -564,7 +564,7 @@ func (_u *AuthMethodUpdateOne) sqlSave(ctx context.Context) (_node *AuthMethod, 
 		}
 	}
 	if value, ok := _u.mutation.Method(); ok {
-		_spec.SetField(authmethod.FieldMethod, field.TypeString, value)
+		_spec.SetField(authmethod.FieldMethod, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(authmethod.FieldIsActive, field.TypeBool, value)

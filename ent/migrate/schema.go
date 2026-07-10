@@ -11,7 +11,7 @@ var (
 	// AuthMethodsColumns holds the columns for the "auth_methods" table.
 	AuthMethodsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "method", Type: field.TypeString},
+		{Name: "method", Type: field.TypeEnum, Enums: []string{"password", "totp", "passkey", "biometric"}},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
 		{Name: "password_hash", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},

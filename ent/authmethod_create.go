@@ -25,7 +25,7 @@ type AuthMethodCreate struct {
 }
 
 // SetMethod sets the "method" field.
-func (_c *AuthMethodCreate) SetMethod(v string) *AuthMethodCreate {
+func (_c *AuthMethodCreate) SetMethod(v authmethod.Method) *AuthMethodCreate {
 	_c.mutation.SetMethod(v)
 	return _c
 }
@@ -212,7 +212,7 @@ func (_c *AuthMethodCreate) createSpec() (*AuthMethod, *sqlgraph.CreateSpec) {
 	)
 	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.Method(); ok {
-		_spec.SetField(authmethod.FieldMethod, field.TypeString, value)
+		_spec.SetField(authmethod.FieldMethod, field.TypeEnum, value)
 		_node.Method = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
@@ -316,7 +316,7 @@ type (
 )
 
 // SetMethod sets the "method" field.
-func (u *AuthMethodUpsert) SetMethod(v string) *AuthMethodUpsert {
+func (u *AuthMethodUpsert) SetMethod(v authmethod.Method) *AuthMethodUpsert {
 	u.Set(authmethod.FieldMethod, v)
 	return u
 }
@@ -415,7 +415,7 @@ func (u *AuthMethodUpsertOne) Update(set func(*AuthMethodUpsert)) *AuthMethodUps
 }
 
 // SetMethod sets the "method" field.
-func (u *AuthMethodUpsertOne) SetMethod(v string) *AuthMethodUpsertOne {
+func (u *AuthMethodUpsertOne) SetMethod(v authmethod.Method) *AuthMethodUpsertOne {
 	return u.Update(func(s *AuthMethodUpsert) {
 		s.SetMethod(v)
 	})
@@ -689,7 +689,7 @@ func (u *AuthMethodUpsertBulk) Update(set func(*AuthMethodUpsert)) *AuthMethodUp
 }
 
 // SetMethod sets the "method" field.
-func (u *AuthMethodUpsertBulk) SetMethod(v string) *AuthMethodUpsertBulk {
+func (u *AuthMethodUpsertBulk) SetMethod(v authmethod.Method) *AuthMethodUpsertBulk {
 	return u.Update(func(s *AuthMethodUpsert) {
 		s.SetMethod(v)
 	})

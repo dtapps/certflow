@@ -52,7 +52,7 @@ type AuthMethodMutation struct {
 	op                         Op
 	typ                        string
 	id                         *int
-	method                     *string
+	method                     *authmethod.Method
 	is_active                  *bool
 	password_hash              *string
 	created_at                 *time.Time
@@ -168,12 +168,12 @@ func (m *AuthMethodMutation) IDs(ctx context.Context) ([]int, error) {
 }
 
 // SetMethod sets the "method" field.
-func (m *AuthMethodMutation) SetMethod(s string) {
-	m.method = &s
+func (m *AuthMethodMutation) SetMethod(a authmethod.Method) {
+	m.method = &a
 }
 
 // Method returns the value of the "method" field in the mutation.
-func (m *AuthMethodMutation) Method() (r string, exists bool) {
+func (m *AuthMethodMutation) Method() (r authmethod.Method, exists bool) {
 	v := m.method
 	if v == nil {
 		return
@@ -184,7 +184,7 @@ func (m *AuthMethodMutation) Method() (r string, exists bool) {
 // OldMethod returns the old "method" field's value of the AuthMethod entity.
 // If the AuthMethod object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AuthMethodMutation) OldMethod(ctx context.Context) (v string, err error) {
+func (m *AuthMethodMutation) OldMethod(ctx context.Context) (v authmethod.Method, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMethod is only allowed on UpdateOne operations")
 	}
@@ -565,7 +565,7 @@ func (m *AuthMethodMutation) OldField(ctx context.Context, name string) (ent.Val
 func (m *AuthMethodMutation) SetField(name string, value ent.Value) error {
 	switch name {
 	case authmethod.FieldMethod:
-		v, ok := value.(string)
+		v, ok := value.(authmethod.Method)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

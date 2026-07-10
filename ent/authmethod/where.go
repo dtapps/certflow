@@ -55,11 +55,6 @@ func IDLTE(id int) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldLTE(FieldID, id))
 }
 
-// Method applies equality check predicate on the "method" field. It's identical to MethodEQ.
-func Method(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldEQ(FieldMethod, v))
-}
-
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldEQ(FieldIsActive, v))
@@ -81,68 +76,23 @@ func UpdatedAt(v time.Time) predicate.AuthMethod {
 }
 
 // MethodEQ applies the EQ predicate on the "method" field.
-func MethodEQ(v string) predicate.AuthMethod {
+func MethodEQ(v Method) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldEQ(FieldMethod, v))
 }
 
 // MethodNEQ applies the NEQ predicate on the "method" field.
-func MethodNEQ(v string) predicate.AuthMethod {
+func MethodNEQ(v Method) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldNEQ(FieldMethod, v))
 }
 
 // MethodIn applies the In predicate on the "method" field.
-func MethodIn(vs ...string) predicate.AuthMethod {
+func MethodIn(vs ...Method) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldIn(FieldMethod, vs...))
 }
 
 // MethodNotIn applies the NotIn predicate on the "method" field.
-func MethodNotIn(vs ...string) predicate.AuthMethod {
+func MethodNotIn(vs ...Method) predicate.AuthMethod {
 	return predicate.AuthMethod(sql.FieldNotIn(FieldMethod, vs...))
-}
-
-// MethodGT applies the GT predicate on the "method" field.
-func MethodGT(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldGT(FieldMethod, v))
-}
-
-// MethodGTE applies the GTE predicate on the "method" field.
-func MethodGTE(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldGTE(FieldMethod, v))
-}
-
-// MethodLT applies the LT predicate on the "method" field.
-func MethodLT(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldLT(FieldMethod, v))
-}
-
-// MethodLTE applies the LTE predicate on the "method" field.
-func MethodLTE(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldLTE(FieldMethod, v))
-}
-
-// MethodContains applies the Contains predicate on the "method" field.
-func MethodContains(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldContains(FieldMethod, v))
-}
-
-// MethodHasPrefix applies the HasPrefix predicate on the "method" field.
-func MethodHasPrefix(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldHasPrefix(FieldMethod, v))
-}
-
-// MethodHasSuffix applies the HasSuffix predicate on the "method" field.
-func MethodHasSuffix(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldHasSuffix(FieldMethod, v))
-}
-
-// MethodEqualFold applies the EqualFold predicate on the "method" field.
-func MethodEqualFold(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldEqualFold(FieldMethod, v))
-}
-
-// MethodContainsFold applies the ContainsFold predicate on the "method" field.
-func MethodContainsFold(v string) predicate.AuthMethod {
-	return predicate.AuthMethod(sql.FieldContainsFold(FieldMethod, v))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.

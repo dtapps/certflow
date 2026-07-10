@@ -156,7 +156,7 @@ func (s *AuthService) GetActiveMethod() (string, error) {
 		}
 		return "", fmt.Errorf(i18n.T("error.load_auth_failed"))
 	}
-	return am.Method, nil
+	return am.Method.String(), nil
 }
 
 // SetActiveMethod 设置激活的认证方式
@@ -167,13 +167,13 @@ func (s *AuthService) SetActiveMethod(method string) error {
 	ctx := context.Background()
 
 	// 验证方法是否有效
-	if method != "password" && method != "totp" && method != "passkey" && method != "biometric" {
+	if method != authmethod.MethodPassword.String() && method != authmethod.MethodTotp.String() && method != authmethod.MethodPasskey.String() && method != authmethod.MethodBiometric.String() {
 		return fmt.Errorf(i18n.T("error.auth_method_invalid", "Method", method))
 	}
 
 	// 检查该方法是否已配置
 	exists, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ(method)).
+		Where(authmethod.MethodEQ(authmethod.Method(method))).
 		Exist(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("error.load_auth_failed"))
@@ -192,7 +192,7 @@ func (s *AuthService) SetActiveMethod(method string) error {
 
 	// 激活指定方法
 	_, err = s.db.AuthMethod.Update().
-		Where(authmethod.MethodEQ(method)).
+		Where(authmethod.MethodEQ(authmethod.Method(method))).
 		SetIsActive(true).
 		Save(ctx)
 	return err
@@ -214,7 +214,7 @@ func (s *AuthService) GetAvailableMethods() ([]string, error) {
 
 	result := make([]string, len(methods))
 	for i, m := range methods {
-		result[i] = m.Method
+		result[i] = m.Method.String()
 	}
 	return result, nil
 }

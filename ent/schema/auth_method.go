@@ -15,10 +15,9 @@ type AuthMethod struct {
 
 func (AuthMethod) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("method").
-			NotEmpty().
-			// ENUM: "password", "totp", "passkey"
-			Comment("认证方式: password/totp/passkey"),
+		field.Enum("method").
+			Values("password", "totp", "passkey", "biometric").
+			Comment("认证方式: password/totp/passkey/biometric"),
 		field.Bool("is_active").
 			Default(false).
 			Comment("是否为当前激活的认证方式"),

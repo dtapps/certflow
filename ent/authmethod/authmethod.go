@@ -3,6 +3,7 @@
 package authmethod
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -67,8 +68,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// MethodValidator is a validator for the "method" field. It is called by the builders before save.
-	MethodValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -78,6 +77,31 @@ var (
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
 )
+
+// Method defines the type for the "method" enum field.
+type Method string
+
+// Method values.
+const (
+	MethodPassword  Method = "password"
+	MethodTotp      Method = "totp"
+	MethodPasskey   Method = "passkey"
+	MethodBiometric Method = "biometric"
+)
+
+func (m Method) String() string {
+	return string(m)
+}
+
+// MethodValidator is a validator for the "method" field enum values. It is called by the builders before save.
+func MethodValidator(m Method) error {
+	switch m {
+	case MethodPassword, MethodTotp, MethodPasskey, MethodBiometric:
+		return nil
+	default:
+		return fmt.Errorf("authmethod: invalid enum value for method field: %q", m)
+	}
+}
 
 // OrderOption defines the ordering options for the AuthMethod queries.
 type OrderOption func(*sql.Selector)

@@ -24,10 +24,6 @@ import (
 func init() {
 	authmethodFields := schema.AuthMethod{}.Fields()
 	_ = authmethodFields
-	// authmethodDescMethod is the schema descriptor for method field.
-	authmethodDescMethod := authmethodFields[0].Descriptor()
-	// authmethod.MethodValidator is a validator for the "method" field. It is called by the builders before save.
-	authmethod.MethodValidator = authmethodDescMethod.Validators[0].(func(string) error)
 	// authmethodDescIsActive is the schema descriptor for is_active field.
 	authmethodDescIsActive := authmethodFields[1].Descriptor()
 	// authmethod.DefaultIsActive holds the default value on creation for the is_active field.

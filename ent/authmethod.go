@@ -17,8 +17,8 @@ type AuthMethod struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 认证方式: password/totp/passkey
-	Method string `json:"method,omitempty"`
+	// 认证方式: password/totp/passkey/biometric
+	Method authmethod.Method `json:"method,omitempty"`
 	// 是否为当前激活的认证方式
 	IsActive bool `json:"is_active,omitempty"`
 	// 密码哈希（bcrypt，仅 password 方式使用）
@@ -100,7 +100,7 @@ func (_m *AuthMethod) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field method", values[i])
 			} else if value.Valid {
-				_m.Method = value.String
+				_m.Method = authmethod.Method(value.String)
 			}
 		case authmethod.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -173,7 +173,7 @@ func (_m *AuthMethod) String() string {
 	builder.WriteString("AuthMethod(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("method=")
-	builder.WriteString(_m.Method)
+	builder.WriteString(fmt.Sprintf("%v", _m.Method))
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))

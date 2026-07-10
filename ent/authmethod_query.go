@@ -335,7 +335,7 @@ func (_q *AuthMethodQuery) WithPasskeyCredentials(opts ...func(*PasskeyCredentia
 // Example:
 //
 //	var v []struct {
-//		Method string `json:"method,omitempty"`
+//		Method authmethod.Method `json:"method,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -358,7 +358,7 @@ func (_q *AuthMethodQuery) GroupBy(field string, fields ...string) *AuthMethodGr
 // Example:
 //
 //	var v []struct {
-//		Method string `json:"method,omitempty"`
+//		Method authmethod.Method `json:"method,omitempty"`
 //	}
 //
 //	client.AuthMethod.Query().
