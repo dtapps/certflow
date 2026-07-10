@@ -2,12 +2,17 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"cnb.cool/dtapp/certflow/ent"
 	"entgo.io/ent/dialect"
-	_ "github.com/mattn/go-sqlite3"
+	sqlite "modernc.org/sqlite"
 )
+
+func init() {
+	sql.Register("sqlite3", &sqlite.Driver{})
+}
 
 func newTestService(t *testing.T) (*AuthService, string) {
 	t.Helper()

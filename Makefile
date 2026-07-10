@@ -76,7 +76,8 @@ deps: ## 安装所有依赖
 update-deps: ## 更新所有依赖
 	go get -u ./...
 	go mod tidy
-	cd frontend && pnpm update --latest
+# 	cd frontend && pnpm update --latest
+	cd frontend && pnpm update
 
 setup: deps bindings ent ## 完整项目初始化
 	@echo "项目初始化完成！运行 'make dev' 启动开发模式"
