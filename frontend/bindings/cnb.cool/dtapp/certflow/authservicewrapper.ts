@@ -22,6 +22,13 @@ export function Authenticate(method: string, credential: string): $CancellablePr
 }
 
 /**
+ * CancelTOTP 取消未确认的 TOTP 设置
+ */
+export function CancelTOTP(): $CancellablePromise<void> {
+    return $Call.ByID(2858935055);
+}
+
+/**
  * ChangePassword 修改密码
  */
 export function ChangePassword(oldPassword: string, newPassword: string): $CancellablePromise<void> {

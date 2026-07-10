@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // @ts-nocheck
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { NCard, NButton, NInput, NSwitch, NSpin, NForm, NFormItem, NAlert, NTag } from 'naive-ui'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
 import { useI18nStore } from '../stores/i18n'
@@ -50,6 +50,8 @@ const totpSetupResult = ref<{ secret: string; url: string } | null>(null)
 const totpCode = ref('')
 const showTOTPForm = ref(false)
 const totpQRCode = ref('')
+const totpCountdown = ref(0)
+let totpTimer: ReturnType<typeof setInterval> | null = null
 
 // Passkey 状态
 const isPasskeySet = ref(false)
@@ -66,6 +68,13 @@ const availableMethods = ref<string[]>([])
 
 onMounted(async () => {
   await loadAuthInfo()
+})
+
+onBeforeUnmount(() => {
+  // 切换页面时取消未确认的 TOTP 设置
+  if (showTOTPForm.value) {
+    cancelTOTPSetup()
+  }
 })
 
 // 监听 TOTP 设置结果，生成 QR 码
@@ -184,6 +193,15 @@ const setupTOTP = async () => {
     const result = await AuthService.SetupTOTP()
     totpSetupResult.value = result
     showTOTPForm.value = true
+    // 启动 120 秒倒计时
+    totpCountdown.value = 120
+    totpTimer = setInterval(() => {
+      totpCountdown.value--
+      if (totpCountdown.value <= 0) {
+        // 超时，取消设置
+        cancelTOTPSetup()
+      }
+    }, 1000)
   } catch (e: any) {
     message.value = { type: 'error', text: e.message || t('personal.totpSetupFailed') }
   }
@@ -197,6 +215,7 @@ const verifyTOTPSetup = async () => {
   }
   try {
     await AuthService.VerifyTOTPSetup(totpCode.value)
+    clearTOTPTimer()
     isTOTPSet.value = true
     showTOTPForm.value = false
     totpSetupResult.value = null
@@ -208,9 +227,32 @@ const verifyTOTPSetup = async () => {
   }
 }
 
+const clearTOTPTimer = () => {
+  if (totpTimer) {
+    clearInterval(totpTimer)
+    totpTimer = null
+  }
+  totpCountdown.value = 0
+}
+
+const cancelTOTPSetup = async () => {
+  clearTOTPTimer()
+  try {
+    await AuthService.CancelTOTP()
+  } catch {
+    // 忽略错误
+  }
+  showTOTPForm.value = false
+  totpSetupResult.value = null
+  totpCode.value = ''
+  totpQRCode.value = ''
+  message.value = { type: 'error', text: t('personal.totpSetupCancelled') }
+}
+
 const clearTOTP = async () => {
   message.value = null
   try {
+    clearTOTPTimer()
     await AuthService.ClearTOTP()
     isTOTPSet.value = false
     showTOTPForm.value = false
@@ -542,9 +584,17 @@ const switchMethod = async (method: string) => {
                 :placeholder="t('personal.verifyTOTPCode')"
               />
             </n-form-item>
-            <n-button type="primary" @click="verifyTOTPSetup">
-              {{ t('personal.confirmSet') }}
-            </n-button>
+            <n-alert v-if="totpCountdown > 0" type="warning" size="small">
+              {{ t('personal.totpTimeout', { seconds: totpCountdown }) }}
+            </n-alert>
+            <div class="flex gap-2">
+              <n-button type="primary" @click="verifyTOTPSetup">
+                {{ t('personal.confirmSet') }}
+              </n-button>
+              <n-button @click="cancelTOTPSetup">
+                {{ t('common.cancel') }}
+              </n-button>
+            </div>
           </div>
         </n-card>
 

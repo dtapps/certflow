@@ -270,6 +270,8 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'personal.manualKey': '手动输入密钥',
     'personal.totpSetupSuccess': 'TOTP 设置成功',
     'personal.totpSetupFailed': 'TOTP 设置失败',
+    'personal.totpTimeout': '请在 {seconds} 秒内完成验证，超时将自动取消设置',
+    'personal.totpSetupCancelled': 'TOTP 设置已超时取消',
     'personal.passkey': '通行密钥 (Passkey)',
     'personal.passkeySet': '已设置',
     'personal.passkeyNotSet': '未设置',
@@ -932,6 +934,9 @@ const messages: Record<ResolvedLocale, Record<string, string>> = {
     'personal.manualKey': 'Manual key entry',
     'personal.totpSetupSuccess': 'TOTP setup successful',
     'personal.totpSetupFailed': 'TOTP setup failed',
+    'personal.totpTimeout':
+      'Complete verification within {seconds} seconds, or setup will be cancelled',
+    'personal.totpSetupCancelled': 'TOTP setup has been cancelled due to timeout',
     'personal.passkey': 'Passkey',
     'personal.passkeySet': 'Configured',
     'personal.passkeyNotSet': 'Not configured',
@@ -1373,8 +1378,14 @@ export const useI18nStore = defineStore('i18n', () => {
   })
 
   // 方法
-  function t(key: string): string {
-    return messages[resolveLocale(locale.value)][key] || key
+  function t(key: string, params?: Record<string, any>): string {
+    let msg = messages[resolveLocale(locale.value)][key] || key
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
+      }
+    }
+    return msg
   }
 
   function setLocale(newLocale: Locale) {

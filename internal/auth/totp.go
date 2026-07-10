@@ -183,6 +183,26 @@ func (s *AuthService) ClearTOTP() error {
 	return err
 }
 
+// CancelTOTP 取消未确认的 TOTP 设置，清理残留数据
+func (s *AuthService) CancelTOTP() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ctx := context.Background()
+
+	// 只删除未激活的 TOTP 数据
+	_, err := s.db.TOTPCredential.Delete().
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+	}
+
+	_, err = s.db.AuthMethod.Delete().
+		Where(authmethod.MethodEQ("totp")).
+		Exec(ctx)
+	return err
+}
+
 // GetTOTPInfo 获取 TOTP 设置信息
 func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 	s.mu.RLock()
@@ -191,7 +211,7 @@ func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 	ctx := context.Background()
 
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("totp")).
+		Where(authmethod.MethodEQ("totp"), authmethod.IsActiveEQ(true)).
 		WithTotpCredentials().
 		Only(ctx)
 	if err != nil {

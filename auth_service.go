@@ -101,6 +101,11 @@ func (s *AuthServiceWrapper) ClearTOTP() error {
 	return s.authService.ClearTOTP()
 }
 
+// CancelTOTP 取消未确认的 TOTP 设置
+func (s *AuthServiceWrapper) CancelTOTP() error {
+	return s.authService.CancelTOTP()
+}
+
 // GetTOTPInfo 获取 TOTP 信息
 func (s *AuthServiceWrapper) GetTOTPInfo() (*auth.TOTPInfo, error) {
 	return s.authService.GetTOTPInfo()
