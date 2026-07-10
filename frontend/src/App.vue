@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { Events } from '@wailsio/runtime'
 import Sidebar from './components/Sidebar.vue'
+import TitleBar from './components/TitleBar.vue'
 import TopBar from './components/TopBar.vue'
 import LoginDialog from './components/LoginDialog.vue'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
@@ -74,22 +75,27 @@ const rootStyle = computed(() => ({
   <n-config-provider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :style="rootStyle">
     <n-message-provider>
       <n-dialog-provider>
+        <!-- 标题栏：始终显示 -->
+        <TitleBar :transparent="!isAuthenticated" />
+
         <!-- 登录弹窗 -->
         <LoginDialog v-if="!isAuthenticated" @verified="handleVerified" />
 
         <!-- 主界面 -->
         <div v-else class="app-layout" :style="mainStyle">
-          <!-- Sidebar -->
-          <Sidebar />
+          <div class="app-body">
+            <!-- Sidebar -->
+            <Sidebar />
 
-          <!-- Main Content -->
-          <div class="app-content">
-            <TopBar />
-            <main class="app-main">
-              <router-view v-slot="{ Component, route }">
-                <component :is="Component" :key="route.path" />
-              </router-view>
-            </main>
+            <!-- Main Content -->
+            <div class="app-content">
+              <TopBar />
+              <main class="app-main">
+                <router-view v-slot="{ Component, route }">
+                  <component :is="Component" :key="route.path" />
+                </router-view>
+              </main>
+            </div>
           </div>
         </div>
       </n-dialog-provider>
@@ -100,8 +106,15 @@ const rootStyle = computed(() => ({
 <style scoped>
 .app-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
   overflow: hidden;
 }
 

@@ -205,7 +205,7 @@ func main() {
 		BackgroundType:   application.BackgroundTypeSolid,
 		BackgroundColour: application.RGBA{Red: 245, Green: 245, Blue: 245, Alpha: 255},
 		URL:              "/",
-		Frameless:        false,
+		Frameless:        true,
 	})
 	mainWindow.OnWindowEvent(wailsEvents.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
 		mainWindow.Show()

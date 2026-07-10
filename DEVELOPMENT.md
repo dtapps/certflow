@@ -101,6 +101,7 @@ certflow/
 │   │   │   ├── PersonalCenter.vue
 │   │   │   └── LogViewer.vue
 │   │   ├── components/        # 公共组件
+│   │   │   ├── TitleBar.vue   # 自定义标题栏（窗口控制）
 │   │   │   ├── Sidebar.vue    # 侧边栏导航
 │   │   │   ├── TopBar.vue     # 顶部工具栏
 │   │   │   └── LoginDialog.vue # 登录弹窗
@@ -243,6 +244,30 @@ make test              # 运行所有测试
 ```
 
 12 个包均有测试覆盖：auth、ca、certificate、db、dnsprovider、i18n、logging、monitor、network、notification、scheduler、settings。
+
+---
+
+## 调试技巧
+
+### 标题栏平台调试
+
+标题栏根据平台自动适配 macOS / Windows / Linux 样式。开发时可通过 localStorage 强制切换平台样式：
+
+```js
+// 模拟 macOS 标题栏
+localStorage.setItem('debug-platform', 'mac')
+
+// 模拟 Windows 标题栏
+localStorage.setItem('debug-platform', 'win32')
+
+// 模拟 Linux 标题栏
+localStorage.setItem('debug-platform', 'linux')
+
+// 恢复自动检测
+localStorage.removeItem('debug-platform')
+```
+
+设置后刷新页面即可看到效果。
 
 ---
 

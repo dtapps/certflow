@@ -394,7 +394,6 @@ function handleLocaleSelect(key: string) {
   justify-content: space-between;
   padding: 0 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.09);
-  --wails-draggable: drag;
 }
 
 :global(.dark) .topbar {

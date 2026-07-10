@@ -101,6 +101,7 @@ certflow/
 │   │   │   ├── PersonalCenter.vue
 │   │   │   └── LogViewer.vue
 │   │   ├── components/        # Shared components
+│   │   │   ├── TitleBar.vue   # Custom title bar (window controls)
 │   │   │   ├── Sidebar.vue    # Sidebar navigation
 │   │   │   ├── TopBar.vue     # Top toolbar
 │   │   │   └── LoginDialog.vue # Login dialog
@@ -242,6 +243,30 @@ make test              # Run all tests
 ```
 
 12 packages with test coverage: auth, ca, certificate, db, dnsprovider, i18n, logging, monitor, network, notification, scheduler, settings.
+
+---
+
+## Debugging Tips
+
+### Title Bar Platform Testing
+
+The title bar automatically adapts to macOS / Windows / Linux styles. During development, you can force a specific platform style via localStorage:
+
+```js
+// Simulate macOS title bar
+localStorage.setItem('debug-platform', 'mac')
+
+// Simulate Windows title bar
+localStorage.setItem('debug-platform', 'win32')
+
+// Simulate Linux title bar
+localStorage.setItem('debug-platform', 'linux')
+
+// Restore auto-detection
+localStorage.removeItem('debug-platform')
+```
+
+Refresh the page after setting to see the effect.
 
 ---
 
