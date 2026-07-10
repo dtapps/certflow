@@ -128,7 +128,7 @@ function handleMenuUpdate(key: string) {
 .sidebar {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   flex-shrink: 0;
   border-right: 1px solid var(--sidebar-border, rgba(0, 0, 0, 0.09));
   background-color: var(--sidebar-bg, #ffffff);
