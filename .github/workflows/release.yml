@@ -300,8 +300,13 @@ jobs:
           fi
 
           # Windows: 升级专用文件（updater- 前缀，不在下载表格显示）
+          # Windows 的 git-bash 不带 zip 命令，改用 PowerShell 内置的 Compress-Archive
           if [ -f "certflow.exe" ]; then
-            zip "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" certflow.exe
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              pwsh -Command "Compress-Archive -Path 'certflow.exe' -DestinationPath 'updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip' -Force"
+            else
+              zip "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" certflow.exe
+            fi
             mv "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
           fi
           # Windows: 安装包（打包文件，显示在下载表格）
