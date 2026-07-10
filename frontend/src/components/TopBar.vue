@@ -12,7 +12,6 @@ import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certifica
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import {
-  MenuOutline,
   SearchOutline,
   MoonOutline,
   SunnyOutline,
@@ -21,14 +20,6 @@ import {
   LanguageOutline,
   PersonOutline,
 } from '@vicons/ionicons5'
-
-const props = defineProps<{
-  sidebarOpen: boolean
-}>()
-
-defineEmits<{
-  toggleSidebar: []
-}>()
 
 const searchQuery = ref('')
 const searchResults = ref<{ type: string; id: number; name: string }[]>([])
@@ -57,13 +48,6 @@ const topbarStyle = computed(() => ({
 const searchDropdownStyle = computed(() => ({
   borderColor: isDark.value ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.09)',
   backgroundColor: isDark.value ? '#1a1a2e' : '#ffffff',
-}))
-
-// 侧边栏图标
-const sidebarIcon = MenuOutline
-const sidebarIconStyle = computed(() => ({
-  transition: 'transform 0.2s ease',
-  transform: props.sidebarOpen ? 'rotate(0deg)' : 'rotate(90deg)',
 }))
 
 const searchItemHoverStyle = computed(() => ({
@@ -230,14 +214,8 @@ function handleLocaleSelect(key: string) {
 
 <template>
   <header class="topbar" :style="topbarStyle">
-    <!-- Left: Toggle + Search -->
+    <!-- Left: Search -->
     <div class="flex items-center gap-4">
-      <n-button quaternary circle size="small" class="no-drag" @click="$emit('toggleSidebar')">
-        <template #icon>
-          <n-icon :size="20" :style="sidebarIconStyle"><component :is="sidebarIcon" /></n-icon>
-        </template>
-      </n-button>
-
       <div class="search-wrapper no-drag">
         <div class="relative">
           <n-input

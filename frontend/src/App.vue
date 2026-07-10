@@ -14,15 +14,10 @@ import { EventAuthVerified, EventNavigate } from './utils/events'
 
 const route = useRoute()
 const router = useRouter()
-const sidebarOpen = ref(true)
 const isAuthenticated = ref(true)
 const themeStore = useThemeStore()
 const { isDark, naiveTheme, naiveThemeOverrides } = storeToRefs(themeStore)
 const { t } = useI18nStore()
-
-function toggleSidebar() {
-  sidebarOpen.value = !sidebarOpen.value
-}
 
 function handleVerified() {
   isAuthenticated.value = true
@@ -85,11 +80,11 @@ const rootStyle = computed(() => ({
         <!-- 主界面 -->
         <div v-else class="app-layout" :style="mainStyle">
           <!-- Sidebar -->
-          <Sidebar :collapsed="!sidebarOpen" @toggle="toggleSidebar" />
+          <Sidebar />
 
           <!-- Main Content -->
           <div class="app-content">
-            <TopBar :sidebar-open="sidebarOpen" @toggle-sidebar="toggleSidebar" />
+            <TopBar />
             <main class="app-main">
               <router-view v-slot="{ Component, route }">
                 <component :is="Component" :key="route.path" />

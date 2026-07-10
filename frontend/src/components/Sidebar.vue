@@ -2,7 +2,7 @@
 import { h, computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { NMenu, NIcon } from 'naive-ui'
+import { NLayoutSider, NMenu, NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
@@ -17,9 +17,6 @@ import {
   SettingsOutline,
 } from '@vicons/ionicons5'
 
-defineProps<{ collapsed: boolean }>()
-defineEmits<{ toggle: [] }>()
-
 const route = useRoute()
 const router = useRouter()
 const i18nStore = useI18nStore()
@@ -27,6 +24,7 @@ const themeStore = useThemeStore()
 const { t } = i18nStore
 const { isDark } = storeToRefs(themeStore)
 
+const collapsed = ref(false)
 const appVersion = ref('')
 
 onMounted(async () => {
@@ -75,10 +73,19 @@ function handleMenuUpdate(key: string) {
 </script>
 
 <template>
-  <aside
-    class="sidebar"
-    :class="collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'"
+  <n-layout-sider
+    :collapsed="collapsed"
+    collapse-mode="width"
+    :collapsed-width="64"
+    :width="220"
+    show-trigger
+    :native-scrollbar="false"
+    bordered
+    content-style="display: flex; flex-direction: column; height: 100%;"
     :style="themeVars"
+    class="sidebar"
+    @collapse="collapsed = true"
+    @expand="collapsed = false"
   >
     <!-- Logo -->
     <div class="sidebar-logo">
@@ -100,13 +107,12 @@ function handleMenuUpdate(key: string) {
     <!-- 导航 -->
     <nav class="flex-1 pt-1 pb-4 overflow-y-auto">
       <n-menu
-        :key="route.path"
+        v-model:value="activeKey"
         :collapsed="collapsed"
         :collapsed-width="64"
-        :collapsed-icon-size="20"
+        :collapsed-icon-size="22"
         :indent="24"
         :options="menuOptions"
-        :value="activeKey"
         @update:value="handleMenuUpdate"
       />
     </nav>
@@ -115,7 +121,7 @@ function handleMenuUpdate(key: string) {
     <div class="sidebar-footer">
       <p class="text-xs text-center sidebar-text-muted">{{ appVersion || 'unknown' }}</p>
     </div>
-  </aside>
+  </n-layout-sider>
 </template>
 
 <style scoped>
