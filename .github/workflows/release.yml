@@ -83,6 +83,11 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
+      # Windows Authenticode 签名所需的证书（未配置对应 secret 时签名步骤自动跳过）
+      SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
+      SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
+      SIGN_THUMBPRINT: ${{ secrets.WINDOWS_SIGN_THUMBPRINT }}
+      TIMESTAMP_SERVER: ${{ secrets.WINDOWS_TIMESTAMP_SERVER }}
 
     steps:
       # 检出代码（必须在版本号生成之前）
@@ -230,12 +235,41 @@ jobs:
         run: |
           wails3 task darwin:sign:notarize
 
-      # Windows: Authenticode 签名（解决同目录文件占用问题）
-      - name: Windows 签名
+      # Windows: 将 base64 编码的证书 secret 解码为本地 .pfx 文件
+      # WINDOWS_SIGN_CERTIFICATE 中存放的是 .pfx 的 base64（含私钥，禁止入库，仅作 secret）
+      - name: 解码 Windows 签名证书
+        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        shell: bash
+        run: |
+          PFX="$RUNNER_TEMP/certflow_authenticode.pfx"
+          if echo "$SIGN_CERTIFICATE" | base64 -d > "$PFX" 2>/dev/null; then
+            echo "解码为 .pfx 文件: $PFX"
+          else
+            # secret 本身就是路径（证书已预置在 runner 上）
+            PFX="$SIGN_CERTIFICATE"
+            echo "使用证书路径: $PFX"
+          fi
+          echo "SIGN_CERTIFICATE=$PFX" >> "$GITHUB_ENV"
+
+      # Windows: 先签名安装包（-install.exe，用户实际下载的文件，修复 SmartScreen 拦截）
+      # windows:sign:installer 内部会重新生成 installer 并签名外层 exe
+      - name: Windows 安装包签名
         if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
         env:
-          SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
           SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
+          WAILS_WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
+          SIGN_THUMBPRINT: ${{ secrets.WINDOWS_SIGN_THUMBPRINT }}
+          TIMESTAMP_SERVER: ${{ secrets.WINDOWS_TIMESTAMP_SERVER }}
+        shell: bash
+        run: |
+          wails3 task windows:sign:installer
+
+      # Windows: 再签名独立 exe（供自更新 updater-*.zip 使用，保证替换后的二进制已签名）
+      - name: Windows 可执行文件签名
+        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        env:
+          SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
+          WAILS_WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
           SIGN_THUMBPRINT: ${{ secrets.WINDOWS_SIGN_THUMBPRINT }}
           TIMESTAMP_SERVER: ${{ secrets.WINDOWS_TIMESTAMP_SERVER }}
         shell: bash
@@ -253,17 +287,24 @@ jobs:
           cd bin
           mkdir -p renamed
 
-          # macOS: .app 压缩为 .zip
+          # macOS: .app 压缩为 .zip。
+          # - CertFlow-...-darwin-...zip：打包文件，显示于下载表格（首次安装用）
+          # - updater-CertFlow-...-darwin-...zip：升级文件（隐藏）。
+          # wails 文档要求 macOS 自更新替换整个 .app 目录以保留 Gatekeeper
+          # 签名，故升级文件必须是 .app 归档，不能只压裸二进制。
           if [ -d "certflow.app" ]; then
             zip -r "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" certflow.app
+            cp "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip"
             mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
+            mv "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
           fi
 
-          # Windows: 便携版（updater 使用）和安装包（加 install 标识）
+          # Windows: 升级专用文件（updater- 前缀，不在下载表格显示）
           if [ -f "certflow.exe" ]; then
-            mv certflow.exe "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe"
-            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.exe" renamed/
+            zip "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" certflow.exe
+            mv "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.zip" renamed/
           fi
+          # Windows: 安装包（打包文件，显示在下载表格）
           if ls *-installer.exe 1>/dev/null 2>&1; then
             for f in *-installer.exe; do
               mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}-install.exe"
@@ -271,11 +312,14 @@ jobs:
             mv CertFlow-*-install.exe renamed/
           fi
 
-          # Linux: 二进制文件（updater 使用）和各格式安装包
-          if [ -f "certflow" ]; then
-            cp certflow "CertFlow-${VERSION}-${PLATFORM}-${ARCH}"
-            mv "CertFlow-${VERSION}-${PLATFORM}-${ARCH}" renamed/
+          # Linux: 升级专用文件（updater- 前缀，不在下载表格显示）
+          # 用 $PLATFORM 守卫，避免 macOS/Linux 通用的 certflow 二进制被误判为
+          # Linux 产物（每个 matrix job 只构建一个平台）。
+          if [ "$PLATFORM" = "linux" ] && [ -f "certflow" ]; then
+            tar -czf "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.tar.gz" certflow
+            mv "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.tar.gz" renamed/
           fi
+          # Linux: 各格式安装包（打包文件，显示在下载表格）
           for f in *.AppImage; do
             [ -f "$f" ] && mv "$f" "CertFlow-${VERSION}-${PLATFORM}-${ARCH}.AppImage" && mv CertFlow-*.AppImage renamed/
           done
@@ -374,6 +418,10 @@ jobs:
             fname=$(basename "$f")
             [ "$fname" = "SHA256SUMS" ] && continue
             [ -d "$f" ] && continue
+            # 升级专用文件（updater- 前缀）不在下载表格显示
+            case "$fname" in
+              updater-*) continue ;;
+            esac
             fsize=$(ls -lh "$f" | awk '{print $5}')
 
             # 从文件名提取平台和架构
@@ -386,15 +434,8 @@ jobs:
             esac
 
             case "$fname" in
-              *.zip)
-                appname="${fname%.zip}.app"
-                echo "| ${PLAT} | ${ARCH} | [${appname}](${RELEASE_URL}/${fname}) | ${fsize} | Mac 应用 |" >> release_body.md
-                ;;
               *-install.exe)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Windows 安装包 |" >> release_body.md
-                ;;
-              *.exe)
-                echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Windows 便携版 |" >> release_body.md
                 ;;
               *.AppImage)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | AppImage 便携版 |" >> release_body.md
@@ -408,13 +449,9 @@ jobs:
               *.pkg.tar.zst)
                 echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Arch Linux |" >> release_body.md
                 ;;
-              *)
-                # Linux 二进制文件（无扩展名）
-                case "$fname" in
-                  *-amd64|*-arm64)
-                    echo "| ${PLAT} | ${ARCH} | [${fname}](${RELEASE_URL}/${fname}) | ${fsize} | Linux 二进制 |" >> release_body.md
-                    ;;
-                esac
+              *.zip)
+                appname="${fname%.zip}.app"
+                echo "| ${PLAT} | ${ARCH} | [${appname}](${RELEASE_URL}/${fname}) | ${fsize} | Mac 应用 |" >> release_body.md
                 ;;
             esac
           done

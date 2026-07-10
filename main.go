@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,9 +34,6 @@ import (
 
 //go:embed all:frontend/dist
 var assets embed.FS
-
-//go:embed build/updater.key.pub
-var updaterPublicKey []byte
 
 // 当前版本号（构建时通过 -ldflags 覆盖）
 var currentVersion = "dev"
@@ -171,6 +169,48 @@ func main() {
 		Token:         githubToken,
 		Prerelease:    settingsService.Get().Prerelease,
 		ChecksumAsset: "SHA256SUMS",
+		// 自定义资源匹配：仅匹配「升级专用文件」（文件名以 updater- 开头）。
+		// 打包/安装文件（Windows -install.exe、macOS .app.zip、Linux
+		// AppImage/deb/rpm/pkg.tar.zst）只用于首次安装，不用于自更新；
+		// 升级文件统一压缩（Windows/macOS 为 .zip，Linux 为 .tar.gz），内
+		// 含单一二进制，由 updater 下载、校验（SHA256SUMS）后替换自身。
+		AssetMatcher: func(req updater.CheckRequest, assets []github.ReleaseAsset) int {
+			plat := strings.ToLower(req.Platform)
+			arch := strings.ToLower(req.Arch)
+			logging.Debug(i18n.T("log.updater_matcher_start", "Plat", plat, "Arch", arch, "Count", len(assets)))
+			for i, a := range assets {
+				name := strings.ToLower(a.Name)
+				logging.Debug(i18n.T("log.updater_matcher_check", "Index", i, "Name", a.Name))
+				// 仅升级专用文件（updater- 前缀）参与自更新
+				if !strings.HasPrefix(name, "updater-") {
+					logging.Debug(i18n.T("log.updater_matcher_skip_not_updater"))
+					continue
+				}
+				if strings.HasSuffix(name, ".sig") || strings.HasSuffix(name, ".asc") || strings.HasSuffix(name, ".zsync") {
+					logging.Debug(i18n.T("log.updater_matcher_skip_sig"))
+					continue
+				}
+				// 升级文件必须是压缩归档（.zip / .tar.gz / .tgz）
+				if !strings.HasSuffix(name, ".zip") &&
+					!strings.HasSuffix(name, ".tar.gz") &&
+					!strings.HasSuffix(name, ".tgz") {
+					logging.Debug(i18n.T("log.updater_matcher_skip_format"))
+					continue
+				}
+				if plat != "" && !strings.Contains(name, plat) {
+					logging.Debug(i18n.T("log.updater_matcher_skip_plat", "Plat", plat))
+					continue
+				}
+				if arch != "" && !strings.Contains(name, arch) {
+					logging.Debug(i18n.T("log.updater_matcher_skip_arch", "Arch", arch))
+					continue
+				}
+				logging.Debug(i18n.T("log.updater_matcher_hit", "Index", i, "Name", a.Name))
+				return i
+			}
+			logging.Debug(i18n.T("log.updater_matcher_none"))
+			return -1
+		},
 	})
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
@@ -178,7 +218,6 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
-			PublicKey:      updaterPublicKey,
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
 					Title:       i18n.T("updater.title"),
