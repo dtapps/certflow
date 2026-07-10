@@ -55,7 +55,7 @@ func Init(dataDir string) error {
 	}
 
 	// 调试模式下开启 ent 日志
-	if logging.Global().GetLevel() == logging.DEBUG {
+	if logging.Global() != nil && logging.Global().GetLevel() == logging.DEBUG {
 		opts = append(
 			opts,
 			ent.Debug(),

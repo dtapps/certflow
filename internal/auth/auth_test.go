@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"cnb.cool/dtapp/certflow/ent"
-	"entgo.io/ent/dialect"
+	esql "entgo.io/ent/dialect/sql"
 	sqlite "modernc.org/sqlite"
 )
 
@@ -18,11 +18,18 @@ func newTestService(t *testing.T) (*AuthService, string) {
 	t.Helper()
 	dir := t.TempDir()
 
-	// 创建内存数据库用于测试
-	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
+	db, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared")
 	if err != nil {
-		t.Fatalf("ent.Open: %v", err)
+		t.Fatal(err)
 	}
+	t.Cleanup(func() { db.Close() })
+
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+
+	drv := esql.OpenDB("sqlite3", db)
+	client := ent.NewClient(ent.Driver(drv))
 	t.Cleanup(func() { client.Close() })
 
 	// 运行迁移
@@ -34,17 +41,32 @@ func newTestService(t *testing.T) (*AuthService, string) {
 	return svc, dir
 }
 
-func TestNewAuthService(t *testing.T) {
-	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
+func newTestClient(t *testing.T) *ent.Client {
+	t.Helper()
+
+	db, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared")
 	if err != nil {
-		t.Fatalf("ent.Open: %v", err)
+		t.Fatal(err)
 	}
+	t.Cleanup(func() { db.Close() })
+
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+
+	drv := esql.OpenDB("sqlite3", db)
+	client := ent.NewClient(ent.Driver(drv))
 	t.Cleanup(func() { client.Close() })
 
 	if err := client.Schema.Create(context.Background()); err != nil {
 		t.Fatalf("Schema.Create: %v", err)
 	}
 
+	return client
+}
+
+func TestNewAuthService(t *testing.T) {
+	client := newTestClient(t)
 	svc := NewAuthService(client)
 	if svc == nil {
 		t.Fatal("expected non-nil AuthService")
@@ -192,16 +214,7 @@ func TestClearPassword(t *testing.T) {
 }
 
 func TestIsPasswordSet_Persistence(t *testing.T) {
-	client, err := ent.Open(dialect.SQLite, "file::memory:?_fk=1")
-	if err != nil {
-		t.Fatalf("ent.Open: %v", err)
-	}
-	t.Cleanup(func() { client.Close() })
-
-	if err := client.Schema.Create(context.Background()); err != nil {
-		t.Fatalf("Schema.Create: %v", err)
-	}
-
+	client := newTestClient(t)
 	svc := NewAuthService(client)
 
 	if svc.IsPasswordSet() {

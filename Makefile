@@ -1,4 +1,4 @@
-.PHONY: help bindings ent dev build check lint lint-fix test clean install deps update-deps
+.PHONY: help bindings ent dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps
 
 # 默认目标
 help: ## 显示帮助信息
@@ -23,14 +23,14 @@ dev: ## 运行 Wails 开发模式
 
 # ==================== 格式化 / 修复 ====================
 
-format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix ## 格式化和修复所有代码
+format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix ## 格式化和修复（全部）
 
 format-go-fmt: ## 格式化 Go 代码
 	gofmt -w -s .
 	go fmt ./...
 
 format-go-fix: ## 修复 Go 代码
-	go fix ./...	
+	go fix ./...
 
 format-frontend-write: ## 格式化前端代码（Vue + TypeScript）
 	cd frontend && pnpm exec prettier --write "src/**/*.{vue,ts,js,css}"
@@ -38,19 +38,24 @@ format-frontend-write: ## 格式化前端代码（Vue + TypeScript）
 format-frontend-fix: ## 修复前端代码（Vue + TypeScript）
 	cd frontend && pnpm exec eslint --fix "src/**/*.{vue,ts,js}"
 
-# ==================== 检查 ====================
+# ==================== 检查 / 测试 ====================
 
-lint: ## Go 代码检查
+check: lint-go lint-frontend test-go ## 检查和测试（全部）
+
+lint-go: ## Go 代码检查
 	golangci-lint run ./...
 
-lint-fix: ## Go 代码检查（自动修复）
+lint-go-fix: ## Go 代码检查（自动修复）
 	golangci-lint run --fix ./...
 
-check: ## 前端 TypeScript 类型检查
+lint-frontend: ## 前端 TypeScript 类型检查
 	cd frontend && pnpm exec vue-tsc --noEmit
 
-test: ## Go 后端测试
+test-go: ## Go 后端测试
 	go test -vet=off ./internal/... -count=1
+
+fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s）
+	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/...
 
 # ==================== 构建打包 ====================
 
@@ -73,10 +78,10 @@ deps: ## 安装所有依赖
 	go mod download
 	cd frontend && pnpm install
 
+# 	cd frontend && pnpm update --latest
 update-deps: ## 更新所有依赖
 	go get -u ./...
 	go mod tidy
-# 	cd frontend && pnpm update --latest
 	cd frontend && pnpm update
 
 setup: deps bindings ent ## 完整项目初始化
