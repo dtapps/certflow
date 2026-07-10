@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 
-	"cnb.cool/dtapp/certflow/internal/i18n"
-	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -43,18 +41,18 @@ func (s *SystemServiceWrapper) GetVersion() string {
 }
 
 // SetWindowAppearance 设置主窗口外观（标题栏主题）
-func (s *SystemServiceWrapper) SetWindowAppearance(isDark bool) {
-	logging.Debug("%s: isDark=%v", i18n.T("log.set_window_appearance"), isDark)
-	if s.mainWindow == nil {
-		logging.Warn("%s", i18n.T("log.main_window_nil"))
-		return
-	}
-	if isDark {
-		s.mainWindow.SetBackgroundColour(application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255})
-	} else {
-		s.mainWindow.SetBackgroundColour(application.RGBA{Red: 245, Green: 245, Blue: 245, Alpha: 255})
-	}
-}
+// func (s *SystemServiceWrapper) SetWindowAppearance(isDark bool) {
+// 	logging.Debug("%s: isDark=%v", i18n.T("log.set_window_appearance"), isDark)
+// 	if s.mainWindow == nil {
+// 		logging.Warn("%s", i18n.T("log.main_window_nil"))
+// 		return
+// 	}
+// 	if isDark {
+// 		s.mainWindow.SetBackgroundColour(application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255})
+// 	} else {
+// 		s.mainWindow.SetBackgroundColour(application.RGBA{Red: 245, Green: 245, Blue: 245, Alpha: 255})
+// 	}
+// }
 
 // ShowMessage 显示原生对话框（前端调用）
 func (s *SystemServiceWrapper) ShowMessage(title, message, msgType string) {

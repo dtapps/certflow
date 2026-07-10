@@ -67,6 +67,7 @@
     padding: 0 !important;
     -webkit-user-select: text !important;
     user-select: text !important;
+    background: transparent !important;
   }
 
   #app {

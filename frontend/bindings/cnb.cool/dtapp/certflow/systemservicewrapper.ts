@@ -43,13 +43,6 @@ export function SetMainWindow(w: application$0.Window): $CancellablePromise<void
 }
 
 /**
- * SetWindowAppearance 设置主窗口外观（标题栏主题）
- */
-export function SetWindowAppearance(isDark: boolean): $CancellablePromise<void> {
-    return $Call.ByID(258278425, isDark);
-}
-
-/**
  * ShowMessage 显示原生对话框（前端调用）
  */
 export function ShowMessage(title: string, message: string, msgType: string): $CancellablePromise<void> {

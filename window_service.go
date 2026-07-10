@@ -51,15 +51,14 @@ body{background:%s;color:%s;font-family:%s;font-size:%dpx;line-height:1.6;paddin
 		opts.Title, opts.BgColor, opts.TextColor, opts.FontFamily, opts.FontSize, opts.Content)
 
 	s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:             opts.WindowName,
-		Title:            opts.Title,
-		Width:            opts.Width,
-		Height:           opts.Height,
-		MinWidth:         600,
-		MinHeight:        400,
-		HTML:             html,
-		BackgroundType:   application.BackgroundTypeSolid,
-		BackgroundColour: application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255},
+		Name:           opts.WindowName,
+		Title:          opts.Title,
+		Width:          opts.Width,
+		Height:         opts.Height,
+		MinWidth:       600,
+		MinHeight:      400,
+		HTML:           html,
+		BackgroundType: application.BackgroundTypeTransparent,
 	})
 	return nil
 }
@@ -67,15 +66,15 @@ body{background:%s;color:%s;font-family:%s;font-size:%dpx;line-height:1.6;paddin
 // OpenWindow 打开独立窗口（不带导航）
 func (s *WindowServiceWrapper) OpenWindow(opts HTMLWindowOptions) error {
 	s.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:             opts.WindowName,
-		Title:            opts.Title,
-		Width:            opts.Width,
-		Height:           opts.Height,
-		MinWidth:         600,
-		MinHeight:        400,
-		URL:              "/log-viewer.html",
-		BackgroundType:   application.BackgroundTypeSolid,
-		BackgroundColour: application.RGBA{Red: 26, Green: 27, Blue: 30, Alpha: 255},
+		Name:           opts.WindowName,
+		Title:          opts.Title,
+		Width:          opts.Width,
+		Height:         opts.Height,
+		MinWidth:       600,
+		MinHeight:      400,
+		Frameless:      true,
+		URL:            "/log-viewer.html",
+		BackgroundType: application.BackgroundTypeTransparent,
 	})
 	return nil
 }

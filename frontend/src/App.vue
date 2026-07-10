@@ -75,26 +75,28 @@ const rootStyle = computed(() => ({
   <n-config-provider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :style="rootStyle">
     <n-message-provider>
       <n-dialog-provider>
-        <!-- 标题栏：始终显示 -->
-        <TitleBar :transparent="!isAuthenticated" />
+        <div class="app-root">
+          <!-- 标题栏：始终显示 -->
+          <TitleBar :transparent="!isAuthenticated" />
 
-        <!-- 登录弹窗 -->
-        <LoginDialog v-if="!isAuthenticated" @verified="handleVerified" />
+          <!-- 登录弹窗 -->
+          <LoginDialog v-if="!isAuthenticated" @verified="handleVerified" />
 
-        <!-- 主界面 -->
-        <div v-else class="app-layout" :style="mainStyle">
-          <div class="app-body">
-            <!-- Sidebar -->
-            <Sidebar />
+          <!-- 主界面 -->
+          <div v-else class="app-layout" :style="mainStyle">
+            <div class="app-body">
+              <!-- Sidebar -->
+              <Sidebar />
 
-            <!-- Main Content -->
-            <div class="app-content">
-              <TopBar />
-              <main class="app-main">
-                <router-view v-slot="{ Component, route }">
-                  <component :is="Component" :key="route.path" />
-                </router-view>
-              </main>
+              <!-- Main Content -->
+              <div class="app-content">
+                <TopBar />
+                <main class="app-main">
+                  <router-view v-slot="{ Component, route }">
+                    <component :is="Component" :key="route.path" />
+                  </router-view>
+                </main>
+              </div>
             </div>
           </div>
         </div>
@@ -104,11 +106,20 @@ const rootStyle = computed(() => ({
 </template>
 
 <style scoped>
-.app-layout {
-  display: flex;
-  flex-direction: column;
+.app-root {
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background-color: v-bind('isDark ? "#1a1a2e" : "#ffffff"');
+}
+
+.app-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 

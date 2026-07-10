@@ -238,13 +238,12 @@ func main() {
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropNormal,
 			TitleBar: application.MacTitleBar{
-				AppearsTransparent: false,
+				AppearsTransparent: true,
 			},
 		},
-		BackgroundType:   application.BackgroundTypeSolid,
-		BackgroundColour: application.RGBA{Red: 245, Green: 245, Blue: 245, Alpha: 255},
-		URL:              "/",
-		Frameless:        true,
+		BackgroundType: application.BackgroundTypeTransparent,
+		URL:            "/",
+		Frameless:      true,
 	})
 	mainWindow.OnWindowEvent(wailsEvents.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
 		mainWindow.Show()

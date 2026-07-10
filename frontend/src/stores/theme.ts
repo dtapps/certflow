@@ -40,11 +40,11 @@ export const useThemeStore = defineStore('theme', () => {
 
   // 同步窗口标题栏背景色
   async function syncWindowAppearance(dark: boolean) {
-    try {
-      await SystemService.SetWindowAppearance(dark)
-    } catch (e) {
-      console.error(t('theme.windowAppearanceFailed'), e)
-    }
+    // try {
+    //   await SystemService.SetWindowAppearance(dark)
+    // } catch (e) {
+    //   console.error(t('theme.windowAppearanceFailed'), e)
+    // }
   }
 
   // 方法

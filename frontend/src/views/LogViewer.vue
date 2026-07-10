@@ -8,6 +8,7 @@ import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapp
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { initMessage, showMessage } from '../utils/message'
+import TitleBar from '../components/TitleBar.vue'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
@@ -119,6 +120,8 @@ const highlightLine = (line: string) => {
 const pageStyle = computed(() => ({
   backgroundColor: isDark.value ? '#1a1a2e' : '#ffffff',
   color: isDark.value ? '#e5e5e5' : '#1a1a2e',
+  borderRadius: '10px',
+  overflow: 'hidden',
 }))
 
 const toolbarStyle = computed(() => ({
@@ -205,6 +208,8 @@ const logFileOptions = computed(() => logFiles.value.map((f) => ({ label: f, val
 
 <template>
   <div class="flex flex-col h-screen" :style="pageStyle">
+    <!-- 标题栏 -->
+    <TitleBar />
     <!-- 工具栏 -->
     <div class="flex items-center gap-2 p-3 border-b" :style="toolbarStyle">
       <n-select
