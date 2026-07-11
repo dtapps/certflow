@@ -52,5 +52,7 @@ func (DNSProvider) Fields() []ent.Field {
 func (DNSProvider) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("certificates", Certificate.Type),
+		edge.To("deploy_targets", DeployTarget.Type).
+			Comment("复用该提供商凭证的部署目标"),
 	}
 }

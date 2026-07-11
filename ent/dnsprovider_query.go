@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"entgo.io/ent"
@@ -20,11 +21,12 @@ import (
 // DNSProviderQuery is the builder for querying DNSProvider entities.
 type DNSProviderQuery struct {
 	config
-	ctx              *QueryContext
-	order            []dnsprovider.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.DNSProvider
-	withCertificates *CertificateQuery
+	ctx               *QueryContext
+	order             []dnsprovider.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.DNSProvider
+	withCertificates  *CertificateQuery
+	withDeployTargets *DeployTargetQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (_q *DNSProviderQuery) QueryCertificates() *CertificateQuery {
 			sqlgraph.From(dnsprovider.Table, dnsprovider.FieldID, selector),
 			sqlgraph.To(certificate.Table, certificate.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, dnsprovider.CertificatesTable, dnsprovider.CertificatesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDeployTargets chains the current query on the "deploy_targets" edge.
+func (_q *DNSProviderQuery) QueryDeployTargets() *DeployTargetQuery {
+	query := (&DeployTargetClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dnsprovider.Table, dnsprovider.FieldID, selector),
+			sqlgraph.To(deploytarget.Table, deploytarget.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dnsprovider.DeployTargetsTable, dnsprovider.DeployTargetsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +294,13 @@ func (_q *DNSProviderQuery) Clone() *DNSProviderQuery {
 		return nil
 	}
 	return &DNSProviderQuery{
-		config:           _q.config,
-		ctx:              _q.ctx.Clone(),
-		order:            append([]dnsprovider.OrderOption{}, _q.order...),
-		inters:           append([]Interceptor{}, _q.inters...),
-		predicates:       append([]predicate.DNSProvider{}, _q.predicates...),
-		withCertificates: _q.withCertificates.Clone(),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]dnsprovider.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.DNSProvider{}, _q.predicates...),
+		withCertificates:  _q.withCertificates.Clone(),
+		withDeployTargets: _q.withDeployTargets.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +315,17 @@ func (_q *DNSProviderQuery) WithCertificates(opts ...func(*CertificateQuery)) *D
 		opt(query)
 	}
 	_q.withCertificates = query
+	return _q
+}
+
+// WithDeployTargets tells the query-builder to eager-load the nodes that are connected to
+// the "deploy_targets" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DNSProviderQuery) WithDeployTargets(opts ...func(*DeployTargetQuery)) *DNSProviderQuery {
+	query := (&DeployTargetClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withDeployTargets = query
 	return _q
 }
 
@@ -371,8 +407,9 @@ func (_q *DNSProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	var (
 		nodes       = []*DNSProvider{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withCertificates != nil,
+			_q.withDeployTargets != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +434,13 @@ func (_q *DNSProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		if err := _q.loadCertificates(ctx, query, nodes,
 			func(n *DNSProvider) { n.Edges.Certificates = []*Certificate{} },
 			func(n *DNSProvider, e *Certificate) { n.Edges.Certificates = append(n.Edges.Certificates, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withDeployTargets; query != nil {
+		if err := _q.loadDeployTargets(ctx, query, nodes,
+			func(n *DNSProvider) { n.Edges.DeployTargets = []*DeployTarget{} },
+			func(n *DNSProvider, e *DeployTarget) { n.Edges.DeployTargets = append(n.Edges.DeployTargets, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -429,6 +473,37 @@ func (_q *DNSProviderQuery) loadCertificates(ctx context.Context, query *Certifi
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "dns_provider_certificates" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *DNSProviderQuery) loadDeployTargets(ctx context.Context, query *DeployTargetQuery, nodes []*DNSProvider, init func(*DNSProvider), assign func(*DNSProvider, *DeployTarget)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*DNSProvider)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.DeployTarget(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(dnsprovider.DeployTargetsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.dns_provider_deploy_targets
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "dns_provider_deploy_targets" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "dns_provider_deploy_targets" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

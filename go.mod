@@ -6,14 +6,27 @@ ignore ./frontend
 
 require (
 	entgo.io/ent v0.14.6
+	github.com/alibabacloud-go/cas-20200407/v3 v3.0.4
+	github.com/alibabacloud-go/cdn-20180510/v5 v5.2.2
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.3
+	github.com/alibabacloud-go/dcdn-20180115/v4 v4.1.0
+	github.com/alibabacloud-go/esa-20240910/v3 v3.6.0
+	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
+	github.com/alibabacloud-go/tea v1.5.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-acme/lego/v5 v5.2.2
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/google/uuid v1.6.0
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.205
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.116
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.131
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.131
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117
 	golang.org/x/crypto v0.54.0
 	golang.org/x/text v0.40.0
@@ -33,9 +46,9 @@ require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.3 // indirect
 	github.com/alibabacloud-go/debug v1.0.1 // indirect
-	github.com/alibabacloud-go/tea v1.5.2 // indirect
+	github.com/alibabacloud-go/endpoint-util v1.1.1 // indirect
+	github.com/alibabacloud-go/openapi-util v0.1.2 // indirect
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.9 // indirect
 	github.com/aliyun/credentials-go v1.4.12 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
@@ -87,7 +100,6 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.205 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
@@ -116,7 +128,6 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.131 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ucloud/ucloud-sdk-go v0.22.90 // indirect

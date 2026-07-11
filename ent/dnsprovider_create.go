@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -124,6 +125,21 @@ func (_c *DNSProviderCreate) AddCertificates(v ...*Certificate) *DNSProviderCrea
 		ids[i] = v[i].ID
 	}
 	return _c.AddCertificateIDs(ids...)
+}
+
+// AddDeployTargetIDs adds the "deploy_targets" edge to the DeployTarget entity by IDs.
+func (_c *DNSProviderCreate) AddDeployTargetIDs(ids ...int) *DNSProviderCreate {
+	_c.mutation.AddDeployTargetIDs(ids...)
+	return _c
+}
+
+// AddDeployTargets adds the "deploy_targets" edges to the DeployTarget entity.
+func (_c *DNSProviderCreate) AddDeployTargets(v ...*DeployTarget) *DNSProviderCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddDeployTargetIDs(ids...)
 }
 
 // Mutation returns the DNSProviderMutation object of the builder.
@@ -277,6 +293,22 @@ func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(certificate.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DeployTargetsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

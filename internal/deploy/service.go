@@ -1,0 +1,515 @@
+package deploy
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
+
+	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploylog"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
+	"cnb.cool/dtapp/certflow/internal/notification"
+	"reflect"
+)
+
+// respDump 将各厂商 SDK 响应安全序列化为单行字符串，便于在调用失败时随错误日志一并打印以便排查。
+// 云厂商在业务错误（HTTP 200 + 错误码）时通常仍返回已解析的响应（含错误信封），打印它可暴露云端错误码/消息；
+// 在传输错误时响应为 nil 指针，此时返回 "<nil>"。用反射判断指针是否为 nil，规避 nil 指针装箱进 interface{} 后 != nil 的误判。
+func respDump(resp any) string {
+	if resp == nil {
+		return "<nil>"
+	}
+	rv := reflect.ValueOf(resp)
+	if rv.Kind() == reflect.Pointer && rv.IsNil() {
+		return "<nil>"
+	}
+	switch v := resp.(type) {
+	case interface{ ToJsonString() string }: // 腾讯云 SDK 响应
+		return v.ToJsonString()
+	case interface{ String() string }: // 阿里云/华为云 SDK 响应
+		return v.String()
+	default:
+		b, _ := json.Marshal(resp)
+		return string(b)
+	}
+}
+
+// registry 部署器注册表（由各云文件 init 注册）
+var registry = map[string]Deployer{}
+
+// RegisterDeployer 注册部署器
+func RegisterDeployer(d Deployer) {
+	registry[d.Provider()] = d
+}
+
+// DeployService 证书部署服务
+type DeployService struct {
+	db           *ent.Client
+	notifService *notification.NotificationService
+	// uploadCache 进程内上传缓存（快速层），键为「厂商|AccessKeyId|区域|证书指纹」。
+	// 去重的权威来源是数据库 CertUpload 表（跨进程持久化）；本内存缓存只是同进程内的加速层。
+	// 两者都由 ensureUploaded 维护，保证同一张证书对同一云账号只真正上传一次。
+	uploadCache map[string]string
+	uploadMu    sync.Mutex
+}
+
+// NewDeployService 创建部署服务
+func NewDeployService(db *ent.Client) *DeployService {
+	return &DeployService{db: db}
+}
+
+// SetNotificationService 注入通知服务（用于部署成功/失败通知）
+func (s *DeployService) SetNotificationService(ns *notification.NotificationService) {
+	s.notifService = ns
+}
+
+// CreateDeployTargetInput 创建部署目标输入
+type CreateDeployTargetInput struct {
+	Name             string            `json:"name"`
+	ProviderType     string            `json:"provider_type"`
+	DeployService    string            `json:"deploy_service"`
+	Config           map[string]string `json:"config"`
+	CredentialSource string            `json:"credential_source"`
+	DNSProviderID    *int              `json:"dns_provider_id,omitempty"`
+	IsActive         bool              `json:"is_active"`
+	Comment          string            `json:"comment"`
+}
+
+// UpdateDeployTargetInput 更新部署目标输入
+type UpdateDeployTargetInput struct {
+	Name             string            `json:"name,omitempty"`
+	ProviderType     string            `json:"provider_type,omitempty"`
+	DeployService    string            `json:"deploy_service,omitempty"`
+	Config           map[string]string `json:"config,omitempty"`
+	CredentialSource string            `json:"credential_source,omitempty"`
+	DNSProviderID    *int              `json:"dns_provider_id,omitempty"`
+	IsActive         *bool             `json:"is_active,omitempty"`
+	Comment          string            `json:"comment,omitempty"`
+}
+
+// Create 创建部署目标
+func (s *DeployService) Create(ctx context.Context, in CreateDeployTargetInput) (*ent.DeployTarget, error) {
+	cfg, _ := json.Marshal(in.Config)
+	b := s.db.DeployTarget.Create().
+		SetName(in.Name).
+		SetProviderType(deploytarget.ProviderType(in.ProviderType)).
+		SetDeployService(in.DeployService).
+		SetConfig(cfg).
+		SetCredentialSource(deploytarget.CredentialSource(in.CredentialSource)).
+		SetIsActive(in.IsActive).
+		SetComment(in.Comment)
+	if in.DNSProviderID != nil && *in.DNSProviderID > 0 {
+		b = b.SetDNSProviderID(*in.DNSProviderID)
+	}
+	return b.Save(ctx)
+}
+
+// Update 更新部署目标
+func (s *DeployService) Update(ctx context.Context, id int, in UpdateDeployTargetInput) (*ent.DeployTarget, error) {
+	b := s.db.DeployTarget.UpdateOneID(id)
+	if in.Name != "" {
+		b = b.SetName(in.Name)
+	}
+	if in.ProviderType != "" {
+		b = b.SetProviderType(deploytarget.ProviderType(in.ProviderType))
+	}
+	if in.DeployService != "" {
+		b = b.SetDeployService(in.DeployService)
+	}
+	if in.Config != nil {
+		cfg, _ := json.Marshal(in.Config)
+		b = b.SetConfig(cfg)
+	}
+	if in.CredentialSource != "" {
+		b = b.SetCredentialSource(deploytarget.CredentialSource(in.CredentialSource))
+	}
+	if in.DNSProviderID != nil {
+		if *in.DNSProviderID > 0 {
+			b = b.SetDNSProviderID(*in.DNSProviderID)
+		}
+	}
+	if in.IsActive != nil {
+		b = b.SetIsActive(*in.IsActive)
+	}
+	if in.Comment != "" {
+		b = b.SetComment(in.Comment)
+	}
+	return b.Save(ctx)
+}
+
+// Delete 删除部署目标
+func (s *DeployService) Delete(ctx context.Context, id int) error {
+	return s.db.DeployTarget.DeleteOneID(id).Exec(ctx)
+}
+
+// Get 获取部署目标
+func (s *DeployService) Get(ctx context.Context, id int) (*ent.DeployTarget, error) {
+	return s.db.DeployTarget.Get(ctx, id)
+}
+
+// List 获取所有部署目标（带凭证来源信息）
+func (s *DeployService) List(ctx context.Context) ([]*ent.DeployTarget, error) {
+	return s.db.DeployTarget.Query().WithDNSProvider().Order(ent.Desc("created_at")).All(ctx)
+}
+
+// LinkCert 关联证书到部署目标
+func (s *DeployService) LinkCert(ctx context.Context, targetID, certID int) error {
+	_, err := s.db.DeployTarget.UpdateOneID(targetID).AddCertificateIDs(certID).Save(ctx)
+	return err
+}
+
+// UnlinkCert 取消证书与部署目标的关联
+func (s *DeployService) UnlinkCert(ctx context.Context, targetID, certID int) error {
+	_, err := s.db.DeployTarget.UpdateOneID(targetID).RemoveCertificateIDs(certID).Save(ctx)
+	return err
+}
+
+// FetchDomainsInput 拉取 CDN 域名输入（新建目标时凭证尚未落库，需内联传入）
+type FetchDomainsInput struct {
+	ProviderType     string
+	DeployService    string
+	CredentialSource string
+	DNSProviderID    *int
+	Region           string
+	Config           map[string]string
+}
+
+// FetchCDNDomains 根据内联传入的凭证拉取 CDN 域名列表（用于新建目标时选择）
+func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInput) ([]string, error) {
+	var creds Credentials
+	if deploytarget.CredentialSource(in.CredentialSource) == deploytarget.CredentialSourceSelf {
+		creds = credsFromConfig(in.ProviderType, in.Config)
+	} else {
+		if in.DNSProviderID == nil || *in.DNSProviderID == 0 {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+		}
+		p, err := s.db.DNSProvider.Get(ctx, *in.DNSProviderID)
+		if err != nil {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+		}
+		creds = credsFromConfig(in.ProviderType, parseConfig(p.Config))
+	}
+	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	region := in.Region
+	if region == "" {
+		region = creds.Region
+	}
+	logging.Debug(i18n.T("log.deploy.fetch_domains_start", "Provider", in.ProviderType, "Service", in.DeployService, "Region", region))
+	d := registry[in.ProviderType]
+	if d == nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_unsupported_provider", "Provider", in.ProviderType))
+	}
+	// 站点级服务在已选站点时按站点拉域名：EdgeOne 用 zone_id，ESA 用 site_id（统一走 zoneID 参数）。
+	zoneID := in.Config["zone_id"]
+	if zoneID == "" {
+		zoneID = in.Config["site_id"]
+	}
+	return d.ListDomains(ctx, creds, in.DeployService, region, zoneID)
+}
+
+// ListCDNDomains 拉取指定部署目标已配置凭证下的 CDN 域名列表
+func (s *DeployService) ListCDNDomains(ctx context.Context, targetID int) ([]string, error) {
+	logging.Debug(i18n.T("log.deploy.fetch_domains_target_start", "TargetID", targetID))
+	target, err := s.db.DeployTarget.Query().
+		Where(deploytarget.ID(targetID)).
+		WithDNSProvider().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
+	}
+	creds, _, err := s.loadCredsAndConfig(target)
+	if err != nil {
+		return nil, err
+	}
+	region := creds.Region
+	d := registry[target.ProviderType.String()]
+	if d == nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_unsupported_provider", "Provider", target.ProviderType.String()))
+	}
+	// 站点级服务按已配置站点拉取域名：EdgeOne 用 zone_id，ESA 用 site_id；其余服务忽略。
+	cfg := parseConfig(target.Config)
+	zoneID := cfg["zone_id"]
+	if zoneID == "" {
+		zoneID = cfg["site_id"]
+	}
+	return d.ListDomains(ctx, creds, target.DeployService, region, zoneID)
+}
+
+// ListByCert 获取关联了某证书的部署目标
+func (s *DeployService) ListByCert(ctx context.Context, certID int) ([]*ent.DeployTarget, error) {
+	return s.db.DeployTarget.Query().
+		Where(deploytarget.HasCertificatesWith(certificate.ID(certID))).
+		WithDNSProvider().
+		All(ctx)
+}
+
+// credsFromConfig 根据厂商标识从配置 map 中提取凭证
+func credsFromConfig(provider string, cfg map[string]string) Credentials {
+	switch provider {
+	case "aliyun":
+		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["access_key_secret"], Region: RegionFromConfig(cfg)}
+	case "huawei":
+		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["secret_access_key"], Region: RegionFromConfig(cfg)}
+	case "tencentcloud":
+		return Credentials{AccessKeyID: cfg["secret_id"], AccessKeySecret: cfg["secret_key"], Region: RegionFromConfig(cfg)}
+	}
+	return Credentials{}
+}
+
+// credKeys 各厂商凭证在 config 中的字段名（用于自管凭证时剔除）
+var credKeys = map[string][]string{
+	"aliyun":       {"access_key_id", "access_key_secret", "region_id"},
+	"huawei":       {"access_key_id", "secret_access_key", "region"},
+	"tencentcloud": {"secret_id", "secret_key", "region"},
+}
+
+// stripCreds 从 config 中剔除凭证字段，保留服务配置
+func stripCreds(provider string, cfg map[string]string) map[string]string {
+	out := map[string]string{}
+	drop := map[string]bool{}
+	for _, k := range credKeys[provider] {
+		drop[k] = true
+	}
+	for k, v := range cfg {
+		if !drop[k] {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// loadCredsAndConfig 解析部署目标对应的凭证与服务配置
+func (s *DeployService) loadCredsAndConfig(target *ent.DeployTarget) (Credentials, map[string]string, error) {
+	var creds Credentials
+	if target.CredentialSource == deploytarget.CredentialSourceSelf {
+		cfg := parseConfig(target.Config)
+		creds = credsFromConfig(target.ProviderType.String(), cfg)
+		svc := stripCreds(target.ProviderType.String(), cfg)
+		if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+		}
+		return creds, svc, nil
+	}
+	// 复用 DNS 提供商凭证
+	if target.Edges.DNSProvider == nil {
+		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+	}
+	dnsCfg := parseConfig(target.Edges.DNSProvider.Config)
+	creds = credsFromConfig(target.ProviderType.String(), dnsCfg)
+	svc := parseConfig(target.Config)
+	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	return creds, svc, nil
+}
+
+// DeployCertificate 将指定证书部署到指定目标（domain 非空时覆盖配置中的 CDN 域名）
+func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID int, domain string) (*DeployOutcome, error) {
+	target, err := s.db.DeployTarget.Query().
+		Where(deploytarget.ID(targetID)).
+		WithDNSProvider().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
+	}
+	logging.Debug(i18n.T("log.deploy.cert_deploy_start", "TargetID", targetID, "CertID", certID, "Domain", domain, "Provider", target.ProviderType.String(), "Service", target.DeployService))
+	cert, err := s.db.Certificate.Get(ctx, certID)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.cert_not_found"))
+	}
+	creds, svc, err := s.loadCredsAndConfig(target)
+	if err != nil {
+		return s.recordFailure(ctx, target, cert, domain, err, "")
+	}
+	if domain != "" {
+		svc["domain"] = domain
+	}
+	// 供部署器在绑定阶段计算证书名称使用（与上传阶段保持一致）
+	svc["cert_domain"] = cert.Domain
+	d := registry[target.ProviderType.String()]
+	if d == nil {
+		return s.recordFailure(ctx, target, cert, domain,
+			i18n.NewError("error.deploy_unsupported_provider", "Provider", target.ProviderType.String()), "")
+	}
+
+	// 上传去重：相同「厂商+账号+区域+证书内容」只真正上传一次，之后直接复用云端证书 ID。
+	// 去重映射持久化到数据库（CertUpload），跨进程重启仍然生效，不依赖任何云厂商的原生去重能力。
+	cloudCertID, uploadRaw, uerr := s.ensureUploaded(ctx, d, target.ProviderType.String(), creds, cert, svc)
+	if uerr != nil {
+		return s.recordFailure(ctx, target, cert, domain, uerr, uploadRaw)
+	}
+
+	res, err := d.DeployCert(ctx, creds, cloudCertID, target.DeployService, svc)
+	if err != nil {
+		rawResp := ""
+		if res != nil {
+			rawResp = res.RawResponse
+		}
+		return s.recordFailure(ctx, target, cert, domain, err, rawResp)
+	}
+	// 部署成功
+	_, _ = s.db.DeployTarget.UpdateOneID(targetID).
+		SetLastStatus("success").
+		SetLastDeployedAt(time.Now()).
+		SetLastError("").
+		Save(ctx)
+	_ = s.recordLog(ctx, target, cert, domain, target.ProviderType.String(), target.DeployService, true, res.Message, res.CloudCertID, res.RawResponse)
+	if s.notifService != nil {
+		_ = s.notifService.SendDeploySuccess(cert.Domain, target.Name)
+	}
+	logging.Info(i18n.T("log.deploy_success", "Domain", cert.Domain, "Target", target.Name))
+	return &DeployOutcome{TargetID: targetID, TargetName: target.Name, CloudCertID: res.CloudCertID, Success: true, Message: res.Message, RawResponse: res.RawResponse}, nil
+}
+
+// ensureUploaded 确保证书已上传到云端：相同「厂商+账号+区域+证书内容」只真正上传一次，
+// 之后直接复用云端证书 ID。去重映射同时保存在内存（快速）与数据库（跨进程持久化）两层，
+// 因此不管是否同一进程、是否重启，都不会重复上传，也不依赖各云厂商的原生去重行为。
+func (s *DeployService) ensureUploaded(ctx context.Context, d Deployer, provider string, creds Credentials, cert *ent.Certificate, svc map[string]string) (string, string, error) {
+	content := cert.CertContent + "\n" + cert.KeyContent
+	fp := sha256.Sum256([]byte(content))
+	fpHex := hex.EncodeToString(fp[:])
+	cacheKey := provider + "|" + creds.AccessKeyID + "|" + creds.Region + "|" + fpHex
+
+	// 1) 内存缓存（同进程内最快）
+	if id, ok := s.cacheGet(cacheKey); ok {
+		return id, "", nil
+	}
+
+	// 2) 数据库已持久化的映射（跨进程重启仍生效）
+	if s.db != nil {
+		if existing, err := s.db.CertUpload.Query().
+			Where(
+				certupload.Provider(provider),
+				certupload.AccessKeyID(creds.AccessKeyID),
+				certupload.Region(creds.Region),
+				certupload.CertFingerprint(fpHex),
+			).
+			Only(ctx); err == nil && existing != nil && existing.CloudCertID != "" {
+			s.cachePut(cacheKey, existing.CloudCertID)
+			logging.Debug(i18n.T("log.deploy.reuse_upload_record", "CertID", existing.CloudCertID, "Key", cacheKey))
+			return existing.CloudCertID, "", nil
+		}
+	}
+
+	// 3) 真正上传
+	cloudCertID, raw, uerr := d.UploadCert(ctx, creds,
+		CertContent{Domain: cert.Domain, CertPEM: cert.CertContent, KeyPEM: cert.KeyContent}, svc)
+	if uerr != nil {
+		return "", raw, uerr
+	}
+
+	// 4) 持久化映射（唯一键冲突时更新云端 ID，兼容并发/历史脏数据）
+	if s.db != nil {
+		if derr := s.db.CertUpload.Create().
+			SetProvider(provider).
+			SetAccessKeyID(creds.AccessKeyID).
+			SetRegion(creds.Region).
+			SetCertFingerprint(fpHex).
+			SetCloudCertID(cloudCertID).
+			OnConflictColumns("provider", "access_key_id", "region", "cert_fingerprint").
+			UpdateNewValues().
+			Exec(ctx); derr != nil {
+			logging.Warn(i18n.T("log.deploy.persist_upload_map_failed", "Err", derr.Error()))
+		}
+	}
+	s.cachePut(cacheKey, cloudCertID)
+	return cloudCertID, raw, nil
+}
+
+func (s *DeployService) cacheGet(key string) (string, bool) {
+	s.uploadMu.Lock()
+	defer s.uploadMu.Unlock()
+	if s.uploadCache == nil {
+		return "", false
+	}
+	id, ok := s.uploadCache[key]
+	return id, ok
+}
+
+func (s *DeployService) cachePut(key, id string) {
+	s.uploadMu.Lock()
+	defer s.uploadMu.Unlock()
+	if s.uploadCache == nil {
+		s.uploadCache = make(map[string]string)
+	}
+	s.uploadCache[key] = id
+}
+
+// recordLog 写入一条部署历史记录（失败也不阻断主流程）
+func (s *DeployService) recordLog(ctx context.Context, target *ent.DeployTarget, cert *ent.Certificate, domain, providerType, deployService string, success bool, message, cloudCertID, rawResponse string) error {
+	if domain == "" {
+		domain = cert.Domain
+	}
+	if _, err := s.db.DeployLog.Create().
+		SetDeployTarget(target).
+		SetCertID(cert.ID).
+		SetCertDomain(cert.Domain).
+		SetDeployDomain(domain).
+		SetTargetName(target.Name).
+		SetProviderType(providerType).
+		SetDeployService(deployService).
+		SetSuccess(success).
+		SetMessage(message).
+		SetResponse(rawResponse).
+		SetCloudCertID(cloudCertID).
+		Save(ctx); err != nil {
+		logging.Error(i18n.T("log.deploy.history_write_failed", "Err", err.Error()))
+		return err
+	}
+	return nil
+}
+
+// recordFailure 记录部署失败并发送失败通知。
+// deployErr 为原始错误（可能是携带 i18n key 的 *i18n.Error）；落库/通知使用其不含信封的纯翻译文本，
+// 返回给前端的仍是原错误（含信封），便于前端按自身语言重新翻译，实现前后端解耦。
+func (s *DeployService) recordFailure(ctx context.Context, target *ent.DeployTarget, cert *ent.Certificate, domain string, deployErr error, rawResponse string) (*DeployOutcome, error) {
+	msg := i18n.TranslateError(deployErr)
+	_, _ = s.db.DeployTarget.UpdateOneID(target.ID).
+		SetLastStatus("failed").
+		SetLastDeployedAt(time.Now()).
+		SetLastError(msg).
+		Save(ctx)
+	_ = s.recordLog(ctx, target, cert, domain, target.ProviderType.String(), target.DeployService, false, msg, "", rawResponse)
+	if s.notifService != nil {
+		_ = s.notifService.SendDeployFailed(cert.Domain, target.Name, msg)
+	}
+	logging.Error(i18n.T("log.deploy_failed", "Target", target.Name, "Error", msg))
+	return &DeployOutcome{TargetID: target.ID, TargetName: target.Name, Success: false, Message: msg}, deployErr
+}
+
+// ListDeployLogs 获取某部署目标的历史记录（按时间倒序）
+func (s *DeployService) ListDeployLogs(ctx context.Context, targetID int) ([]*ent.DeployLog, error) {
+	return s.db.DeployLog.Query().
+		Where(deploylog.HasDeployTargetWith(deploytarget.ID(targetID))).
+		Order(ent.Desc("created_at")).
+		All(ctx)
+}
+
+// DeployAllForCert 将该证书部署到所有关联且启用的目标
+func (s *DeployService) DeployAllForCert(ctx context.Context, certID int) ([]*DeployOutcome, error) {
+	targets, err := s.ListByCert(ctx, certID)
+	if err != nil {
+		return nil, err
+	}
+	var outcomes []*DeployOutcome
+	for _, t := range targets {
+		if !t.IsActive {
+			continue
+		}
+		outcome, _ := s.DeployCertificate(ctx, t.ID, certID, "")
+		if outcome != nil {
+			outcomes = append(outcomes, outcome)
+		}
+	}
+	return outcomes, nil
+}

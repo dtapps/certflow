@@ -69,6 +69,7 @@ const (
 	CategoryDNS     Category = "dns"
 	CategoryMonitor Category = "monitor"
 	CategorySystem  Category = "system"
+	CategoryDeploy  Category = "deploy"
 )
 
 func (c Category) String() string {
@@ -78,7 +79,7 @@ func (c Category) String() string {
 // CategoryValidator is a validator for the "category" field enum values. It is called by the builders before save.
 func CategoryValidator(c Category) error {
 	switch c {
-	case CategoryCert, CategoryDNS, CategoryMonitor, CategorySystem:
+	case CategoryCert, CategoryDNS, CategoryMonitor, CategorySystem, CategoryDeploy:
 		return nil
 	default:
 		return fmt.Errorf("notification: invalid enum value for category field: %q", c)

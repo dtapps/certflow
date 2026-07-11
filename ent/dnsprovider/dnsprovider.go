@@ -33,6 +33,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeCertificates holds the string denoting the certificates edge name in mutations.
 	EdgeCertificates = "certificates"
+	// EdgeDeployTargets holds the string denoting the deploy_targets edge name in mutations.
+	EdgeDeployTargets = "deploy_targets"
 	// Table holds the table name of the dnsprovider in the database.
 	Table = "dns_providers"
 	// CertificatesTable is the table that holds the certificates relation/edge.
@@ -42,6 +44,13 @@ const (
 	CertificatesInverseTable = "certificates"
 	// CertificatesColumn is the table column denoting the certificates relation/edge.
 	CertificatesColumn = "dns_provider_certificates"
+	// DeployTargetsTable is the table that holds the deploy_targets relation/edge.
+	DeployTargetsTable = "deploy_targets"
+	// DeployTargetsInverseTable is the table name for the DeployTarget entity.
+	// It exists in this package in order to avoid circular dependency with the "deploytarget" package.
+	DeployTargetsInverseTable = "deploy_targets"
+	// DeployTargetsColumn is the table column denoting the deploy_targets relation/edge.
+	DeployTargetsColumn = "dns_provider_deploy_targets"
 )
 
 // Columns holds all SQL columns for dnsprovider fields.
@@ -178,10 +187,31 @@ func ByCertificates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCertificatesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByDeployTargetsCount orders the results by deploy_targets count.
+func ByDeployTargetsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDeployTargetsStep(), opts...)
+	}
+}
+
+// ByDeployTargets orders the results by deploy_targets terms.
+func ByDeployTargets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDeployTargetsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newCertificatesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CertificatesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CertificatesTable, CertificatesColumn),
+	)
+}
+func newDeployTargetsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DeployTargetsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DeployTargetsTable, DeployTargetsColumn),
 	)
 }

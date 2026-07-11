@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"entgo.io/ent/dialect/sql"
@@ -138,6 +139,21 @@ func (_u *DNSProviderUpdate) AddCertificates(v ...*Certificate) *DNSProviderUpda
 	return _u.AddCertificateIDs(ids...)
 }
 
+// AddDeployTargetIDs adds the "deploy_targets" edge to the DeployTarget entity by IDs.
+func (_u *DNSProviderUpdate) AddDeployTargetIDs(ids ...int) *DNSProviderUpdate {
+	_u.mutation.AddDeployTargetIDs(ids...)
+	return _u
+}
+
+// AddDeployTargets adds the "deploy_targets" edges to the DeployTarget entity.
+func (_u *DNSProviderUpdate) AddDeployTargets(v ...*DeployTarget) *DNSProviderUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDeployTargetIDs(ids...)
+}
+
 // Mutation returns the DNSProviderMutation object of the builder.
 func (_u *DNSProviderUpdate) Mutation() *DNSProviderMutation {
 	return _u.mutation
@@ -162,6 +178,27 @@ func (_u *DNSProviderUpdate) RemoveCertificates(v ...*Certificate) *DNSProviderU
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCertificateIDs(ids...)
+}
+
+// ClearDeployTargets clears all "deploy_targets" edges to the DeployTarget entity.
+func (_u *DNSProviderUpdate) ClearDeployTargets() *DNSProviderUpdate {
+	_u.mutation.ClearDeployTargets()
+	return _u
+}
+
+// RemoveDeployTargetIDs removes the "deploy_targets" edge to DeployTarget entities by IDs.
+func (_u *DNSProviderUpdate) RemoveDeployTargetIDs(ids ...int) *DNSProviderUpdate {
+	_u.mutation.RemoveDeployTargetIDs(ids...)
+	return _u
+}
+
+// RemoveDeployTargets removes "deploy_targets" edges to DeployTarget entities.
+func (_u *DNSProviderUpdate) RemoveDeployTargets(v ...*DeployTarget) *DNSProviderUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDeployTargetIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -299,6 +336,51 @@ func (_u *DNSProviderUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.DeployTargetsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDeployTargetsIDs(); len(nodes) > 0 && !_u.mutation.DeployTargetsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeployTargetsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{dnsprovider.Label}
@@ -428,6 +510,21 @@ func (_u *DNSProviderUpdateOne) AddCertificates(v ...*Certificate) *DNSProviderU
 	return _u.AddCertificateIDs(ids...)
 }
 
+// AddDeployTargetIDs adds the "deploy_targets" edge to the DeployTarget entity by IDs.
+func (_u *DNSProviderUpdateOne) AddDeployTargetIDs(ids ...int) *DNSProviderUpdateOne {
+	_u.mutation.AddDeployTargetIDs(ids...)
+	return _u
+}
+
+// AddDeployTargets adds the "deploy_targets" edges to the DeployTarget entity.
+func (_u *DNSProviderUpdateOne) AddDeployTargets(v ...*DeployTarget) *DNSProviderUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDeployTargetIDs(ids...)
+}
+
 // Mutation returns the DNSProviderMutation object of the builder.
 func (_u *DNSProviderUpdateOne) Mutation() *DNSProviderMutation {
 	return _u.mutation
@@ -452,6 +549,27 @@ func (_u *DNSProviderUpdateOne) RemoveCertificates(v ...*Certificate) *DNSProvid
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCertificateIDs(ids...)
+}
+
+// ClearDeployTargets clears all "deploy_targets" edges to the DeployTarget entity.
+func (_u *DNSProviderUpdateOne) ClearDeployTargets() *DNSProviderUpdateOne {
+	_u.mutation.ClearDeployTargets()
+	return _u
+}
+
+// RemoveDeployTargetIDs removes the "deploy_targets" edge to DeployTarget entities by IDs.
+func (_u *DNSProviderUpdateOne) RemoveDeployTargetIDs(ids ...int) *DNSProviderUpdateOne {
+	_u.mutation.RemoveDeployTargetIDs(ids...)
+	return _u
+}
+
+// RemoveDeployTargets removes "deploy_targets" edges to DeployTarget entities.
+func (_u *DNSProviderUpdateOne) RemoveDeployTargets(v ...*DeployTarget) *DNSProviderUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDeployTargetIDs(ids...)
 }
 
 // Where appends a list predicates to the DNSProviderUpdate builder.
@@ -612,6 +730,51 @@ func (_u *DNSProviderUpdateOne) sqlSave(ctx context.Context) (_node *DNSProvider
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(certificate.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeployTargetsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDeployTargetsIDs(); len(nodes) > 0 && !_u.mutation.DeployTargetsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeployTargetsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dnsprovider.DeployTargetsTable,
+			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

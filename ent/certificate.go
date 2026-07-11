@@ -55,10 +55,11 @@ type Certificate struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CertificateQuery when eager-loading is set.
-	Edges                     CertificateEdges `json:"edges"`
-	ca_certificates           *int
-	dns_provider_certificates *int
-	selectValues              sql.SelectValues
+	Edges                      CertificateEdges `json:"edges"`
+	ca_certificates            *int
+	dns_provider_certificates  *int
+	deploy_target_certificates *int
+	selectValues               sql.SelectValues
 }
 
 // CertificateEdges holds the relations/edges for other nodes in the graph.
@@ -123,6 +124,8 @@ func (*Certificate) scanValues(columns []string) ([]any, error) {
 		case certificate.ForeignKeys[0]: // ca_certificates
 			values[i] = new(sql.NullInt64)
 		case certificate.ForeignKeys[1]: // dns_provider_certificates
+			values[i] = new(sql.NullInt64)
+		case certificate.ForeignKeys[2]: // deploy_target_certificates
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -258,6 +261,13 @@ func (_m *Certificate) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.dns_provider_certificates = new(int)
 				*_m.dns_provider_certificates = int(value.Int64)
+			}
+		case certificate.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field deploy_target_certificates", value)
+			} else if value.Valid {
+				_m.deploy_target_certificates = new(int)
+				*_m.deploy_target_certificates = int(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])

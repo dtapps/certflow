@@ -54,10 +54,10 @@ func (s *NotificationService) Init() error {
 	// 请求通知权限
 	authorized, err := s.notifService.RequestNotificationAuthorization()
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.request_notification_auth_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.request_notification_auth_failed", "Error", err))
 	}
 	if !authorized {
-		return fmt.Errorf(i18n.T("error.notification_permission_denied"))
+		return fmt.Errorf("%s", i18n.T("error.notification_permission_denied"))
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 			Body:     opt.Body,
 			Category: opt.Category,
 		}); !ok {
-			logging.Warn(i18n.T("error.notification_failed"))
+			logging.Warn("%s", i18n.T("error.notification_failed"))
 		}
 	}
 
@@ -117,7 +117,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 // ListNotifications 获取通知列表
 func (s *NotificationService) ListNotifications(ctx context.Context, limit, offset int) ([]*ent.Notification, error) {
 	if s.db == nil {
-		return nil, fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return nil, fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	return s.db.Notification.Query().
 		Order(ent.Desc("created_at")).
@@ -129,7 +129,7 @@ func (s *NotificationService) ListNotifications(ctx context.Context, limit, offs
 // CountUnread 获取未读通知数量
 func (s *NotificationService) CountUnread(ctx context.Context) (int, error) {
 	if s.db == nil {
-		return 0, fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return 0, fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	return s.db.Notification.Query().
 		Where(entnotification.Read(false)).
@@ -139,7 +139,7 @@ func (s *NotificationService) CountUnread(ctx context.Context) (int, error) {
 // MarkAsRead 标记通知为已读
 func (s *NotificationService) MarkAsRead(ctx context.Context, id int) error {
 	if s.db == nil {
-		return fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	return s.db.Notification.UpdateOneID(id).
 		SetRead(true).
@@ -149,7 +149,7 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, id int) error {
 // MarkAllAsRead 标记所有通知为已读
 func (s *NotificationService) MarkAllAsRead(ctx context.Context) error {
 	if s.db == nil {
-		return fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	return s.db.Notification.Update().
 		SetRead(true).
@@ -159,7 +159,7 @@ func (s *NotificationService) MarkAllAsRead(ctx context.Context) error {
 // DeleteNotification 删除通知
 func (s *NotificationService) DeleteNotification(ctx context.Context, id int) error {
 	if s.db == nil {
-		return fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	return s.db.Notification.DeleteOneID(id).Exec(ctx)
 }
@@ -167,7 +167,7 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, id int) er
 // ClearAllNotifications 清空所有通知
 func (s *NotificationService) ClearAllNotifications(ctx context.Context) error {
 	if s.db == nil {
-		return fmt.Errorf(i18n.T("error.db_not_initialized"))
+		return fmt.Errorf("%s", i18n.T("error.db_not_initialized"))
 	}
 	_, err := s.db.Notification.Delete().Exec(ctx)
 	return err
@@ -229,6 +229,24 @@ func (s *NotificationService) SendCertRenewFailed(domain, reason string) error {
 		Title:    i18n.T("notification.cert_renew_failed.title"),
 		Body:     i18n.T("notification.cert_renew_failed.body", "Domain", domain, "Error", reason),
 		Category: entnotification.CategoryCert.String(),
+	})
+}
+
+// SendDeploySuccess 发送证书部署成功通知
+func (s *NotificationService) SendDeploySuccess(domain, target string) error {
+	return s.SendNotification(NotificationOption{
+		Title:    i18n.T("notification.deploy_success.title"),
+		Body:     i18n.T("notification.deploy_success.body", "Domain", domain, "Target", target),
+		Category: entnotification.CategoryDeploy.String(),
+	})
+}
+
+// SendDeployFailed 发送证书部署失败通知
+func (s *NotificationService) SendDeployFailed(domain, target, reason string) error {
+	return s.SendNotification(NotificationOption{
+		Title:    i18n.T("notification.deploy_failed.title"),
+		Body:     i18n.T("notification.deploy_failed.body", "Domain", domain, "Target", target, "Error", reason),
+		Category: entnotification.CategoryDeploy.String(),
 	})
 }
 

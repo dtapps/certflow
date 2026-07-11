@@ -104,6 +104,7 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"ca_certificates",
 	"dns_provider_certificates",
+	"deploy_target_certificates",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

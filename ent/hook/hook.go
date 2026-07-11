@@ -33,6 +33,18 @@ func (f CAFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CAMutation", m)
 }
 
+// The CertUploadFunc type is an adapter to allow the use of ordinary
+// function as CertUpload mutator.
+type CertUploadFunc func(context.Context, *ent.CertUploadMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CertUploadFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CertUploadMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CertUploadMutation", m)
+}
+
 // The CertificateFunc type is an adapter to allow the use of ordinary
 // function as Certificate mutator.
 type CertificateFunc func(context.Context, *ent.CertificateMutation) (ent.Value, error)
@@ -55,6 +67,30 @@ func (f DNSProviderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DNSProviderMutation", m)
+}
+
+// The DeployLogFunc type is an adapter to allow the use of ordinary
+// function as DeployLog mutator.
+type DeployLogFunc func(context.Context, *ent.DeployLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DeployLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DeployLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeployLogMutation", m)
+}
+
+// The DeployTargetFunc type is an adapter to allow the use of ordinary
+// function as DeployTarget mutator.
+type DeployTargetFunc func(context.Context, *ent.DeployTargetMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DeployTargetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DeployTargetMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeployTargetMutation", m)
 }
 
 // The MonitoredDomainFunc type is an adapter to allow the use of ordinary

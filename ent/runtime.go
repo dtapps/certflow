@@ -8,6 +8,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploylog"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
@@ -66,6 +69,18 @@ func init() {
 	ca.DefaultUpdatedAt = caDescUpdatedAt.Default.(func() time.Time)
 	// ca.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	ca.UpdateDefaultUpdatedAt = caDescUpdatedAt.UpdateDefault.(func() time.Time)
+	certuploadFields := schema.CertUpload{}.Fields()
+	_ = certuploadFields
+	// certuploadDescCreatedAt is the schema descriptor for created_at field.
+	certuploadDescCreatedAt := certuploadFields[5].Descriptor()
+	// certupload.DefaultCreatedAt holds the default value on creation for the created_at field.
+	certupload.DefaultCreatedAt = certuploadDescCreatedAt.Default.(func() time.Time)
+	// certuploadDescUpdatedAt is the schema descriptor for updated_at field.
+	certuploadDescUpdatedAt := certuploadFields[6].Descriptor()
+	// certupload.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	certupload.DefaultUpdatedAt = certuploadDescUpdatedAt.Default.(func() time.Time)
+	// certupload.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	certupload.UpdateDefaultUpdatedAt = certuploadDescUpdatedAt.UpdateDefault.(func() time.Time)
 	certificateFields := schema.Certificate{}.Fields()
 	_ = certificateFields
 	// certificateDescDomain is the schema descriptor for domain field.
@@ -114,6 +129,36 @@ func init() {
 	dnsprovider.DefaultUpdatedAt = dnsproviderDescUpdatedAt.Default.(func() time.Time)
 	// dnsprovider.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	dnsprovider.UpdateDefaultUpdatedAt = dnsproviderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	deploylogFields := schema.DeployLog{}.Fields()
+	_ = deploylogFields
+	// deploylogDescCreatedAt is the schema descriptor for created_at field.
+	deploylogDescCreatedAt := deploylogFields[10].Descriptor()
+	// deploylog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	deploylog.DefaultCreatedAt = deploylogDescCreatedAt.Default.(func() time.Time)
+	deploytargetFields := schema.DeployTarget{}.Fields()
+	_ = deploytargetFields
+	// deploytargetDescName is the schema descriptor for name field.
+	deploytargetDescName := deploytargetFields[0].Descriptor()
+	// deploytarget.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	deploytarget.NameValidator = deploytargetDescName.Validators[0].(func(string) error)
+	// deploytargetDescDeployService is the schema descriptor for deploy_service field.
+	deploytargetDescDeployService := deploytargetFields[2].Descriptor()
+	// deploytarget.DeployServiceValidator is a validator for the "deploy_service" field. It is called by the builders before save.
+	deploytarget.DeployServiceValidator = deploytargetDescDeployService.Validators[0].(func(string) error)
+	// deploytargetDescIsActive is the schema descriptor for is_active field.
+	deploytargetDescIsActive := deploytargetFields[5].Descriptor()
+	// deploytarget.DefaultIsActive holds the default value on creation for the is_active field.
+	deploytarget.DefaultIsActive = deploytargetDescIsActive.Default.(bool)
+	// deploytargetDescCreatedAt is the schema descriptor for created_at field.
+	deploytargetDescCreatedAt := deploytargetFields[10].Descriptor()
+	// deploytarget.DefaultCreatedAt holds the default value on creation for the created_at field.
+	deploytarget.DefaultCreatedAt = deploytargetDescCreatedAt.Default.(func() time.Time)
+	// deploytargetDescUpdatedAt is the schema descriptor for updated_at field.
+	deploytargetDescUpdatedAt := deploytargetFields[11].Descriptor()
+	// deploytarget.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	deploytarget.DefaultUpdatedAt = deploytargetDescUpdatedAt.Default.(func() time.Time)
+	// deploytarget.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	deploytarget.UpdateDefaultUpdatedAt = deploytargetDescUpdatedAt.UpdateDefault.(func() time.Time)
 	monitoreddomainFields := schema.MonitoredDomain{}.Fields()
 	_ = monitoreddomainFields
 	// monitoreddomainDescDomain is the schema descriptor for domain field.

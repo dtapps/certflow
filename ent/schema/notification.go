@@ -21,7 +21,7 @@ func (Notification) Fields() []ent.Field {
 			Optional().
 			Comment("通知内容"),
 		field.Enum("category").
-			Values("cert", "dns", "monitor", "system").
+			Values("cert", "dns", "monitor", "system", "deploy").
 			Default("system").
 			Optional().
 			Comment("通知分类"),

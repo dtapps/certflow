@@ -40,6 +40,30 @@ var (
 		Columns:    CasColumns,
 		PrimaryKey: []*schema.Column{CasColumns[0]},
 	}
+	// CertUploadsColumns holds the columns for the "cert_uploads" table.
+	CertUploadsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "access_key_id", Type: field.TypeString},
+		{Name: "region", Type: field.TypeString},
+		{Name: "cert_fingerprint", Type: field.TypeString},
+		{Name: "cloud_cert_id", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// CertUploadsTable holds the schema information for the "cert_uploads" table.
+	CertUploadsTable = &schema.Table{
+		Name:       "cert_uploads",
+		Columns:    CertUploadsColumns,
+		PrimaryKey: []*schema.Column{CertUploadsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "certupload_provider_access_key_id_region_cert_fingerprint",
+				Unique:  true,
+				Columns: []*schema.Column{CertUploadsColumns[1], CertUploadsColumns[2], CertUploadsColumns[3], CertUploadsColumns[4]},
+			},
+		},
+	}
 	// CertificatesColumns holds the columns for the "certificates" table.
 	CertificatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -61,6 +85,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "ca_certificates", Type: field.TypeInt, Nullable: true},
 		{Name: "dns_provider_certificates", Type: field.TypeInt, Nullable: true},
+		{Name: "deploy_target_certificates", Type: field.TypeInt, Nullable: true},
 	}
 	// CertificatesTable holds the schema information for the "certificates" table.
 	CertificatesTable = &schema.Table{
@@ -78,6 +103,12 @@ var (
 				Symbol:     "certificates_dns_providers_certificates",
 				Columns:    []*schema.Column{CertificatesColumns[18]},
 				RefColumns: []*schema.Column{DNSProvidersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "certificates_deploy_targets_certificates",
+				Columns:    []*schema.Column{CertificatesColumns[19]},
+				RefColumns: []*schema.Column{DeployTargetsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -99,6 +130,67 @@ var (
 		Name:       "dns_providers",
 		Columns:    DNSProvidersColumns,
 		PrimaryKey: []*schema.Column{DNSProvidersColumns[0]},
+	}
+	// DeployLogsColumns holds the columns for the "deploy_logs" table.
+	DeployLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "cert_id", Type: field.TypeInt},
+		{Name: "cert_domain", Type: field.TypeString},
+		{Name: "deploy_domain", Type: field.TypeString},
+		{Name: "target_name", Type: field.TypeString, Nullable: true},
+		{Name: "provider_type", Type: field.TypeString, Nullable: true},
+		{Name: "deploy_service", Type: field.TypeString, Nullable: true},
+		{Name: "success", Type: field.TypeBool},
+		{Name: "message", Type: field.TypeString, Nullable: true},
+		{Name: "response", Type: field.TypeString, Nullable: true},
+		{Name: "cloud_cert_id", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "deploy_target_deploy_logs", Type: field.TypeInt},
+	}
+	// DeployLogsTable holds the schema information for the "deploy_logs" table.
+	DeployLogsTable = &schema.Table{
+		Name:       "deploy_logs",
+		Columns:    DeployLogsColumns,
+		PrimaryKey: []*schema.Column{DeployLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "deploy_logs_deploy_targets_deploy_logs",
+				Columns:    []*schema.Column{DeployLogsColumns[12]},
+				RefColumns: []*schema.Column{DeployTargetsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// DeployTargetsColumns holds the columns for the "deploy_targets" table.
+	DeployTargetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"aliyun", "tencentcloud", "huawei"}},
+		{Name: "deploy_service", Type: field.TypeString},
+		{Name: "config", Type: field.TypeBytes, Nullable: true},
+		{Name: "credential_source", Type: field.TypeEnum, Enums: []string{"dns_provider", "self"}, Default: "dns_provider"},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "comment", Type: field.TypeString, Nullable: true},
+		{Name: "last_deployed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_status", Type: field.TypeString, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "dns_provider_deploy_targets", Type: field.TypeInt, Nullable: true},
+	}
+	// DeployTargetsTable holds the schema information for the "deploy_targets" table.
+	DeployTargetsTable = &schema.Table{
+		Name:       "deploy_targets",
+		Columns:    DeployTargetsColumns,
+		PrimaryKey: []*schema.Column{DeployTargetsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "deploy_targets_dns_providers_deploy_targets",
+				Columns:    []*schema.Column{DeployTargetsColumns[13]},
+				RefColumns: []*schema.Column{DNSProvidersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// MonitoredDomainsColumns holds the columns for the "monitored_domains" table.
 	MonitoredDomainsColumns = []*schema.Column{
@@ -138,7 +230,7 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "body", Type: field.TypeString, Nullable: true},
-		{Name: "category", Type: field.TypeEnum, Nullable: true, Enums: []string{"cert", "dns", "monitor", "system"}, Default: "system"},
+		{Name: "category", Type: field.TypeEnum, Nullable: true, Enums: []string{"cert", "dns", "monitor", "system", "deploy"}, Default: "system"},
 		{Name: "read", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 	}
@@ -255,8 +347,11 @@ var (
 	Tables = []*schema.Table{
 		AuthMethodsTable,
 		CasTable,
+		CertUploadsTable,
 		CertificatesTable,
 		DNSProvidersTable,
+		DeployLogsTable,
+		DeployTargetsTable,
 		MonitoredDomainsTable,
 		NotificationsTable,
 		PasskeyCredentialsTable,
@@ -269,6 +364,9 @@ var (
 func init() {
 	CertificatesTable.ForeignKeys[0].RefTable = CasTable
 	CertificatesTable.ForeignKeys[1].RefTable = DNSProvidersTable
+	CertificatesTable.ForeignKeys[2].RefTable = DeployTargetsTable
+	DeployLogsTable.ForeignKeys[0].RefTable = DeployTargetsTable
+	DeployTargetsTable.ForeignKeys[0].RefTable = DNSProvidersTable
 	PasskeyCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable
 	RenewalLogsTable.ForeignKeys[0].RefTable = CertificatesTable
 	TotpCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable

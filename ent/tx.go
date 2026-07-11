@@ -16,10 +16,16 @@ type Tx struct {
 	AuthMethod *AuthMethodClient
 	// CA is the client for interacting with the CA builders.
 	CA *CAClient
+	// CertUpload is the client for interacting with the CertUpload builders.
+	CertUpload *CertUploadClient
 	// Certificate is the client for interacting with the Certificate builders.
 	Certificate *CertificateClient
 	// DNSProvider is the client for interacting with the DNSProvider builders.
 	DNSProvider *DNSProviderClient
+	// DeployLog is the client for interacting with the DeployLog builders.
+	DeployLog *DeployLogClient
+	// DeployTarget is the client for interacting with the DeployTarget builders.
+	DeployTarget *DeployTargetClient
 	// MonitoredDomain is the client for interacting with the MonitoredDomain builders.
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
@@ -165,8 +171,11 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.AuthMethod = NewAuthMethodClient(tx.config)
 	tx.CA = NewCAClient(tx.config)
+	tx.CertUpload = NewCertUploadClient(tx.config)
 	tx.Certificate = NewCertificateClient(tx.config)
 	tx.DNSProvider = NewDNSProviderClient(tx.config)
+	tx.DeployLog = NewDeployLogClient(tx.config)
+	tx.DeployTarget = NewDeployTargetClient(tx.config)
 	tx.MonitoredDomain = NewMonitoredDomainClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.PasskeyCredential = NewPasskeyCredentialClient(tx.config)

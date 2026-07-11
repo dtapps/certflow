@@ -34,6 +34,21 @@ const router = createRouter({
       component: () => import('../views/DNSProviders.vue'),
     },
     {
+      path: '/deploy',
+      name: 'deploy',
+      component: () => import('../views/DeployTargets.vue'),
+    },
+    {
+      path: '/deploy/new',
+      name: 'deploy-new',
+      component: () => import('../views/DeployTargetForm.vue'),
+    },
+    {
+      path: '/deploy/:id/edit',
+      name: 'deploy-edit',
+      component: () => import('../views/DeployTargetForm.vue'),
+    },
+    {
       path: '/monitor',
       name: 'monitor',
       component: () => import('../views/Monitor.vue'),

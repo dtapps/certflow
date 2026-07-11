@@ -8,6 +8,7 @@ import * as CAServiceWrapper from "./caservicewrapper.js";
 import * as CertificateServiceWrapper from "./certificateservicewrapper.js";
 import * as ClipboardServiceWrapper from "./clipboardservicewrapper.js";
 import * as DNSProviderServiceWrapper from "./dnsproviderservicewrapper.js";
+import * as DeployServiceWrapper from "./deployservicewrapper.js";
 import * as DockServiceWrapper from "./dockservicewrapper.js";
 import * as FileServiceWrapper from "./fileservicewrapper.js";
 import * as LoggingServiceWrapper from "./loggingservicewrapper.js";
@@ -27,6 +28,7 @@ export {
     CertificateServiceWrapper,
     ClipboardServiceWrapper,
     DNSProviderServiceWrapper,
+    DeployServiceWrapper,
     DockServiceWrapper,
     FileServiceWrapper,
     LoggingServiceWrapper,
@@ -49,11 +51,17 @@ export type {
     CertificateListItem,
     CreateCACreateRequest,
     CreateDNSProviderRequest,
+    CreateDeployTargetRequest,
     DNSProviderListItem,
+    DeployLogListItem,
+    DeployOutcomeDTO,
+    DeployTargetListItem,
+    FetchCDNDomainsRequest,
     HTMLWindowOptions,
     ManualDNSChallenge,
     NotificationItem,
     RenewalLogItem,
     TXTRecordItem,
-    UpdateDNSProviderRequest
+    UpdateDNSProviderRequest,
+    UpdateDeployTargetRequest
 } from "./models.js";

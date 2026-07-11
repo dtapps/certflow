@@ -43,9 +43,11 @@ type DNSProvider struct {
 type DNSProviderEdges struct {
 	// Certificates holds the value of the certificates edge.
 	Certificates []*Certificate `json:"certificates,omitempty"`
+	// 复用该提供商凭证的部署目标
+	DeployTargets []*DeployTarget `json:"deploy_targets,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // CertificatesOrErr returns the Certificates value or an error if the edge
@@ -55,6 +57,15 @@ func (e DNSProviderEdges) CertificatesOrErr() ([]*Certificate, error) {
 		return e.Certificates, nil
 	}
 	return nil, &NotLoadedError{edge: "certificates"}
+}
+
+// DeployTargetsOrErr returns the DeployTargets value or an error if the edge
+// was not loaded in eager-loading.
+func (e DNSProviderEdges) DeployTargetsOrErr() ([]*DeployTarget, error) {
+	if e.loadedTypes[1] {
+		return e.DeployTargets, nil
+	}
+	return nil, &NotLoadedError{edge: "deploy_targets"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -157,6 +168,11 @@ func (_m *DNSProvider) Value(name string) (ent.Value, error) {
 // QueryCertificates queries the "certificates" edge of the DNSProvider entity.
 func (_m *DNSProvider) QueryCertificates() *CertificateQuery {
 	return NewDNSProviderClient(_m.config).QueryCertificates(_m)
+}
+
+// QueryDeployTargets queries the "deploy_targets" edge of the DNSProvider entity.
+func (_m *DNSProvider) QueryDeployTargets() *DeployTargetQuery {
+	return NewDNSProviderClient(_m.config).QueryDeployTargets(_m)
 }
 
 // Update returns a builder for updating this DNSProvider.

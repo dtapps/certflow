@@ -12,6 +12,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploylog"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
@@ -84,8 +87,11 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			authmethod.Table:        authmethod.ValidColumn,
 			ca.Table:                ca.ValidColumn,
+			certupload.Table:        certupload.ValidColumn,
 			certificate.Table:       certificate.ValidColumn,
 			dnsprovider.Table:       dnsprovider.ValidColumn,
+			deploylog.Table:         deploylog.ValidColumn,
+			deploytarget.Table:      deploytarget.ValidColumn,
 			monitoreddomain.Table:   monitoreddomain.ValidColumn,
 			notification.Table:      notification.ValidColumn,
 			passkeycredential.Table: passkeycredential.ValidColumn,

@@ -382,6 +382,51 @@ export interface CreateDNSProviderRequest {
 }
 
 /**
+ * CreateDeployTargetRequest 创建部署目标请求
+ */
+export interface CreateDeployTargetRequest {
+    /**
+     * 部署目标名称
+     */
+    "name": string;
+
+    /**
+     * 云厂商类型
+     */
+    "provider_type": string;
+
+    /**
+     * 部署服务
+     */
+    "deploy_service": string;
+
+    /**
+     * 部署参数
+     */
+    "config": { [_ in string]?: string } | null;
+
+    /**
+     * 凭证来源
+     */
+    "credential_source": string;
+
+    /**
+     * 关联 DNS 提供商 ID（可选）
+     */
+    "dns_provider_id"?: number | null;
+
+    /**
+     * 是否启用
+     */
+    "is_active": boolean;
+
+    /**
+     * 备注
+     */
+    "comment": string;
+}
+
+/**
  * DNSProviderListItem DNS 提供商列表项（前端展示用）
  */
 export interface DNSProviderListItem {
@@ -429,6 +474,226 @@ export interface DNSProviderListItem {
      * 更新时间
      */
     "updated_at": string;
+}
+
+/**
+ * DeployLogListItem 部署历史列表项（前端展示用）
+ */
+export interface DeployLogListItem {
+    /**
+     * 部署历史 ID
+     */
+    "id": number;
+
+    /**
+     * 部署目标名称
+     */
+    "target_name": string;
+
+    /**
+     * 证书 ID
+     */
+    "cert_id": number;
+
+    /**
+     * 证书域名
+     */
+    "cert_domain": string;
+
+    /**
+     * 部署到的加速域名
+     */
+    "deploy_domain": string;
+
+    /**
+     * 云厂商类型
+     */
+    "provider_type": string;
+
+    /**
+     * 部署服务
+     */
+    "deploy_service": string;
+
+    /**
+     * 是否部署成功
+     */
+    "success": boolean;
+
+    /**
+     * 部署结果描述
+     */
+    "message": string;
+
+    /**
+     * 云厂商原始响应（调试用）
+     */
+    "response": string;
+
+    /**
+     * 云端证书 ID
+     */
+    "cloud_cert_id": string;
+
+    /**
+     * 部署时间
+     */
+    "created_at": string;
+}
+
+/**
+ * DeployOutcomeDTO 部署结果（前端展示用）
+ */
+export interface DeployOutcomeDTO {
+    /**
+     * 部署目标 ID
+     */
+    "target_id": number;
+
+    /**
+     * 部署目标名称
+     */
+    "target_name": string;
+
+    /**
+     * 云端证书 ID
+     */
+    "cloud_cert_id": string;
+
+    /**
+     * 是否部署成功
+     */
+    "success": boolean;
+
+    /**
+     * 部署结果描述
+     */
+    "message": string;
+
+    /**
+     * 云厂商原始响应（调试用）
+     */
+    "raw_response": string;
+}
+
+/**
+ * DeployTargetListItem 部署目标列表项（前端展示用）
+ */
+export interface DeployTargetListItem {
+    /**
+     * 部署目标 ID
+     */
+    "id": number;
+
+    /**
+     * 部署目标名称
+     */
+    "name": string;
+
+    /**
+     * 云厂商类型（aliyun/tencentcloud/huawei）
+     */
+    "provider_type": string;
+
+    /**
+     * 部署服务（cdn/dcdn/elb/waf 等）
+     */
+    "deploy_service": string;
+
+    /**
+     * 部署参数（region、域名等，按厂商/服务不同）
+     */
+    "config": { [_ in string]?: string } | null;
+
+    /**
+     * 区域代码
+     */
+    "region": string;
+
+    /**
+     * 凭证来源（access_key 等引用方式）
+     */
+    "credential_source": string;
+
+    /**
+     * 关联 DNS 提供商 ID（可为空）
+     */
+    "dns_provider_id": number | null;
+
+    /**
+     * 关联 DNS 提供商名称
+     */
+    "dns_provider_name": string;
+
+    /**
+     * 是否启用
+     */
+    "is_active": boolean;
+
+    /**
+     * 备注
+     */
+    "comment": string;
+
+    /**
+     * 最近一次部署状态（success/failed）
+     */
+    "last_status": string;
+
+    /**
+     * 最近一次部署错误信息
+     */
+    "last_error": string;
+
+    /**
+     * 最近部署时间
+     */
+    "last_deployed_at": string;
+
+    /**
+     * 创建时间
+     */
+    "created_at": string;
+
+    /**
+     * 更新时间
+     */
+    "updated_at": string;
+}
+
+/**
+ * FetchCDNDomainsRequest 拉取 CDN 域名请求（内联凭证，用于新建目标时选择）
+ */
+export interface FetchCDNDomainsRequest {
+    /**
+     * 云厂商类型
+     */
+    "provider_type": string;
+
+    /**
+     * 部署服务（cdn/dcdn/elb/waf 等）
+     */
+    "deploy_service": string;
+
+    /**
+     * 凭证来源（access_key 等引用方式）
+     */
+    "credential_source": string;
+
+    /**
+     * 关联 DNS 提供商 ID（可选）
+     */
+    "dns_provider_id"?: number | null;
+
+    /**
+     * 区域代码
+     */
+    "region": string;
+
+    /**
+     * 部署参数（按厂商/服务不同）
+     */
+    "config": { [_ in string]?: string } | null;
 }
 
 /**
@@ -624,6 +889,51 @@ export interface UpdateDNSProviderRequest {
      * 是否设为默认
      */
     "is_default"?: boolean | null;
+
+    /**
+     * 是否启用
+     */
+    "is_active"?: boolean | null;
+
+    /**
+     * 备注
+     */
+    "comment"?: string;
+}
+
+/**
+ * UpdateDeployTargetRequest 更新部署目标请求
+ */
+export interface UpdateDeployTargetRequest {
+    /**
+     * 部署目标名称
+     */
+    "name"?: string;
+
+    /**
+     * 云厂商类型
+     */
+    "provider_type"?: string;
+
+    /**
+     * 部署服务
+     */
+    "deploy_service"?: string;
+
+    /**
+     * 部署参数
+     */
+    "config"?: { [_ in string]?: string } | null;
+
+    /**
+     * 凭证来源
+     */
+    "credential_source"?: string;
+
+    /**
+     * 关联 DNS 提供商 ID（可选）
+     */
+    "dns_provider_id"?: number | null;
 
     /**
      * 是否启用

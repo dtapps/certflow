@@ -14,6 +14,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent/authmethod"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploylog"
+	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
@@ -36,10 +39,16 @@ type Client struct {
 	AuthMethod *AuthMethodClient
 	// CA is the client for interacting with the CA builders.
 	CA *CAClient
+	// CertUpload is the client for interacting with the CertUpload builders.
+	CertUpload *CertUploadClient
 	// Certificate is the client for interacting with the Certificate builders.
 	Certificate *CertificateClient
 	// DNSProvider is the client for interacting with the DNSProvider builders.
 	DNSProvider *DNSProviderClient
+	// DeployLog is the client for interacting with the DeployLog builders.
+	DeployLog *DeployLogClient
+	// DeployTarget is the client for interacting with the DeployTarget builders.
+	DeployTarget *DeployTargetClient
 	// MonitoredDomain is the client for interacting with the MonitoredDomain builders.
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
@@ -65,8 +74,11 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.AuthMethod = NewAuthMethodClient(c.config)
 	c.CA = NewCAClient(c.config)
+	c.CertUpload = NewCertUploadClient(c.config)
 	c.Certificate = NewCertificateClient(c.config)
 	c.DNSProvider = NewDNSProviderClient(c.config)
+	c.DeployLog = NewDeployLogClient(c.config)
+	c.DeployTarget = NewDeployTargetClient(c.config)
 	c.MonitoredDomain = NewMonitoredDomainClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.PasskeyCredential = NewPasskeyCredentialClient(c.config)
@@ -167,8 +179,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:            cfg,
 		AuthMethod:        NewAuthMethodClient(cfg),
 		CA:                NewCAClient(cfg),
+		CertUpload:        NewCertUploadClient(cfg),
 		Certificate:       NewCertificateClient(cfg),
 		DNSProvider:       NewDNSProviderClient(cfg),
+		DeployLog:         NewDeployLogClient(cfg),
+		DeployTarget:      NewDeployTargetClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
 		Notification:      NewNotificationClient(cfg),
 		PasskeyCredential: NewPasskeyCredentialClient(cfg),
@@ -196,8 +211,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:            cfg,
 		AuthMethod:        NewAuthMethodClient(cfg),
 		CA:                NewCAClient(cfg),
+		CertUpload:        NewCertUploadClient(cfg),
 		Certificate:       NewCertificateClient(cfg),
 		DNSProvider:       NewDNSProviderClient(cfg),
+		DeployLog:         NewDeployLogClient(cfg),
+		DeployTarget:      NewDeployTargetClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
 		Notification:      NewNotificationClient(cfg),
 		PasskeyCredential: NewPasskeyCredentialClient(cfg),
@@ -233,9 +251,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AuthMethod, c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain,
-		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
-		c.TOTPCredential,
+		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider, c.DeployLog,
+		c.DeployTarget, c.MonitoredDomain, c.Notification, c.PasskeyCredential,
+		c.RenewalLog, c.ScanResult, c.TOTPCredential,
 	} {
 		n.Use(hooks...)
 	}
@@ -245,9 +263,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AuthMethod, c.CA, c.Certificate, c.DNSProvider, c.MonitoredDomain,
-		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
-		c.TOTPCredential,
+		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider, c.DeployLog,
+		c.DeployTarget, c.MonitoredDomain, c.Notification, c.PasskeyCredential,
+		c.RenewalLog, c.ScanResult, c.TOTPCredential,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -260,10 +278,16 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuthMethod.mutate(ctx, m)
 	case *CAMutation:
 		return c.CA.mutate(ctx, m)
+	case *CertUploadMutation:
+		return c.CertUpload.mutate(ctx, m)
 	case *CertificateMutation:
 		return c.Certificate.mutate(ctx, m)
 	case *DNSProviderMutation:
 		return c.DNSProvider.mutate(ctx, m)
+	case *DeployLogMutation:
+		return c.DeployLog.mutate(ctx, m)
+	case *DeployTargetMutation:
+		return c.DeployTarget.mutate(ctx, m)
 	case *MonitoredDomainMutation:
 		return c.MonitoredDomain.mutate(ctx, m)
 	case *NotificationMutation:
@@ -595,6 +619,139 @@ func (c *CAClient) mutate(ctx context.Context, m *CAMutation) (Value, error) {
 	}
 }
 
+// CertUploadClient is a client for the CertUpload schema.
+type CertUploadClient struct {
+	config
+}
+
+// NewCertUploadClient returns a client for the CertUpload from the given config.
+func NewCertUploadClient(c config) *CertUploadClient {
+	return &CertUploadClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `certupload.Hooks(f(g(h())))`.
+func (c *CertUploadClient) Use(hooks ...Hook) {
+	c.hooks.CertUpload = append(c.hooks.CertUpload, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `certupload.Intercept(f(g(h())))`.
+func (c *CertUploadClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CertUpload = append(c.inters.CertUpload, interceptors...)
+}
+
+// Create returns a builder for creating a CertUpload entity.
+func (c *CertUploadClient) Create() *CertUploadCreate {
+	mutation := newCertUploadMutation(c.config, OpCreate)
+	return &CertUploadCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CertUpload entities.
+func (c *CertUploadClient) CreateBulk(builders ...*CertUploadCreate) *CertUploadCreateBulk {
+	return &CertUploadCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CertUploadClient) MapCreateBulk(slice any, setFunc func(*CertUploadCreate, int)) *CertUploadCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CertUploadCreateBulk{err: fmt.Errorf("calling to CertUploadClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CertUploadCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CertUploadCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CertUpload.
+func (c *CertUploadClient) Update() *CertUploadUpdate {
+	mutation := newCertUploadMutation(c.config, OpUpdate)
+	return &CertUploadUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CertUploadClient) UpdateOne(_m *CertUpload) *CertUploadUpdateOne {
+	mutation := newCertUploadMutation(c.config, OpUpdateOne, withCertUpload(_m))
+	return &CertUploadUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CertUploadClient) UpdateOneID(id int) *CertUploadUpdateOne {
+	mutation := newCertUploadMutation(c.config, OpUpdateOne, withCertUploadID(id))
+	return &CertUploadUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CertUpload.
+func (c *CertUploadClient) Delete() *CertUploadDelete {
+	mutation := newCertUploadMutation(c.config, OpDelete)
+	return &CertUploadDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CertUploadClient) DeleteOne(_m *CertUpload) *CertUploadDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CertUploadClient) DeleteOneID(id int) *CertUploadDeleteOne {
+	builder := c.Delete().Where(certupload.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CertUploadDeleteOne{builder}
+}
+
+// Query returns a query builder for CertUpload.
+func (c *CertUploadClient) Query() *CertUploadQuery {
+	return &CertUploadQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCertUpload},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CertUpload entity by its id.
+func (c *CertUploadClient) Get(ctx context.Context, id int) (*CertUpload, error) {
+	return c.Query().Where(certupload.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CertUploadClient) GetX(ctx context.Context, id int) *CertUpload {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CertUploadClient) Hooks() []Hook {
+	return c.hooks.CertUpload
+}
+
+// Interceptors returns the client interceptors.
+func (c *CertUploadClient) Interceptors() []Interceptor {
+	return c.inters.CertUpload
+}
+
+func (c *CertUploadClient) mutate(ctx context.Context, m *CertUploadMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CertUploadCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CertUploadUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CertUploadUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CertUploadDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CertUpload mutation op: %q", m.Op())
+	}
+}
+
 // CertificateClient is a client for the Certificate schema.
 type CertificateClient struct {
 	config
@@ -900,6 +1057,22 @@ func (c *DNSProviderClient) QueryCertificates(_m *DNSProvider) *CertificateQuery
 	return query
 }
 
+// QueryDeployTargets queries the deploy_targets edge of a DNSProvider.
+func (c *DNSProviderClient) QueryDeployTargets(_m *DNSProvider) *DeployTargetQuery {
+	query := (&DeployTargetClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dnsprovider.Table, dnsprovider.FieldID, id),
+			sqlgraph.To(deploytarget.Table, deploytarget.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dnsprovider.DeployTargetsTable, dnsprovider.DeployTargetsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *DNSProviderClient) Hooks() []Hook {
 	return c.hooks.DNSProvider
@@ -922,6 +1095,336 @@ func (c *DNSProviderClient) mutate(ctx context.Context, m *DNSProviderMutation) 
 		return (&DNSProviderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown DNSProvider mutation op: %q", m.Op())
+	}
+}
+
+// DeployLogClient is a client for the DeployLog schema.
+type DeployLogClient struct {
+	config
+}
+
+// NewDeployLogClient returns a client for the DeployLog from the given config.
+func NewDeployLogClient(c config) *DeployLogClient {
+	return &DeployLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `deploylog.Hooks(f(g(h())))`.
+func (c *DeployLogClient) Use(hooks ...Hook) {
+	c.hooks.DeployLog = append(c.hooks.DeployLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `deploylog.Intercept(f(g(h())))`.
+func (c *DeployLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DeployLog = append(c.inters.DeployLog, interceptors...)
+}
+
+// Create returns a builder for creating a DeployLog entity.
+func (c *DeployLogClient) Create() *DeployLogCreate {
+	mutation := newDeployLogMutation(c.config, OpCreate)
+	return &DeployLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DeployLog entities.
+func (c *DeployLogClient) CreateBulk(builders ...*DeployLogCreate) *DeployLogCreateBulk {
+	return &DeployLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DeployLogClient) MapCreateBulk(slice any, setFunc func(*DeployLogCreate, int)) *DeployLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DeployLogCreateBulk{err: fmt.Errorf("calling to DeployLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DeployLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DeployLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DeployLog.
+func (c *DeployLogClient) Update() *DeployLogUpdate {
+	mutation := newDeployLogMutation(c.config, OpUpdate)
+	return &DeployLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DeployLogClient) UpdateOne(_m *DeployLog) *DeployLogUpdateOne {
+	mutation := newDeployLogMutation(c.config, OpUpdateOne, withDeployLog(_m))
+	return &DeployLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DeployLogClient) UpdateOneID(id int) *DeployLogUpdateOne {
+	mutation := newDeployLogMutation(c.config, OpUpdateOne, withDeployLogID(id))
+	return &DeployLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DeployLog.
+func (c *DeployLogClient) Delete() *DeployLogDelete {
+	mutation := newDeployLogMutation(c.config, OpDelete)
+	return &DeployLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DeployLogClient) DeleteOne(_m *DeployLog) *DeployLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DeployLogClient) DeleteOneID(id int) *DeployLogDeleteOne {
+	builder := c.Delete().Where(deploylog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DeployLogDeleteOne{builder}
+}
+
+// Query returns a query builder for DeployLog.
+func (c *DeployLogClient) Query() *DeployLogQuery {
+	return &DeployLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDeployLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DeployLog entity by its id.
+func (c *DeployLogClient) Get(ctx context.Context, id int) (*DeployLog, error) {
+	return c.Query().Where(deploylog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DeployLogClient) GetX(ctx context.Context, id int) *DeployLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDeployTarget queries the deploy_target edge of a DeployLog.
+func (c *DeployLogClient) QueryDeployTarget(_m *DeployLog) *DeployTargetQuery {
+	query := (&DeployTargetClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploylog.Table, deploylog.FieldID, id),
+			sqlgraph.To(deploytarget.Table, deploytarget.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, deploylog.DeployTargetTable, deploylog.DeployTargetColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DeployLogClient) Hooks() []Hook {
+	return c.hooks.DeployLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *DeployLogClient) Interceptors() []Interceptor {
+	return c.inters.DeployLog
+}
+
+func (c *DeployLogClient) mutate(ctx context.Context, m *DeployLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DeployLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DeployLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DeployLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DeployLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DeployLog mutation op: %q", m.Op())
+	}
+}
+
+// DeployTargetClient is a client for the DeployTarget schema.
+type DeployTargetClient struct {
+	config
+}
+
+// NewDeployTargetClient returns a client for the DeployTarget from the given config.
+func NewDeployTargetClient(c config) *DeployTargetClient {
+	return &DeployTargetClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `deploytarget.Hooks(f(g(h())))`.
+func (c *DeployTargetClient) Use(hooks ...Hook) {
+	c.hooks.DeployTarget = append(c.hooks.DeployTarget, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `deploytarget.Intercept(f(g(h())))`.
+func (c *DeployTargetClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DeployTarget = append(c.inters.DeployTarget, interceptors...)
+}
+
+// Create returns a builder for creating a DeployTarget entity.
+func (c *DeployTargetClient) Create() *DeployTargetCreate {
+	mutation := newDeployTargetMutation(c.config, OpCreate)
+	return &DeployTargetCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DeployTarget entities.
+func (c *DeployTargetClient) CreateBulk(builders ...*DeployTargetCreate) *DeployTargetCreateBulk {
+	return &DeployTargetCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DeployTargetClient) MapCreateBulk(slice any, setFunc func(*DeployTargetCreate, int)) *DeployTargetCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DeployTargetCreateBulk{err: fmt.Errorf("calling to DeployTargetClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DeployTargetCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DeployTargetCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DeployTarget.
+func (c *DeployTargetClient) Update() *DeployTargetUpdate {
+	mutation := newDeployTargetMutation(c.config, OpUpdate)
+	return &DeployTargetUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DeployTargetClient) UpdateOne(_m *DeployTarget) *DeployTargetUpdateOne {
+	mutation := newDeployTargetMutation(c.config, OpUpdateOne, withDeployTarget(_m))
+	return &DeployTargetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DeployTargetClient) UpdateOneID(id int) *DeployTargetUpdateOne {
+	mutation := newDeployTargetMutation(c.config, OpUpdateOne, withDeployTargetID(id))
+	return &DeployTargetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DeployTarget.
+func (c *DeployTargetClient) Delete() *DeployTargetDelete {
+	mutation := newDeployTargetMutation(c.config, OpDelete)
+	return &DeployTargetDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DeployTargetClient) DeleteOne(_m *DeployTarget) *DeployTargetDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DeployTargetClient) DeleteOneID(id int) *DeployTargetDeleteOne {
+	builder := c.Delete().Where(deploytarget.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DeployTargetDeleteOne{builder}
+}
+
+// Query returns a query builder for DeployTarget.
+func (c *DeployTargetClient) Query() *DeployTargetQuery {
+	return &DeployTargetQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDeployTarget},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DeployTarget entity by its id.
+func (c *DeployTargetClient) Get(ctx context.Context, id int) (*DeployTarget, error) {
+	return c.Query().Where(deploytarget.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DeployTargetClient) GetX(ctx context.Context, id int) *DeployTarget {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDNSProvider queries the dns_provider edge of a DeployTarget.
+func (c *DeployTargetClient) QueryDNSProvider(_m *DeployTarget) *DNSProviderQuery {
+	query := (&DNSProviderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, id),
+			sqlgraph.To(dnsprovider.Table, dnsprovider.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, deploytarget.DNSProviderTable, deploytarget.DNSProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCertificates queries the certificates edge of a DeployTarget.
+func (c *DeployTargetClient) QueryCertificates(_m *DeployTarget) *CertificateQuery {
+	query := (&CertificateClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, id),
+			sqlgraph.To(certificate.Table, certificate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, deploytarget.CertificatesTable, deploytarget.CertificatesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDeployLogs queries the deploy_logs edge of a DeployTarget.
+func (c *DeployTargetClient) QueryDeployLogs(_m *DeployTarget) *DeployLogQuery {
+	query := (&DeployLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, id),
+			sqlgraph.To(deploylog.Table, deploylog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, deploytarget.DeployLogsTable, deploytarget.DeployLogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DeployTargetClient) Hooks() []Hook {
+	return c.hooks.DeployTarget
+}
+
+// Interceptors returns the client interceptors.
+func (c *DeployTargetClient) Interceptors() []Interceptor {
+	return c.inters.DeployTarget
+}
+
+func (c *DeployTargetClient) mutate(ctx context.Context, m *DeployTargetMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DeployTargetCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DeployTargetUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DeployTargetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DeployTargetDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DeployTarget mutation op: %q", m.Op())
 	}
 }
 
@@ -1774,11 +2277,13 @@ func (c *TOTPCredentialClient) mutate(ctx context.Context, m *TOTPCredentialMuta
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AuthMethod, CA, Certificate, DNSProvider, MonitoredDomain, Notification,
-		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Hook
+		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployLog, DeployTarget,
+		MonitoredDomain, Notification, PasskeyCredential, RenewalLog, ScanResult,
+		TOTPCredential []ent.Hook
 	}
 	inters struct {
-		AuthMethod, CA, Certificate, DNSProvider, MonitoredDomain, Notification,
-		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Interceptor
+		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployLog, DeployTarget,
+		MonitoredDomain, Notification, PasskeyCredential, RenewalLog, ScanResult,
+		TOTPCredential []ent.Interceptor
 	}
 )

@@ -12,11 +12,20 @@ type AuthMethod func(*sql.Selector)
 // CA is the predicate function for ca builders.
 type CA func(*sql.Selector)
 
+// CertUpload is the predicate function for certupload builders.
+type CertUpload func(*sql.Selector)
+
 // Certificate is the predicate function for certificate builders.
 type Certificate func(*sql.Selector)
 
 // DNSProvider is the predicate function for dnsprovider builders.
 type DNSProvider func(*sql.Selector)
+
+// DeployLog is the predicate function for deploylog builders.
+type DeployLog func(*sql.Selector)
+
+// DeployTarget is the predicate function for deploytarget builders.
+type DeployTarget func(*sql.Selector)
 
 // MonitoredDomain is the predicate function for monitoreddomain builders.
 type MonitoredDomain func(*sql.Selector)

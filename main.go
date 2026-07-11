@@ -17,6 +17,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ca"
 	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/db"
+	"cnb.cool/dtapp/certflow/internal/deploy"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
@@ -70,6 +71,12 @@ func main() {
 	}
 	i18n.SetLocale(settingsService.Get().Language)
 
+	// 运行时语言切换：前端保存设置（含语言）后，文件监控触发 OnChange，
+	// 同步后端 i18n 语言环境，使后端返回的错误/日志文案跟随界面语言变化。
+	settingsService.OnChange(func(s settings.Settings) {
+		i18n.SetLocale(s.Language)
+	})
+
 	// 初始化日志系统（必须在数据库和调度器之前）
 	settings := settingsService.Get()
 	logDir := filepath.Join(dataDir, "logs")
@@ -92,6 +99,8 @@ func main() {
 	notifService := notification.NewNotificationService()
 	certService.SetNotificationService(notifService)
 	certService.SetSettingsProvider(settingsService.Get)
+	deployService := deploy.NewDeployService(db.Client)
+	deployService.SetNotificationService(notifService)
 	schedulerService := scheduler.NewScheduler(db.Client, certService, notifService, settingsService, dataDir)
 	monitorService := monitor.NewMonitorService(db.Client)
 	monitorService.SetSettingsProvider(settingsService.Get)
@@ -127,6 +136,7 @@ func main() {
 			application.NewService(NewCAServiceWrapper(caService)),
 			application.NewService(NewDNSProviderServiceWrapper(dnsService)),
 			application.NewService(NewCertificateServiceWrapper(certService)),
+			application.NewService(NewDeployServiceWrapper(deployService)),
 			application.NewService(NewSchedulerServiceWrapper(schedulerService)),
 			application.NewService(NewNotificationServiceWrapper(notifService)),
 			application.NewService(NewSettingsServiceWrapper(settingsService)),

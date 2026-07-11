@@ -423,6 +423,29 @@ func HasCertificatesWith(preds ...predicate.Certificate) predicate.DNSProvider {
 	})
 }
 
+// HasDeployTargets applies the HasEdge predicate on the "deploy_targets" edge.
+func HasDeployTargets() predicate.DNSProvider {
+	return predicate.DNSProvider(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DeployTargetsTable, DeployTargetsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDeployTargetsWith applies the HasEdge predicate on the "deploy_targets" edge with a given conditions (other predicates).
+func HasDeployTargetsWith(preds ...predicate.DeployTarget) predicate.DNSProvider {
+	return predicate.DNSProvider(func(s *sql.Selector) {
+		step := newDeployTargetsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.DNSProvider) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.AndPredicates(predicates...))
