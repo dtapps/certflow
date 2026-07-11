@@ -56,6 +56,9 @@
             ASSET_COUNT=$(echo "$RELEASE_INFO" | jq '.assets | length')
             echo "共 ${ASSET_COUNT} 个附件"
 
+            # 保存 Release 信息，供后续替换下载链接生成发布内容使用
+            echo "$RELEASE_INFO" > release_info.json
+
             if [ "$ASSET_COUNT" = "0" ]; then
               echo "错误：Release 没有附件，请先在 GitHub Actions 完成构建"
               exit 1
@@ -75,54 +78,20 @@
             echo "下载完成："
             ls -lh "${DOWNLOAD_DIR}/"
 
-            # 提取 GitHub Release 的更新日志（只取"## 更新内容"部分，跳过下载表格）
-            echo "$RELEASE_INFO" | jq -r '.body // ""' | sed -n '/^## 更新内容/,$p' | tail -n +2 | sed '/./,$!d' > github_changelog.md
-            echo "✓ 更新日志已保存到 github_changelog.md"
-
-        # 生成完整发布内容（下载表格 + GitHub 更新日志）
+        # 生成发布内容（直接复用 GitHub Release 正文，下载链接替换为 CNB）
         - name: 生成发布内容
           script: |
             TAG="${INTERIOR_VERSION}"
-            CNB_DL_BASE="https://cnb.cool/dtapp/certflow/-/releases/download/${TAG}"
+            GH_DL_PREFIX="https://github.com/dtapps/certflow/releases/download/${TAG}"
+            CNB_DL_PREFIX="https://cnb.cool/dtapp/certflow/-/releases/download/${TAG}"
 
-            # 下载表格
-            printf "## 下载\n\n" > release_body.md
-            printf "| 平台 | 架构 | 文件 | 大小 | 说明 |\n" >> release_body.md
-            printf "|------|------|------|------|------|\n" >> release_body.md
+            # 复用 GitHub Release 的完整正文（含其原有下载表格），
+            # 仅把下载链接前缀由 GitHub 替换为 CNB，避免单独生成表格导致与 GitHub 不同步
+            RELEASE_INFO=$(cat release_info.json)
+            echo "$RELEASE_INFO" | jq -r '.body // ""' \
+              | sed "s#${GH_DL_PREFIX}#${CNB_DL_PREFIX}#g" \
+              > release_body.md
 
-            for f in dist/*; do
-              [ ! -f "$f" ] && continue
-              fname=$(basename "$f")
-              fsize=$(ls -lh "$f" | awk '{print $5}')
-              DL_URL="${CNB_DL_BASE}/${fname}"
-
-              PLAT=""
-              ARCH=""
-              case "$fname" in
-                *-darwin-*)  PLAT="macOS"; ARCH="${fname##*-darwin-}"; ARCH="${ARCH%%.*}" ;;
-                *-windows-*) PLAT="Windows"; ARCH="${fname##*-windows-}"; ARCH="${ARCH%%.*}" ;;
-                *-linux-*)   PLAT="Linux"; ARCH="${fname##*-linux-}"; ARCH="${ARCH%%.*}" ;;
-                SHA256SUMS)  PLAT="校验和"; ARCH="-" ;;
-              esac
-
-              case "$fname" in
-                *.zip)         printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | Mac 应用 |\n" "${fname%.zip}.app" "$fsize" >> release_body.md ;;
-                *.exe)         printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | Windows 安装包 |\n" "$fname" "$fsize" >> release_body.md ;;
-                *.AppImage)    printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | AppImage 便携版 |\n" "$fname" "$fsize" >> release_body.md ;;
-                *.deb)         printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | Debian/Ubuntu |\n" "$fname" "$fsize" >> release_body.md ;;
-                *.rpm)         printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | Fedora/RHEL |\n" "$fname" "$fsize" >> release_body.md ;;
-                *.pkg.tar.zst) printf "| ${PLAT} | ${ARCH} | [%s](${DL_URL}) | %s | Arch Linux |\n" "$fname" "$fsize" >> release_body.md ;;
-                SHA256SUMS)    printf "| ${PLAT} | - | [%s](${DL_URL}) | %s | SHA-256 |\n" "$fname" "$fsize" >> release_body.md ;;
-              esac
-            done
-
-            # 拼接 GitHub 更新日志
-            if [ -s github_changelog.md ]; then
-              printf "\n## 更新内容\n\n" >> release_body.md
-              cat github_changelog.md >> release_body.md
-            fi
-
-            # 输出完整内容（供 git:release 引用）
             cat release_body.md
 
         # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
