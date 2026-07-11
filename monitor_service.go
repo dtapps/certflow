@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -50,7 +51,7 @@ func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, 
 
 // SetUserAgent 设置 User-Agent
 func (s *MonitorServiceWrapper) SetUserAgent(ua string) {
-	logging.Info("前端 User-Agent: %s", ua)
+	logging.Info(i18n.T("log.monitor.set_user_agent", "UA", ua))
 	s.monitorService.SetUserAgent(ua)
 }
 
