@@ -19,7 +19,7 @@ ent: ## 生成 Ent ORM 代码
 	go run -tags entc ./entc_generate.go
 
 dev: ## 运行 Wails 开发模式
-	wails3 dev
+	wails3 dev -port 9246
 
 # ==================== 格式化 / 修复 ====================
 
