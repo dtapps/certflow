@@ -20,28 +20,28 @@ const (
 
 // TimePayload 时间同步事件参数
 type TimePayload struct {
-	Time string `json:"time"`
+	Time string `json:"time"` // 当前时间（ISO 格式）
 }
 
 // NotificationPayload 通知事件参数
 type NotificationPayload struct {
-	Title    string `json:"title"`
-	Subtitle string `json:"subtitle,omitempty"`
-	Body     string `json:"body,omitempty"`
-	Category string `json:"category"`
+	Title    string `json:"title"`              // 通知标题
+	Subtitle string `json:"subtitle,omitempty"` // 通知副标题（可选）
+	Body     string `json:"body,omitempty"`     // 通知正文（可选）
+	Category string `json:"category"`           // 通知分类（用于前端区分类型）
 }
 
 // ThemeChangedPayload 主题变化事件参数
 type ThemeChangedPayload struct {
-	Dark bool `json:"dark"`
+	Dark bool `json:"dark"` // 是否为深色主题
 }
 
 // LocaleChangedPayload 语言变化事件参数
 type LocaleChangedPayload struct {
-	Locale string `json:"locale"`
+	Locale string `json:"locale"` // 当前语言（zh-CN/en-US/auto）
 }
 
 // NavigatePayload 导航事件参数
 type NavigatePayload struct {
-	Path string `json:"path"`
+	Path string `json:"path"` // 目标路由路径
 }

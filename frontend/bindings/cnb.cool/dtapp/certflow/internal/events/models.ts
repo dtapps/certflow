@@ -5,6 +5,9 @@
  * LocaleChangedPayload 语言变化事件参数
  */
 export interface LocaleChangedPayload {
+    /**
+     * 当前语言（zh-CN/en-US/auto）
+     */
     "locale": string;
 }
 
@@ -12,6 +15,9 @@ export interface LocaleChangedPayload {
  * NavigatePayload 导航事件参数
  */
 export interface NavigatePayload {
+    /**
+     * 目标路由路径
+     */
     "path": string;
 }
 
@@ -19,9 +25,24 @@ export interface NavigatePayload {
  * NotificationPayload 通知事件参数
  */
 export interface NotificationPayload {
+    /**
+     * 通知标题
+     */
     "title": string;
+
+    /**
+     * 通知副标题（可选）
+     */
     "subtitle"?: string;
+
+    /**
+     * 通知正文（可选）
+     */
     "body"?: string;
+
+    /**
+     * 通知分类（用于前端区分类型）
+     */
     "category": string;
 }
 
@@ -29,6 +50,9 @@ export interface NotificationPayload {
  * ThemeChangedPayload 主题变化事件参数
  */
 export interface ThemeChangedPayload {
+    /**
+     * 是否为深色主题
+     */
     "dark": boolean;
 }
 
@@ -36,5 +60,8 @@ export interface ThemeChangedPayload {
  * TimePayload 时间同步事件参数
  */
 export interface TimePayload {
+    /**
+     * 当前时间（ISO 格式）
+     */
     "time": string;
 }
