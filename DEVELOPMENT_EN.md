@@ -97,10 +97,8 @@ certflow/
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
 │   ├── biometric/             # Biometric helper binaries (Touch ID/Windows Hello)
 │   ├── ca/                    # CA management
-│   ├── cert/                  # Certificate parsing/utilities
 │   ├── certificate/           # Certificate issuance/renewal/revocation
 │   ├── db/                    # Database initialization
-│   ├── dns/                   # DNS utilities
 │   ├── dnsprovider/           # DNS provider management
 │   ├── events/                # Frontend-backend event definitions
 │   ├── i18n/                  # Internationalization (embedded locale files)

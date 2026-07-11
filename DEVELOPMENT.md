@@ -97,10 +97,8 @@ certflow/
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
 │   ├── biometric/             # 生物识别 Helper 二进制（Touch ID/Windows Hello）
 │   ├── ca/                    # CA 管理
-│   ├── cert/                  # 证书解析/工具
 │   ├── certificate/           # 证书申请/续期/撤销
 │   ├── db/                    # 数据库初始化
-│   ├── dns/                   # DNS 工具
 │   ├── dnsprovider/           # DNS 提供商管理
 │   ├── events/                # 前后端事件定义
 │   ├── i18n/                  # 国际化（嵌入式语言文件）
