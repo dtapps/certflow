@@ -39,10 +39,10 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 		Where(authmethod.MethodEQ("totp")).
 		Exist(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.totp_generate_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_generate_failed", "Error", err))
 	}
 	if exists {
-		return nil, fmt.Errorf(i18n.T("error.totp_already_configured"))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_already_configured"))
 	}
 
 	// 生成 TOTP 密钥
@@ -51,7 +51,7 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 		AccountName: "user",
 	})
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.totp_generate_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_generate_failed", "Error", err))
 	}
 
 	// 创建 TOTP 认证方式
@@ -60,7 +60,7 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 		SetIsActive(false).
 		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	// 保存 TOTP 凭据
@@ -73,7 +73,7 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 	if err != nil {
 		// 回滚认证方式
 		_ = s.db.AuthMethod.DeleteOneID(am.ID).Exec(ctx)
-		return nil, fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	logging.Info(i18n.T("log.totp_key_generated"))
@@ -98,7 +98,7 @@ func (s *AuthService) VerifyTOTPSetup(code string) error {
 		WithAuthMethod().
 		First(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	logging.Info(i18n.T("log.totp_verifying"))
@@ -107,7 +107,7 @@ func (s *AuthService) VerifyTOTPSetup(code string) error {
 	valid := totp.Validate(code, tc.Secret)
 	if !valid {
 		logging.Warn(i18n.T("log.totp_verify_failed"))
-		return fmt.Errorf(i18n.T("error.totp_verify_failed"))
+		return fmt.Errorf("%s", i18n.T("error.totp_verify_failed"))
 	}
 
 	logging.Info(i18n.T("log.totp_verify_success"))
@@ -118,7 +118,7 @@ func (s *AuthService) VerifyTOTPSetup(code string) error {
 		SetIsActive(true).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	// 如果之前有其他激活的方式，取消激活
@@ -173,7 +173,7 @@ func (s *AuthService) ClearTOTP() error {
 	_, err := s.db.TOTPCredential.Delete().
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	// 再删除 TOTP 认证方式
@@ -194,7 +194,7 @@ func (s *AuthService) CancelTOTP() error {
 	_, err := s.db.TOTPCredential.Delete().
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	_, err = s.db.AuthMethod.Delete().
@@ -218,7 +218,7 @@ func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 		if ent.IsNotFound(err) {
 			return &TOTPInfo{IsConfigured: false}, nil
 		}
-		return nil, fmt.Errorf(i18n.T("error.totp_setup_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
 
 	info := &TOTPInfo{

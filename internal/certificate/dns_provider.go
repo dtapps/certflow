@@ -45,12 +45,12 @@ import (
 // createDNSProvider 根据提供商类型和配置创建 lego DNS provider
 func createDNSProvider(provider *ent.DNSProvider) (challenge.Provider, error) {
 	if len(provider.Config) == 0 {
-		return nil, fmt.Errorf(i18n.T("error.dns_provider_config_empty"))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_config_empty"))
 	}
 
 	var configMap map[string]string
 	if err := json.Unmarshal(provider.Config, &configMap); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.dns_provider_config_parse_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_config_parse_failed", "Error", err))
 	}
 
 	switch provider.ProviderType {
@@ -119,7 +119,7 @@ func createDNSProvider(provider *ent.DNSProvider) (challenge.Provider, error) {
 	case "ns1":
 		return createNS1Provider(configMap)
 	default:
-		return nil, fmt.Errorf(i18n.T("error.dns_provider_unsupported", "Type", provider.ProviderType))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_unsupported", "Type", provider.ProviderType))
 	}
 }
 

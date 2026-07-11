@@ -55,29 +55,29 @@ func (s *AuthService) SetupBiometric() error {
 		Where(authmethod.MethodEQ("biometric")).
 		Exist(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.biometric_helper_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.biometric_helper_failed", "Error", err))
 	}
 	if exists {
-		return fmt.Errorf(i18n.T("error.biometric_already_configured"))
+		return fmt.Errorf("%s", i18n.T("error.biometric_already_configured"))
 	}
 
 	// 检查设备支持
 	helper, err := getBiometricHelper()
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.biometric_helper_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.biometric_helper_failed", "Error", err))
 	}
 	if !helper.IsSupported() {
-		return fmt.Errorf(i18n.T("error.biometric_not_supported"))
+		return fmt.Errorf("%s", i18n.T("error.biometric_not_supported"))
 	}
 
 	// 触发一次验证确认可用
 	authCtx := context.Background()
 	success, err := helper.Authenticate(authCtx, i18n.T("personal.setupBiometric"))
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.biometric_verification_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.biometric_verification_failed", "Error", err))
 	}
 	if !success {
-		return fmt.Errorf(i18n.T("error.biometric_user_cancelled"))
+		return fmt.Errorf("%s", i18n.T("error.biometric_user_cancelled"))
 	}
 
 	// 创建认证方式
@@ -86,7 +86,7 @@ func (s *AuthService) SetupBiometric() error {
 		SetIsActive(true).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.biometric_setup_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.biometric_setup_failed", "Error", err))
 	}
 
 	// 取消其他激活方式
@@ -156,7 +156,7 @@ func (s *AuthService) GetBiometricInfo() (*BiometricInfo, error) {
 		Where(authmethod.MethodEQ("biometric")).
 		Exist(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.biometric_helper_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_helper_failed", "Error", err))
 	}
 
 	// 检查设备支持

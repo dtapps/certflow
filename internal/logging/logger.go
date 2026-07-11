@@ -78,13 +78,13 @@ func NewLogger(logDir string, level Level, maxMB int, maxBackups int) (*Logger, 
 // NewLoggerWithFilename 创建指定文件名的日志记录器
 func NewLoggerWithFilename(logDir string, filename string, level Level, maxMB int, maxBackups int) (*Logger, error) {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.create_log_dir_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_log_dir_failed", "Error", err))
 	}
 
 	filePath := filepath.Join(logDir, filename)
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.open_log_file_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.open_log_file_failed", "Error", err))
 	}
 
 	return &Logger{
@@ -163,7 +163,7 @@ func (l *Logger) rotate() error {
 	if _, err := os.Stat(l.filePath); err == nil {
 		backupPath := l.filePath + ".1.gz"
 		if err := compressFile(l.filePath, backupPath); err != nil {
-			return fmt.Errorf(i18n.T("error.compress_log_file_failed", "Error", err))
+			return fmt.Errorf("%s", i18n.T("error.compress_log_file_failed", "Error", err))
 		}
 		os.Remove(l.filePath)
 	}
@@ -171,7 +171,7 @@ func (l *Logger) rotate() error {
 	// 创建新文件
 	file, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0444)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.create_new_log_file_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.create_new_log_file_failed", "Error", err))
 	}
 	l.file = file
 

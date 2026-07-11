@@ -51,7 +51,7 @@ func (s *CAService) Create(ctx context.Context, input CreateCAInput) (*ent.CA, e
 
 	result, err := builder.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.ca_create_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_create_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -61,9 +61,9 @@ func (s *CAService) GetByID(ctx context.Context, id int) (*ent.CA, error) {
 	result, err := s.db.CA.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.ca_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.ca_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.get_ca_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_ca_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -72,7 +72,7 @@ func (s *CAService) GetByID(ctx context.Context, id int) (*ent.CA, error) {
 func (s *CAService) List(ctx context.Context) ([]*ent.CA, error) {
 	results, err := s.db.CA.Query().All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_ca_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_ca_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -83,7 +83,7 @@ func (s *CAService) ListActive(ctx context.Context) ([]*ent.CA, error) {
 		Where(ca.IsActiveEQ(true)).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_ca_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_ca_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -112,9 +112,9 @@ func (s *CAService) Update(ctx context.Context, id int, input UpdateCAInput) (*e
 	result, err := builder.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.ca_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.ca_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.ca_update_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_update_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -124,9 +124,9 @@ func (s *CAService) Delete(ctx context.Context, id int) error {
 	err := s.db.CA.DeleteOneID(id).Exec(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return fmt.Errorf(i18n.T("error.ca_not_found"))
+			return fmt.Errorf("%s", i18n.T("error.ca_not_found"))
 		}
-		return fmt.Errorf(i18n.T("error.ca_delete_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.ca_delete_failed", "Error", err))
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func (s *CAService) SetDefault(ctx context.Context, id int) (*ent.CA, error) {
 		SetIsDefault(false).
 		Exec(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.unset_default_ca_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.unset_default_ca_failed", "Error", err))
 	}
 
 	// 设置指定 CA 为默认
@@ -147,9 +147,9 @@ func (s *CAService) SetDefault(ctx context.Context, id int) (*ent.CA, error) {
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.ca_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.ca_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.set_default_ca_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.set_default_ca_failed", "Error", err))
 	}
 	return result, nil
 }

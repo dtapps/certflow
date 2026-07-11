@@ -44,7 +44,7 @@ func NewHelper() (*Helper, error) {
 		return nil, err
 	}
 	if binaryData == nil {
-		return nil, fmt.Errorf(i18n.T("error.biometric_unsupported_platform", "Platform", runtime.GOOS))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_unsupported_platform", "Platform", runtime.GOOS))
 	}
 
 	// 提取到临时目录
@@ -58,7 +58,7 @@ func NewHelper() (*Helper, error) {
 
 	// 写入文件
 	if err := os.WriteFile(execPath, binaryData, 0755); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.biometric_write_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_write_failed", "Error", err))
 	}
 
 	h.executablePath = execPath
@@ -128,7 +128,7 @@ func (h *Helper) execute(ctx context.Context, req Request) (*Response, error) {
 	// 序列化请求
 	reqData, err := json.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.biometric_marshal_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_marshal_failed", "Error", err))
 	}
 
 	// 创建命令
@@ -140,15 +140,15 @@ func (h *Helper) execute(ctx context.Context, req Request) (*Response, error) {
 	if err != nil {
 		// 检查是否是超时
 		if ctx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf(i18n.T("error.biometric_timeout"))
+			return nil, fmt.Errorf("%s", i18n.T("error.biometric_timeout"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.biometric_execute_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_execute_failed", "Error", err))
 	}
 
 	// 解析响应
 	var resp Response
 	if err := json.Unmarshal(output, &resp); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.biometric_parse_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.biometric_parse_failed", "Error", err))
 	}
 
 	return &resp, nil

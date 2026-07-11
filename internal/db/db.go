@@ -28,7 +28,7 @@ var Client *ent.Client
 func Init(dataDir string) error {
 	dbDir := filepath.Join(dataDir, "data")
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
-		return fmt.Errorf(i18n.T("error.create_db_dir_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.create_db_dir_failed", "Error", err))
 	}
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout=5000", filepath.Join(dbDir, "certflow.db"))
 
@@ -64,14 +64,14 @@ func Init(dataDir string) error {
 
 	client, err := ent.Open(dialect.SQLite, dsn, opts...)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.open_db_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.open_db_failed", "Error", err))
 	}
 
 	// 运行自动迁移
 	ctx := context.Background()
 	if err := client.Schema.Create(ctx); err != nil {
 		client.Close()
-		return fmt.Errorf(i18n.T("error.create_schema_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.create_schema_failed", "Error", err))
 	}
 
 	Client = client

@@ -93,7 +93,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.WithLocation(time.Local),
 	)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.create_scheduler_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.create_scheduler_failed", "Error", err))
 	}
 	s.scheduler = scheduler
 
@@ -105,7 +105,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
 	)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.add_renew_job_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.add_renew_job_failed", "Error", err))
 	}
 
 	// 添加证书过期检查任务：每6小时检查一次
@@ -116,7 +116,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
 	)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.add_expiry_check_job_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.add_expiry_check_job_failed", "Error", err))
 	}
 
 	// 启动调度器
@@ -130,7 +130,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 func (s *Scheduler) Stop() error {
 	if s.scheduler != nil {
 		if err := s.scheduler.Shutdown(); err != nil {
-			return fmt.Errorf(i18n.T("error.stop_scheduler_failed", "Error", err))
+			return fmt.Errorf("%s", i18n.T("error.stop_scheduler_failed", "Error", err))
 		}
 	}
 	logging.Info(i18n.T("log.scheduler_stopped"))
@@ -271,7 +271,7 @@ func (s *Scheduler) GetRenewalLogs(ctx context.Context, certID int) ([]*ent.Rene
 		WithCertificate().
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.get_renewal_logs_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_renewal_logs_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -284,7 +284,7 @@ func (s *Scheduler) GetRecentRenewalLogs(ctx context.Context, limit int) ([]*ent
 		WithCertificate().
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.get_renewal_logs_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_renewal_logs_failed", "Error", err))
 	}
 	return results, nil
 }

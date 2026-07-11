@@ -45,7 +45,7 @@ type UpdateDNSProviderInput struct {
 func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProviderInput) (*ent.DNSProvider, error) {
 	configJSON, err := json.Marshal(input.Config)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.dns_config_marshal_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_config_marshal_failed", "Error", err))
 	}
 	builder := s.db.DNSProvider.Create().
 		SetName(input.Name).
@@ -57,7 +57,7 @@ func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProvider
 
 	result, err := builder.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.dns_create_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_create_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -67,9 +67,9 @@ func (s *DNSProviderService) GetByID(ctx context.Context, id int) (*ent.DNSProvi
 	result, err := s.db.DNSProvider.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.dns_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.get_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_dns_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -78,7 +78,7 @@ func (s *DNSProviderService) GetByID(ctx context.Context, id int) (*ent.DNSProvi
 func (s *DNSProviderService) List(ctx context.Context) ([]*ent.DNSProvider, error) {
 	results, err := s.db.DNSProvider.Query().All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_dns_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -89,7 +89,7 @@ func (s *DNSProviderService) ListActive(ctx context.Context) ([]*ent.DNSProvider
 		Where(dnsprovider.IsActiveEQ(true)).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_dns_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -100,7 +100,7 @@ func (s *DNSProviderService) ListByType(ctx context.Context, providerType string
 		Where(dnsprovider.ProviderTypeEQ(dnsprovider.ProviderType(providerType))).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_dns_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -119,7 +119,7 @@ func (s *DNSProviderService) Update(ctx context.Context, id int, input UpdateDNS
 	if input.Config != nil {
 		configJSON, err := json.Marshal(input.Config)
 		if err != nil {
-			return nil, fmt.Errorf(i18n.T("error.dns_config_marshal_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_config_marshal_failed", "Error", err))
 		}
 		builder.SetConfig(configJSON)
 	}
@@ -136,9 +136,9 @@ func (s *DNSProviderService) Update(ctx context.Context, id int, input UpdateDNS
 	result, err := builder.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.dns_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.dns_update_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.dns_update_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -148,9 +148,9 @@ func (s *DNSProviderService) Delete(ctx context.Context, id int) error {
 	err := s.db.DNSProvider.DeleteOneID(id).Exec(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return fmt.Errorf(i18n.T("error.dns_not_found"))
+			return fmt.Errorf("%s", i18n.T("error.dns_not_found"))
 		}
-		return fmt.Errorf(i18n.T("error.dns_delete_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.dns_delete_failed", "Error", err))
 	}
 	return nil
 }
@@ -162,7 +162,7 @@ func (s *DNSProviderService) SetDefault(ctx context.Context, id int) (*ent.DNSPr
 		SetIsDefault(false).
 		Exec(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.unset_default_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.unset_default_dns_failed", "Error", err))
 	}
 
 	// 设置指定 DNS 提供商为默认
@@ -171,9 +171,9 @@ func (s *DNSProviderService) SetDefault(ctx context.Context, id int) (*ent.DNSPr
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.dns_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.set_default_dns_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.set_default_dns_failed", "Error", err))
 	}
 	return result, nil
 }

@@ -68,7 +68,7 @@ type ScanResultItem struct {
 func (s *ScannerService) Scan(ctx context.Context, input ScanInput) (*ScanResultItem, error) {
 	domain := input.Domain
 	if domain == "" {
-		return nil, fmt.Errorf(i18n.T("error.scanner_empty_domain"))
+		return nil, fmt.Errorf("%s", i18n.T("error.scanner_empty_domain"))
 	}
 
 	port := input.Port
@@ -141,7 +141,7 @@ func (s *ScannerService) Scan(ctx context.Context, input ScanInput) (*ScanResult
 	item, err := s.saveResult(ctx, result)
 	if err != nil {
 		logging.Error(i18n.T("log.scanner_save_failed", "Domain", domain, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.scanner_save_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.scanner_save_failed", "Error", err))
 	}
 
 	if result.ErrorMessage != "" {

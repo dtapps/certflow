@@ -95,15 +95,15 @@ func (s *AuthService) StartPasskeyRegistration() (*PasskeyRegistrationResponse, 
 		Where(authmethod.MethodEQ("passkey")).
 		Exist(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 	if exists {
-		return nil, fmt.Errorf(i18n.T("error.passkey_already_configured"))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_already_configured"))
 	}
 
 	wa, err := s.getWebAuthn()
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	user := &webauthnUser{
@@ -115,7 +115,7 @@ func (s *AuthService) StartPasskeyRegistration() (*PasskeyRegistrationResponse, 
 	// 开始注册
 	credential, session, err := wa.BeginRegistration(user)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 将 session 信息存储（简化实现，实际应存储到 session store）
@@ -128,7 +128,7 @@ func (s *AuthService) StartPasskeyRegistration() (*PasskeyRegistrationResponse, 
 		SetIsActive(false).
 		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 返回注册选项（简化：返回基本选项供前端使用）
@@ -166,13 +166,13 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 	// 解析前端返回的注册数据
 	var regData PasskeyRegistrationData
 	if err := json.Unmarshal([]byte(data), &regData); err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 验证凭据 ID
 	credentialID, err := base64.RawURLEncoding.DecodeString(regData.RawID)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 获取待完成的 Passkey 认证方式
@@ -180,7 +180,7 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 		Where(authmethod.MethodEQ("passkey")).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 保存凭据（简化实现，实际应验证 attestation）
@@ -191,7 +191,7 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 		SetAuthMethod(am).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 激活 Passkey 认证方式
@@ -200,7 +200,7 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 		SetIsActive(true).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 取消其他激活方式
@@ -229,10 +229,10 @@ func (s *AuthService) StartPasskeyLogin() (*PasskeyAuthenticationResponse, error
 	// 获取 Passkey 凭据
 	credentials, err := s.db.PasskeyCredential.Query().All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
 	}
 	if len(credentials) == 0 {
-		return nil, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", "no credentials"))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", "no credentials"))
 	}
 
 	// 构建允许的凭据列表
@@ -272,13 +272,13 @@ func (s *AuthService) FinishPasskeyLogin(data string) (bool, error) {
 	// 解析前端返回的认证数据
 	var authData PasskeyAuthenticationData
 	if err := json.Unmarshal([]byte(data), &authData); err != nil {
-		return false, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", err))
+		return false, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
 	}
 
 	// 验证凭据 ID
 	credentialID, err := base64.RawURLEncoding.DecodeString(authData.RawID)
 	if err != nil {
-		return false, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", err))
+		return false, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
 	}
 
 	// 查找匹配的凭据
@@ -291,7 +291,7 @@ func (s *AuthService) FinishPasskeyLogin(data string) (bool, error) {
 		if ent.IsNotFound(err) {
 			return false, nil // 凭据不存在
 		}
-		return false, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", err))
+		return false, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
 	}
 
 	// 简化验证：实际应验证签名等
@@ -313,7 +313,7 @@ func (s *AuthService) ClearPasskey() error {
 	_, err := s.db.PasskeyCredential.Delete().
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.passkey_registration_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
 	// 再删除 Passkey 认证方式
@@ -338,7 +338,7 @@ func (s *AuthService) GetPasskeyInfo() (*PasskeyInfo, error) {
 		if ent.IsNotFound(err) {
 			return &PasskeyInfo{IsConfigured: false}, nil
 		}
-		return nil, fmt.Errorf(i18n.T("error.passkey_verification_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
 	}
 
 	info := &PasskeyInfo{

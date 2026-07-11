@@ -42,12 +42,12 @@ func (s *AuthService) IsPasswordSet() bool {
 // SetPassword 设置密码（明文传入，内部哈希存储）
 func (s *AuthService) SetPassword(plainPassword string) error {
 	if len(plainPassword) < 6 {
-		return fmt.Errorf(i18n.T("error.password_too_short"))
+		return fmt.Errorf("%s", i18n.T("error.password_too_short"))
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.password_hash_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.password_hash_failed", "Error", err))
 	}
 
 	s.mu.Lock()
@@ -60,7 +60,7 @@ func (s *AuthService) SetPassword(plainPassword string) error {
 		Where(authmethod.MethodEQ("password")).
 		Exist(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+		return fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
 	}
 
 	if exists {
@@ -116,11 +116,11 @@ func (s *AuthService) VerifyPassword(plainPassword string) bool {
 // ChangePassword 修改密码（需要验证旧密码）
 func (s *AuthService) ChangePassword(oldPassword, newPassword string) error {
 	if !s.VerifyPassword(oldPassword) {
-		return fmt.Errorf(i18n.T("error.password_incorrect"))
+		return fmt.Errorf("%s", i18n.T("error.password_incorrect"))
 	}
 
 	if len(newPassword) < 6 {
-		return fmt.Errorf(i18n.T("error.password_too_short"))
+		return fmt.Errorf("%s", i18n.T("error.password_too_short"))
 	}
 
 	return s.SetPassword(newPassword)
@@ -154,7 +154,7 @@ func (s *AuthService) GetActiveMethod() (string, error) {
 		if ent.IsNotFound(err) {
 			return "", nil // 没有激活的认证方式
 		}
-		return "", fmt.Errorf(i18n.T("error.load_auth_failed"))
+		return "", fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
 	}
 	return am.Method.String(), nil
 }
@@ -168,7 +168,7 @@ func (s *AuthService) SetActiveMethod(method string) error {
 
 	// 验证方法是否有效
 	if method != authmethod.MethodPassword.String() && method != authmethod.MethodTotp.String() && method != authmethod.MethodPasskey.String() && method != authmethod.MethodBiometric.String() {
-		return fmt.Errorf(i18n.T("error.auth_method_invalid", "Method", method))
+		return fmt.Errorf("%s", i18n.T("error.auth_method_invalid", "Method", method))
 	}
 
 	// 检查该方法是否已配置
@@ -176,10 +176,10 @@ func (s *AuthService) SetActiveMethod(method string) error {
 		Where(authmethod.MethodEQ(authmethod.Method(method))).
 		Exist(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+		return fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
 	}
 	if !exists {
-		return fmt.Errorf(i18n.T("error.auth_method_not_configured", "Method", method))
+		return fmt.Errorf("%s", i18n.T("error.auth_method_not_configured", "Method", method))
 	}
 
 	// 取消所有方法的激活状态
@@ -187,7 +187,7 @@ func (s *AuthService) SetActiveMethod(method string) error {
 		SetIsActive(false).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.load_auth_failed"))
+		return fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
 	}
 
 	// 激活指定方法
@@ -209,7 +209,7 @@ func (s *AuthService) GetAvailableMethods() ([]string, error) {
 		Select(authmethod.FieldMethod).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.load_auth_failed"))
+		return nil, fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
 	}
 
 	result := make([]string, len(methods))
@@ -231,6 +231,6 @@ func (s *AuthService) Authenticate(method, credential string) (bool, error) {
 	case "biometric":
 		return s.authenticateBiometric(credential), nil
 	default:
-		return false, fmt.Errorf(i18n.T("error.auth_method_invalid", "Method", method))
+		return false, fmt.Errorf("%s", i18n.T("error.auth_method_invalid", "Method", method))
 	}
 }

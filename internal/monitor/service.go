@@ -163,7 +163,7 @@ func (s *MonitorService) Create(ctx context.Context, input CreateInput) (*Monito
 		SetStatus(monitoreddomain.StatusUnknown).
 		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.create_monitored_domain_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_monitored_domain_failed", "Error", err))
 	}
 	return toItem(m), nil
 }
@@ -179,7 +179,7 @@ func (s *MonitorService) Update(ctx context.Context, id int, input CreateInput) 
 		SetEnabled(input.Enabled).
 		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.update_monitored_domain_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.update_monitored_domain_failed", "Error", err))
 	}
 	return toItem(m), nil
 }

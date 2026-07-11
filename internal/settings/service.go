@@ -182,7 +182,7 @@ type Service struct {
 // NewService 创建新的设置服务
 func NewService(dataDir string) (*Service, error) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.create_data_dir_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_data_dir_failed", "Error", err))
 	}
 
 	filePath := filepath.Join(dataDir, "settings.json")
@@ -206,23 +206,23 @@ func NewService(dataDir string) (*Service, error) {
 		// 首次运行，写入默认配置
 		if os.IsNotExist(err) {
 			if err := s.writeConfig(); err != nil {
-				return nil, fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
+				return nil, fmt.Errorf("%s", i18n.T("error.write_settings_file_failed", "Error", err))
 			}
 		} else {
-			return nil, fmt.Errorf(i18n.T("error.load_settings_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.load_settings_failed", "Error", err))
 		}
 	}
 
 	// 反序列化到内存
 	if err := v.Unmarshal(&s.settings); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.load_settings_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.load_settings_failed", "Error", err))
 	}
 
 	// 同步内置 DNS 条目
 	s.updateDefaultDNS()
 	// 通过 Viper 写入，保持内部状态同步
 	if err := s.writeConfig(); err != nil {
-		return nil, fmt.Errorf(i18n.T("error.write_settings_file_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.write_settings_file_failed", "Error", err))
 	}
 
 	// 初始化 seeded.json 的 Viper 实例

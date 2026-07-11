@@ -103,26 +103,26 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 	caEntity, err := s.db.CA.Get(ctx, req.CAID)
 	if err != nil {
 		logging.Error(i18n.T("log.get_ca_config_failed", "CAID", req.CAID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.ca_config_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_config_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.ca_config_debug", "Name", caEntity.Name, "Dir", caEntity.DirectoryURL, "Email", caEntity.AccountEmail))
 
 	// 校验 CA 邮箱已配置
 	if caEntity.AccountEmail == "" {
 		logging.Error(i18n.T("log.ca_email_not_configured", "Name", caEntity.Name))
-		return nil, fmt.Errorf(i18n.T("error.ca_email_required", "Name", caEntity.Name))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_email_required", "Name", caEntity.Name))
 	}
 
 	// 生成两个不同的私钥：一个用于 ACME 账户，一个用于证书
 	accountKey, err := generateKeyByType(req.KeyType)
 	if err != nil {
 		logging.Error(i18n.T("log.generate_key_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.generate_key_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.generate_key_failed", "Error", err))
 	}
 	certKey, err := generateKeyByType(req.KeyType)
 	if err != nil {
 		logging.Error(i18n.T("log.generate_key_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.generate_key_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.generate_key_failed", "Error", err))
 	}
 
 	// 创建 ACME 用户
@@ -145,7 +145,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 	client, err := lego.NewClient(config)
 	if err != nil {
 		logging.Error(i18n.T("log.create_acme_client_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_acme_client_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_acme_client_failed", "Error", err))
 	}
 
 	// 配置 DNS 传播检查的 nameserver
@@ -175,7 +175,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		reg, err = client.Registration.ResolveAccountByKey(ctx)
 		if err != nil {
 			logging.Error(i18n.T("log.register_acme_account_failed", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.register_acme_account_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", err))
 		}
 	}
 	logging.Debug(i18n.T("log.acme_account_registered"))
@@ -188,7 +188,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		dnsProvider, err := s.db.DNSProvider.Get(ctx, *req.DNSProviderID)
 		if err != nil {
 			logging.Error(i18n.T("log.dns_provider_not_found", "ID", *req.DNSProviderID, "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.get_dns_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.get_dns_failed", "Error", err))
 		}
 		logging.Debug(i18n.T("log.dns_provider_using", "Name", dnsProvider.Name))
 		dnsProviderEntity = dnsProvider
@@ -197,7 +197,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		legoDNSProvider, err := createDNSProvider(dnsProvider)
 		if err != nil {
 			logging.Error(i18n.T("log.dns_provider_create_failed", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.dns_provider_create_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_create_failed", "Error", err))
 		}
 		client.Challenge.SetDNS01Provider(legoDNSProvider)
 	} else {
@@ -206,7 +206,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		challengeInfo, err := s.StartManualDNSChallenge(ctx, req)
 		if err != nil {
 			logging.Error(i18n.T("log.start_manual_dns_failed", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.start_manual_dns_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.start_manual_dns_failed", "Error", err))
 		}
 		// 返回 TXT 记录信息给前端，等待用户添加 DNS 记录
 		logging.Info(i18n.T("log.manual_dns_challenge_created_simple", "Records", formatRecords(challengeInfo.Records)))
@@ -240,7 +240,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 	certRecord, err := createBuilder.Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_record_create_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_cert_record_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_cert_record_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.cert_record_created", "ID", certRecord.ID, "Domain", req.Domain))
 
@@ -259,7 +259,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		if s.notifService != nil {
 			_ = s.notifService.SendCertApplyFailed(req.Domain, errMsg)
 		}
-		return nil, fmt.Errorf(i18n.T("error.apply_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.apply_cert_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.acme_obtain_success"))
 
@@ -275,7 +275,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		if s.notifService != nil {
 			_ = s.notifService.SendCertApplyFailed(req.Domain, errMsg)
 		}
-		return nil, fmt.Errorf(i18n.T("error.parse_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_cert_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.cert_parse_success", "Issuer", x509Cert.Issuer.CommonName, "NotAfter", x509Cert.NotAfter))
 
@@ -295,7 +295,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_record_update_failed_simple", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.update_cert_record_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))
 	}
 
 	// 发送成功通知
@@ -322,7 +322,7 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 	certEntity, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
 		logging.Error(i18n.T("log.get_cert_record_failed", "ID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.cert_entity_info", "Domain", certEntity.Domain, "Sans", certEntity.Sans, "Status", certEntity.Status))
 
@@ -330,19 +330,19 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 	caEntity, err := certEntity.QueryCa().Only(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.get_ca_config_failed", "CAID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.ca_config_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_config_failed", "Error", err))
 	}
 
 	// 生成两个不同的私钥：一个用于 ACME 账户，一个用于证书
 	accountKey, err := generateKeyByType(certEntity.KeyType.String())
 	if err != nil {
 		logging.Error(i18n.T("log.generate_key_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.generate_key_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.generate_key_failed", "Error", err))
 	}
 	certKey, err := generateKeyByType(certEntity.KeyType.String())
 	if err != nil {
 		logging.Error(i18n.T("log.generate_key_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.generate_key_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.generate_key_failed", "Error", err))
 	}
 
 	// 创建 lego 配置
@@ -360,7 +360,7 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 	client, err := lego.NewClient(config)
 	if err != nil {
 		logging.Error(i18n.T("log.create_acme_client_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_acme_client_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_acme_client_failed", "Error", err))
 	}
 
 	// 配置 DNS 传播检查的 nameserver
@@ -389,7 +389,7 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 		})
 		if err != nil {
 			logging.Error(i18n.T("log.register_acme_account_error_simple", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.register_acme_account_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", err))
 		}
 	}
 
@@ -406,21 +406,21 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 	certificates, err := client.Certificate.Obtain(ctx, request)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_renew_obtain_failed", "Domain", certEntity.Domain, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.renew_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.renew_cert_failed", "Error", err))
 	}
 
 	// 生成证书内容
 	certContent, keyContent := generateCertPEM(certificates)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_save_failed_domain", "Domain", certEntity.Domain, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.save_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.save_cert_failed", "Error", err))
 	}
 
 	// 解析证书
 	x509Cert, err := parseCertificate(certificates.Certificate)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_parse_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.parse_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_cert_failed", "Error", err))
 	}
 
 	// 更新数据库
@@ -436,7 +436,7 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 		Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_record_update_failed_simple_id", "ID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.update_cert_record_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))
 	}
 
 	logging.Info(i18n.T("log.cert_renew_success_full", "Domain", certEntity.Domain, "Issuer", x509Cert.Issuer.CommonName, "NotAfter", x509Cert.NotAfter))
@@ -455,9 +455,9 @@ func (s *CertificateService) GetByID(ctx context.Context, id int) (*ent.Certific
 	result, err := s.db.Certificate.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf(i18n.T("error.cert_not_found"))
+			return nil, fmt.Errorf("%s", i18n.T("error.cert_not_found"))
 		}
-		return nil, fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 	return result, nil
 }
@@ -466,7 +466,7 @@ func (s *CertificateService) GetByID(ctx context.Context, id int) (*ent.Certific
 func (s *CertificateService) List(ctx context.Context) ([]*ent.Certificate, error) {
 	results, err := s.db.Certificate.Query().All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_certs_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_certs_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -479,7 +479,7 @@ func (s *CertificateService) ListExpiring(ctx context.Context, days int) ([]*ent
 		Where(certificate.StatusEQ("active")).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_expiring_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_expiring_failed", "Error", err))
 	}
 	return results, nil
 }
@@ -492,7 +492,7 @@ func (s *CertificateService) ListAutoRenew(ctx context.Context) ([]*ent.Certific
 		Where(certificate.StatusEQ("active")).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.list_auto_renew_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.list_auto_renew_failed", "Error", err))
 	}
 
 	// 筛选需要续期的证书
@@ -509,25 +509,25 @@ func (s *CertificateService) ListAutoRenew(ctx context.Context) ([]*ent.Certific
 func (s *CertificateService) RevokeCertificate(ctx context.Context, certID int) error {
 	certEntity, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 
 	// 获取 CA（通过 edge 查询）
 	caEntity, err := certEntity.QueryCa().Only(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.ca_config_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.ca_config_failed", "Error", err))
 	}
 
 	// 从数据库读取证书内容
 	certPEM := []byte(certEntity.CertContent)
 	if len(certPEM) == 0 {
-		return fmt.Errorf(i18n.T("error.cert_content_empty"))
+		return fmt.Errorf("%s", i18n.T("error.cert_content_empty"))
 	}
 
 	// 创建 lego 客户端
 	privateKey, err := loadPrivateKeyFromContent([]byte(certEntity.KeyContent))
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.load_private_key_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.load_private_key_failed", "Error", err))
 	}
 
 	config := lego.NewConfig(&acmeUser{
@@ -538,13 +538,13 @@ func (s *CertificateService) RevokeCertificate(ctx context.Context, certID int) 
 
 	client, err := lego.NewClient(config)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.create_acme_client_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.create_acme_client_failed", "Error", err))
 	}
 
 	// 撤销证书
 	err = client.Certificate.Revoke(ctx, certPEM)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.revoke_cert_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.revoke_cert_failed", "Error", err))
 	}
 
 	// 更新数据库状态
@@ -552,7 +552,7 @@ func (s *CertificateService) RevokeCertificate(ctx context.Context, certID int) 
 		SetStatus("revoked").
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.update_cert_record_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))
 	}
 
 	return nil
@@ -566,9 +566,9 @@ func (s *CertificateService) UpdateSettings(ctx context.Context, certID int, aut
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return fmt.Errorf(i18n.T("error.cert_not_found"))
+			return fmt.Errorf("%s", i18n.T("error.cert_not_found"))
 		}
-		return fmt.Errorf(i18n.T("error.update_cert_record_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))
 	}
 	return nil
 }
@@ -578,15 +578,15 @@ func (s *CertificateService) Delete(ctx context.Context, certID int) error {
 	_, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return fmt.Errorf(i18n.T("error.cert_not_found"))
+			return fmt.Errorf("%s", i18n.T("error.cert_not_found"))
 		}
-		return fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 
 	// 删除数据库记录
 	err = s.db.Certificate.DeleteOneID(certID).Exec(ctx)
 	if err != nil {
-		return fmt.Errorf(i18n.T("error.delete_cert_failed", "Error", err))
+		return fmt.Errorf("%s", i18n.T("error.delete_cert_failed", "Error", err))
 	}
 
 	return nil
@@ -603,7 +603,7 @@ func generateCertPEM(certs *legocert.Resource) (string, string) {
 func parseCertificate(certBytes []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(certBytes)
 	if block == nil {
-		return nil, fmt.Errorf(i18n.T("error.parse_pem_cert_failed"))
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_pem_cert_failed"))
 	}
 	return x509.ParseCertificate(block.Bytes)
 }
@@ -612,7 +612,7 @@ func parseCertificate(certBytes []byte) (*x509.Certificate, error) {
 func loadPrivateKeyFromContent(keyBytes []byte) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
-		return nil, fmt.Errorf(i18n.T("error.parse_pem_key_failed"))
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_pem_key_failed"))
 	}
 	return x509.ParseECPrivateKey(block.Bytes)
 }
@@ -649,7 +649,7 @@ func formatRecords(records []TXTRecord) string {
 func (s *CertificateService) GetCertificateContent(ctx context.Context, certID int) (string, string, error) {
 	cert, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
-		return "", "", fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return "", "", fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 	return cert.CertContent, cert.KeyContent, nil
 }
@@ -658,7 +658,7 @@ func (s *CertificateService) GetCertificateContent(ctx context.Context, certID i
 func (s *CertificateService) GetCertificateInfo(ctx context.Context, certID int) (map[string]any, error) {
 	cert, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 
 	return map[string]any{

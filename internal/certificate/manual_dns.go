@@ -110,7 +110,7 @@ func (p *ManualDNSProvider) WaitForChallenge(timeout time.Duration, expectedReco
 		logging.Debug(i18n.T("log.manual_dns_challenge_ready", "RecordsCount", len(info.Records), "Records", info.Records))
 		return info, nil
 	}
-	return nil, fmt.Errorf(i18n.T("error.wait_dns_challenge_timeout"))
+	return nil, fmt.Errorf("%s", i18n.T("error.wait_dns_challenge_timeout"))
 }
 
 // manualDNSProviderAdapter 适配 lego 的 dns01.ChallengeProvider 接口
@@ -143,12 +143,12 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 	caEntity, err := s.db.CA.Get(ctx, req.CAID)
 	if err != nil {
 		logging.Error(i18n.T("log.get_ca_config_failed", "CAID", req.CAID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.ca_config_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_config_failed", "Error", err))
 	}
 
 	if caEntity.AccountEmail == "" {
 		logging.Error(i18n.T("log.ca_email_not_configured", "Name", caEntity.Name))
-		return nil, fmt.Errorf(i18n.T("error.ca_email_required", "Name", caEntity.Name))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_email_required", "Name", caEntity.Name))
 	}
 
 	// 生成两个不同的私钥：一个用于 ACME 账户，一个用于证书
@@ -179,7 +179,7 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 	client, err := lego.NewClient(config)
 	if err != nil {
 		logging.Error(i18n.T("log.create_acme_client_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_acme_client_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_acme_client_failed", "Error", err))
 	}
 
 	// 注册账户
@@ -191,7 +191,7 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 		reg, err = client.Registration.ResolveAccountByKey(ctx)
 		if err != nil {
 			logging.Error(i18n.T("log.register_acme_account_failed", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.register_acme_account_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", err))
 		}
 	}
 	user.Registration = reg
@@ -250,7 +250,7 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 	info, err := manualProvider.WaitForChallenge(60*time.Second, expectedRecords)
 	if err != nil {
 		logging.Error(i18n.T("log.get_dns_challenge_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.get_dns_challenge_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_dns_challenge_failed", "Error", err))
 	}
 	logging.Debug(i18n.T("log.dns_challenge_ready", "Records", info.Records))
 
@@ -270,7 +270,7 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 		Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_record_create_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_cert_record_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_cert_record_failed", "Error", err))
 	}
 
 	// 保存状态供后续完成
@@ -293,11 +293,11 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 func (s *CertificateService) GetPendingChallengeInfo(ctx context.Context, certID int) (*ManualChallengeInfo, error) {
 	cert, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 
 	if cert.Status != "pending" || len(cert.ChallengeRecords) == 0 {
-		return nil, fmt.Errorf(i18n.T("error.no_pending_challenge"))
+		return nil, fmt.Errorf("%s", i18n.T("error.no_pending_challenge"))
 	}
 
 	// 转换数据库中的 challenge_records 为 TXTRecord 列表
@@ -320,19 +320,19 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 	cert, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
 		logging.Error(i18n.T("log.get_cert_record_failed", "ID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.get_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_cert_failed", "Error", err))
 	}
 
 	if cert.Status != "pending" {
 		logging.Error(i18n.T("log.manual_dns_status_error", "ID", certID, "Status", cert.Status))
-		return nil, fmt.Errorf(i18n.T("error.only_pending_can_resume"))
+		return nil, fmt.Errorf("%s", i18n.T("error.only_pending_can_resume"))
 	}
 
 	// 获取 CA 配置
 	caEntity, err := cert.QueryCa().Only(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.get_ca_config_failed", "CAID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.ca_config_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.ca_config_failed", "Error", err))
 	}
 
 	// 构造原始请求
@@ -372,7 +372,7 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 	client, err := lego.NewClient(config)
 	if err != nil {
 		logging.Error(i18n.T("log.create_acme_client_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.create_acme_client_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.create_acme_client_failed", "Error", err))
 	}
 
 	// 注册账户
@@ -384,7 +384,7 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 		reg, err = client.Registration.ResolveAccountByKey(ctx)
 		if err != nil {
 			logging.Error(i18n.T("log.register_acme_account_failed", "Error", err))
-			return nil, fmt.Errorf(i18n.T("error.register_acme_account_failed", "Error", err))
+			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", err))
 		}
 	}
 	user.Registration = reg
@@ -442,7 +442,7 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 	info, err := manualProvider.WaitForChallenge(60*time.Second, expectedRecords)
 	if err != nil {
 		logging.Error(i18n.T("log.get_dns_challenge_failed", "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.get_dns_challenge_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.get_dns_challenge_failed", "Error", err))
 	}
 
 	// 更新数据库记录中的挑战信息
@@ -455,7 +455,7 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 		Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.update_challenge_info_failed", "ID", certID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.update_challenge_info_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.update_challenge_info_failed", "Error", err))
 	}
 
 	// 保存状态供后续完成
@@ -483,7 +483,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 	val, ok := s.pendingChallenges.Load(domain)
 	if !ok {
 		logging.Error(i18n.T("log.manual_dns_pending_not_found", "Domain", domain))
-		return nil, fmt.Errorf(i18n.T("error.pending_challenge_not_found", "Domain", domain))
+		return nil, fmt.Errorf("%s", i18n.T("error.pending_challenge_not_found", "Domain", domain))
 	}
 	pc := val.(*pendingChallenge)
 
@@ -501,7 +501,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		if s.notifService != nil {
 			_ = s.notifService.SendCertApplyFailed(pc.req.Domain, errMsg)
 		}
-		return nil, fmt.Errorf(i18n.T("error.apply_cert_failed", "Error", result.err))
+		return nil, fmt.Errorf("%s", i18n.T("error.apply_cert_failed", "Error", result.err))
 	}
 	certificates := result.cert
 	logging.Debug(i18n.T("log.acme_obtain_success"))
@@ -519,7 +519,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		if s.notifService != nil {
 			_ = s.notifService.SendCertApplyFailed(pc.req.Domain, errMsg)
 		}
-		return nil, fmt.Errorf(i18n.T("error.parse_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_cert_failed", "Error", err))
 	}
 
 	// 生成证书内容
@@ -535,7 +535,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		if s.notifService != nil {
 			_ = s.notifService.SendCertApplyFailed(pc.req.Domain, errMsg)
 		}
-		return nil, fmt.Errorf(i18n.T("error.save_cert_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.save_cert_failed", "Error", err))
 	}
 
 	// 更新数据库记录为成功
@@ -550,7 +550,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		Save(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.cert_record_update_failed", "ID", pc.certRecordID, "Error", err))
-		return nil, fmt.Errorf(i18n.T("error.update_cert_record_failed", "Error", err))
+		return nil, fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))
 	}
 
 	// 清理挑战状态
