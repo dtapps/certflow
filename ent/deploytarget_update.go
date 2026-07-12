@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -218,6 +219,25 @@ func (_u *DeployTargetUpdate) SetDNSProvider(v *DNSProvider) *DeployTargetUpdate
 	return _u.SetDNSProviderID(v.ID)
 }
 
+// SetDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID.
+func (_u *DeployTargetUpdate) SetDeployCredentialID(id int) *DeployTargetUpdate {
+	_u.mutation.SetDeployCredentialID(id)
+	return _u
+}
+
+// SetNillableDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID if the given value is not nil.
+func (_u *DeployTargetUpdate) SetNillableDeployCredentialID(id *int) *DeployTargetUpdate {
+	if id != nil {
+		_u = _u.SetDeployCredentialID(*id)
+	}
+	return _u
+}
+
+// SetDeployCredential sets the "deploy_credential" edge to the DeployCredential entity.
+func (_u *DeployTargetUpdate) SetDeployCredential(v *DeployCredential) *DeployTargetUpdate {
+	return _u.SetDeployCredentialID(v.ID)
+}
+
 // AddCertificateIDs adds the "certificates" edge to the Certificate entity by IDs.
 func (_u *DeployTargetUpdate) AddCertificateIDs(ids ...int) *DeployTargetUpdate {
 	_u.mutation.AddCertificateIDs(ids...)
@@ -256,6 +276,12 @@ func (_u *DeployTargetUpdate) Mutation() *DeployTargetMutation {
 // ClearDNSProvider clears the "dns_provider" edge to the DNSProvider entity.
 func (_u *DeployTargetUpdate) ClearDNSProvider() *DeployTargetUpdate {
 	_u.mutation.ClearDNSProvider()
+	return _u
+}
+
+// ClearDeployCredential clears the "deploy_credential" edge to the DeployCredential entity.
+func (_u *DeployTargetUpdate) ClearDeployCredential() *DeployTargetUpdate {
+	_u.mutation.ClearDeployCredential()
 	return _u
 }
 
@@ -444,6 +470,35 @@ func (_u *DeployTargetUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(dnsprovider.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeployCredentialCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deploytarget.DeployCredentialTable,
+			Columns: []string{deploytarget.DeployCredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeployCredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deploytarget.DeployCredentialTable,
+			Columns: []string{deploytarget.DeployCredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -748,6 +803,25 @@ func (_u *DeployTargetUpdateOne) SetDNSProvider(v *DNSProvider) *DeployTargetUpd
 	return _u.SetDNSProviderID(v.ID)
 }
 
+// SetDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID.
+func (_u *DeployTargetUpdateOne) SetDeployCredentialID(id int) *DeployTargetUpdateOne {
+	_u.mutation.SetDeployCredentialID(id)
+	return _u
+}
+
+// SetNillableDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID if the given value is not nil.
+func (_u *DeployTargetUpdateOne) SetNillableDeployCredentialID(id *int) *DeployTargetUpdateOne {
+	if id != nil {
+		_u = _u.SetDeployCredentialID(*id)
+	}
+	return _u
+}
+
+// SetDeployCredential sets the "deploy_credential" edge to the DeployCredential entity.
+func (_u *DeployTargetUpdateOne) SetDeployCredential(v *DeployCredential) *DeployTargetUpdateOne {
+	return _u.SetDeployCredentialID(v.ID)
+}
+
 // AddCertificateIDs adds the "certificates" edge to the Certificate entity by IDs.
 func (_u *DeployTargetUpdateOne) AddCertificateIDs(ids ...int) *DeployTargetUpdateOne {
 	_u.mutation.AddCertificateIDs(ids...)
@@ -786,6 +860,12 @@ func (_u *DeployTargetUpdateOne) Mutation() *DeployTargetMutation {
 // ClearDNSProvider clears the "dns_provider" edge to the DNSProvider entity.
 func (_u *DeployTargetUpdateOne) ClearDNSProvider() *DeployTargetUpdateOne {
 	_u.mutation.ClearDNSProvider()
+	return _u
+}
+
+// ClearDeployCredential clears the "deploy_credential" edge to the DeployCredential entity.
+func (_u *DeployTargetUpdateOne) ClearDeployCredential() *DeployTargetUpdateOne {
+	_u.mutation.ClearDeployCredential()
 	return _u
 }
 
@@ -1004,6 +1084,35 @@ func (_u *DeployTargetUpdateOne) sqlSave(ctx context.Context) (_node *DeployTarg
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(dnsprovider.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DeployCredentialCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deploytarget.DeployCredentialTable,
+			Columns: []string{deploytarget.DeployCredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DeployCredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deploytarget.DeployCredentialTable,
+			Columns: []string{deploytarget.DeployCredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

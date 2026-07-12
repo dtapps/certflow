@@ -9,6 +9,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -51,20 +52,16 @@ func init() {
 	caDescDirectoryURL := caFields[1].Descriptor()
 	// ca.DirectoryURLValidator is a validator for the "directory_url" field. It is called by the builders before save.
 	ca.DirectoryURLValidator = caDescDirectoryURL.Validators[0].(func(string) error)
-	// caDescIsDefault is the schema descriptor for is_default field.
-	caDescIsDefault := caFields[3].Descriptor()
-	// ca.DefaultIsDefault holds the default value on creation for the is_default field.
-	ca.DefaultIsDefault = caDescIsDefault.Default.(bool)
 	// caDescIsActive is the schema descriptor for is_active field.
-	caDescIsActive := caFields[4].Descriptor()
+	caDescIsActive := caFields[3].Descriptor()
 	// ca.DefaultIsActive holds the default value on creation for the is_active field.
 	ca.DefaultIsActive = caDescIsActive.Default.(bool)
 	// caDescCreatedAt is the schema descriptor for created_at field.
-	caDescCreatedAt := caFields[5].Descriptor()
+	caDescCreatedAt := caFields[4].Descriptor()
 	// ca.DefaultCreatedAt holds the default value on creation for the created_at field.
 	ca.DefaultCreatedAt = caDescCreatedAt.Default.(func() time.Time)
 	// caDescUpdatedAt is the schema descriptor for updated_at field.
-	caDescUpdatedAt := caFields[6].Descriptor()
+	caDescUpdatedAt := caFields[5].Descriptor()
 	// ca.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	ca.DefaultUpdatedAt = caDescUpdatedAt.Default.(func() time.Time)
 	// ca.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -111,24 +108,40 @@ func init() {
 	dnsproviderDescName := dnsproviderFields[0].Descriptor()
 	// dnsprovider.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	dnsprovider.NameValidator = dnsproviderDescName.Validators[0].(func(string) error)
-	// dnsproviderDescIsDefault is the schema descriptor for is_default field.
-	dnsproviderDescIsDefault := dnsproviderFields[3].Descriptor()
-	// dnsprovider.DefaultIsDefault holds the default value on creation for the is_default field.
-	dnsprovider.DefaultIsDefault = dnsproviderDescIsDefault.Default.(bool)
 	// dnsproviderDescIsActive is the schema descriptor for is_active field.
-	dnsproviderDescIsActive := dnsproviderFields[4].Descriptor()
+	dnsproviderDescIsActive := dnsproviderFields[3].Descriptor()
 	// dnsprovider.DefaultIsActive holds the default value on creation for the is_active field.
 	dnsprovider.DefaultIsActive = dnsproviderDescIsActive.Default.(bool)
 	// dnsproviderDescCreatedAt is the schema descriptor for created_at field.
-	dnsproviderDescCreatedAt := dnsproviderFields[6].Descriptor()
+	dnsproviderDescCreatedAt := dnsproviderFields[5].Descriptor()
 	// dnsprovider.DefaultCreatedAt holds the default value on creation for the created_at field.
 	dnsprovider.DefaultCreatedAt = dnsproviderDescCreatedAt.Default.(func() time.Time)
 	// dnsproviderDescUpdatedAt is the schema descriptor for updated_at field.
-	dnsproviderDescUpdatedAt := dnsproviderFields[7].Descriptor()
+	dnsproviderDescUpdatedAt := dnsproviderFields[6].Descriptor()
 	// dnsprovider.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	dnsprovider.DefaultUpdatedAt = dnsproviderDescUpdatedAt.Default.(func() time.Time)
 	// dnsprovider.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	dnsprovider.UpdateDefaultUpdatedAt = dnsproviderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	deploycredentialFields := schema.DeployCredential{}.Fields()
+	_ = deploycredentialFields
+	// deploycredentialDescName is the schema descriptor for name field.
+	deploycredentialDescName := deploycredentialFields[0].Descriptor()
+	// deploycredential.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	deploycredential.NameValidator = deploycredentialDescName.Validators[0].(func(string) error)
+	// deploycredentialDescIsActive is the schema descriptor for is_active field.
+	deploycredentialDescIsActive := deploycredentialFields[3].Descriptor()
+	// deploycredential.DefaultIsActive holds the default value on creation for the is_active field.
+	deploycredential.DefaultIsActive = deploycredentialDescIsActive.Default.(bool)
+	// deploycredentialDescCreatedAt is the schema descriptor for created_at field.
+	deploycredentialDescCreatedAt := deploycredentialFields[5].Descriptor()
+	// deploycredential.DefaultCreatedAt holds the default value on creation for the created_at field.
+	deploycredential.DefaultCreatedAt = deploycredentialDescCreatedAt.Default.(func() time.Time)
+	// deploycredentialDescUpdatedAt is the schema descriptor for updated_at field.
+	deploycredentialDescUpdatedAt := deploycredentialFields[6].Descriptor()
+	// deploycredential.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	deploycredential.DefaultUpdatedAt = deploycredentialDescUpdatedAt.Default.(func() time.Time)
+	// deploycredential.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	deploycredential.UpdateDefaultUpdatedAt = deploycredentialDescUpdatedAt.UpdateDefault.(func() time.Time)
 	deploylogFields := schema.DeployLog{}.Fields()
 	_ = deploylogFields
 	// deploylogDescCreatedAt is the schema descriptor for created_at field.

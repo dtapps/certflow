@@ -22,46 +22,50 @@ func NewDeployServiceWrapper(deployService *deploy.DeployService) *DeployService
 
 // DeployTargetListItem 部署目标列表项（前端展示用）
 type DeployTargetListItem struct {
-	ID               int               `json:"id"`                // 部署目标 ID
-	Name             string            `json:"name"`              // 部署目标名称
-	ProviderType     string            `json:"provider_type"`     // 云厂商类型（aliyun/tencentcloud/huawei）
-	DeployService    string            `json:"deploy_service"`    // 部署服务（cdn/dcdn/elb/waf 等）
-	Config           map[string]string `json:"config"`            // 部署参数（region、域名等，按厂商/服务不同）
-	Region           string            `json:"region"`            // 区域代码
-	CredentialSource string            `json:"credential_source"` // 凭证来源（access_key 等引用方式）
-	DNSProviderID    *int              `json:"dns_provider_id"`   // 关联 DNS 提供商 ID（可为空）
-	DNSProviderName  string            `json:"dns_provider_name"` // 关联 DNS 提供商名称
-	IsActive         bool              `json:"is_active"`         // 是否启用
-	Comment          string            `json:"comment"`           // 备注
-	LastStatus       string            `json:"last_status"`       // 最近一次部署状态（success/failed）
-	LastError        string            `json:"last_error"`        // 最近一次部署错误信息
-	LastDeployedAt   string            `json:"last_deployed_at"`  // 最近部署时间
-	CreatedAt        string            `json:"created_at"`        // 创建时间
-	UpdatedAt        string            `json:"updated_at"`        // 更新时间
+	ID                   int               `json:"id"`                     // 部署目标 ID
+	Name                 string            `json:"name"`                   // 部署目标名称
+	ProviderType         string            `json:"provider_type"`          // 云厂商类型（aliyun/tencentcloud/huawei）
+	DeployService        string            `json:"deploy_service"`         // 部署服务（cdn/dcdn/elb/waf 等）
+	Config               map[string]string `json:"config"`                 // 部署参数（region、域名等，按厂商/服务不同）
+	Region               string            `json:"region"`                 // 区域代码
+	CredentialSource     string            `json:"credential_source"`      // 凭证来源（dns_provider/deploy_credential）
+	DNSProviderID        *int              `json:"dns_provider_id"`        // 关联 DNS 凭证 ID（可为空）
+	DNSProviderName      string            `json:"dns_provider_name"`      // 关联 DNS 凭证名称
+	DeployCredentialID   *int              `json:"deploy_credential_id"`   // 关联部署凭证 ID（可为空）
+	DeployCredentialName string            `json:"deploy_credential_name"` // 关联部署凭证名称
+	IsActive             bool              `json:"is_active"`              // 是否启用
+	Comment              string            `json:"comment"`                // 备注
+	LastStatus           string            `json:"last_status"`            // 最近一次部署状态（success/failed）
+	LastError            string            `json:"last_error"`             // 最近一次部署错误信息
+	LastDeployedAt       string            `json:"last_deployed_at"`       // 最近部署时间
+	CreatedAt            string            `json:"created_at"`             // 创建时间
+	UpdatedAt            string            `json:"updated_at"`             // 更新时间
 }
 
 // CreateDeployTargetRequest 创建部署目标请求
 type CreateDeployTargetRequest struct {
-	Name             string            `json:"name"`                      // 部署目标名称
-	ProviderType     string            `json:"provider_type"`             // 云厂商类型
-	DeployService    string            `json:"deploy_service"`            // 部署服务
-	Config           map[string]string `json:"config"`                    // 部署参数
-	CredentialSource string            `json:"credential_source"`         // 凭证来源
-	DNSProviderID    *int              `json:"dns_provider_id,omitempty"` // 关联 DNS 提供商 ID（可选）
-	IsActive         bool              `json:"is_active"`                 // 是否启用
-	Comment          string            `json:"comment"`                   // 备注
+	Name               string            `json:"name"`                           // 部署目标名称
+	ProviderType       string            `json:"provider_type"`                  // 云厂商类型
+	DeployService      string            `json:"deploy_service"`                 // 部署服务
+	Config             map[string]string `json:"config"`                         // 部署参数
+	CredentialSource   string            `json:"credential_source"`              // 凭证来源
+	DNSProviderID      *int              `json:"dns_provider_id,omitempty"`      // 关联 DNS 凭证 ID（可选）
+	DeployCredentialID *int              `json:"deploy_credential_id,omitempty"` // 关联部署凭证 ID（可选）
+	IsActive           bool              `json:"is_active"`                      // 是否启用
+	Comment            string            `json:"comment"`                        // 备注
 }
 
 // UpdateDeployTargetRequest 更新部署目标请求
 type UpdateDeployTargetRequest struct {
-	Name             string            `json:"name,omitempty"`              // 部署目标名称
-	ProviderType     string            `json:"provider_type,omitempty"`     // 云厂商类型
-	DeployService    string            `json:"deploy_service,omitempty"`    // 部署服务
-	Config           map[string]string `json:"config,omitempty"`            // 部署参数
-	CredentialSource string            `json:"credential_source,omitempty"` // 凭证来源
-	DNSProviderID    *int              `json:"dns_provider_id,omitempty"`   // 关联 DNS 提供商 ID（可选）
-	IsActive         *bool             `json:"is_active,omitempty"`         // 是否启用
-	Comment          string            `json:"comment,omitempty"`           // 备注
+	Name               string            `json:"name,omitempty"`                 // 部署目标名称
+	ProviderType       string            `json:"provider_type,omitempty"`        // 云厂商类型
+	DeployService      string            `json:"deploy_service,omitempty"`       // 部署服务
+	Config             map[string]string `json:"config,omitempty"`               // 部署参数
+	CredentialSource   string            `json:"credential_source,omitempty"`    // 凭证来源
+	DNSProviderID      *int              `json:"dns_provider_id,omitempty"`      // 关联 DNS 凭证 ID（可选）
+	DeployCredentialID *int              `json:"deploy_credential_id,omitempty"` // 关联部署凭证 ID（可选）
+	IsActive           *bool             `json:"is_active,omitempty"`            // 是否启用
+	Comment            string            `json:"comment,omitempty"`              // 备注
 }
 
 // DeployOutcomeDTO 部署结果（前端展示用）
@@ -99,6 +103,11 @@ func toDeployTargetListItem(t *ent.DeployTarget) DeployTargetListItem {
 		item.DNSProviderID = &id
 		item.DNSProviderName = t.Edges.DNSProvider.Name
 	}
+	if t.Edges.DeployCredential != nil {
+		id := t.Edges.DeployCredential.ID
+		item.DeployCredentialID = &id
+		item.DeployCredentialName = t.Edges.DeployCredential.Name
+	}
 	if !t.LastDeployedAt.IsZero() {
 		item.LastDeployedAt = t.LastDeployedAt.Format(time.DateTime)
 	}
@@ -134,14 +143,15 @@ func (s *DeployServiceWrapper) GetDeployTarget(id int) (*DeployTargetListItem, e
 func (s *DeployServiceWrapper) CreateDeployTarget(input CreateDeployTargetRequest) (*DeployTargetListItem, error) {
 	ctx := context.Background()
 	t, err := s.deployService.Create(ctx, deploy.CreateDeployTargetInput{
-		Name:             input.Name,
-		ProviderType:     input.ProviderType,
-		DeployService:    input.DeployService,
-		Config:           input.Config,
-		CredentialSource: input.CredentialSource,
-		DNSProviderID:    input.DNSProviderID,
-		IsActive:         input.IsActive,
-		Comment:          input.Comment,
+		Name:               input.Name,
+		ProviderType:       input.ProviderType,
+		DeployService:      input.DeployService,
+		Config:             input.Config,
+		CredentialSource:   input.CredentialSource,
+		DNSProviderID:      input.DNSProviderID,
+		DeployCredentialID: input.DeployCredentialID,
+		IsActive:           input.IsActive,
+		Comment:            input.Comment,
 	})
 	if err != nil {
 		return nil, err
@@ -154,14 +164,15 @@ func (s *DeployServiceWrapper) CreateDeployTarget(input CreateDeployTargetReques
 func (s *DeployServiceWrapper) UpdateDeployTarget(id int, input UpdateDeployTargetRequest) (*DeployTargetListItem, error) {
 	ctx := context.Background()
 	t, err := s.deployService.Update(ctx, id, deploy.UpdateDeployTargetInput{
-		Name:             input.Name,
-		ProviderType:     input.ProviderType,
-		DeployService:    input.DeployService,
-		Config:           input.Config,
-		CredentialSource: input.CredentialSource,
-		DNSProviderID:    input.DNSProviderID,
-		IsActive:         input.IsActive,
-		Comment:          input.Comment,
+		Name:               input.Name,
+		ProviderType:       input.ProviderType,
+		DeployService:      input.DeployService,
+		Config:             input.Config,
+		CredentialSource:   input.CredentialSource,
+		DNSProviderID:      input.DNSProviderID,
+		DeployCredentialID: input.DeployCredentialID,
+		IsActive:           input.IsActive,
+		Comment:            input.Comment,
 	})
 	if err != nil {
 		return nil, err
@@ -241,24 +252,26 @@ func (s *DeployServiceWrapper) DeployAllForCert(certID int) ([]DeployOutcomeDTO,
 
 // FetchCDNDomainsRequest 拉取 CDN 域名请求（内联凭证，用于新建目标时选择）
 type FetchCDNDomainsRequest struct {
-	ProviderType     string            `json:"provider_type"`             // 云厂商类型
-	DeployService    string            `json:"deploy_service"`            // 部署服务（cdn/dcdn/elb/waf 等）
-	CredentialSource string            `json:"credential_source"`         // 凭证来源（access_key 等引用方式）
-	DNSProviderID    *int              `json:"dns_provider_id,omitempty"` // 关联 DNS 提供商 ID（可选）
-	Region           string            `json:"region"`                    // 区域代码
-	Config           map[string]string `json:"config"`                    // 部署参数（按厂商/服务不同）
+	ProviderType       string            `json:"provider_type"`                  // 云厂商类型
+	DeployService      string            `json:"deploy_service"`                 // 部署服务（cdn/dcdn/elb/waf 等）
+	CredentialSource   string            `json:"credential_source"`              // 凭证来源（dns_provider/deploy_credential）
+	DNSProviderID      *int              `json:"dns_provider_id,omitempty"`      // 关联 DNS 凭证 ID（可选）
+	DeployCredentialID *int              `json:"deploy_credential_id,omitempty"` // 关联部署凭证 ID（可选）
+	Region             string            `json:"region"`                         // 区域代码
+	Config             map[string]string `json:"config"`                         // 部署参数（按厂商/服务不同）
 }
 
 // FetchCDNDomains 根据内联凭证拉取 CDN 域名列表
 func (s *DeployServiceWrapper) FetchCDNDomains(input FetchCDNDomainsRequest) ([]string, error) {
 	ctx := context.Background()
 	return s.deployService.FetchCDNDomains(ctx, deploy.FetchDomainsInput{
-		ProviderType:     input.ProviderType,
-		DeployService:    input.DeployService,
-		CredentialSource: input.CredentialSource,
-		DNSProviderID:    input.DNSProviderID,
-		Region:           input.Region,
-		Config:           input.Config,
+		ProviderType:       input.ProviderType,
+		DeployService:      input.DeployService,
+		CredentialSource:   input.CredentialSource,
+		DNSProviderID:      input.DNSProviderID,
+		DeployCredentialID: input.DeployCredentialID,
+		Region:             input.Region,
+		Config:             input.Config,
 	})
 }
 

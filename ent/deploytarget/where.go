@@ -713,6 +713,29 @@ func HasDNSProviderWith(preds ...predicate.DNSProvider) predicate.DeployTarget {
 	})
 }
 
+// HasDeployCredential applies the HasEdge predicate on the "deploy_credential" edge.
+func HasDeployCredential() predicate.DeployTarget {
+	return predicate.DeployTarget(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DeployCredentialTable, DeployCredentialColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDeployCredentialWith applies the HasEdge predicate on the "deploy_credential" edge with a given conditions (other predicates).
+func HasDeployCredentialWith(preds ...predicate.DeployCredential) predicate.DeployTarget {
+	return predicate.DeployTarget(func(s *sql.Selector) {
+		step := newDeployCredentialStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasCertificates applies the HasEdge predicate on the "certificates" edge.
 func HasCertificates() predicate.DeployTarget {
 	return predicate.DeployTarget(func(s *sql.Selector) {

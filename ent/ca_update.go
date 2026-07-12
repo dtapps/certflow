@@ -77,20 +77,6 @@ func (_u *CAUpdate) ClearAccountEmail() *CAUpdate {
 	return _u
 }
 
-// SetIsDefault sets the "is_default" field.
-func (_u *CAUpdate) SetIsDefault(v bool) *CAUpdate {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *CAUpdate) SetNillableIsDefault(v *bool) *CAUpdate {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
-	return _u
-}
-
 // SetIsActive sets the "is_active" field.
 func (_u *CAUpdate) SetIsActive(v bool) *CAUpdate {
 	_u.mutation.SetIsActive(v)
@@ -227,9 +213,6 @@ func (_u *CAUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.AccountEmailCleared() {
 		_spec.ClearField(ca.FieldAccountEmail, field.TypeString)
 	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(ca.FieldIsDefault, field.TypeBool, value)
-	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)
 	}
@@ -346,20 +329,6 @@ func (_u *CAUpdateOne) SetNillableAccountEmail(v *string) *CAUpdateOne {
 // ClearAccountEmail clears the value of the "account_email" field.
 func (_u *CAUpdateOne) ClearAccountEmail() *CAUpdateOne {
 	_u.mutation.ClearAccountEmail()
-	return _u
-}
-
-// SetIsDefault sets the "is_default" field.
-func (_u *CAUpdateOne) SetIsDefault(v bool) *CAUpdateOne {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *CAUpdateOne) SetNillableIsDefault(v *bool) *CAUpdateOne {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
 	return _u
 }
 
@@ -528,9 +497,6 @@ func (_u *CAUpdateOne) sqlSave(ctx context.Context) (_node *CA, err error) {
 	}
 	if _u.mutation.AccountEmailCleared() {
 		_spec.ClearField(ca.FieldAccountEmail, field.TypeString)
-	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(ca.FieldIsDefault, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)

@@ -20,8 +20,6 @@ const (
 	FieldDirectoryURL = "directory_url"
 	// FieldAccountEmail holds the string denoting the account_email field in the database.
 	FieldAccountEmail = "account_email"
-	// FieldIsDefault holds the string denoting the is_default field in the database.
-	FieldIsDefault = "is_default"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -47,7 +45,6 @@ var Columns = []string{
 	FieldName,
 	FieldDirectoryURL,
 	FieldAccountEmail,
-	FieldIsDefault,
 	FieldIsActive,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -68,8 +65,6 @@ var (
 	NameValidator func(string) error
 	// DirectoryURLValidator is a validator for the "directory_url" field. It is called by the builders before save.
 	DirectoryURLValidator func(string) error
-	// DefaultIsDefault holds the default value on creation for the "is_default" field.
-	DefaultIsDefault bool
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -101,11 +96,6 @@ func ByDirectoryURL(opts ...sql.OrderTermOption) OrderOption {
 // ByAccountEmail orders the results by the account_email field.
 func ByAccountEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountEmail, opts...).ToFunc()
-}
-
-// ByIsDefault orders the results by the is_default field.
-func ByIsDefault(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsDefault, opts...).ToFunc()
 }
 
 // ByIsActive orders the results by the is_active field.

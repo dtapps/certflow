@@ -33,7 +33,7 @@ type BaiduDeployer struct{}
 
 func init() { RegisterDeployer(&BaiduDeployer{}) }
 
-func (d *BaiduDeployer) Provider() string { return "baidu" }
+func (d *BaiduDeployer) Provider() string { return "baiducloud" }
 
 // certKeyMatch 校验证书与私钥是否配对（公钥一致）。
 // 百度云在证书/私钥不匹配时只会返回笼统错误，因此在上传前本地做一次配对校验，

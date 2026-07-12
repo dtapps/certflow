@@ -21,6 +21,9 @@ type Certificate func(*sql.Selector)
 // DNSProvider is the predicate function for dnsprovider builders.
 type DNSProvider func(*sql.Selector)
 
+// DeployCredential is the predicate function for deploycredential builders.
+type DeployCredential func(*sql.Selector)
+
 // DeployLog is the predicate function for deploylog builders.
 type DeployLog func(*sql.Selector)
 

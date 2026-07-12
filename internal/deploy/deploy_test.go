@@ -97,9 +97,9 @@ func TestCredsFromConfig(t *testing.T) {
 			wantID:   "ak", wantSec: "sk", wantRgn: "ap-guangzhou",
 		},
 		{
-			provider: "baidu",
-			cfg:      map[string]string{"access_key_id": "ak", "secret_access_key": "sk", "region": "bj"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "bj",
+			provider: "baiducloud",
+			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantID:   "ak", wantSec: "sk", wantRgn: "",
 		},
 		{
 			// 未知厂商返回空凭证
@@ -145,10 +145,10 @@ func TestStripCreds(t *testing.T) {
 			drop:     []string{"secret_id", "secret_key", "region"},
 		},
 		{
-			provider: "baidu",
-			cfg:      map[string]string{"access_key_id": "ak", "secret_access_key": "sk", "region": "bj", "domain": "x.com"},
+			provider: "baiducloud",
+			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk", "domain": "x.com"},
 			keep:     []string{"domain"},
-			drop:     []string{"access_key_id", "secret_access_key", "region"},
+			drop:     []string{"access_key_id", "access_key_secret"},
 		},
 	}
 	for _, c := range cases {

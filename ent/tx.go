@@ -22,6 +22,8 @@ type Tx struct {
 	Certificate *CertificateClient
 	// DNSProvider is the client for interacting with the DNSProvider builders.
 	DNSProvider *DNSProviderClient
+	// DeployCredential is the client for interacting with the DeployCredential builders.
+	DeployCredential *DeployCredentialClient
 	// DeployLog is the client for interacting with the DeployLog builders.
 	DeployLog *DeployLogClient
 	// DeployTarget is the client for interacting with the DeployTarget builders.
@@ -174,6 +176,7 @@ func (tx *Tx) init() {
 	tx.CertUpload = NewCertUploadClient(tx.config)
 	tx.Certificate = NewCertificateClient(tx.config)
 	tx.DNSProvider = NewDNSProviderClient(tx.config)
+	tx.DeployCredential = NewDeployCredentialClient(tx.config)
 	tx.DeployLog = NewDeployLogClient(tx.config)
 	tx.DeployTarget = NewDeployTargetClient(tx.config)
 	tx.MonitoredDomain = NewMonitoredDomainClient(tx.config)

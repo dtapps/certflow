@@ -69,6 +69,18 @@ func (f DNSProviderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DNSProviderMutation", m)
 }
 
+// The DeployCredentialFunc type is an adapter to allow the use of ordinary
+// function as DeployCredential mutator.
+type DeployCredentialFunc func(context.Context, *ent.DeployCredentialMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DeployCredentialFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DeployCredentialMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeployCredentialMutation", m)
+}
+
 // The DeployLogFunc type is an adapter to allow the use of ordinary
 // function as DeployLog mutator.
 type DeployLogFunc func(context.Context, *ent.DeployLogMutation) (ent.Value, error)

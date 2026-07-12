@@ -13,6 +13,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -90,6 +91,7 @@ func checkColumn(t, c string) error {
 			certupload.Table:        certupload.ValidColumn,
 			certificate.Table:       certificate.ValidColumn,
 			dnsprovider.Table:       dnsprovider.ValidColumn,
+			deploycredential.Table:  deploycredential.ValidColumn,
 			deploylog.Table:         deploylog.ValidColumn,
 			deploytarget.Table:      deploytarget.ValidColumn,
 			monitoreddomain.Table:   monitoreddomain.ValidColumn,

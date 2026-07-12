@@ -7,21 +7,21 @@ import (
 	"strings"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
 
-// DNSProvider is the model entity for the DNSProvider schema.
-type DNSProvider struct {
+// DeployCredential is the model entity for the DeployCredential schema.
+type DeployCredential struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 提供商名称
+	// 凭证名称
 	Name string `json:"name,omitempty"`
 	// 提供商类型
-	ProviderType dnsprovider.ProviderType `json:"provider_type,omitempty"`
-	// 配置 JSON
+	ProviderType deploycredential.ProviderType `json:"provider_type,omitempty"`
+	// 配置 JSON（API 密钥等）
 	Config []byte `json:"config,omitempty"`
 	// 是否启用
 	IsActive bool `json:"is_active,omitempty"`
@@ -32,54 +32,43 @@ type DNSProvider struct {
 	// 更新时间
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the DNSProviderQuery when eager-loading is set.
-	Edges        DNSProviderEdges `json:"edges"`
+	// The values are being populated by the DeployCredentialQuery when eager-loading is set.
+	Edges        DeployCredentialEdges `json:"edges"`
 	selectValues sql.SelectValues
 }
 
-// DNSProviderEdges holds the relations/edges for other nodes in the graph.
-type DNSProviderEdges struct {
-	// Certificates holds the value of the certificates edge.
-	Certificates []*Certificate `json:"certificates,omitempty"`
-	// 复用该提供商凭证的部署目标
+// DeployCredentialEdges holds the relations/edges for other nodes in the graph.
+type DeployCredentialEdges struct {
+	// 使用该凭证的部署目标
 	DeployTargets []*DeployTarget `json:"deploy_targets,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// CertificatesOrErr returns the Certificates value or an error if the edge
-// was not loaded in eager-loading.
-func (e DNSProviderEdges) CertificatesOrErr() ([]*Certificate, error) {
-	if e.loadedTypes[0] {
-		return e.Certificates, nil
-	}
-	return nil, &NotLoadedError{edge: "certificates"}
+	loadedTypes [1]bool
 }
 
 // DeployTargetsOrErr returns the DeployTargets value or an error if the edge
 // was not loaded in eager-loading.
-func (e DNSProviderEdges) DeployTargetsOrErr() ([]*DeployTarget, error) {
-	if e.loadedTypes[1] {
+func (e DeployCredentialEdges) DeployTargetsOrErr() ([]*DeployTarget, error) {
+	if e.loadedTypes[0] {
 		return e.DeployTargets, nil
 	}
 	return nil, &NotLoadedError{edge: "deploy_targets"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*DNSProvider) scanValues(columns []string) ([]any, error) {
+func (*DeployCredential) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case dnsprovider.FieldConfig:
+		case deploycredential.FieldConfig:
 			values[i] = new([]byte)
-		case dnsprovider.FieldIsActive:
+		case deploycredential.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case dnsprovider.FieldID:
+		case deploycredential.FieldID:
 			values[i] = new(sql.NullInt64)
-		case dnsprovider.FieldName, dnsprovider.FieldProviderType, dnsprovider.FieldComment:
+		case deploycredential.FieldName, deploycredential.FieldProviderType, deploycredential.FieldComment:
 			values[i] = new(sql.NullString)
-		case dnsprovider.FieldCreatedAt, dnsprovider.FieldUpdatedAt:
+		case deploycredential.FieldCreatedAt, deploycredential.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -89,56 +78,56 @@ func (*DNSProvider) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the DNSProvider fields.
-func (_m *DNSProvider) assignValues(columns []string, values []any) error {
+// to the DeployCredential fields.
+func (_m *DeployCredential) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case dnsprovider.FieldID:
+		case deploycredential.FieldID:
 			value, ok := values[i].(*sql.NullInt64)
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
-		case dnsprovider.FieldName:
+		case deploycredential.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				_m.Name = value.String
 			}
-		case dnsprovider.FieldProviderType:
+		case deploycredential.FieldProviderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_type", values[i])
 			} else if value.Valid {
-				_m.ProviderType = dnsprovider.ProviderType(value.String)
+				_m.ProviderType = deploycredential.ProviderType(value.String)
 			}
-		case dnsprovider.FieldConfig:
+		case deploycredential.FieldConfig:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field config", values[i])
 			} else if value != nil {
 				_m.Config = *value
 			}
-		case dnsprovider.FieldIsActive:
+		case deploycredential.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
 			}
-		case dnsprovider.FieldComment:
+		case deploycredential.FieldComment:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field comment", values[i])
 			} else if value.Valid {
 				_m.Comment = value.String
 			}
-		case dnsprovider.FieldCreatedAt:
+		case deploycredential.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case dnsprovider.FieldUpdatedAt:
+		case deploycredential.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
@@ -151,44 +140,39 @@ func (_m *DNSProvider) assignValues(columns []string, values []any) error {
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the DNSProvider.
+// Value returns the ent.Value that was dynamically selected and assigned to the DeployCredential.
 // This includes values selected through modifiers, order, etc.
-func (_m *DNSProvider) Value(name string) (ent.Value, error) {
+func (_m *DeployCredential) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryCertificates queries the "certificates" edge of the DNSProvider entity.
-func (_m *DNSProvider) QueryCertificates() *CertificateQuery {
-	return NewDNSProviderClient(_m.config).QueryCertificates(_m)
+// QueryDeployTargets queries the "deploy_targets" edge of the DeployCredential entity.
+func (_m *DeployCredential) QueryDeployTargets() *DeployTargetQuery {
+	return NewDeployCredentialClient(_m.config).QueryDeployTargets(_m)
 }
 
-// QueryDeployTargets queries the "deploy_targets" edge of the DNSProvider entity.
-func (_m *DNSProvider) QueryDeployTargets() *DeployTargetQuery {
-	return NewDNSProviderClient(_m.config).QueryDeployTargets(_m)
-}
-
-// Update returns a builder for updating this DNSProvider.
-// Note that you need to call DNSProvider.Unwrap() before calling this method if this DNSProvider
+// Update returns a builder for updating this DeployCredential.
+// Note that you need to call DeployCredential.Unwrap() before calling this method if this DeployCredential
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *DNSProvider) Update() *DNSProviderUpdateOne {
-	return NewDNSProviderClient(_m.config).UpdateOne(_m)
+func (_m *DeployCredential) Update() *DeployCredentialUpdateOne {
+	return NewDeployCredentialClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the DNSProvider entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the DeployCredential entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *DNSProvider) Unwrap() *DNSProvider {
+func (_m *DeployCredential) Unwrap() *DeployCredential {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: DNSProvider is not a transactional entity")
+		panic("ent: DeployCredential is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *DNSProvider) String() string {
+func (_m *DeployCredential) String() string {
 	var builder strings.Builder
-	builder.WriteString("DNSProvider(")
+	builder.WriteString("DeployCredential(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
@@ -214,5 +198,5 @@ func (_m *DNSProvider) String() string {
 	return builder.String()
 }
 
-// DNSProviders is a parsable slice of DNSProvider.
-type DNSProviders []*DNSProvider
+// DeployCredentials is a parsable slice of DeployCredential.
+type DeployCredentials []*DeployCredential

@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -22,14 +23,15 @@ import (
 // DeployTargetQuery is the builder for querying DeployTarget entities.
 type DeployTargetQuery struct {
 	config
-	ctx              *QueryContext
-	order            []deploytarget.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.DeployTarget
-	withDNSProvider  *DNSProviderQuery
-	withCertificates *CertificateQuery
-	withDeployLogs   *DeployLogQuery
-	withFKs          bool
+	ctx                  *QueryContext
+	order                []deploytarget.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.DeployTarget
+	withDNSProvider      *DNSProviderQuery
+	withDeployCredential *DeployCredentialQuery
+	withCertificates     *CertificateQuery
+	withDeployLogs       *DeployLogQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -81,6 +83,28 @@ func (_q *DeployTargetQuery) QueryDNSProvider() *DNSProviderQuery {
 			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, selector),
 			sqlgraph.To(dnsprovider.Table, dnsprovider.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, deploytarget.DNSProviderTable, deploytarget.DNSProviderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDeployCredential chains the current query on the "deploy_credential" edge.
+func (_q *DeployTargetQuery) QueryDeployCredential() *DeployCredentialQuery {
+	query := (&DeployCredentialClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, selector),
+			sqlgraph.To(deploycredential.Table, deploycredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, deploytarget.DeployCredentialTable, deploytarget.DeployCredentialColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +343,15 @@ func (_q *DeployTargetQuery) Clone() *DeployTargetQuery {
 		return nil
 	}
 	return &DeployTargetQuery{
-		config:           _q.config,
-		ctx:              _q.ctx.Clone(),
-		order:            append([]deploytarget.OrderOption{}, _q.order...),
-		inters:           append([]Interceptor{}, _q.inters...),
-		predicates:       append([]predicate.DeployTarget{}, _q.predicates...),
-		withDNSProvider:  _q.withDNSProvider.Clone(),
-		withCertificates: _q.withCertificates.Clone(),
-		withDeployLogs:   _q.withDeployLogs.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]deploytarget.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.DeployTarget{}, _q.predicates...),
+		withDNSProvider:      _q.withDNSProvider.Clone(),
+		withDeployCredential: _q.withDeployCredential.Clone(),
+		withCertificates:     _q.withCertificates.Clone(),
+		withDeployLogs:       _q.withDeployLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -341,6 +366,17 @@ func (_q *DeployTargetQuery) WithDNSProvider(opts ...func(*DNSProviderQuery)) *D
 		opt(query)
 	}
 	_q.withDNSProvider = query
+	return _q
+}
+
+// WithDeployCredential tells the query-builder to eager-load the nodes that are connected to
+// the "deploy_credential" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DeployTargetQuery) WithDeployCredential(opts ...func(*DeployCredentialQuery)) *DeployTargetQuery {
+	query := (&DeployCredentialClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withDeployCredential = query
 	return _q
 }
 
@@ -445,13 +481,14 @@ func (_q *DeployTargetQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		nodes       = []*DeployTarget{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withDNSProvider != nil,
+			_q.withDeployCredential != nil,
 			_q.withCertificates != nil,
 			_q.withDeployLogs != nil,
 		}
 	)
-	if _q.withDNSProvider != nil {
+	if _q.withDNSProvider != nil || _q.withDeployCredential != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -478,6 +515,12 @@ func (_q *DeployTargetQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if query := _q.withDNSProvider; query != nil {
 		if err := _q.loadDNSProvider(ctx, query, nodes, nil,
 			func(n *DeployTarget, e *DNSProvider) { n.Edges.DNSProvider = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withDeployCredential; query != nil {
+		if err := _q.loadDeployCredential(ctx, query, nodes, nil,
+			func(n *DeployTarget, e *DeployCredential) { n.Edges.DeployCredential = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -523,6 +566,38 @@ func (_q *DeployTargetQuery) loadDNSProvider(ctx context.Context, query *DNSProv
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "dns_provider_deploy_targets" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DeployTargetQuery) loadDeployCredential(ctx context.Context, query *DeployCredentialQuery, nodes []*DeployTarget, init func(*DeployTarget), assign func(*DeployTarget, *DeployCredential)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*DeployTarget)
+	for i := range nodes {
+		if nodes[i].deploy_credential_deploy_targets == nil {
+			continue
+		}
+		fk := *nodes[i].deploy_credential_deploy_targets
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(deploycredential.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "deploy_credential_deploy_targets" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

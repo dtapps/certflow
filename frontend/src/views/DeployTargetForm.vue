@@ -16,6 +16,7 @@ import {
 } from 'naive-ui'
 import * as DeployService from '@bindings/cnb.cool/dtapp/certflow/deployservicewrapper'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
+import * as DeployCredentialService from '@bindings/cnb.cool/dtapp/certflow/deploycredentialservicewrapper'
 import type {
   DeployTargetListItem,
   CreateDeployTargetRequest,
@@ -37,6 +38,7 @@ const loading = ref(false)
 const fetchingDomains = ref(false)
 const fetchingZones = ref(false)
 const dnsProviders = ref<{ id: number; name: string; provider_type: string }[]>([])
+const deployCredentials = ref<{ id: number; name: string; provider_type: string }[]>([])
 const domainOptions = ref<{ label: string; value: string }[]>([])
 const zoneOptions = ref<{ label: string; value: string }[]>([])
 
@@ -46,6 +48,7 @@ const form = reactive({
   deploy_service: 'cdn',
   credential_source: 'dns_provider',
   dns_provider_id: null as number | null,
+  deploy_credential_id: null as number | null,
   access_key: '',
   secret_key: '',
   region: '',
@@ -64,7 +67,7 @@ const providerOptions = [
   { label: t('deploy.provider.aliyun'), value: 'aliyun' },
   { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
   { label: t('deploy.provider.huawei'), value: 'huawei' },
-  { label: t('deploy.provider.baidu'), value: 'baidu' },
+  { label: t('deploy.provider.baidu'), value: 'baiducloud' },
 ]
 // 部署服务随云厂商变化：不同厂商提供的可部署目标不同，只展示后端已实现的服务，
 // 避免用户选到不属于该厂商、或后端未实现（只会上传不绑定）的服务。
@@ -89,7 +92,7 @@ const servicesByProvider = computed<{ label: string; value: string }[]>(() => {
         { label: t('deploy.service.waf'), value: 'waf' },
         { label: t('deploy.service.elb'), value: 'elb' },
       ]
-    case 'baidu':
+    case 'baiducloud':
       return [
         { label: t('deploy.service.cdn'), value: 'cdn' },
         { label: t('deploy.service.drcdn'), value: 'drcdn' },
@@ -127,7 +130,7 @@ const dnsTypeByDeployType: Record<string, string[]> = {
   aliyun: ['aliyun'],
   tencentcloud: ['tencentcloud'],
   huawei: ['huawei'],
-  baidu: ['baiducloud'],
+  baiducloud: ['baiducloud'],
 }
 
 const dnsOptions = computed(() => {
@@ -135,6 +138,12 @@ const dnsOptions = computed(() => {
   return dnsProviders.value
     .filter((d) => want.includes(d.provider_type))
     .map((d) => ({ label: d.name, value: d.id }))
+})
+
+const deployCredentialOptions = computed(() => {
+  return deployCredentials.value
+    .filter((c) => c.provider_type === form.provider_type)
+    .map((c) => ({ label: c.name, value: c.id }))
 })
 
 // 用户手动切换云厂商时调用：当前部署服务可能不属于新厂商，重置为第一项；
@@ -163,7 +172,7 @@ function credFields() {
       return { id: 'access_key_id', secret: 'access_key_secret' }
     case 'huawei':
       return { id: 'access_key_id', secret: 'secret_access_key' }
-    case 'baidu':
+    case 'baiducloud':
       return { id: 'access_key_id', secret: 'secret_access_key' }
     default:
       return { id: 'secret_id', secret: 'secret_key' }
@@ -180,6 +189,19 @@ async function loadDnsProviders() {
     }))
   } catch {
     dnsProviders.value = []
+  }
+}
+
+async function loadDeployCredentials() {
+  try {
+    const clist = await DeployCredentialService.ListDeployCredentials()
+    deployCredentials.value = (clist || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      provider_type: c.provider_type,
+    }))
+  } catch {
+    deployCredentials.value = []
   }
 }
 
@@ -261,11 +283,6 @@ function buildConfig(): Record<string, string> {
     if (form.accelerator_id) cfg.accelerator_id = form.accelerator_id
     if (form.listener_id) cfg.listener_id = form.listener_id
   }
-  if (form.credential_source === 'self') {
-    const f = credFields()
-    cfg[f.id] = form.access_key
-    cfg[f.secret] = form.secret_key
-  }
   return cfg
 }
 
@@ -280,23 +297,20 @@ async function fetchDomains() {
     else cfg.region = form.region
     if (form.deploy_service === 'edgeone' && form.zone_id) cfg.zone_id = form.zone_id
     if (form.deploy_service === 'esa' && form.site_id) cfg.site_id = form.site_id
-    if (form.credential_source === 'self') {
-      const f = credFields()
-      cfg[f.id] = form.access_key
-      cfg[f.secret] = form.secret_key
-    }
     const list = await DeployService.FetchCDNDomains({
       provider_type: form.provider_type,
       deploy_service: form.deploy_service,
       credential_source: form.credential_source,
       dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
+      deploy_credential_id:
+        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
       region: form.region,
       config: cfg,
     })
     if (!list || list.length === 0) {
       // 百度云 CDN 与全站加速（DRCDN）域名共用同一列表但类型不同：选了 CDN 服务却拉不到域名，
       // 极可能是域名实为 DRCDN 类型。给出针对性提示，引导用户切换部署服务。
-      if (form.provider_type === 'baidu' && form.deploy_service === 'cdn') {
+      if (form.provider_type === 'baiducloud' && form.deploy_service === 'cdn') {
         showMessage(t('deploy.baidu.cdnNoDomainsHint'), 'warning')
       } else {
         showMessage(t('deploy.noDomains'), 'warning')
@@ -321,16 +335,13 @@ async function fetchZones() {
     const cfg: Record<string, string> = {}
     if (form.provider_type === 'aliyun') cfg.region_id = form.region
     else cfg.region = form.region
-    if (form.credential_source === 'self') {
-      const f = credFields()
-      cfg[f.id] = form.access_key
-      cfg[f.secret] = form.secret_key
-    }
     const list = await DeployService.FetchCDNDomains({
       provider_type: form.provider_type,
       deploy_service: form.deploy_service,
       credential_source: form.credential_source,
       dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
+      deploy_credential_id:
+        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
       region: form.region,
       config: cfg,
     })
@@ -363,6 +374,8 @@ async function save() {
         deploy_service: form.deploy_service,
         credential_source: form.credential_source,
         dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
+        deploy_credential_id:
+          form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
         config: cfg,
         comment: form.comment,
       }
@@ -374,6 +387,8 @@ async function save() {
         deploy_service: form.deploy_service,
         credential_source: form.credential_source,
         dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
+        deploy_credential_id:
+          form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
         config: cfg,
         is_active: true,
         comment: form.comment,
@@ -390,7 +405,7 @@ async function save() {
 }
 
 onMounted(async () => {
-  await loadDnsProviders()
+  await Promise.all([loadDnsProviders(), loadDeployCredentials()])
   const idParam = route.params.id
   if (idParam !== undefined && idParam !== '') {
     editingId.value = Number(idParam)
@@ -430,7 +445,9 @@ onMounted(async () => {
           <n-form-item :label="t('deploy.credentialSource')">
             <n-radio-group v-model:value="form.credential_source">
               <n-radio-button value="dns_provider">{{ t('deploy.credFromDns') }}</n-radio-button>
-              <n-radio-button value="self">{{ t('deploy.credFromSelf') }}</n-radio-button>
+              <n-radio-button value="deploy_credential">{{
+                t('deploy.credFromCredential')
+              }}</n-radio-button>
             </n-radio-group>
           </n-form-item>
           <n-form-item
@@ -444,15 +461,18 @@ onMounted(async () => {
               clearable
             />
           </n-form-item>
-          <template v-else>
-            <n-form-item :label="t('deploy.cred.id')">
-              <n-input v-model:value="form.access_key" />
-            </n-form-item>
-            <n-form-item :label="t('deploy.cred.secret')">
-              <n-input v-model:value="form.secret_key" type="password" />
-            </n-form-item>
-          </template>
-          <n-form-item v-if="form.provider_type !== 'baidu'" :label="t('deploy.config.region')">
+          <n-form-item v-if="form.credential_source === 'deploy_credential'" label="部署凭证">
+            <n-select
+              v-model:value="form.deploy_credential_id"
+              :options="deployCredentialOptions"
+              placeholder="选择部署凭证"
+              clearable
+            />
+          </n-form-item>
+          <n-form-item
+            v-if="form.provider_type !== 'baiducloud'"
+            :label="t('deploy.config.region')"
+          >
             <n-select
               v-model:value="form.region"
               :options="regionOptions(form.provider_type, form.deploy_service)"

@@ -90,7 +90,7 @@ const providerOptions = [
   { label: t('deploy.provider.aliyun'), value: 'aliyun' },
   { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
   { label: t('deploy.provider.huawei'), value: 'huawei' },
-  { label: t('deploy.provider.baidu'), value: 'baidu' },
+  { label: t('deploy.provider.baidu'), value: 'baiducloud' },
 ]
 const serviceOptions = [
   { label: t('deploy.service.cdn'), value: 'cdn' },

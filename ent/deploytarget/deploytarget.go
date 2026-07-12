@@ -41,6 +41,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeDNSProvider holds the string denoting the dns_provider edge name in mutations.
 	EdgeDNSProvider = "dns_provider"
+	// EdgeDeployCredential holds the string denoting the deploy_credential edge name in mutations.
+	EdgeDeployCredential = "deploy_credential"
 	// EdgeCertificates holds the string denoting the certificates edge name in mutations.
 	EdgeCertificates = "certificates"
 	// EdgeDeployLogs holds the string denoting the deploy_logs edge name in mutations.
@@ -54,6 +56,13 @@ const (
 	DNSProviderInverseTable = "dns_providers"
 	// DNSProviderColumn is the table column denoting the dns_provider relation/edge.
 	DNSProviderColumn = "dns_provider_deploy_targets"
+	// DeployCredentialTable is the table that holds the deploy_credential relation/edge.
+	DeployCredentialTable = "deploy_targets"
+	// DeployCredentialInverseTable is the table name for the DeployCredential entity.
+	// It exists in this package in order to avoid circular dependency with the "deploycredential" package.
+	DeployCredentialInverseTable = "deploy_credentials"
+	// DeployCredentialColumn is the table column denoting the deploy_credential relation/edge.
+	DeployCredentialColumn = "deploy_credential_deploy_targets"
 	// CertificatesTable is the table that holds the certificates relation/edge.
 	CertificatesTable = "certificates"
 	// CertificatesInverseTable is the table name for the Certificate entity.
@@ -91,6 +100,7 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"dns_provider_deploy_targets",
+	"deploy_credential_deploy_targets",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -131,7 +141,7 @@ const (
 	ProviderTypeAliyun       ProviderType = "aliyun"
 	ProviderTypeTencentcloud ProviderType = "tencentcloud"
 	ProviderTypeHuawei       ProviderType = "huawei"
-	ProviderTypeBaidu        ProviderType = "baidu"
+	ProviderTypeBaiducloud   ProviderType = "baiducloud"
 )
 
 func (pt ProviderType) String() string {
@@ -141,7 +151,7 @@ func (pt ProviderType) String() string {
 // ProviderTypeValidator is a validator for the "provider_type" field enum values. It is called by the builders before save.
 func ProviderTypeValidator(pt ProviderType) error {
 	switch pt {
-	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaidu:
+	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaiducloud:
 		return nil
 	default:
 		return fmt.Errorf("deploytarget: invalid enum value for provider_type field: %q", pt)
@@ -156,8 +166,8 @@ const DefaultCredentialSource = CredentialSourceDNSProvider
 
 // CredentialSource values.
 const (
-	CredentialSourceDNSProvider CredentialSource = "dns_provider"
-	CredentialSourceSelf        CredentialSource = "self"
+	CredentialSourceDNSProvider      CredentialSource = "dns_provider"
+	CredentialSourceDeployCredential CredentialSource = "deploy_credential"
 )
 
 func (cs CredentialSource) String() string {
@@ -167,7 +177,7 @@ func (cs CredentialSource) String() string {
 // CredentialSourceValidator is a validator for the "credential_source" field enum values. It is called by the builders before save.
 func CredentialSourceValidator(cs CredentialSource) error {
 	switch cs {
-	case CredentialSourceDNSProvider, CredentialSourceSelf:
+	case CredentialSourceDNSProvider, CredentialSourceDeployCredential:
 		return nil
 	default:
 		return fmt.Errorf("deploytarget: invalid enum value for credential_source field: %q", cs)
@@ -244,6 +254,13 @@ func ByDNSProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByDeployCredentialField orders the results by deploy_credential field.
+func ByDeployCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDeployCredentialStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByCertificatesCount orders the results by certificates count.
 func ByCertificatesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -276,6 +293,13 @@ func newDNSProviderStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DNSProviderInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, DNSProviderTable, DNSProviderColumn),
+	)
+}
+func newDeployCredentialStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DeployCredentialInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, DeployCredentialTable, DeployCredentialColumn),
 	)
 }
 func newCertificatesStep() *sqlgraph.Step {

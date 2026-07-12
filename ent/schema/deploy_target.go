@@ -19,18 +19,18 @@ func (DeployTarget) Fields() []ent.Field {
 			NotEmpty().
 			Comment("部署目标名称"),
 		field.Enum("provider_type").
-			Values("aliyun", "tencentcloud", "huawei", "baidu").
+			Values("aliyun", "tencentcloud", "huawei", "baiducloud").
 			Comment("云厂商"),
 		field.String("deploy_service").
 			NotEmpty().
 			Comment("部署服务：cdn / clb / slb / scm / oss 等"),
 		field.Bytes("config").
 			Optional().
-			Comment("服务配置 JSON（region、资源 ID、证书名等；自管凭证时含 access_key/secret）"),
+			Comment("服务配置 JSON（region、资源 ID、证书名等）"),
 		field.Enum("credential_source").
-			Values("dns_provider", "self").
+			Values("dns_provider", "deploy_credential").
 			Default("dns_provider").
-			Comment("凭证来源：复用 DNS 提供商 或 自行配置"),
+			Comment("凭证来源：复用 DNS 凭证 或 部署凭证"),
 		field.Bool("is_active").
 			Default(true).
 			Comment("是否启用"),
@@ -64,6 +64,11 @@ func (DeployTarget) Edges() []ent.Edge {
 			Ref("deploy_targets").
 			Unique().
 			Comment("凭证复用的 DNS 提供商"),
+		// 凭证关联：一个部署目标可关联一个部署凭证（多对一）
+		edge.From("deploy_credential", DeployCredential.Type).
+			Ref("deploy_targets").
+			Unique().
+			Comment("关联的部署凭证"),
 		// 关联证书（多对多）：一个目标可部署多个证书，一个证书可部署到多个目标
 		edge.To("certificates", Certificate.Type).
 			Comment("关联部署的证书"),

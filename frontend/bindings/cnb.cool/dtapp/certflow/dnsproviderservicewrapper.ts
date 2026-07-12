@@ -43,13 +43,6 @@ export function ListDNSProviders(): $CancellablePromise<$models.DNSProviderListI
 }
 
 /**
- * SetDefaultDNSProvider 设置默认 DNS 提供商
- */
-export function SetDefaultDNSProvider(id: number): $CancellablePromise<$models.DNSProviderListItem | null> {
-    return $Call.ByID(1820444217, id);
-}
-
-/**
  * UpdateDNSProvider 更新 DNS 提供商
  */
 export function UpdateDNSProvider(id: number, input: $models.UpdateDNSProviderRequest): $CancellablePromise<$models.DNSProviderListItem | null> {

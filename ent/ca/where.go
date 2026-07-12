@@ -70,11 +70,6 @@ func AccountEmail(v string) predicate.CA {
 	return predicate.CA(sql.FieldEQ(FieldAccountEmail, v))
 }
 
-// IsDefault applies equality check predicate on the "is_default" field. It's identical to IsDefaultEQ.
-func IsDefault(v bool) predicate.CA {
-	return predicate.CA(sql.FieldEQ(FieldIsDefault, v))
-}
-
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.CA {
 	return predicate.CA(sql.FieldEQ(FieldIsActive, v))
@@ -293,16 +288,6 @@ func AccountEmailEqualFold(v string) predicate.CA {
 // AccountEmailContainsFold applies the ContainsFold predicate on the "account_email" field.
 func AccountEmailContainsFold(v string) predicate.CA {
 	return predicate.CA(sql.FieldContainsFold(FieldAccountEmail, v))
-}
-
-// IsDefaultEQ applies the EQ predicate on the "is_default" field.
-func IsDefaultEQ(v bool) predicate.CA {
-	return predicate.CA(sql.FieldEQ(FieldIsDefault, v))
-}
-
-// IsDefaultNEQ applies the NEQ predicate on the "is_default" field.
-func IsDefaultNEQ(v bool) predicate.CA {
-	return predicate.CA(sql.FieldNEQ(FieldIsDefault, v))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.

@@ -8,48 +8,47 @@ import (
 	"fmt"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
-	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 )
 
-// DNSProviderCreate is the builder for creating a DNSProvider entity.
-type DNSProviderCreate struct {
+// DeployCredentialCreate is the builder for creating a DeployCredential entity.
+type DeployCredentialCreate struct {
 	config
-	mutation *DNSProviderMutation
+	mutation *DeployCredentialMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
 }
 
 // SetName sets the "name" field.
-func (_c *DNSProviderCreate) SetName(v string) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetName(v string) *DeployCredentialCreate {
 	_c.mutation.SetName(v)
 	return _c
 }
 
 // SetProviderType sets the "provider_type" field.
-func (_c *DNSProviderCreate) SetProviderType(v dnsprovider.ProviderType) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetProviderType(v deploycredential.ProviderType) *DeployCredentialCreate {
 	_c.mutation.SetProviderType(v)
 	return _c
 }
 
 // SetConfig sets the "config" field.
-func (_c *DNSProviderCreate) SetConfig(v []byte) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetConfig(v []byte) *DeployCredentialCreate {
 	_c.mutation.SetConfig(v)
 	return _c
 }
 
 // SetIsActive sets the "is_active" field.
-func (_c *DNSProviderCreate) SetIsActive(v bool) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetIsActive(v bool) *DeployCredentialCreate {
 	_c.mutation.SetIsActive(v)
 	return _c
 }
 
 // SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (_c *DNSProviderCreate) SetNillableIsActive(v *bool) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetNillableIsActive(v *bool) *DeployCredentialCreate {
 	if v != nil {
 		_c.SetIsActive(*v)
 	}
@@ -57,13 +56,13 @@ func (_c *DNSProviderCreate) SetNillableIsActive(v *bool) *DNSProviderCreate {
 }
 
 // SetComment sets the "comment" field.
-func (_c *DNSProviderCreate) SetComment(v string) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetComment(v string) *DeployCredentialCreate {
 	_c.mutation.SetComment(v)
 	return _c
 }
 
 // SetNillableComment sets the "comment" field if the given value is not nil.
-func (_c *DNSProviderCreate) SetNillableComment(v *string) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetNillableComment(v *string) *DeployCredentialCreate {
 	if v != nil {
 		_c.SetComment(*v)
 	}
@@ -71,13 +70,13 @@ func (_c *DNSProviderCreate) SetNillableComment(v *string) *DNSProviderCreate {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (_c *DNSProviderCreate) SetCreatedAt(v time.Time) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetCreatedAt(v time.Time) *DeployCredentialCreate {
 	_c.mutation.SetCreatedAt(v)
 	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (_c *DNSProviderCreate) SetNillableCreatedAt(v *time.Time) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetNillableCreatedAt(v *time.Time) *DeployCredentialCreate {
 	if v != nil {
 		_c.SetCreatedAt(*v)
 	}
@@ -85,42 +84,27 @@ func (_c *DNSProviderCreate) SetNillableCreatedAt(v *time.Time) *DNSProviderCrea
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (_c *DNSProviderCreate) SetUpdatedAt(v time.Time) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetUpdatedAt(v time.Time) *DeployCredentialCreate {
 	_c.mutation.SetUpdatedAt(v)
 	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (_c *DNSProviderCreate) SetNillableUpdatedAt(v *time.Time) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) SetNillableUpdatedAt(v *time.Time) *DeployCredentialCreate {
 	if v != nil {
 		_c.SetUpdatedAt(*v)
 	}
 	return _c
 }
 
-// AddCertificateIDs adds the "certificates" edge to the Certificate entity by IDs.
-func (_c *DNSProviderCreate) AddCertificateIDs(ids ...int) *DNSProviderCreate {
-	_c.mutation.AddCertificateIDs(ids...)
-	return _c
-}
-
-// AddCertificates adds the "certificates" edges to the Certificate entity.
-func (_c *DNSProviderCreate) AddCertificates(v ...*Certificate) *DNSProviderCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddCertificateIDs(ids...)
-}
-
 // AddDeployTargetIDs adds the "deploy_targets" edge to the DeployTarget entity by IDs.
-func (_c *DNSProviderCreate) AddDeployTargetIDs(ids ...int) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) AddDeployTargetIDs(ids ...int) *DeployCredentialCreate {
 	_c.mutation.AddDeployTargetIDs(ids...)
 	return _c
 }
 
 // AddDeployTargets adds the "deploy_targets" edges to the DeployTarget entity.
-func (_c *DNSProviderCreate) AddDeployTargets(v ...*DeployTarget) *DNSProviderCreate {
+func (_c *DeployCredentialCreate) AddDeployTargets(v ...*DeployTarget) *DeployCredentialCreate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -128,19 +112,19 @@ func (_c *DNSProviderCreate) AddDeployTargets(v ...*DeployTarget) *DNSProviderCr
 	return _c.AddDeployTargetIDs(ids...)
 }
 
-// Mutation returns the DNSProviderMutation object of the builder.
-func (_c *DNSProviderCreate) Mutation() *DNSProviderMutation {
+// Mutation returns the DeployCredentialMutation object of the builder.
+func (_c *DeployCredentialCreate) Mutation() *DeployCredentialMutation {
 	return _c.mutation
 }
 
-// Save creates the DNSProvider in the database.
-func (_c *DNSProviderCreate) Save(ctx context.Context) (*DNSProvider, error) {
+// Save creates the DeployCredential in the database.
+func (_c *DeployCredentialCreate) Save(ctx context.Context) (*DeployCredential, error) {
 	_c.defaults()
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (_c *DNSProviderCreate) SaveX(ctx context.Context) *DNSProvider {
+func (_c *DeployCredentialCreate) SaveX(ctx context.Context) *DeployCredential {
 	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
@@ -149,65 +133,65 @@ func (_c *DNSProviderCreate) SaveX(ctx context.Context) *DNSProvider {
 }
 
 // Exec executes the query.
-func (_c *DNSProviderCreate) Exec(ctx context.Context) error {
+func (_c *DeployCredentialCreate) Exec(ctx context.Context) error {
 	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_c *DNSProviderCreate) ExecX(ctx context.Context) {
+func (_c *DeployCredentialCreate) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *DNSProviderCreate) defaults() {
+func (_c *DeployCredentialCreate) defaults() {
 	if _, ok := _c.mutation.IsActive(); !ok {
-		v := dnsprovider.DefaultIsActive
+		v := deploycredential.DefaultIsActive
 		_c.mutation.SetIsActive(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
-		v := dnsprovider.DefaultCreatedAt()
+		v := deploycredential.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		v := dnsprovider.DefaultUpdatedAt()
+		v := deploycredential.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (_c *DNSProviderCreate) check() error {
+func (_c *DeployCredentialCreate) check() error {
 	if _, ok := _c.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "DNSProvider.name"`)}
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "DeployCredential.name"`)}
 	}
 	if v, ok := _c.mutation.Name(); ok {
-		if err := dnsprovider.NameValidator(v); err != nil {
-			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "DNSProvider.name": %w`, err)}
+		if err := deploycredential.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "DeployCredential.name": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.ProviderType(); !ok {
-		return &ValidationError{Name: "provider_type", err: errors.New(`ent: missing required field "DNSProvider.provider_type"`)}
+		return &ValidationError{Name: "provider_type", err: errors.New(`ent: missing required field "DeployCredential.provider_type"`)}
 	}
 	if v, ok := _c.mutation.ProviderType(); ok {
-		if err := dnsprovider.ProviderTypeValidator(v); err != nil {
-			return &ValidationError{Name: "provider_type", err: fmt.Errorf(`ent: validator failed for field "DNSProvider.provider_type": %w`, err)}
+		if err := deploycredential.ProviderTypeValidator(v); err != nil {
+			return &ValidationError{Name: "provider_type", err: fmt.Errorf(`ent: validator failed for field "DeployCredential.provider_type": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
-		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "DNSProvider.is_active"`)}
+		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "DeployCredential.is_active"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "DNSProvider.created_at"`)}
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "DeployCredential.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "DNSProvider.updated_at"`)}
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "DeployCredential.updated_at"`)}
 	}
 	return nil
 }
 
-func (_c *DNSProviderCreate) sqlSave(ctx context.Context) (*DNSProvider, error) {
+func (_c *DeployCredentialCreate) sqlSave(ctx context.Context) (*DeployCredential, error) {
 	if err := _c.check(); err != nil {
 		return nil, err
 	}
@@ -225,62 +209,46 @@ func (_c *DNSProviderCreate) sqlSave(ctx context.Context) (*DNSProvider, error) 
 	return _node, nil
 }
 
-func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
+func (_c *DeployCredentialCreate) createSpec() (*DeployCredential, *sqlgraph.CreateSpec) {
 	var (
-		_node = &DNSProvider{config: _c.config}
-		_spec = sqlgraph.NewCreateSpec(dnsprovider.Table, sqlgraph.NewFieldSpec(dnsprovider.FieldID, field.TypeInt))
+		_node = &DeployCredential{config: _c.config}
+		_spec = sqlgraph.NewCreateSpec(deploycredential.Table, sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.Name(); ok {
-		_spec.SetField(dnsprovider.FieldName, field.TypeString, value)
+		_spec.SetField(deploycredential.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.ProviderType(); ok {
-		_spec.SetField(dnsprovider.FieldProviderType, field.TypeEnum, value)
+		_spec.SetField(deploycredential.FieldProviderType, field.TypeEnum, value)
 		_node.ProviderType = value
 	}
 	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploycredential.FieldConfig, field.TypeBytes, value)
 		_node.Config = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
-		_spec.SetField(dnsprovider.FieldIsActive, field.TypeBool, value)
+		_spec.SetField(deploycredential.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
 	}
 	if value, ok := _c.mutation.Comment(); ok {
-		_spec.SetField(dnsprovider.FieldComment, field.TypeString, value)
+		_spec.SetField(deploycredential.FieldComment, field.TypeString, value)
 		_node.Comment = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
-		_spec.SetField(dnsprovider.FieldCreatedAt, field.TypeTime, value)
+		_spec.SetField(deploycredential.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
 	if value, ok := _c.mutation.UpdatedAt(); ok {
-		_spec.SetField(dnsprovider.FieldUpdatedAt, field.TypeTime, value)
+		_spec.SetField(deploycredential.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
-	}
-	if nodes := _c.mutation.CertificatesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   dnsprovider.CertificatesTable,
-			Columns: []string{dnsprovider.CertificatesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(certificate.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.DeployTargetsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   dnsprovider.DeployTargetsTable,
-			Columns: []string{dnsprovider.DeployTargetsColumn},
+			Table:   deploycredential.DeployTargetsTable,
+			Columns: []string{deploycredential.DeployTargetsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(deploytarget.FieldID, field.TypeInt),
@@ -297,7 +265,7 @@ func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		SetName(v).
 //		OnConflict(
 //			// Update the row with the new values
@@ -306,13 +274,13 @@ func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
 //		).
 //		// Override some of the fields with custom
 //		// update values.
-//		Update(func(u *ent.DNSProviderUpsert) {
+//		Update(func(u *ent.DeployCredentialUpsert) {
 //			SetName(v+v).
 //		}).
 //		Exec(ctx)
-func (_c *DNSProviderCreate) OnConflict(opts ...sql.ConflictOption) *DNSProviderUpsertOne {
+func (_c *DeployCredentialCreate) OnConflict(opts ...sql.ConflictOption) *DeployCredentialUpsertOne {
 	_c.conflict = opts
-	return &DNSProviderUpsertOne{
+	return &DeployCredentialUpsertOne{
 		create: _c,
 	}
 }
@@ -320,126 +288,126 @@ func (_c *DNSProviderCreate) OnConflict(opts ...sql.ConflictOption) *DNSProvider
 // OnConflictColumns calls `OnConflict` and configures the columns
 // as conflict target. Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (_c *DNSProviderCreate) OnConflictColumns(columns ...string) *DNSProviderUpsertOne {
+func (_c *DeployCredentialCreate) OnConflictColumns(columns ...string) *DeployCredentialUpsertOne {
 	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &DNSProviderUpsertOne{
+	return &DeployCredentialUpsertOne{
 		create: _c,
 	}
 }
 
 type (
-	// DNSProviderUpsertOne is the builder for "upsert"-ing
-	//  one DNSProvider node.
-	DNSProviderUpsertOne struct {
-		create *DNSProviderCreate
+	// DeployCredentialUpsertOne is the builder for "upsert"-ing
+	//  one DeployCredential node.
+	DeployCredentialUpsertOne struct {
+		create *DeployCredentialCreate
 	}
 
-	// DNSProviderUpsert is the "OnConflict" setter.
-	DNSProviderUpsert struct {
+	// DeployCredentialUpsert is the "OnConflict" setter.
+	DeployCredentialUpsert struct {
 		*sql.UpdateSet
 	}
 )
 
 // SetName sets the "name" field.
-func (u *DNSProviderUpsert) SetName(v string) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldName, v)
+func (u *DeployCredentialUpsert) SetName(v string) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldName, v)
 	return u
 }
 
 // UpdateName sets the "name" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateName() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldName)
+func (u *DeployCredentialUpsert) UpdateName() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldName)
 	return u
 }
 
 // SetProviderType sets the "provider_type" field.
-func (u *DNSProviderUpsert) SetProviderType(v dnsprovider.ProviderType) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldProviderType, v)
+func (u *DeployCredentialUpsert) SetProviderType(v deploycredential.ProviderType) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldProviderType, v)
 	return u
 }
 
 // UpdateProviderType sets the "provider_type" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateProviderType() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldProviderType)
+func (u *DeployCredentialUpsert) UpdateProviderType() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldProviderType)
 	return u
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsert) SetConfig(v []byte) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldConfig, v)
+func (u *DeployCredentialUpsert) SetConfig(v []byte) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldConfig, v)
 	return u
 }
 
 // UpdateConfig sets the "config" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateConfig() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldConfig)
+func (u *DeployCredentialUpsert) UpdateConfig() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldConfig)
 	return u
 }
 
 // ClearConfig clears the value of the "config" field.
-func (u *DNSProviderUpsert) ClearConfig() *DNSProviderUpsert {
-	u.SetNull(dnsprovider.FieldConfig)
+func (u *DeployCredentialUpsert) ClearConfig() *DeployCredentialUpsert {
+	u.SetNull(deploycredential.FieldConfig)
 	return u
 }
 
 // SetIsActive sets the "is_active" field.
-func (u *DNSProviderUpsert) SetIsActive(v bool) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldIsActive, v)
+func (u *DeployCredentialUpsert) SetIsActive(v bool) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldIsActive, v)
 	return u
 }
 
 // UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateIsActive() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldIsActive)
+func (u *DeployCredentialUpsert) UpdateIsActive() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldIsActive)
 	return u
 }
 
 // SetComment sets the "comment" field.
-func (u *DNSProviderUpsert) SetComment(v string) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldComment, v)
+func (u *DeployCredentialUpsert) SetComment(v string) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldComment, v)
 	return u
 }
 
 // UpdateComment sets the "comment" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateComment() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldComment)
+func (u *DeployCredentialUpsert) UpdateComment() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldComment)
 	return u
 }
 
 // ClearComment clears the value of the "comment" field.
-func (u *DNSProviderUpsert) ClearComment() *DNSProviderUpsert {
-	u.SetNull(dnsprovider.FieldComment)
+func (u *DeployCredentialUpsert) ClearComment() *DeployCredentialUpsert {
+	u.SetNull(deploycredential.FieldComment)
 	return u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (u *DNSProviderUpsert) SetUpdatedAt(v time.Time) *DNSProviderUpsert {
-	u.Set(dnsprovider.FieldUpdatedAt, v)
+func (u *DeployCredentialUpsert) SetUpdatedAt(v time.Time) *DeployCredentialUpsert {
+	u.Set(deploycredential.FieldUpdatedAt, v)
 	return u
 }
 
 // UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *DNSProviderUpsert) UpdateUpdatedAt() *DNSProviderUpsert {
-	u.SetExcluded(dnsprovider.FieldUpdatedAt)
+func (u *DeployCredentialUpsert) UpdateUpdatedAt() *DeployCredentialUpsert {
+	u.SetExcluded(deploycredential.FieldUpdatedAt)
 	return u
 }
 
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
 //		).
 //		Exec(ctx)
-func (u *DNSProviderUpsertOne) UpdateNewValues() *DNSProviderUpsertOne {
+func (u *DeployCredentialUpsertOne) UpdateNewValues() *DeployCredentialUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(dnsprovider.FieldCreatedAt)
+			s.SetIgnore(deploycredential.FieldCreatedAt)
 		}
 	}))
 	return u
@@ -448,145 +416,145 @@ func (u *DNSProviderUpsertOne) UpdateNewValues() *DNSProviderUpsertOne {
 // Ignore sets each column to itself in case of conflict.
 // Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //	    OnConflict(sql.ResolveWithIgnore()).
 //	    Exec(ctx)
-func (u *DNSProviderUpsertOne) Ignore() *DNSProviderUpsertOne {
+func (u *DeployCredentialUpsertOne) Ignore() *DeployCredentialUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
 	return u
 }
 
 // DoNothing configures the conflict_action to `DO NOTHING`.
 // Supported only by SQLite and PostgreSQL.
-func (u *DNSProviderUpsertOne) DoNothing() *DNSProviderUpsertOne {
+func (u *DeployCredentialUpsertOne) DoNothing() *DeployCredentialUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.DoNothing())
 	return u
 }
 
-// Update allows overriding fields `UPDATE` values. See the DNSProviderCreate.OnConflict
+// Update allows overriding fields `UPDATE` values. See the DeployCredentialCreate.OnConflict
 // documentation for more info.
-func (u *DNSProviderUpsertOne) Update(set func(*DNSProviderUpsert)) *DNSProviderUpsertOne {
+func (u *DeployCredentialUpsertOne) Update(set func(*DeployCredentialUpsert)) *DeployCredentialUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&DNSProviderUpsert{UpdateSet: update})
+		set(&DeployCredentialUpsert{UpdateSet: update})
 	}))
 	return u
 }
 
 // SetName sets the "name" field.
-func (u *DNSProviderUpsertOne) SetName(v string) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetName(v string) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetName(v)
 	})
 }
 
 // UpdateName sets the "name" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateName() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateName() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateName()
 	})
 }
 
 // SetProviderType sets the "provider_type" field.
-func (u *DNSProviderUpsertOne) SetProviderType(v dnsprovider.ProviderType) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetProviderType(v deploycredential.ProviderType) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetProviderType(v)
 	})
 }
 
 // UpdateProviderType sets the "provider_type" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateProviderType() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateProviderType() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateProviderType()
 	})
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertOne) SetConfig(v []byte) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetConfig(v []byte) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetConfig(v)
 	})
 }
 
 // UpdateConfig sets the "config" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateConfig() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateConfig() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateConfig()
 	})
 }
 
 // ClearConfig clears the value of the "config" field.
-func (u *DNSProviderUpsertOne) ClearConfig() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) ClearConfig() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.ClearConfig()
 	})
 }
 
 // SetIsActive sets the "is_active" field.
-func (u *DNSProviderUpsertOne) SetIsActive(v bool) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetIsActive(v bool) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetIsActive(v)
 	})
 }
 
 // UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateIsActive() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateIsActive() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateIsActive()
 	})
 }
 
 // SetComment sets the "comment" field.
-func (u *DNSProviderUpsertOne) SetComment(v string) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetComment(v string) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetComment(v)
 	})
 }
 
 // UpdateComment sets the "comment" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateComment() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateComment() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateComment()
 	})
 }
 
 // ClearComment clears the value of the "comment" field.
-func (u *DNSProviderUpsertOne) ClearComment() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) ClearComment() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.ClearComment()
 	})
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (u *DNSProviderUpsertOne) SetUpdatedAt(v time.Time) *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) SetUpdatedAt(v time.Time) *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetUpdatedAt(v)
 	})
 }
 
 // UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *DNSProviderUpsertOne) UpdateUpdatedAt() *DNSProviderUpsertOne {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertOne) UpdateUpdatedAt() *DeployCredentialUpsertOne {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateUpdatedAt()
 	})
 }
 
 // Exec executes the query.
-func (u *DNSProviderUpsertOne) Exec(ctx context.Context) error {
+func (u *DeployCredentialUpsertOne) Exec(ctx context.Context) error {
 	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for DNSProviderCreate.OnConflict")
+		return errors.New("ent: missing options for DeployCredentialCreate.OnConflict")
 	}
 	return u.create.Exec(ctx)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (u *DNSProviderUpsertOne) ExecX(ctx context.Context) {
+func (u *DeployCredentialUpsertOne) ExecX(ctx context.Context) {
 	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *DNSProviderUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *DeployCredentialUpsertOne) ID(ctx context.Context) (id int, err error) {
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -595,7 +563,7 @@ func (u *DNSProviderUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *DNSProviderUpsertOne) IDX(ctx context.Context) int {
+func (u *DeployCredentialUpsertOne) IDX(ctx context.Context) int {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -603,28 +571,28 @@ func (u *DNSProviderUpsertOne) IDX(ctx context.Context) int {
 	return id
 }
 
-// DNSProviderCreateBulk is the builder for creating many DNSProvider entities in bulk.
-type DNSProviderCreateBulk struct {
+// DeployCredentialCreateBulk is the builder for creating many DeployCredential entities in bulk.
+type DeployCredentialCreateBulk struct {
 	config
 	err      error
-	builders []*DNSProviderCreate
+	builders []*DeployCredentialCreate
 	conflict []sql.ConflictOption
 }
 
-// Save creates the DNSProvider entities in the database.
-func (_c *DNSProviderCreateBulk) Save(ctx context.Context) ([]*DNSProvider, error) {
+// Save creates the DeployCredential entities in the database.
+func (_c *DeployCredentialCreateBulk) Save(ctx context.Context) ([]*DeployCredential, error) {
 	if _c.err != nil {
 		return nil, _c.err
 	}
 	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
-	nodes := make([]*DNSProvider, len(_c.builders))
+	nodes := make([]*DeployCredential, len(_c.builders))
 	mutators := make([]Mutator, len(_c.builders))
 	for i := range _c.builders {
 		func(i int, root context.Context) {
 			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-				mutation, ok := m.(*DNSProviderMutation)
+				mutation, ok := m.(*DeployCredentialMutation)
 				if !ok {
 					return nil, fmt.Errorf("unexpected mutation type %T", m)
 				}
@@ -672,7 +640,7 @@ func (_c *DNSProviderCreateBulk) Save(ctx context.Context) ([]*DNSProvider, erro
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (_c *DNSProviderCreateBulk) SaveX(ctx context.Context) []*DNSProvider {
+func (_c *DeployCredentialCreateBulk) SaveX(ctx context.Context) []*DeployCredential {
 	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
@@ -681,13 +649,13 @@ func (_c *DNSProviderCreateBulk) SaveX(ctx context.Context) []*DNSProvider {
 }
 
 // Exec executes the query.
-func (_c *DNSProviderCreateBulk) Exec(ctx context.Context) error {
+func (_c *DeployCredentialCreateBulk) Exec(ctx context.Context) error {
 	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_c *DNSProviderCreateBulk) ExecX(ctx context.Context) {
+func (_c *DeployCredentialCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
@@ -696,7 +664,7 @@ func (_c *DNSProviderCreateBulk) ExecX(ctx context.Context) {
 // OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
 // of the `INSERT` statement. For example:
 //
-//	client.DNSProvider.CreateBulk(builders...).
+//	client.DeployCredential.CreateBulk(builders...).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -704,13 +672,13 @@ func (_c *DNSProviderCreateBulk) ExecX(ctx context.Context) {
 //		).
 //		// Override some of the fields with custom
 //		// update values.
-//		Update(func(u *ent.DNSProviderUpsert) {
+//		Update(func(u *ent.DeployCredentialUpsert) {
 //			SetName(v+v).
 //		}).
 //		Exec(ctx)
-func (_c *DNSProviderCreateBulk) OnConflict(opts ...sql.ConflictOption) *DNSProviderUpsertBulk {
+func (_c *DeployCredentialCreateBulk) OnConflict(opts ...sql.ConflictOption) *DeployCredentialUpsertBulk {
 	_c.conflict = opts
-	return &DNSProviderUpsertBulk{
+	return &DeployCredentialUpsertBulk{
 		create: _c,
 	}
 }
@@ -718,36 +686,36 @@ func (_c *DNSProviderCreateBulk) OnConflict(opts ...sql.ConflictOption) *DNSProv
 // OnConflictColumns calls `OnConflict` and configures the columns
 // as conflict target. Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (_c *DNSProviderCreateBulk) OnConflictColumns(columns ...string) *DNSProviderUpsertBulk {
+func (_c *DeployCredentialCreateBulk) OnConflictColumns(columns ...string) *DeployCredentialUpsertBulk {
 	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
-	return &DNSProviderUpsertBulk{
+	return &DeployCredentialUpsertBulk{
 		create: _c,
 	}
 }
 
-// DNSProviderUpsertBulk is the builder for "upsert"-ing
-// a bulk of DNSProvider nodes.
-type DNSProviderUpsertBulk struct {
-	create *DNSProviderCreateBulk
+// DeployCredentialUpsertBulk is the builder for "upsert"-ing
+// a bulk of DeployCredential nodes.
+type DeployCredentialUpsertBulk struct {
+	create *DeployCredentialCreateBulk
 }
 
 // UpdateNewValues updates the mutable fields using the new values that
 // were set on create. Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
 //		).
 //		Exec(ctx)
-func (u *DNSProviderUpsertBulk) UpdateNewValues() *DNSProviderUpsertBulk {
+func (u *DeployCredentialUpsertBulk) UpdateNewValues() *DeployCredentialUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
 			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(dnsprovider.FieldCreatedAt)
+				s.SetIgnore(deploycredential.FieldCreatedAt)
 			}
 		}
 	}))
@@ -757,146 +725,146 @@ func (u *DNSProviderUpsertBulk) UpdateNewValues() *DNSProviderUpsertBulk {
 // Ignore sets each column to itself in case of conflict.
 // Using this option is equivalent to using:
 //
-//	client.DNSProvider.Create().
+//	client.DeployCredential.Create().
 //		OnConflict(sql.ResolveWithIgnore()).
 //		Exec(ctx)
-func (u *DNSProviderUpsertBulk) Ignore() *DNSProviderUpsertBulk {
+func (u *DeployCredentialUpsertBulk) Ignore() *DeployCredentialUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
 	return u
 }
 
 // DoNothing configures the conflict_action to `DO NOTHING`.
 // Supported only by SQLite and PostgreSQL.
-func (u *DNSProviderUpsertBulk) DoNothing() *DNSProviderUpsertBulk {
+func (u *DeployCredentialUpsertBulk) DoNothing() *DeployCredentialUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.DoNothing())
 	return u
 }
 
-// Update allows overriding fields `UPDATE` values. See the DNSProviderCreateBulk.OnConflict
+// Update allows overriding fields `UPDATE` values. See the DeployCredentialCreateBulk.OnConflict
 // documentation for more info.
-func (u *DNSProviderUpsertBulk) Update(set func(*DNSProviderUpsert)) *DNSProviderUpsertBulk {
+func (u *DeployCredentialUpsertBulk) Update(set func(*DeployCredentialUpsert)) *DeployCredentialUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
-		set(&DNSProviderUpsert{UpdateSet: update})
+		set(&DeployCredentialUpsert{UpdateSet: update})
 	}))
 	return u
 }
 
 // SetName sets the "name" field.
-func (u *DNSProviderUpsertBulk) SetName(v string) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetName(v string) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetName(v)
 	})
 }
 
 // UpdateName sets the "name" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateName() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateName() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateName()
 	})
 }
 
 // SetProviderType sets the "provider_type" field.
-func (u *DNSProviderUpsertBulk) SetProviderType(v dnsprovider.ProviderType) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetProviderType(v deploycredential.ProviderType) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetProviderType(v)
 	})
 }
 
 // UpdateProviderType sets the "provider_type" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateProviderType() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateProviderType() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateProviderType()
 	})
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertBulk) SetConfig(v []byte) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetConfig(v []byte) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetConfig(v)
 	})
 }
 
 // UpdateConfig sets the "config" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateConfig() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateConfig() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateConfig()
 	})
 }
 
 // ClearConfig clears the value of the "config" field.
-func (u *DNSProviderUpsertBulk) ClearConfig() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) ClearConfig() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.ClearConfig()
 	})
 }
 
 // SetIsActive sets the "is_active" field.
-func (u *DNSProviderUpsertBulk) SetIsActive(v bool) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetIsActive(v bool) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetIsActive(v)
 	})
 }
 
 // UpdateIsActive sets the "is_active" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateIsActive() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateIsActive() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateIsActive()
 	})
 }
 
 // SetComment sets the "comment" field.
-func (u *DNSProviderUpsertBulk) SetComment(v string) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetComment(v string) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetComment(v)
 	})
 }
 
 // UpdateComment sets the "comment" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateComment() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateComment() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateComment()
 	})
 }
 
 // ClearComment clears the value of the "comment" field.
-func (u *DNSProviderUpsertBulk) ClearComment() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) ClearComment() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.ClearComment()
 	})
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (u *DNSProviderUpsertBulk) SetUpdatedAt(v time.Time) *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) SetUpdatedAt(v time.Time) *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetUpdatedAt(v)
 	})
 }
 
 // UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *DNSProviderUpsertBulk) UpdateUpdatedAt() *DNSProviderUpsertBulk {
-	return u.Update(func(s *DNSProviderUpsert) {
+func (u *DeployCredentialUpsertBulk) UpdateUpdatedAt() *DeployCredentialUpsertBulk {
+	return u.Update(func(s *DeployCredentialUpsert) {
 		s.UpdateUpdatedAt()
 	})
 }
 
 // Exec executes the query.
-func (u *DNSProviderUpsertBulk) Exec(ctx context.Context) error {
+func (u *DeployCredentialUpsertBulk) Exec(ctx context.Context) error {
 	if u.create.err != nil {
 		return u.create.err
 	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
-			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DNSProviderCreateBulk instead", i)
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DeployCredentialCreateBulk instead", i)
 		}
 	}
 	if len(u.create.conflict) == 0 {
-		return errors.New("ent: missing options for DNSProviderCreateBulk.OnConflict")
+		return errors.New("ent: missing options for DeployCredentialCreateBulk.OnConflict")
 	}
 	return u.create.Exec(ctx)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (u *DNSProviderUpsertBulk) ExecX(ctx context.Context) {
+func (u *DeployCredentialUpsertBulk) ExecX(ctx context.Context) {
 	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}

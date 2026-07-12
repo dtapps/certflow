@@ -29,14 +29,22 @@ const router = createRouter({
       component: () => import('../views/CAConfig.vue'),
     },
     {
+      path: '/providers',
+      name: 'providers',
+      component: () => import('../views/Providers.vue'),
+    },
+    {
+      path: '/ssl-deploy',
+      name: 'ssl-deploy',
+      component: () => import('../views/DeployTargets.vue'),
+    },
+    {
       path: '/dns',
-      name: 'dns',
-      component: () => import('../views/DNSProviders.vue'),
+      redirect: '/providers',
     },
     {
       path: '/deploy',
-      name: 'deploy',
-      component: () => import('../views/DeployTargets.vue'),
+      redirect: '/providers',
     },
     {
       path: '/deploy/new',

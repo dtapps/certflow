@@ -73,26 +73,28 @@ func (s *DeployService) SetNotificationService(ns *notification.NotificationServ
 
 // CreateDeployTargetInput 创建部署目标输入
 type CreateDeployTargetInput struct {
-	Name             string            `json:"name"`
-	ProviderType     string            `json:"provider_type"`
-	DeployService    string            `json:"deploy_service"`
-	Config           map[string]string `json:"config"`
-	CredentialSource string            `json:"credential_source"`
-	DNSProviderID    *int              `json:"dns_provider_id,omitempty"`
-	IsActive         bool              `json:"is_active"`
-	Comment          string            `json:"comment"`
+	Name               string            `json:"name"`
+	ProviderType       string            `json:"provider_type"`
+	DeployService      string            `json:"deploy_service"`
+	Config             map[string]string `json:"config"`
+	CredentialSource   string            `json:"credential_source"`
+	DNSProviderID      *int              `json:"dns_provider_id,omitempty"`
+	DeployCredentialID *int              `json:"deploy_credential_id,omitempty"`
+	IsActive           bool              `json:"is_active"`
+	Comment            string            `json:"comment"`
 }
 
 // UpdateDeployTargetInput 更新部署目标输入
 type UpdateDeployTargetInput struct {
-	Name             string            `json:"name,omitempty"`
-	ProviderType     string            `json:"provider_type,omitempty"`
-	DeployService    string            `json:"deploy_service,omitempty"`
-	Config           map[string]string `json:"config,omitempty"`
-	CredentialSource string            `json:"credential_source,omitempty"`
-	DNSProviderID    *int              `json:"dns_provider_id,omitempty"`
-	IsActive         *bool             `json:"is_active,omitempty"`
-	Comment          string            `json:"comment,omitempty"`
+	Name               string            `json:"name,omitempty"`
+	ProviderType       string            `json:"provider_type,omitempty"`
+	DeployService      string            `json:"deploy_service,omitempty"`
+	Config             map[string]string `json:"config,omitempty"`
+	CredentialSource   string            `json:"credential_source,omitempty"`
+	DNSProviderID      *int              `json:"dns_provider_id,omitempty"`
+	DeployCredentialID *int              `json:"deploy_credential_id,omitempty"`
+	IsActive           *bool             `json:"is_active,omitempty"`
+	Comment            string            `json:"comment,omitempty"`
 }
 
 // Create 创建部署目标
@@ -108,6 +110,9 @@ func (s *DeployService) Create(ctx context.Context, in CreateDeployTargetInput) 
 		SetComment(in.Comment)
 	if in.DNSProviderID != nil && *in.DNSProviderID > 0 {
 		b = b.SetDNSProviderID(*in.DNSProviderID)
+	}
+	if in.DeployCredentialID != nil && *in.DeployCredentialID > 0 {
+		b = b.SetDeployCredentialID(*in.DeployCredentialID)
 	}
 	return b.Save(ctx)
 }
@@ -136,6 +141,11 @@ func (s *DeployService) Update(ctx context.Context, id int, in UpdateDeployTarge
 			b = b.SetDNSProviderID(*in.DNSProviderID)
 		}
 	}
+	if in.DeployCredentialID != nil {
+		if *in.DeployCredentialID > 0 {
+			b = b.SetDeployCredentialID(*in.DeployCredentialID)
+		}
+	}
 	if in.IsActive != nil {
 		b = b.SetIsActive(*in.IsActive)
 	}
@@ -157,7 +167,7 @@ func (s *DeployService) Get(ctx context.Context, id int) (*ent.DeployTarget, err
 
 // List 获取所有部署目标（带凭证来源信息）
 func (s *DeployService) List(ctx context.Context) ([]*ent.DeployTarget, error) {
-	return s.db.DeployTarget.Query().WithDNSProvider().Order(ent.Desc("created_at")).All(ctx)
+	return s.db.DeployTarget.Query().WithDNSProvider().WithDeployCredential().Order(ent.Desc("created_at")).All(ctx)
 }
 
 // LinkCert 关联证书到部署目标
@@ -174,20 +184,29 @@ func (s *DeployService) UnlinkCert(ctx context.Context, targetID, certID int) er
 
 // FetchDomainsInput 拉取 CDN 域名输入（新建目标时凭证尚未落库，需内联传入）
 type FetchDomainsInput struct {
-	ProviderType     string
-	DeployService    string
-	CredentialSource string
-	DNSProviderID    *int
-	Region           string
-	Config           map[string]string
+	ProviderType       string
+	DeployService      string
+	CredentialSource   string
+	DNSProviderID      *int
+	DeployCredentialID *int
+	Region             string
+	Config             map[string]string
 }
 
 // FetchCDNDomains 根据内联传入的凭证拉取 CDN 域名列表（用于新建目标时选择）
 func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInput) ([]string, error) {
 	var creds Credentials
-	if deploytarget.CredentialSource(in.CredentialSource) == deploytarget.CredentialSourceSelf {
-		creds = credsFromConfig(in.ProviderType, in.Config)
-	} else {
+	switch deploytarget.CredentialSource(in.CredentialSource) {
+	case deploytarget.CredentialSourceDeployCredential:
+		if in.DeployCredentialID == nil || *in.DeployCredentialID == 0 {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
+		}
+		cred, err := s.db.DeployCredential.Get(ctx, *in.DeployCredentialID)
+		if err != nil {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
+		}
+		creds = credsFromConfig(in.ProviderType, parseConfig(cred.Config))
+	case deploytarget.CredentialSourceDNSProvider:
 		if in.DNSProviderID == nil || *in.DNSProviderID == 0 {
 			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
 		}
@@ -196,6 +215,8 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
 		}
 		creds = credsFromConfig(in.ProviderType, parseConfig(p.Config))
+	default:
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
 	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
@@ -223,6 +244,7 @@ func (s *DeployService) ListCDNDomains(ctx context.Context, targetID int) ([]str
 	target, err := s.db.DeployTarget.Query().
 		Where(deploytarget.ID(targetID)).
 		WithDNSProvider().
+		WithDeployCredential().
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
@@ -250,6 +272,7 @@ func (s *DeployService) ListByCert(ctx context.Context, certID int) ([]*ent.Depl
 	return s.db.DeployTarget.Query().
 		Where(deploytarget.HasCertificatesWith(certificate.ID(certID))).
 		WithDNSProvider().
+		WithDeployCredential().
 		All(ctx)
 }
 
@@ -262,8 +285,8 @@ func credsFromConfig(provider string, cfg map[string]string) Credentials {
 		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["secret_access_key"], Region: RegionFromConfig(cfg)}
 	case "tencentcloud":
 		return Credentials{AccessKeyID: cfg["secret_id"], AccessKeySecret: cfg["secret_key"], Region: RegionFromConfig(cfg)}
-	case "baidu":
-		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["secret_access_key"], Region: RegionFromConfig(cfg)}
+	case "baiducloud":
+		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["access_key_secret"], Region: RegionFromConfig(cfg)}
 	}
 	return Credentials{}
 }
@@ -273,7 +296,7 @@ var credKeys = map[string][]string{
 	"aliyun":       {"access_key_id", "access_key_secret", "region_id"},
 	"huawei":       {"access_key_id", "secret_access_key", "region"},
 	"tencentcloud": {"secret_id", "secret_key", "region"},
-	"baidu":        {"access_key_id", "secret_access_key", "region"},
+	"baiducloud":   {"access_key_id", "access_key_secret"},
 }
 
 // stripCreds 从 config 中剔除凭证字段，保留服务配置
@@ -294,26 +317,34 @@ func stripCreds(provider string, cfg map[string]string) map[string]string {
 // loadCredsAndConfig 解析部署目标对应的凭证与服务配置
 func (s *DeployService) loadCredsAndConfig(target *ent.DeployTarget) (Credentials, map[string]string, error) {
 	var creds Credentials
-	if target.CredentialSource == deploytarget.CredentialSourceSelf {
-		cfg := parseConfig(target.Config)
-		creds = credsFromConfig(target.ProviderType.String(), cfg)
-		svc := stripCreds(target.ProviderType.String(), cfg)
+	switch target.CredentialSource {
+	case deploytarget.CredentialSourceDeployCredential:
+		// 从部署凭证表读取
+		if target.Edges.DeployCredential == nil {
+			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
+		}
+		credCfg := parseConfig(target.Edges.DeployCredential.Config)
+		creds = credsFromConfig(target.ProviderType.String(), credCfg)
+		svc := parseConfig(target.Config)
 		if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
 			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 		}
 		return creds, svc, nil
-	}
-	// 复用 DNS 提供商凭证
-	if target.Edges.DNSProvider == nil {
-		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
-	}
-	dnsCfg := parseConfig(target.Edges.DNSProvider.Config)
-	creds = credsFromConfig(target.ProviderType.String(), dnsCfg)
-	svc := parseConfig(target.Config)
-	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+	case deploytarget.CredentialSourceDNSProvider:
+		// 复用 DNS 提供商凭证
+		if target.Edges.DNSProvider == nil {
+			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+		}
+		dnsCfg := parseConfig(target.Edges.DNSProvider.Config)
+		creds = credsFromConfig(target.ProviderType.String(), dnsCfg)
+		svc := parseConfig(target.Config)
+		if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+		}
+		return creds, svc, nil
+	default:
 		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
-	return creds, svc, nil
 }
 
 // DeployCertificate 将指定证书部署到指定目标（domain 非空时覆盖配置中的 CDN 域名）
@@ -321,6 +352,7 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	target, err := s.db.DeployTarget.Query().
 		Where(deploytarget.ID(targetID)).
 		WithDNSProvider().
+		WithDeployCredential().
 		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))

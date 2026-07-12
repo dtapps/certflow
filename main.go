@@ -18,6 +18,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/db"
 	"cnb.cool/dtapp/certflow/internal/deploy"
+	"cnb.cool/dtapp/certflow/internal/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
@@ -101,6 +102,7 @@ func main() {
 	certService.SetSettingsProvider(settingsService.Get)
 	deployService := deploy.NewDeployService(db.Client)
 	deployService.SetNotificationService(notifService)
+	deployCredentialService := deploycredential.NewService(db.Client)
 	schedulerService := scheduler.NewScheduler(db.Client, certService, notifService, settingsService, dataDir)
 	monitorService := monitor.NewMonitorService(db.Client)
 	monitorService.SetSettingsProvider(settingsService.Get)
@@ -137,6 +139,7 @@ func main() {
 			application.NewService(NewDNSProviderServiceWrapper(dnsService)),
 			application.NewService(NewCertificateServiceWrapper(certService)),
 			application.NewService(NewDeployServiceWrapper(deployService)),
+			application.NewService(NewDeployCredentialServiceWrapper(deployCredentialService)),
 			application.NewService(NewSchedulerServiceWrapper(schedulerService)),
 			application.NewService(NewNotificationServiceWrapper(notifService)),
 			application.NewService(NewSettingsServiceWrapper(settingsService)),

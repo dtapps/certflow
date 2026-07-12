@@ -70,20 +70,6 @@ func (_u *DNSProviderUpdate) ClearConfig() *DNSProviderUpdate {
 	return _u
 }
 
-// SetIsDefault sets the "is_default" field.
-func (_u *DNSProviderUpdate) SetIsDefault(v bool) *DNSProviderUpdate {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *DNSProviderUpdate) SetNillableIsDefault(v *bool) *DNSProviderUpdate {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
-	return _u
-}
-
 // SetIsActive sets the "is_active" field.
 func (_u *DNSProviderUpdate) SetIsActive(v bool) *DNSProviderUpdate {
 	_u.mutation.SetIsActive(v)
@@ -276,9 +262,6 @@ func (_u *DNSProviderUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if _u.mutation.ConfigCleared() {
 		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
 	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(dnsprovider.FieldIsDefault, field.TypeBool, value)
-	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dnsprovider.FieldIsActive, field.TypeBool, value)
 	}
@@ -438,20 +421,6 @@ func (_u *DNSProviderUpdateOne) SetConfig(v []byte) *DNSProviderUpdateOne {
 // ClearConfig clears the value of the "config" field.
 func (_u *DNSProviderUpdateOne) ClearConfig() *DNSProviderUpdateOne {
 	_u.mutation.ClearConfig()
-	return _u
-}
-
-// SetIsDefault sets the "is_default" field.
-func (_u *DNSProviderUpdateOne) SetIsDefault(v bool) *DNSProviderUpdateOne {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *DNSProviderUpdateOne) SetNillableIsDefault(v *bool) *DNSProviderUpdateOne {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
 	return _u
 }
 
@@ -676,9 +645,6 @@ func (_u *DNSProviderUpdateOne) sqlSave(ctx context.Context) (_node *DNSProvider
 	}
 	if _u.mutation.ConfigCleared() {
 		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
-	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(dnsprovider.FieldIsDefault, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dnsprovider.FieldIsActive, field.TypeBool, value)

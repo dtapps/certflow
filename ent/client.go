@@ -15,6 +15,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -45,6 +46,8 @@ type Client struct {
 	Certificate *CertificateClient
 	// DNSProvider is the client for interacting with the DNSProvider builders.
 	DNSProvider *DNSProviderClient
+	// DeployCredential is the client for interacting with the DeployCredential builders.
+	DeployCredential *DeployCredentialClient
 	// DeployLog is the client for interacting with the DeployLog builders.
 	DeployLog *DeployLogClient
 	// DeployTarget is the client for interacting with the DeployTarget builders.
@@ -77,6 +80,7 @@ func (c *Client) init() {
 	c.CertUpload = NewCertUploadClient(c.config)
 	c.Certificate = NewCertificateClient(c.config)
 	c.DNSProvider = NewDNSProviderClient(c.config)
+	c.DeployCredential = NewDeployCredentialClient(c.config)
 	c.DeployLog = NewDeployLogClient(c.config)
 	c.DeployTarget = NewDeployTargetClient(c.config)
 	c.MonitoredDomain = NewMonitoredDomainClient(c.config)
@@ -182,6 +186,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CertUpload:        NewCertUploadClient(cfg),
 		Certificate:       NewCertificateClient(cfg),
 		DNSProvider:       NewDNSProviderClient(cfg),
+		DeployCredential:  NewDeployCredentialClient(cfg),
 		DeployLog:         NewDeployLogClient(cfg),
 		DeployTarget:      NewDeployTargetClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
@@ -214,6 +219,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CertUpload:        NewCertUploadClient(cfg),
 		Certificate:       NewCertificateClient(cfg),
 		DNSProvider:       NewDNSProviderClient(cfg),
+		DeployCredential:  NewDeployCredentialClient(cfg),
 		DeployLog:         NewDeployLogClient(cfg),
 		DeployTarget:      NewDeployTargetClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
@@ -251,9 +257,10 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider, c.DeployLog,
-		c.DeployTarget, c.MonitoredDomain, c.Notification, c.PasskeyCredential,
-		c.RenewalLog, c.ScanResult, c.TOTPCredential,
+		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider,
+		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitoredDomain,
+		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
+		c.TOTPCredential,
 	} {
 		n.Use(hooks...)
 	}
@@ -263,9 +270,10 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider, c.DeployLog,
-		c.DeployTarget, c.MonitoredDomain, c.Notification, c.PasskeyCredential,
-		c.RenewalLog, c.ScanResult, c.TOTPCredential,
+		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider,
+		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitoredDomain,
+		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
+		c.TOTPCredential,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -284,6 +292,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Certificate.mutate(ctx, m)
 	case *DNSProviderMutation:
 		return c.DNSProvider.mutate(ctx, m)
+	case *DeployCredentialMutation:
+		return c.DeployCredential.mutate(ctx, m)
 	case *DeployLogMutation:
 		return c.DeployLog.mutate(ctx, m)
 	case *DeployTargetMutation:
@@ -1098,6 +1108,155 @@ func (c *DNSProviderClient) mutate(ctx context.Context, m *DNSProviderMutation) 
 	}
 }
 
+// DeployCredentialClient is a client for the DeployCredential schema.
+type DeployCredentialClient struct {
+	config
+}
+
+// NewDeployCredentialClient returns a client for the DeployCredential from the given config.
+func NewDeployCredentialClient(c config) *DeployCredentialClient {
+	return &DeployCredentialClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `deploycredential.Hooks(f(g(h())))`.
+func (c *DeployCredentialClient) Use(hooks ...Hook) {
+	c.hooks.DeployCredential = append(c.hooks.DeployCredential, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `deploycredential.Intercept(f(g(h())))`.
+func (c *DeployCredentialClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DeployCredential = append(c.inters.DeployCredential, interceptors...)
+}
+
+// Create returns a builder for creating a DeployCredential entity.
+func (c *DeployCredentialClient) Create() *DeployCredentialCreate {
+	mutation := newDeployCredentialMutation(c.config, OpCreate)
+	return &DeployCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DeployCredential entities.
+func (c *DeployCredentialClient) CreateBulk(builders ...*DeployCredentialCreate) *DeployCredentialCreateBulk {
+	return &DeployCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DeployCredentialClient) MapCreateBulk(slice any, setFunc func(*DeployCredentialCreate, int)) *DeployCredentialCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DeployCredentialCreateBulk{err: fmt.Errorf("calling to DeployCredentialClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DeployCredentialCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DeployCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DeployCredential.
+func (c *DeployCredentialClient) Update() *DeployCredentialUpdate {
+	mutation := newDeployCredentialMutation(c.config, OpUpdate)
+	return &DeployCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DeployCredentialClient) UpdateOne(_m *DeployCredential) *DeployCredentialUpdateOne {
+	mutation := newDeployCredentialMutation(c.config, OpUpdateOne, withDeployCredential(_m))
+	return &DeployCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DeployCredentialClient) UpdateOneID(id int) *DeployCredentialUpdateOne {
+	mutation := newDeployCredentialMutation(c.config, OpUpdateOne, withDeployCredentialID(id))
+	return &DeployCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DeployCredential.
+func (c *DeployCredentialClient) Delete() *DeployCredentialDelete {
+	mutation := newDeployCredentialMutation(c.config, OpDelete)
+	return &DeployCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DeployCredentialClient) DeleteOne(_m *DeployCredential) *DeployCredentialDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DeployCredentialClient) DeleteOneID(id int) *DeployCredentialDeleteOne {
+	builder := c.Delete().Where(deploycredential.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DeployCredentialDeleteOne{builder}
+}
+
+// Query returns a query builder for DeployCredential.
+func (c *DeployCredentialClient) Query() *DeployCredentialQuery {
+	return &DeployCredentialQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDeployCredential},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DeployCredential entity by its id.
+func (c *DeployCredentialClient) Get(ctx context.Context, id int) (*DeployCredential, error) {
+	return c.Query().Where(deploycredential.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DeployCredentialClient) GetX(ctx context.Context, id int) *DeployCredential {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDeployTargets queries the deploy_targets edge of a DeployCredential.
+func (c *DeployCredentialClient) QueryDeployTargets(_m *DeployCredential) *DeployTargetQuery {
+	query := (&DeployTargetClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploycredential.Table, deploycredential.FieldID, id),
+			sqlgraph.To(deploytarget.Table, deploytarget.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, deploycredential.DeployTargetsTable, deploycredential.DeployTargetsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DeployCredentialClient) Hooks() []Hook {
+	return c.hooks.DeployCredential
+}
+
+// Interceptors returns the client interceptors.
+func (c *DeployCredentialClient) Interceptors() []Interceptor {
+	return c.inters.DeployCredential
+}
+
+func (c *DeployCredentialClient) mutate(ctx context.Context, m *DeployCredentialMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DeployCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DeployCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DeployCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DeployCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DeployCredential mutation op: %q", m.Op())
+	}
+}
+
 // DeployLogClient is a client for the DeployLog schema.
 type DeployLogClient struct {
 	config
@@ -1364,6 +1523,22 @@ func (c *DeployTargetClient) QueryDNSProvider(_m *DeployTarget) *DNSProviderQuer
 			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, id),
 			sqlgraph.To(dnsprovider.Table, dnsprovider.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, deploytarget.DNSProviderTable, deploytarget.DNSProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDeployCredential queries the deploy_credential edge of a DeployTarget.
+func (c *DeployTargetClient) QueryDeployCredential(_m *DeployTarget) *DeployCredentialQuery {
+	query := (&DeployCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deploytarget.Table, deploytarget.FieldID, id),
+			sqlgraph.To(deploycredential.Table, deploycredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, deploytarget.DeployCredentialTable, deploytarget.DeployCredentialColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2277,13 +2452,13 @@ func (c *TOTPCredentialClient) mutate(ctx context.Context, m *TOTPCredentialMuta
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployLog, DeployTarget,
-		MonitoredDomain, Notification, PasskeyCredential, RenewalLog, ScanResult,
-		TOTPCredential []ent.Hook
+		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployCredential,
+		DeployLog, DeployTarget, MonitoredDomain, Notification, PasskeyCredential,
+		RenewalLog, ScanResult, TOTPCredential []ent.Hook
 	}
 	inters struct {
-		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployLog, DeployTarget,
-		MonitoredDomain, Notification, PasskeyCredential, RenewalLog, ScanResult,
-		TOTPCredential []ent.Interceptor
+		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployCredential,
+		DeployLog, DeployTarget, MonitoredDomain, Notification, PasskeyCredential,
+		RenewalLog, ScanResult, TOTPCredential []ent.Interceptor
 	}
 )

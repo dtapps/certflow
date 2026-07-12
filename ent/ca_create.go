@@ -49,20 +49,6 @@ func (_c *CACreate) SetNillableAccountEmail(v *string) *CACreate {
 	return _c
 }
 
-// SetIsDefault sets the "is_default" field.
-func (_c *CACreate) SetIsDefault(v bool) *CACreate {
-	_c.mutation.SetIsDefault(v)
-	return _c
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_c *CACreate) SetNillableIsDefault(v *bool) *CACreate {
-	if v != nil {
-		_c.SetIsDefault(*v)
-	}
-	return _c
-}
-
 // SetIsActive sets the "is_active" field.
 func (_c *CACreate) SetIsActive(v bool) *CACreate {
 	_c.mutation.SetIsActive(v)
@@ -155,10 +141,6 @@ func (_c *CACreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *CACreate) defaults() {
-	if _, ok := _c.mutation.IsDefault(); !ok {
-		v := ca.DefaultIsDefault
-		_c.mutation.SetIsDefault(v)
-	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		v := ca.DefaultIsActive
 		_c.mutation.SetIsActive(v)
@@ -190,9 +172,6 @@ func (_c *CACreate) check() error {
 		if err := ca.DirectoryURLValidator(v); err != nil {
 			return &ValidationError{Name: "directory_url", err: fmt.Errorf(`ent: validator failed for field "CA.directory_url": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.IsDefault(); !ok {
-		return &ValidationError{Name: "is_default", err: errors.New(`ent: missing required field "CA.is_default"`)}
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "CA.is_active"`)}
@@ -241,10 +220,6 @@ func (_c *CACreate) createSpec() (*CA, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AccountEmail(); ok {
 		_spec.SetField(ca.FieldAccountEmail, field.TypeString, value)
 		_node.AccountEmail = value
-	}
-	if value, ok := _c.mutation.IsDefault(); ok {
-		_spec.SetField(ca.FieldIsDefault, field.TypeBool, value)
-		_node.IsDefault = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)
@@ -368,18 +343,6 @@ func (u *CAUpsert) ClearAccountEmail() *CAUpsert {
 	return u
 }
 
-// SetIsDefault sets the "is_default" field.
-func (u *CAUpsert) SetIsDefault(v bool) *CAUpsert {
-	u.Set(ca.FieldIsDefault, v)
-	return u
-}
-
-// UpdateIsDefault sets the "is_default" field to the value that was provided on create.
-func (u *CAUpsert) UpdateIsDefault() *CAUpsert {
-	u.SetExcluded(ca.FieldIsDefault)
-	return u
-}
-
 // SetIsActive sets the "is_active" field.
 func (u *CAUpsert) SetIsActive(v bool) *CAUpsert {
 	u.Set(ca.FieldIsActive, v)
@@ -495,20 +458,6 @@ func (u *CAUpsertOne) UpdateAccountEmail() *CAUpsertOne {
 func (u *CAUpsertOne) ClearAccountEmail() *CAUpsertOne {
 	return u.Update(func(s *CAUpsert) {
 		s.ClearAccountEmail()
-	})
-}
-
-// SetIsDefault sets the "is_default" field.
-func (u *CAUpsertOne) SetIsDefault(v bool) *CAUpsertOne {
-	return u.Update(func(s *CAUpsert) {
-		s.SetIsDefault(v)
-	})
-}
-
-// UpdateIsDefault sets the "is_default" field to the value that was provided on create.
-func (u *CAUpsertOne) UpdateIsDefault() *CAUpsertOne {
-	return u.Update(func(s *CAUpsert) {
-		s.UpdateIsDefault()
 	})
 }
 
@@ -797,20 +746,6 @@ func (u *CAUpsertBulk) UpdateAccountEmail() *CAUpsertBulk {
 func (u *CAUpsertBulk) ClearAccountEmail() *CAUpsertBulk {
 	return u.Update(func(s *CAUpsert) {
 		s.ClearAccountEmail()
-	})
-}
-
-// SetIsDefault sets the "is_default" field.
-func (u *CAUpsertBulk) SetIsDefault(v bool) *CAUpsertBulk {
-	return u.Update(func(s *CAUpsert) {
-		s.SetIsDefault(v)
-	})
-}
-
-// UpdateIsDefault sets the "is_default" field to the value that was provided on create.
-func (u *CAUpsertBulk) UpdateIsDefault() *CAUpsertBulk {
-	return u.Update(func(s *CAUpsert) {
-		s.UpdateIsDefault()
 	})
 }
 

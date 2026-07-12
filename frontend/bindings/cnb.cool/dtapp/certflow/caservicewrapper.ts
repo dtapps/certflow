@@ -36,13 +36,6 @@ export function ListCA(): $CancellablePromise<$models.CAListItem[] | null> {
 }
 
 /**
- * SetDefaultCA 设置默认 CA
- */
-export function SetDefaultCA(id: number): $CancellablePromise<$models.CAListItem | null> {
-    return $Call.ByID(692054675, id);
-}
-
-/**
  * TestCAConnection 测试 CA 连接
  */
 export function TestCAConnection(id: number): $CancellablePromise<string> {

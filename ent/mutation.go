@@ -13,6 +13,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/ent/certificate"
 	"cnb.cool/dtapp/certflow/ent/certupload"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -42,6 +43,7 @@ const (
 	TypeCertUpload        = "CertUpload"
 	TypeCertificate       = "Certificate"
 	TypeDNSProvider       = "DNSProvider"
+	TypeDeployCredential  = "DeployCredential"
 	TypeDeployLog         = "DeployLog"
 	TypeDeployTarget      = "DeployTarget"
 	TypeMonitoredDomain   = "MonitoredDomain"
@@ -801,7 +803,6 @@ type CAMutation struct {
 	name                *string
 	directory_url       *string
 	account_email       *string
-	is_default          *bool
 	is_active           *bool
 	created_at          *time.Time
 	updated_at          *time.Time
@@ -1033,42 +1034,6 @@ func (m *CAMutation) ResetAccountEmail() {
 	delete(m.clearedFields, ca.FieldAccountEmail)
 }
 
-// SetIsDefault sets the "is_default" field.
-func (m *CAMutation) SetIsDefault(b bool) {
-	m.is_default = &b
-}
-
-// IsDefault returns the value of the "is_default" field in the mutation.
-func (m *CAMutation) IsDefault() (r bool, exists bool) {
-	v := m.is_default
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsDefault returns the old "is_default" field's value of the CA entity.
-// If the CA object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CAMutation) OldIsDefault(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsDefault is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsDefault requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsDefault: %w", err)
-	}
-	return oldValue.IsDefault, nil
-}
-
-// ResetIsDefault resets all changes to the "is_default" field.
-func (m *CAMutation) ResetIsDefault() {
-	m.is_default = nil
-}
-
 // SetIsActive sets the "is_active" field.
 func (m *CAMutation) SetIsActive(b bool) {
 	m.is_active = &b
@@ -1265,7 +1230,7 @@ func (m *CAMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CAMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 6)
 	if m.name != nil {
 		fields = append(fields, ca.FieldName)
 	}
@@ -1274,9 +1239,6 @@ func (m *CAMutation) Fields() []string {
 	}
 	if m.account_email != nil {
 		fields = append(fields, ca.FieldAccountEmail)
-	}
-	if m.is_default != nil {
-		fields = append(fields, ca.FieldIsDefault)
 	}
 	if m.is_active != nil {
 		fields = append(fields, ca.FieldIsActive)
@@ -1301,8 +1263,6 @@ func (m *CAMutation) Field(name string) (ent.Value, bool) {
 		return m.DirectoryURL()
 	case ca.FieldAccountEmail:
 		return m.AccountEmail()
-	case ca.FieldIsDefault:
-		return m.IsDefault()
 	case ca.FieldIsActive:
 		return m.IsActive()
 	case ca.FieldCreatedAt:
@@ -1324,8 +1284,6 @@ func (m *CAMutation) OldField(ctx context.Context, name string) (ent.Value, erro
 		return m.OldDirectoryURL(ctx)
 	case ca.FieldAccountEmail:
 		return m.OldAccountEmail(ctx)
-	case ca.FieldIsDefault:
-		return m.OldIsDefault(ctx)
 	case ca.FieldIsActive:
 		return m.OldIsActive(ctx)
 	case ca.FieldCreatedAt:
@@ -1361,13 +1319,6 @@ func (m *CAMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAccountEmail(v)
-		return nil
-	case ca.FieldIsDefault:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsDefault(v)
 		return nil
 	case ca.FieldIsActive:
 		v, ok := value.(bool)
@@ -1456,9 +1407,6 @@ func (m *CAMutation) ResetField(name string) error {
 		return nil
 	case ca.FieldAccountEmail:
 		m.ResetAccountEmail()
-		return nil
-	case ca.FieldIsDefault:
-		m.ResetIsDefault()
 		return nil
 	case ca.FieldIsActive:
 		m.ResetIsActive()
@@ -3807,7 +3755,6 @@ type DNSProviderMutation struct {
 	name                  *string
 	provider_type         *dnsprovider.ProviderType
 	_config               *[]byte
-	is_default            *bool
 	is_active             *bool
 	comment               *string
 	created_at            *time.Time
@@ -4041,42 +3988,6 @@ func (m *DNSProviderMutation) ConfigCleared() bool {
 func (m *DNSProviderMutation) ResetConfig() {
 	m._config = nil
 	delete(m.clearedFields, dnsprovider.FieldConfig)
-}
-
-// SetIsDefault sets the "is_default" field.
-func (m *DNSProviderMutation) SetIsDefault(b bool) {
-	m.is_default = &b
-}
-
-// IsDefault returns the value of the "is_default" field in the mutation.
-func (m *DNSProviderMutation) IsDefault() (r bool, exists bool) {
-	v := m.is_default
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsDefault returns the old "is_default" field's value of the DNSProvider entity.
-// If the DNSProvider object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DNSProviderMutation) OldIsDefault(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsDefault is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsDefault requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsDefault: %w", err)
-	}
-	return oldValue.IsDefault, nil
-}
-
-// ResetIsDefault resets all changes to the "is_default" field.
-func (m *DNSProviderMutation) ResetIsDefault() {
-	m.is_default = nil
 }
 
 // SetIsActive sets the "is_active" field.
@@ -4378,7 +4289,7 @@ func (m *DNSProviderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DNSProviderMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 7)
 	if m.name != nil {
 		fields = append(fields, dnsprovider.FieldName)
 	}
@@ -4387,9 +4298,6 @@ func (m *DNSProviderMutation) Fields() []string {
 	}
 	if m._config != nil {
 		fields = append(fields, dnsprovider.FieldConfig)
-	}
-	if m.is_default != nil {
-		fields = append(fields, dnsprovider.FieldIsDefault)
 	}
 	if m.is_active != nil {
 		fields = append(fields, dnsprovider.FieldIsActive)
@@ -4417,8 +4325,6 @@ func (m *DNSProviderMutation) Field(name string) (ent.Value, bool) {
 		return m.ProviderType()
 	case dnsprovider.FieldConfig:
 		return m.Config()
-	case dnsprovider.FieldIsDefault:
-		return m.IsDefault()
 	case dnsprovider.FieldIsActive:
 		return m.IsActive()
 	case dnsprovider.FieldComment:
@@ -4442,8 +4348,6 @@ func (m *DNSProviderMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldProviderType(ctx)
 	case dnsprovider.FieldConfig:
 		return m.OldConfig(ctx)
-	case dnsprovider.FieldIsDefault:
-		return m.OldIsDefault(ctx)
 	case dnsprovider.FieldIsActive:
 		return m.OldIsActive(ctx)
 	case dnsprovider.FieldComment:
@@ -4481,13 +4385,6 @@ func (m *DNSProviderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetConfig(v)
-		return nil
-	case dnsprovider.FieldIsDefault:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsDefault(v)
 		return nil
 	case dnsprovider.FieldIsActive:
 		v, ok := value.(bool)
@@ -4589,9 +4486,6 @@ func (m *DNSProviderMutation) ResetField(name string) error {
 		return nil
 	case dnsprovider.FieldConfig:
 		m.ResetConfig()
-		return nil
-	case dnsprovider.FieldIsDefault:
-		m.ResetIsDefault()
 		return nil
 	case dnsprovider.FieldIsActive:
 		m.ResetIsActive()
@@ -4717,6 +4611,790 @@ func (m *DNSProviderMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown DNSProvider edge %s", name)
+}
+
+// DeployCredentialMutation represents an operation that mutates the DeployCredential nodes in the graph.
+type DeployCredentialMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *int
+	name                  *string
+	provider_type         *deploycredential.ProviderType
+	_config               *[]byte
+	is_active             *bool
+	comment               *string
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	deploy_targets        map[int]struct{}
+	removeddeploy_targets map[int]struct{}
+	cleareddeploy_targets bool
+	done                  bool
+	oldValue              func(context.Context) (*DeployCredential, error)
+	predicates            []predicate.DeployCredential
+}
+
+var _ ent.Mutation = (*DeployCredentialMutation)(nil)
+
+// deploycredentialOption allows management of the mutation configuration using functional options.
+type deploycredentialOption func(*DeployCredentialMutation)
+
+// newDeployCredentialMutation creates new mutation for the DeployCredential entity.
+func newDeployCredentialMutation(c config, op Op, opts ...deploycredentialOption) *DeployCredentialMutation {
+	m := &DeployCredentialMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeDeployCredential,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withDeployCredentialID sets the ID field of the mutation.
+func withDeployCredentialID(id int) deploycredentialOption {
+	return func(m *DeployCredentialMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *DeployCredential
+		)
+		m.oldValue = func(ctx context.Context) (*DeployCredential, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().DeployCredential.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withDeployCredential sets the old DeployCredential of the mutation.
+func withDeployCredential(node *DeployCredential) deploycredentialOption {
+	return func(m *DeployCredentialMutation) {
+		m.oldValue = func(context.Context) (*DeployCredential, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m DeployCredentialMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m DeployCredentialMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *DeployCredentialMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DeployCredentialMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().DeployCredential.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetName sets the "name" field.
+func (m *DeployCredentialMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *DeployCredentialMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *DeployCredentialMutation) ResetName() {
+	m.name = nil
+}
+
+// SetProviderType sets the "provider_type" field.
+func (m *DeployCredentialMutation) SetProviderType(dt deploycredential.ProviderType) {
+	m.provider_type = &dt
+}
+
+// ProviderType returns the value of the "provider_type" field in the mutation.
+func (m *DeployCredentialMutation) ProviderType() (r deploycredential.ProviderType, exists bool) {
+	v := m.provider_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderType returns the old "provider_type" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldProviderType(ctx context.Context) (v deploycredential.ProviderType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderType: %w", err)
+	}
+	return oldValue.ProviderType, nil
+}
+
+// ResetProviderType resets all changes to the "provider_type" field.
+func (m *DeployCredentialMutation) ResetProviderType() {
+	m.provider_type = nil
+}
+
+// SetConfig sets the "config" field.
+func (m *DeployCredentialMutation) SetConfig(b []byte) {
+	m._config = &b
+}
+
+// Config returns the value of the "config" field in the mutation.
+func (m *DeployCredentialMutation) Config() (r []byte, exists bool) {
+	v := m._config
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConfig returns the old "config" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldConfig(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConfig requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConfig: %w", err)
+	}
+	return oldValue.Config, nil
+}
+
+// ClearConfig clears the value of the "config" field.
+func (m *DeployCredentialMutation) ClearConfig() {
+	m._config = nil
+	m.clearedFields[deploycredential.FieldConfig] = struct{}{}
+}
+
+// ConfigCleared returns if the "config" field was cleared in this mutation.
+func (m *DeployCredentialMutation) ConfigCleared() bool {
+	_, ok := m.clearedFields[deploycredential.FieldConfig]
+	return ok
+}
+
+// ResetConfig resets all changes to the "config" field.
+func (m *DeployCredentialMutation) ResetConfig() {
+	m._config = nil
+	delete(m.clearedFields, deploycredential.FieldConfig)
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *DeployCredentialMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *DeployCredentialMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *DeployCredentialMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetComment sets the "comment" field.
+func (m *DeployCredentialMutation) SetComment(s string) {
+	m.comment = &s
+}
+
+// Comment returns the value of the "comment" field in the mutation.
+func (m *DeployCredentialMutation) Comment() (r string, exists bool) {
+	v := m.comment
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldComment returns the old "comment" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldComment(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldComment is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldComment requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldComment: %w", err)
+	}
+	return oldValue.Comment, nil
+}
+
+// ClearComment clears the value of the "comment" field.
+func (m *DeployCredentialMutation) ClearComment() {
+	m.comment = nil
+	m.clearedFields[deploycredential.FieldComment] = struct{}{}
+}
+
+// CommentCleared returns if the "comment" field was cleared in this mutation.
+func (m *DeployCredentialMutation) CommentCleared() bool {
+	_, ok := m.clearedFields[deploycredential.FieldComment]
+	return ok
+}
+
+// ResetComment resets all changes to the "comment" field.
+func (m *DeployCredentialMutation) ResetComment() {
+	m.comment = nil
+	delete(m.clearedFields, deploycredential.FieldComment)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *DeployCredentialMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *DeployCredentialMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *DeployCredentialMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *DeployCredentialMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *DeployCredentialMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the DeployCredential entity.
+// If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DeployCredentialMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *DeployCredentialMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// AddDeployTargetIDs adds the "deploy_targets" edge to the DeployTarget entity by ids.
+func (m *DeployCredentialMutation) AddDeployTargetIDs(ids ...int) {
+	if m.deploy_targets == nil {
+		m.deploy_targets = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.deploy_targets[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDeployTargets clears the "deploy_targets" edge to the DeployTarget entity.
+func (m *DeployCredentialMutation) ClearDeployTargets() {
+	m.cleareddeploy_targets = true
+}
+
+// DeployTargetsCleared reports if the "deploy_targets" edge to the DeployTarget entity was cleared.
+func (m *DeployCredentialMutation) DeployTargetsCleared() bool {
+	return m.cleareddeploy_targets
+}
+
+// RemoveDeployTargetIDs removes the "deploy_targets" edge to the DeployTarget entity by IDs.
+func (m *DeployCredentialMutation) RemoveDeployTargetIDs(ids ...int) {
+	if m.removeddeploy_targets == nil {
+		m.removeddeploy_targets = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.deploy_targets, ids[i])
+		m.removeddeploy_targets[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDeployTargets returns the removed IDs of the "deploy_targets" edge to the DeployTarget entity.
+func (m *DeployCredentialMutation) RemovedDeployTargetsIDs() (ids []int) {
+	for id := range m.removeddeploy_targets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DeployTargetsIDs returns the "deploy_targets" edge IDs in the mutation.
+func (m *DeployCredentialMutation) DeployTargetsIDs() (ids []int) {
+	for id := range m.deploy_targets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDeployTargets resets all changes to the "deploy_targets" edge.
+func (m *DeployCredentialMutation) ResetDeployTargets() {
+	m.deploy_targets = nil
+	m.cleareddeploy_targets = false
+	m.removeddeploy_targets = nil
+}
+
+// Where appends a list predicates to the DeployCredentialMutation builder.
+func (m *DeployCredentialMutation) Where(ps ...predicate.DeployCredential) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the DeployCredentialMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DeployCredentialMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.DeployCredential, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *DeployCredentialMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DeployCredentialMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (DeployCredential).
+func (m *DeployCredentialMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *DeployCredentialMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.name != nil {
+		fields = append(fields, deploycredential.FieldName)
+	}
+	if m.provider_type != nil {
+		fields = append(fields, deploycredential.FieldProviderType)
+	}
+	if m._config != nil {
+		fields = append(fields, deploycredential.FieldConfig)
+	}
+	if m.is_active != nil {
+		fields = append(fields, deploycredential.FieldIsActive)
+	}
+	if m.comment != nil {
+		fields = append(fields, deploycredential.FieldComment)
+	}
+	if m.created_at != nil {
+		fields = append(fields, deploycredential.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, deploycredential.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *DeployCredentialMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case deploycredential.FieldName:
+		return m.Name()
+	case deploycredential.FieldProviderType:
+		return m.ProviderType()
+	case deploycredential.FieldConfig:
+		return m.Config()
+	case deploycredential.FieldIsActive:
+		return m.IsActive()
+	case deploycredential.FieldComment:
+		return m.Comment()
+	case deploycredential.FieldCreatedAt:
+		return m.CreatedAt()
+	case deploycredential.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *DeployCredentialMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case deploycredential.FieldName:
+		return m.OldName(ctx)
+	case deploycredential.FieldProviderType:
+		return m.OldProviderType(ctx)
+	case deploycredential.FieldConfig:
+		return m.OldConfig(ctx)
+	case deploycredential.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case deploycredential.FieldComment:
+		return m.OldComment(ctx)
+	case deploycredential.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case deploycredential.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown DeployCredential field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DeployCredentialMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case deploycredential.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case deploycredential.FieldProviderType:
+		v, ok := value.(deploycredential.ProviderType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderType(v)
+		return nil
+	case deploycredential.FieldConfig:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConfig(v)
+		return nil
+	case deploycredential.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case deploycredential.FieldComment:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetComment(v)
+		return nil
+	case deploycredential.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case deploycredential.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown DeployCredential field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *DeployCredentialMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *DeployCredentialMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DeployCredentialMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown DeployCredential numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *DeployCredentialMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(deploycredential.FieldConfig) {
+		fields = append(fields, deploycredential.FieldConfig)
+	}
+	if m.FieldCleared(deploycredential.FieldComment) {
+		fields = append(fields, deploycredential.FieldComment)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *DeployCredentialMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *DeployCredentialMutation) ClearField(name string) error {
+	switch name {
+	case deploycredential.FieldConfig:
+		m.ClearConfig()
+		return nil
+	case deploycredential.FieldComment:
+		m.ClearComment()
+		return nil
+	}
+	return fmt.Errorf("unknown DeployCredential nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *DeployCredentialMutation) ResetField(name string) error {
+	switch name {
+	case deploycredential.FieldName:
+		m.ResetName()
+		return nil
+	case deploycredential.FieldProviderType:
+		m.ResetProviderType()
+		return nil
+	case deploycredential.FieldConfig:
+		m.ResetConfig()
+		return nil
+	case deploycredential.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case deploycredential.FieldComment:
+		m.ResetComment()
+		return nil
+	case deploycredential.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case deploycredential.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown DeployCredential field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *DeployCredentialMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.deploy_targets != nil {
+		edges = append(edges, deploycredential.EdgeDeployTargets)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *DeployCredentialMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case deploycredential.EdgeDeployTargets:
+		ids := make([]ent.Value, 0, len(m.deploy_targets))
+		for id := range m.deploy_targets {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *DeployCredentialMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removeddeploy_targets != nil {
+		edges = append(edges, deploycredential.EdgeDeployTargets)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *DeployCredentialMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case deploycredential.EdgeDeployTargets:
+		ids := make([]ent.Value, 0, len(m.removeddeploy_targets))
+		for id := range m.removeddeploy_targets {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *DeployCredentialMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareddeploy_targets {
+		edges = append(edges, deploycredential.EdgeDeployTargets)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *DeployCredentialMutation) EdgeCleared(name string) bool {
+	switch name {
+	case deploycredential.EdgeDeployTargets:
+		return m.cleareddeploy_targets
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *DeployCredentialMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown DeployCredential unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *DeployCredentialMutation) ResetEdge(name string) error {
+	switch name {
+	case deploycredential.EdgeDeployTargets:
+		m.ResetDeployTargets()
+		return nil
+	}
+	return fmt.Errorf("unknown DeployCredential edge %s", name)
 }
 
 // DeployLogMutation represents an operation that mutates the DeployLog nodes in the graph.
@@ -5808,33 +6486,35 @@ func (m *DeployLogMutation) ResetEdge(name string) error {
 // DeployTargetMutation represents an operation that mutates the DeployTarget nodes in the graph.
 type DeployTargetMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *int
-	name                *string
-	provider_type       *deploytarget.ProviderType
-	deploy_service      *string
-	_config             *[]byte
-	credential_source   *deploytarget.CredentialSource
-	is_active           *bool
-	comment             *string
-	last_deployed_at    *time.Time
-	last_status         *string
-	last_error          *string
-	created_at          *time.Time
-	updated_at          *time.Time
-	clearedFields       map[string]struct{}
-	dns_provider        *int
-	cleareddns_provider bool
-	certificates        map[int]struct{}
-	removedcertificates map[int]struct{}
-	clearedcertificates bool
-	deploy_logs         map[int]struct{}
-	removeddeploy_logs  map[int]struct{}
-	cleareddeploy_logs  bool
-	done                bool
-	oldValue            func(context.Context) (*DeployTarget, error)
-	predicates          []predicate.DeployTarget
+	op                       Op
+	typ                      string
+	id                       *int
+	name                     *string
+	provider_type            *deploytarget.ProviderType
+	deploy_service           *string
+	_config                  *[]byte
+	credential_source        *deploytarget.CredentialSource
+	is_active                *bool
+	comment                  *string
+	last_deployed_at         *time.Time
+	last_status              *string
+	last_error               *string
+	created_at               *time.Time
+	updated_at               *time.Time
+	clearedFields            map[string]struct{}
+	dns_provider             *int
+	cleareddns_provider      bool
+	deploy_credential        *int
+	cleareddeploy_credential bool
+	certificates             map[int]struct{}
+	removedcertificates      map[int]struct{}
+	clearedcertificates      bool
+	deploy_logs              map[int]struct{}
+	removeddeploy_logs       map[int]struct{}
+	cleareddeploy_logs       bool
+	done                     bool
+	oldValue                 func(context.Context) (*DeployTarget, error)
+	predicates               []predicate.DeployTarget
 }
 
 var _ ent.Mutation = (*DeployTargetMutation)(nil)
@@ -6471,6 +7151,45 @@ func (m *DeployTargetMutation) ResetDNSProvider() {
 	m.cleareddns_provider = false
 }
 
+// SetDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by id.
+func (m *DeployTargetMutation) SetDeployCredentialID(id int) {
+	m.deploy_credential = &id
+}
+
+// ClearDeployCredential clears the "deploy_credential" edge to the DeployCredential entity.
+func (m *DeployTargetMutation) ClearDeployCredential() {
+	m.cleareddeploy_credential = true
+}
+
+// DeployCredentialCleared reports if the "deploy_credential" edge to the DeployCredential entity was cleared.
+func (m *DeployTargetMutation) DeployCredentialCleared() bool {
+	return m.cleareddeploy_credential
+}
+
+// DeployCredentialID returns the "deploy_credential" edge ID in the mutation.
+func (m *DeployTargetMutation) DeployCredentialID() (id int, exists bool) {
+	if m.deploy_credential != nil {
+		return *m.deploy_credential, true
+	}
+	return
+}
+
+// DeployCredentialIDs returns the "deploy_credential" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DeployCredentialID instead. It exists only for internal usage by the builders.
+func (m *DeployTargetMutation) DeployCredentialIDs() (ids []int) {
+	if id := m.deploy_credential; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDeployCredential resets all changes to the "deploy_credential" edge.
+func (m *DeployTargetMutation) ResetDeployCredential() {
+	m.deploy_credential = nil
+	m.cleareddeploy_credential = false
+}
+
 // AddCertificateIDs adds the "certificates" edge to the Certificate entity by ids.
 func (m *DeployTargetMutation) AddCertificateIDs(ids ...int) {
 	if m.certificates == nil {
@@ -6932,9 +7651,12 @@ func (m *DeployTargetMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DeployTargetMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.dns_provider != nil {
 		edges = append(edges, deploytarget.EdgeDNSProvider)
+	}
+	if m.deploy_credential != nil {
+		edges = append(edges, deploytarget.EdgeDeployCredential)
 	}
 	if m.certificates != nil {
 		edges = append(edges, deploytarget.EdgeCertificates)
@@ -6951,6 +7673,10 @@ func (m *DeployTargetMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case deploytarget.EdgeDNSProvider:
 		if id := m.dns_provider; id != nil {
+			return []ent.Value{*id}
+		}
+	case deploytarget.EdgeDeployCredential:
+		if id := m.deploy_credential; id != nil {
 			return []ent.Value{*id}
 		}
 	case deploytarget.EdgeCertificates:
@@ -6971,7 +7697,7 @@ func (m *DeployTargetMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DeployTargetMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedcertificates != nil {
 		edges = append(edges, deploytarget.EdgeCertificates)
 	}
@@ -7003,9 +7729,12 @@ func (m *DeployTargetMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DeployTargetMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleareddns_provider {
 		edges = append(edges, deploytarget.EdgeDNSProvider)
+	}
+	if m.cleareddeploy_credential {
+		edges = append(edges, deploytarget.EdgeDeployCredential)
 	}
 	if m.clearedcertificates {
 		edges = append(edges, deploytarget.EdgeCertificates)
@@ -7022,6 +7751,8 @@ func (m *DeployTargetMutation) EdgeCleared(name string) bool {
 	switch name {
 	case deploytarget.EdgeDNSProvider:
 		return m.cleareddns_provider
+	case deploytarget.EdgeDeployCredential:
+		return m.cleareddeploy_credential
 	case deploytarget.EdgeCertificates:
 		return m.clearedcertificates
 	case deploytarget.EdgeDeployLogs:
@@ -7037,6 +7768,9 @@ func (m *DeployTargetMutation) ClearEdge(name string) error {
 	case deploytarget.EdgeDNSProvider:
 		m.ClearDNSProvider()
 		return nil
+	case deploytarget.EdgeDeployCredential:
+		m.ClearDeployCredential()
+		return nil
 	}
 	return fmt.Errorf("unknown DeployTarget unique edge %s", name)
 }
@@ -7047,6 +7781,9 @@ func (m *DeployTargetMutation) ResetEdge(name string) error {
 	switch name {
 	case deploytarget.EdgeDNSProvider:
 		m.ResetDNSProvider()
+		return nil
+	case deploytarget.EdgeDeployCredential:
+		m.ResetDeployCredential()
 		return nil
 	case deploytarget.EdgeCertificates:
 		m.ResetCertificates()

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
@@ -178,6 +179,25 @@ func (_c *DeployTargetCreate) SetNillableDNSProviderID(id *int) *DeployTargetCre
 // SetDNSProvider sets the "dns_provider" edge to the DNSProvider entity.
 func (_c *DeployTargetCreate) SetDNSProvider(v *DNSProvider) *DeployTargetCreate {
 	return _c.SetDNSProviderID(v.ID)
+}
+
+// SetDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID.
+func (_c *DeployTargetCreate) SetDeployCredentialID(id int) *DeployTargetCreate {
+	_c.mutation.SetDeployCredentialID(id)
+	return _c
+}
+
+// SetNillableDeployCredentialID sets the "deploy_credential" edge to the DeployCredential entity by ID if the given value is not nil.
+func (_c *DeployTargetCreate) SetNillableDeployCredentialID(id *int) *DeployTargetCreate {
+	if id != nil {
+		_c = _c.SetDeployCredentialID(*id)
+	}
+	return _c
+}
+
+// SetDeployCredential sets the "deploy_credential" edge to the DeployCredential entity.
+func (_c *DeployTargetCreate) SetDeployCredential(v *DeployCredential) *DeployTargetCreate {
+	return _c.SetDeployCredentialID(v.ID)
 }
 
 // AddCertificateIDs adds the "certificates" edge to the Certificate entity by IDs.
@@ -396,6 +416,23 @@ func (_c *DeployTargetCreate) createSpec() (*DeployTarget, *sqlgraph.CreateSpec)
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.dns_provider_deploy_targets = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DeployCredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deploytarget.DeployCredentialTable,
+			Columns: []string{deploytarget.DeployCredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(deploycredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.deploy_credential_deploy_targets = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.CertificatesIDs(); len(nodes) > 0 {

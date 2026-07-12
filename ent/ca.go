@@ -23,8 +23,6 @@ type CA struct {
 	DirectoryURL string `json:"directory_url,omitempty"`
 	// 注册邮箱
 	AccountEmail string `json:"account_email,omitempty"`
-	// 是否为默认 CA
-	IsDefault bool `json:"is_default,omitempty"`
 	// 是否启用
 	IsActive bool `json:"is_active,omitempty"`
 	// 创建时间
@@ -60,7 +58,7 @@ func (*CA) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ca.FieldIsDefault, ca.FieldIsActive:
+		case ca.FieldIsActive:
 			values[i] = new(sql.NullBool)
 		case ca.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -106,12 +104,6 @@ func (_m *CA) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field account_email", values[i])
 			} else if value.Valid {
 				_m.AccountEmail = value.String
-			}
-		case ca.FieldIsDefault:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_default", values[i])
-			} else if value.Valid {
-				_m.IsDefault = value.Bool
 			}
 		case ca.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -180,9 +172,6 @@ func (_m *CA) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("account_email=")
 	builder.WriteString(_m.AccountEmail)
-	builder.WriteString(", ")
-	builder.WriteString("is_default=")
-	builder.WriteString(fmt.Sprintf("%v", _m.IsDefault))
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"cnb.cool/dtapp/certflow/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
 	"entgo.io/ent"
@@ -24,9 +25,9 @@ type DeployTarget struct {
 	ProviderType deploytarget.ProviderType `json:"provider_type,omitempty"`
 	// 部署服务：cdn / clb / slb / scm / oss 等
 	DeployService string `json:"deploy_service,omitempty"`
-	// 服务配置 JSON（region、资源 ID、证书名等；自管凭证时含 access_key/secret）
+	// 服务配置 JSON（region、资源 ID、证书名等）
 	Config []byte `json:"config,omitempty"`
-	// 凭证来源：复用 DNS 提供商 或 自行配置
+	// 凭证来源：复用 DNS 凭证 或 部署凭证
 	CredentialSource deploytarget.CredentialSource `json:"credential_source,omitempty"`
 	// 是否启用
 	IsActive bool `json:"is_active,omitempty"`
@@ -44,22 +45,25 @@ type DeployTarget struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DeployTargetQuery when eager-loading is set.
-	Edges                       DeployTargetEdges `json:"edges"`
-	dns_provider_deploy_targets *int
-	selectValues                sql.SelectValues
+	Edges                            DeployTargetEdges `json:"edges"`
+	dns_provider_deploy_targets      *int
+	deploy_credential_deploy_targets *int
+	selectValues                     sql.SelectValues
 }
 
 // DeployTargetEdges holds the relations/edges for other nodes in the graph.
 type DeployTargetEdges struct {
 	// 凭证复用的 DNS 提供商
 	DNSProvider *DNSProvider `json:"dns_provider,omitempty"`
+	// 关联的部署凭证
+	DeployCredential *DeployCredential `json:"deploy_credential,omitempty"`
 	// 关联部署的证书
 	Certificates []*Certificate `json:"certificates,omitempty"`
 	// 部署历史记录
 	DeployLogs []*DeployLog `json:"deploy_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // DNSProviderOrErr returns the DNSProvider value or an error if the edge
@@ -73,10 +77,21 @@ func (e DeployTargetEdges) DNSProviderOrErr() (*DNSProvider, error) {
 	return nil, &NotLoadedError{edge: "dns_provider"}
 }
 
+// DeployCredentialOrErr returns the DeployCredential value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DeployTargetEdges) DeployCredentialOrErr() (*DeployCredential, error) {
+	if e.DeployCredential != nil {
+		return e.DeployCredential, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: deploycredential.Label}
+	}
+	return nil, &NotLoadedError{edge: "deploy_credential"}
+}
+
 // CertificatesOrErr returns the Certificates value or an error if the edge
 // was not loaded in eager-loading.
 func (e DeployTargetEdges) CertificatesOrErr() ([]*Certificate, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.Certificates, nil
 	}
 	return nil, &NotLoadedError{edge: "certificates"}
@@ -85,7 +100,7 @@ func (e DeployTargetEdges) CertificatesOrErr() ([]*Certificate, error) {
 // DeployLogsOrErr returns the DeployLogs value or an error if the edge
 // was not loaded in eager-loading.
 func (e DeployTargetEdges) DeployLogsOrErr() ([]*DeployLog, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.DeployLogs, nil
 	}
 	return nil, &NotLoadedError{edge: "deploy_logs"}
@@ -107,6 +122,8 @@ func (*DeployTarget) scanValues(columns []string) ([]any, error) {
 		case deploytarget.FieldLastDeployedAt, deploytarget.FieldCreatedAt, deploytarget.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case deploytarget.ForeignKeys[0]: // dns_provider_deploy_targets
+			values[i] = new(sql.NullInt64)
+		case deploytarget.ForeignKeys[1]: // deploy_credential_deploy_targets
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -208,6 +225,13 @@ func (_m *DeployTarget) assignValues(columns []string, values []any) error {
 				_m.dns_provider_deploy_targets = new(int)
 				*_m.dns_provider_deploy_targets = int(value.Int64)
 			}
+		case deploytarget.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field deploy_credential_deploy_targets", value)
+			} else if value.Valid {
+				_m.deploy_credential_deploy_targets = new(int)
+				*_m.deploy_credential_deploy_targets = int(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -224,6 +248,11 @@ func (_m *DeployTarget) Value(name string) (ent.Value, error) {
 // QueryDNSProvider queries the "dns_provider" edge of the DeployTarget entity.
 func (_m *DeployTarget) QueryDNSProvider() *DNSProviderQuery {
 	return NewDeployTargetClient(_m.config).QueryDNSProvider(_m)
+}
+
+// QueryDeployCredential queries the "deploy_credential" edge of the DeployTarget entity.
+func (_m *DeployTarget) QueryDeployCredential() *DeployCredentialQuery {
+	return NewDeployTargetClient(_m.config).QueryDeployCredential(_m)
 }
 
 // QueryCertificates queries the "certificates" edge of the DeployTarget entity.

@@ -106,11 +106,6 @@ export interface CAListItem {
     "account_email": string;
 
     /**
-     * 是否为默认 CA
-     */
-    "is_default": boolean;
-
-    /**
      * 是否启用
      */
     "is_active": boolean;
@@ -144,11 +139,6 @@ export interface CAUpdateRequest {
      * 注册邮箱
      */
     "account_email"?: string;
-
-    /**
-     * 是否设为默认
-     */
-    "is_default"?: boolean | null;
 
     /**
      * 是否启用
@@ -336,11 +326,6 @@ export interface CreateCACreateRequest {
     "account_email": string;
 
     /**
-     * 是否设为默认
-     */
-    "is_default": boolean;
-
-    /**
      * 是否启用
      */
     "is_active": boolean;
@@ -366,9 +351,34 @@ export interface CreateDNSProviderRequest {
     "config": { [_ in string]?: string } | null;
 
     /**
-     * 是否设为默认
+     * 是否启用
      */
-    "is_default": boolean;
+    "is_active": boolean;
+
+    /**
+     * 备注
+     */
+    "comment": string;
+}
+
+/**
+ * CreateDeployCredentialRequest 创建部署凭证请求
+ */
+export interface CreateDeployCredentialRequest {
+    /**
+     * 凭证名称
+     */
+    "name": string;
+
+    /**
+     * 提供商类型
+     */
+    "provider_type": string;
+
+    /**
+     * 配置参数
+     */
+    "config": { [_ in string]?: string } | null;
 
     /**
      * 是否启用
@@ -411,9 +421,14 @@ export interface CreateDeployTargetRequest {
     "credential_source": string;
 
     /**
-     * 关联 DNS 提供商 ID（可选）
+     * 关联 DNS 凭证 ID（可选）
      */
     "dns_provider_id"?: number | null;
+
+    /**
+     * 关联部署凭证 ID（可选）
+     */
+    "deploy_credential_id"?: number | null;
 
     /**
      * 是否启用
@@ -451,9 +466,49 @@ export interface DNSProviderListItem {
     "config": { [_ in string]?: string } | null;
 
     /**
-     * 是否为默认
+     * 是否启用
      */
-    "is_default": boolean;
+    "is_active": boolean;
+
+    /**
+     * 备注
+     */
+    "comment": string;
+
+    /**
+     * 创建时间
+     */
+    "created_at": string;
+
+    /**
+     * 更新时间
+     */
+    "updated_at": string;
+}
+
+/**
+ * DeployCredentialListItem 部署凭证列表项（前端展示用）
+ */
+export interface DeployCredentialListItem {
+    /**
+     * 部署凭证 ID
+     */
+    "id": number;
+
+    /**
+     * 凭证名称
+     */
+    "name": string;
+
+    /**
+     * 提供商类型（aliyun/tencentcloud/huawei/baiducloud/btpanel/1panel/acepanel）
+     */
+    "provider_type": string;
+
+    /**
+     * 配置参数（API 密钥等）
+     */
+    "config": { [_ in string]?: string } | null;
 
     /**
      * 是否启用
@@ -611,19 +666,29 @@ export interface DeployTargetListItem {
     "region": string;
 
     /**
-     * 凭证来源（access_key 等引用方式）
+     * 凭证来源（dns_provider/deploy_credential）
      */
     "credential_source": string;
 
     /**
-     * 关联 DNS 提供商 ID（可为空）
+     * 关联 DNS 凭证 ID（可为空）
      */
     "dns_provider_id": number | null;
 
     /**
-     * 关联 DNS 提供商名称
+     * 关联 DNS 凭证名称
      */
     "dns_provider_name": string;
+
+    /**
+     * 关联部署凭证 ID（可为空）
+     */
+    "deploy_credential_id": number | null;
+
+    /**
+     * 关联部署凭证名称
+     */
+    "deploy_credential_name": string;
 
     /**
      * 是否启用
@@ -676,14 +741,19 @@ export interface FetchCDNDomainsRequest {
     "deploy_service": string;
 
     /**
-     * 凭证来源（access_key 等引用方式）
+     * 凭证来源（dns_provider/deploy_credential）
      */
     "credential_source": string;
 
     /**
-     * 关联 DNS 提供商 ID（可选）
+     * 关联 DNS 凭证 ID（可选）
      */
     "dns_provider_id"?: number | null;
+
+    /**
+     * 关联部署凭证 ID（可选）
+     */
+    "deploy_credential_id"?: number | null;
 
     /**
      * 区域代码
@@ -886,11 +956,6 @@ export interface UpdateDNSProviderRequest {
     "config"?: { [_ in string]?: string } | null;
 
     /**
-     * 是否设为默认
-     */
-    "is_default"?: boolean | null;
-
-    /**
      * 是否启用
      */
     "is_active"?: boolean | null;
@@ -899,6 +964,36 @@ export interface UpdateDNSProviderRequest {
      * 备注
      */
     "comment"?: string;
+}
+
+/**
+ * UpdateDeployCredentialRequest 更新部署凭证请求
+ */
+export interface UpdateDeployCredentialRequest {
+    /**
+     * 凭证名称
+     */
+    "name": string;
+
+    /**
+     * 提供商类型
+     */
+    "provider_type": string;
+
+    /**
+     * 配置参数
+     */
+    "config": { [_ in string]?: string } | null;
+
+    /**
+     * 是否启用
+     */
+    "is_active": boolean;
+
+    /**
+     * 备注
+     */
+    "comment": string;
 }
 
 /**
@@ -931,9 +1026,14 @@ export interface UpdateDeployTargetRequest {
     "credential_source"?: string;
 
     /**
-     * 关联 DNS 提供商 ID（可选）
+     * 关联 DNS 凭证 ID（可选）
      */
     "dns_provider_id"?: number | null;
+
+    /**
+     * 关联部署凭证 ID（可选）
+     */
+    "deploy_credential_id"?: number | null;
 
     /**
      * 是否启用

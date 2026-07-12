@@ -65,11 +65,6 @@ func Config(v []byte) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldEQ(FieldConfig, v))
 }
 
-// IsDefault applies equality check predicate on the "is_default" field. It's identical to IsDefaultEQ.
-func IsDefault(v bool) predicate.DNSProvider {
-	return predicate.DNSProvider(sql.FieldEQ(FieldIsDefault, v))
-}
-
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldEQ(FieldIsActive, v))
@@ -223,16 +218,6 @@ func ConfigIsNil() predicate.DNSProvider {
 // ConfigNotNil applies the NotNil predicate on the "config" field.
 func ConfigNotNil() predicate.DNSProvider {
 	return predicate.DNSProvider(sql.FieldNotNull(FieldConfig))
-}
-
-// IsDefaultEQ applies the EQ predicate on the "is_default" field.
-func IsDefaultEQ(v bool) predicate.DNSProvider {
-	return predicate.DNSProvider(sql.FieldEQ(FieldIsDefault, v))
-}
-
-// IsDefaultNEQ applies the NEQ predicate on the "is_default" field.
-func IsDefaultNEQ(v bool) predicate.DNSProvider {
-	return predicate.DNSProvider(sql.FieldNEQ(FieldIsDefault, v))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.
