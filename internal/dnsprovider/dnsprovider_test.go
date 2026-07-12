@@ -72,7 +72,6 @@ func TestCreateAndGetByID(t *testing.T) {
 		Name:         "My Cloudflare",
 		ProviderType: "cloudflare",
 		Config:       map[string]string{"api_token": "test-token"},
-		IsDefault:    true,
 		IsActive:     true,
 		Comment:      "test provider",
 	}

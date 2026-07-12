@@ -34,14 +34,12 @@ const formData = ref<{
   name: string
   provider_type: string
   config: Record<string, string>
-  is_default: boolean
   is_active: boolean
   comment: string
 }>({
   name: '',
   provider_type: 'cloudflare',
   config: {},
-  is_default: false,
   is_active: true,
   comment: '',
 })
@@ -257,7 +255,6 @@ const openCreate = () => {
     name: '',
     provider_type: 'cloudflare',
     config: {},
-    is_default: false,
     is_active: true,
     comment: '',
   }
@@ -276,7 +273,6 @@ const openEdit = (p: (typeof providers.value)[0]) => {
     name: p.name,
     provider_type: p.provider_type,
     config: (p.config ?? {}) as Record<string, string>,
-    is_default: p.is_default,
     is_active: p.is_active,
     comment: p.comment,
   }
@@ -319,16 +315,6 @@ const handleDelete = async () => {
     showMessage(t('dns.deleteSuccess'), 'success')
   } catch (e) {
     showMessage(t('dns.deleteProviderFailed') + ' ' + e, 'error')
-  }
-}
-
-const handleSetDefault = async (id: number) => {
-  try {
-    await DNSProviderService.SetDefaultDNSProvider(id)
-    providers.value = (await DNSProviderService.ListDNSProviders()) ?? []
-    showMessage(t('dns.setDefaultSuccess'), 'success')
-  } catch (e) {
-    showMessage(t('dns.setDefaultFailed') + ' ' + e, 'error')
   }
 }
 
@@ -394,9 +380,6 @@ const getProviderLabel = (type: string) => {
                   <n-tag size="small" :bordered="false">{{
                     getProviderLabel(p.provider_type)
                   }}</n-tag>
-                  <n-tag v-if="p.is_default" type="primary" size="small" :bordered="false">{{
-                    t('dns.default')
-                  }}</n-tag>
                   <n-tag v-if="!p.is_active" size="small" :bordered="false">{{
                     t('dns.disabled')
                   }}</n-tag>
@@ -405,25 +388,6 @@ const getProviderLabel = (type: string) => {
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <n-button
-                v-if="!p.is_default"
-                quaternary
-                circle
-                size="small"
-                @click="handleSetDefault(p.id)"
-                :title="t('dns.setTitle')"
-              >
-                <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </template>
-              </n-button>
               <n-button
                 quaternary
                 circle
@@ -519,9 +483,6 @@ const getProviderLabel = (type: string) => {
         </n-form-item>
         <n-form-item :label="t('dns.enabled')">
           <n-switch v-model:value="formData.is_active" />
-        </n-form-item>
-        <n-form-item :label="t('dns.setAsDefault')">
-          <n-switch v-model:value="formData.is_default" />
         </n-form-item>
       </n-form>
       <template #footer>

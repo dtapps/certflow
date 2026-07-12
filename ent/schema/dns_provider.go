@@ -29,9 +29,6 @@ func (DNSProvider) Fields() []ent.Field {
 		field.Bytes("config").
 			Optional().
 			Comment("配置 JSON"),
-		field.Bool("is_default").
-			Default(false).
-			Comment("是否为默认提供商"),
 		field.Bool("is_active").
 			Default(true).
 			Comment("是否启用"),

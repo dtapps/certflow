@@ -26,7 +26,6 @@ type CreateDNSProviderInput struct {
 	Name         string            `json:"name"`          // 提供商名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
 	Config       map[string]string `json:"config"`        // 配置参数
-	IsDefault    bool              `json:"is_default"`    // 是否设为默认
 	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注
 }
@@ -36,7 +35,6 @@ type UpdateDNSProviderInput struct {
 	Name         string            `json:"name,omitempty"`          // 提供商名称
 	ProviderType string            `json:"provider_type,omitempty"` // 提供商类型
 	Config       map[string]string `json:"config,omitempty"`        // 配置参数
-	IsDefault    *bool             `json:"is_default,omitempty"`    // 是否设为默认
 	IsActive     *bool             `json:"is_active,omitempty"`     // 是否启用
 	Comment      string            `json:"comment,omitempty"`       // 备注
 }
@@ -51,7 +49,6 @@ func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProvider
 		SetName(input.Name).
 		SetProviderType(dnsprovider.ProviderType(input.ProviderType)).
 		SetConfig(configJSON).
-		SetIsDefault(input.IsDefault).
 		SetIsActive(input.IsActive).
 		SetComment(input.Comment)
 
@@ -123,9 +120,6 @@ func (s *DNSProviderService) Update(ctx context.Context, id int, input UpdateDNS
 		}
 		builder.SetConfig(configJSON)
 	}
-	if input.IsDefault != nil {
-		builder.SetIsDefault(*input.IsDefault)
-	}
 	if input.IsActive != nil {
 		builder.SetIsActive(*input.IsActive)
 	}
@@ -153,29 +147,6 @@ func (s *DNSProviderService) Delete(ctx context.Context, id int) error {
 		return fmt.Errorf("%s", i18n.T("error.dns_delete_failed", "Error", err))
 	}
 	return nil
-}
-
-// SetDefault 设置指定 DNS 提供商为默认提供商（会取消其他提供商的默认状态）
-func (s *DNSProviderService) SetDefault(ctx context.Context, id int) (*ent.DNSProvider, error) {
-	// 先取消所有 DNS 提供商的默认状态
-	err := s.db.DNSProvider.Update().
-		SetIsDefault(false).
-		Exec(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("error.unset_default_dns_failed", "Error", err))
-	}
-
-	// 设置指定 DNS 提供商为默认
-	result, err := s.db.DNSProvider.UpdateOneID(id).
-		SetIsDefault(true).
-		Save(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_found"))
-		}
-		return nil, fmt.Errorf("%s", i18n.T("error.set_default_dns_failed", "Error", err))
-	}
-	return result, nil
 }
 
 // GetProviderTypes 获取支持的 DNS 提供商类型列表
