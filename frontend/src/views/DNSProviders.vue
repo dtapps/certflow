@@ -2,166 +2,176 @@
 import { ref } from 'vue'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
 import CredentialList from './CredentialList.vue'
+import { useI18nStore } from '../stores/i18n'
+
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 
 const providerConfigSchema: Record<
   string,
-  { key: string; label: string; type: 'text' | 'password' }[]
+  { key: string; labelKey: string; type: 'text' | 'password' }[]
 > = {
   cloudflare: [
-    { key: 'email', label: 'Email', type: 'text' },
-    { key: 'api_key', label: 'API Key', type: 'password' },
-    { key: 'api_token', label: 'API Token', type: 'password' },
+    { key: 'email', labelKey: 'dns.config.email', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
+    { key: 'api_token', labelKey: 'dns.config.api_token', type: 'password' },
   ],
   aliyun: [
-    { key: 'access_key_id', label: 'Access Key ID', type: 'text' },
-    { key: 'access_key_secret', label: 'Access Key Secret', type: 'password' },
-    { key: 'region_id', label: 'Region ID', type: 'text' },
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'access_key_secret', labelKey: 'dns.config.access_key_secret', type: 'password' },
+    { key: 'region_id', labelKey: 'dns.config.region_id', type: 'text' },
   ],
   huawei: [
-    { key: 'access_key_id', label: 'Access Key ID', type: 'text' },
-    { key: 'secret_access_key', label: 'Secret Access Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'secret_access_key', labelKey: 'dns.config.secret_access_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   tencentcloud: [
-    { key: 'secret_id', label: 'Secret ID', type: 'text' },
-    { key: 'secret_key', label: 'Secret Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'secret_id', labelKey: 'dns.config.secret_id', type: 'text' },
+    { key: 'secret_key', labelKey: 'dns.config.secret_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   aws: [
-    { key: 'access_key_id', label: 'Access Key ID', type: 'text' },
-    { key: 'secret_access_key', label: 'Secret Access Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'secret_access_key', labelKey: 'dns.config.secret_access_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   googlecloud: [
-    { key: 'client_id', label: 'Client ID', type: 'text' },
-    { key: 'email', label: 'Email', type: 'text' },
-    { key: 'password', label: 'Password', type: 'password' },
+    { key: 'client_id', labelKey: 'dns.config.client_id', type: 'text' },
+    { key: 'email', labelKey: 'dns.config.email', type: 'text' },
+    { key: 'password', labelKey: 'dns.config.password', type: 'password' },
   ],
   baiducloud: [
-    { key: 'access_key_id', label: 'Access Key ID', type: 'text' },
-    { key: 'secret_access_key', label: 'Secret Access Key', type: 'password' },
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'secret_access_key', labelKey: 'dns.config.secret_access_key', type: 'password' },
   ],
   jdcloud: [
-    { key: 'access_key_id', label: 'Access Key ID', type: 'text' },
-    { key: 'access_key_secret', label: 'Access Key Secret', type: 'password' },
-    { key: 'region_id', label: 'Region ID', type: 'text' },
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'access_key_secret', labelKey: 'dns.config.access_key_secret', type: 'password' },
+    { key: 'region_id', labelKey: 'dns.config.region_id', type: 'text' },
   ],
   volcengine: [
-    { key: 'access_key', label: 'Access Key', type: 'text' },
-    { key: 'secret_key', label: 'Secret Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'access_key', labelKey: 'dns.config.access_key', type: 'text' },
+    { key: 'secret_key', labelKey: 'dns.config.secret_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   edgeone: [
-    { key: 'secret_id', label: 'Secret ID', type: 'text' },
-    { key: 'secret_key', label: 'Secret Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'secret_id', labelKey: 'dns.config.secret_id', type: 'text' },
+    { key: 'secret_key', labelKey: 'dns.config.secret_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   aliesa: [
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'secret_key', label: 'Secret Key', type: 'password' },
-    { key: 'region_id', label: 'Region ID', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'secret_key', labelKey: 'dns.config.secret_key', type: 'password' },
+    { key: 'region_id', labelKey: 'dns.config.region_id', type: 'text' },
   ],
   ucloud: [
-    { key: 'public_key', label: 'Public Key', type: 'text' },
-    { key: 'private_key', label: 'Private Key', type: 'password' },
-    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'public_key', labelKey: 'dns.config.public_key', type: 'text' },
+    { key: 'private_key', labelKey: 'dns.config.private_key', type: 'password' },
+    { key: 'region', labelKey: 'dns.config.region', type: 'text' },
   ],
   westcn: [
-    { key: 'username', label: 'Username', type: 'text' },
-    { key: 'password', label: 'Password', type: 'password' },
+    { key: 'username', labelKey: 'dns.config.username', type: 'text' },
+    { key: 'password', labelKey: 'dns.config.password', type: 'password' },
   ],
   com35: [
-    { key: 'username', label: 'Username', type: 'text' },
-    { key: 'password', label: 'Password', type: 'password' },
+    { key: 'username', labelKey: 'dns.config.username', type: 'text' },
+    { key: 'password', labelKey: 'dns.config.password', type: 'password' },
   ],
-  rainyun: [{ key: 'api_key', label: 'API Key', type: 'text' }],
+  rainyun: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' }],
   todaynic: [
-    { key: 'auth_user_id', label: 'Auth User ID', type: 'text' },
-    { key: 'api_key', label: 'API Key', type: 'text' },
+    { key: 'auth_user_id', labelKey: 'dns.config.auth_user_id', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
   ],
   dnsla: [
-    { key: 'api_id', label: 'API ID', type: 'text' },
-    { key: 'api_secret', label: 'API Secret', type: 'password' },
+    { key: 'api_id', labelKey: 'dns.config.api_id', type: 'text' },
+    { key: 'api_secret', labelKey: 'dns.config.api_secret', type: 'password' },
   ],
   dns51: [
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'api_secret', label: 'API Secret', type: 'password' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'api_secret', labelKey: 'dns.config.api_secret', type: 'password' },
   ],
   xinnet: [
-    { key: 'secret', label: 'Secret', type: 'password' },
-    { key: 'agent_id', label: 'Agent ID', type: 'text' },
+    { key: 'secret', labelKey: 'dns.config.secret', type: 'password' },
+    { key: 'agent_id', labelKey: 'dns.config.agent_id', type: 'text' },
   ],
   porkbun: [
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'secret_api_key', label: 'Secret API Key', type: 'password' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'secret_api_key', labelKey: 'dns.config.secret_api_key', type: 'password' },
   ],
   namecheap: [
-    { key: 'api_user', label: 'API User', type: 'text' },
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'client_ip', label: 'Client IP', type: 'text' },
+    { key: 'api_user', labelKey: 'dns.config.api_user', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'client_ip', labelKey: 'dns.config.client_ip', type: 'text' },
   ],
   godaddy: [
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'api_secret', label: 'API Secret', type: 'password' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'api_secret', labelKey: 'dns.config.api_secret', type: 'password' },
   ],
-  gandiv5: [{ key: 'personal_access_token', label: 'Personal Access Token', type: 'password' }],
+  gandiv5: [
+    {
+      key: 'personal_access_token',
+      labelKey: 'dns.config.personal_access_token',
+      type: 'password',
+    },
+  ],
   dynadot: [
-    { key: 'api_key', label: 'API Key', type: 'text' },
-    { key: 'api_secret', label: 'API Secret', type: 'password' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'text' },
+    { key: 'api_secret', labelKey: 'dns.config.api_secret', type: 'password' },
   ],
   azuredns: [
-    { key: 'subscription_id', label: 'Subscription ID', type: 'text' },
-    { key: 'resource_group', label: 'Resource Group', type: 'text' },
-    { key: 'client_id', label: 'Client ID', type: 'text' },
-    { key: 'client_secret', label: 'Client Secret', type: 'password' },
-    { key: 'tenant_id', label: 'Tenant ID', type: 'text' },
+    { key: 'subscription_id', labelKey: 'dns.config.subscription_id', type: 'text' },
+    { key: 'resource_group', labelKey: 'dns.config.resource_group', type: 'text' },
+    { key: 'client_id', labelKey: 'dns.config.client_id', type: 'text' },
+    { key: 'client_secret', labelKey: 'dns.config.client_secret', type: 'password' },
+    { key: 'tenant_id', labelKey: 'dns.config.tenant_id', type: 'text' },
   ],
-  digitalocean: [{ key: 'auth_token', label: 'Auth Token', type: 'password' }],
-  vultr: [{ key: 'api_key', label: 'API Key', type: 'password' }],
-  hetzner: [{ key: 'api_token', label: 'API Token', type: 'password' }],
-  linode: [{ key: 'token', label: 'Token', type: 'password' }],
+  digitalocean: [{ key: 'auth_token', labelKey: 'dns.config.auth_token', type: 'password' }],
+  vultr: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' }],
+  hetzner: [{ key: 'api_token', labelKey: 'dns.config.api_token', type: 'password' }],
+  linode: [{ key: 'token', labelKey: 'dns.config.token', type: 'password' }],
   ovh: [
-    { key: 'application_key', label: 'Application Key', type: 'text' },
-    { key: 'application_secret', label: 'Application Secret', type: 'password' },
-    { key: 'consumer_key', label: 'Consumer Key', type: 'password' },
+    { key: 'application_key', labelKey: 'dns.config.application_key', type: 'text' },
+    { key: 'application_secret', labelKey: 'dns.config.application_secret', type: 'password' },
+    { key: 'consumer_key', labelKey: 'dns.config.consumer_key', type: 'password' },
   ],
-  dnsimple: [{ key: 'access_token', label: 'Access Token', type: 'password' }],
-  ns1: [{ key: 'api_key', label: 'API Key', type: 'password' }],
+  dnsimple: [{ key: 'access_token', labelKey: 'dns.config.access_token', type: 'password' }],
+  ns1: [{ key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' }],
 }
 
 const providerTypes = [
-  { value: 'cloudflare', label: 'Cloudflare' },
-  { value: 'aliyun', label: '阿里云' },
-  { value: 'huawei', label: '华为云' },
-  { value: 'tencentcloud', label: '腾讯云' },
-  { value: 'aws', label: 'AWS Route53' },
-  { value: 'googlecloud', label: 'Google Cloud' },
-  { value: 'baiducloud', label: '百度云' },
-  { value: 'jdcloud', label: '京东云' },
-  { value: 'volcengine', label: '火山引擎' },
-  { value: 'edgeone', label: '腾讯云 EdgeOne' },
-  { value: 'aliesa', label: '阿里云 ESA' },
-  { value: 'ucloud', label: 'UCloud' },
-  { value: 'westcn', label: '西部数码' },
-  { value: 'com35', label: '三五互联' },
-  { value: 'rainyun', label: '雨云' },
-  { value: 'todaynic', label: '今天互联' },
-  { value: 'dnsla', label: 'DNSLA' },
-  { value: 'dns51', label: '51DNS' },
-  { value: 'xinnet', label: '新网' },
-  { value: 'porkbun', label: 'Porkbun' },
-  { value: 'namecheap', label: 'Namecheap' },
-  { value: 'godaddy', label: 'GoDaddy' },
-  { value: 'gandiv5', label: 'Gandi' },
-  { value: 'dynadot', label: 'Dynadot' },
-  { value: 'azuredns', label: 'Azure DNS' },
-  { value: 'digitalocean', label: 'DigitalOcean' },
-  { value: 'vultr', label: 'Vultr' },
-  { value: 'hetzner', label: 'Hetzner' },
-  { value: 'linode', label: 'Linode' },
-  { value: 'ovh', label: 'OVH' },
-  { value: 'dnsimple', label: 'DNSimple' },
-  { value: 'ns1', label: 'NS1' },
+  { value: 'cloudflare', labelKey: 'dns.type.cloudflare' },
+  { value: 'aliyun', labelKey: 'dns.type.aliyun' },
+  { value: 'huawei', labelKey: 'dns.type.huawei' },
+  { value: 'tencentcloud', labelKey: 'dns.type.tencentcloud' },
+  { value: 'aws', labelKey: 'dns.type.aws' },
+  { value: 'googlecloud', labelKey: 'dns.type.googlecloud' },
+  { value: 'baiducloud', labelKey: 'dns.type.baiducloud' },
+  { value: 'jdcloud', labelKey: 'dns.type.jdcloud' },
+  { value: 'volcengine', labelKey: 'dns.type.volcengine' },
+  { value: 'edgeone', labelKey: 'dns.type.edgeone' },
+  { value: 'aliesa', labelKey: 'dns.type.aliesa' },
+  { value: 'ucloud', labelKey: 'dns.type.ucloud' },
+  { value: 'westcn', labelKey: 'dns.type.westcn' },
+  { value: 'com35', labelKey: 'dns.type.com35' },
+  { value: 'rainyun', labelKey: 'dns.type.rainyun' },
+  { value: 'todaynic', labelKey: 'dns.type.todaynic' },
+  { value: 'dnsla', labelKey: 'dns.type.dnsla' },
+  { value: 'dns51', labelKey: 'dns.type.dns51' },
+  { value: 'xinnet', labelKey: 'dns.type.xinnet' },
+  { value: 'porkbun', labelKey: 'dns.type.porkbun' },
+  { value: 'namecheap', labelKey: 'dns.type.namecheap' },
+  { value: 'godaddy', labelKey: 'dns.type.godaddy' },
+  { value: 'gandiv5', labelKey: 'dns.type.gandiv5' },
+  { value: 'dynadot', labelKey: 'dns.type.dynadot' },
+  { value: 'azuredns', labelKey: 'dns.type.azuredns' },
+  { value: 'digitalocean', labelKey: 'dns.type.digitalocean' },
+  { value: 'vultr', labelKey: 'dns.type.vultr' },
+  { value: 'hetzner', labelKey: 'dns.type.hetzner' },
+  { value: 'linode', labelKey: 'dns.type.linode' },
+  { value: 'ovh', labelKey: 'dns.type.ovh' },
+  { value: 'dnsimple', labelKey: 'dns.type.dnsimple' },
+  { value: 'ns1', labelKey: 'dns.type.ns1' },
 ]
 
 const credentialListRef = ref<InstanceType<typeof CredentialList>>()
@@ -187,11 +197,11 @@ const deleteItem = async (id: number) => {
 <template>
   <CredentialList
     ref="credentialListRef"
-    title="DNS 凭证"
-    subtitle="管理 DNS 验证用的 API 凭证"
-    empty-text="暂无 DNS 凭证"
-    create-text="添加 DNS 凭证"
-    edit-text="编辑 DNS 凭证"
+    :title="t('dns.credentialTitle')"
+    :subtitle="t('dns.credentialSubtitle')"
+    :empty-text="t('dns.noProvider')"
+    :create-text="t('dns.addProvider')"
+    :edit-text="t('dns.editProvider')"
     :provider-types="providerTypes"
     :config-schema="providerConfigSchema"
     icon-color="green"

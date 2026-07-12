@@ -23,8 +23,8 @@ const props = defineProps<{
   emptyText: string
   createText: string
   editText: string
-  providerTypes: { value: string; label: string }[]
-  configSchema: Record<string, { key: string; label: string; type: 'text' | 'password' }[]>
+  providerTypes: { value: string; labelKey: string }[]
+  configSchema: Record<string, { key: string; labelKey: string; type: 'text' | 'password' }[]>
   iconColor?: string
   loadItems: () => Promise<any[]>
   createItem: (data: any) => Promise<any>
@@ -62,7 +62,7 @@ const configFields = reactive<Record<string, string>>({})
 const currentFields = computed(() => props.configSchema[formData.value.provider_type] || [])
 
 const providerTypeOptions = computed(() =>
-  props.providerTypes.map((p) => ({ label: p.label, value: p.value })),
+  props.providerTypes.map((p) => ({ label: t(p.labelKey), value: p.value })),
 )
 
 const syncConfigToMap = () => {
@@ -162,7 +162,7 @@ const handleDelete = async () => {
 
 const getProviderLabel = (type: string) => {
   const pt = props.providerTypes.find((p) => p.value === type)
-  return pt ? pt.label : type
+  return pt ? t(pt.labelKey) : type
 }
 
 const iconBgClass = computed(
@@ -308,11 +308,11 @@ loadData()
           <n-form-item :label="t('dns.config')">
             <div class="w-full space-y-3">
               <div v-for="field in currentFields" :key="field.key">
-                <label class="block text-xs opacity-60 mb-1">{{ field.label }}</label>
+                <label class="block text-xs opacity-60 mb-1">{{ t(field.labelKey) }}</label>
                 <n-input
                   v-model:value="configFields[field.key]"
                   :type="field.type"
-                  :placeholder="field.label"
+                  :placeholder="t(field.labelKey)"
                   show-password-on="click"
                 />
               </div>
