@@ -84,7 +84,14 @@ func NewLoggerWithFilename(logDir string, filename string, level Level, maxMB in
 	filePath := filepath.Join(logDir, filename)
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("error.open_log_file_failed", "Error", err))
+		// 若因文件只读（例如旧版本轮转后误将活动日志设为 0444）导致打开失败，
+		// 尝试修正权限后重试一次，避免日志无法写入（自愈，无需手动 chmod）。
+		if chmodErr := os.Chmod(filePath, 0644); chmodErr == nil {
+			file, err = os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("%s", i18n.T("error.open_log_file_failed", "Error", err))
+		}
 	}
 
 	return &Logger{
@@ -168,8 +175,8 @@ func (l *Logger) rotate() error {
 		os.Remove(l.filePath)
 	}
 
-	// 创建新文件
-	file, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0444)
+	// 创建新文件（必须是可写权限，否则下次进程启动重新打开时会因只读而失败）
+	file, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.create_new_log_file_failed", "Error", err))
 	}
