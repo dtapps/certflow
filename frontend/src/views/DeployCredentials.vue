@@ -212,10 +212,12 @@ const getProviderLabel = (type: string) => {
   return pt ? pt.label : type
 }
 
-// 监听提供商类型变化，重置配置字段
+// 监听提供商类型变化，重置配置字段（仅新建时）
 watch(
   () => formData.value.provider_type,
   (newType) => {
+    // 编辑时不重置配置字段
+    if (editingId.value) return
     const fields = providerConfigSchema[newType] || []
     const newConfig: Record<string, string> = {}
     fields.forEach((f) => {
@@ -340,6 +342,7 @@ watch(
                   v-model:value="configFields[field.key]"
                   :type="field.type"
                   :placeholder="field.label"
+                  show-password-on="click"
                 />
               </div>
             </div>

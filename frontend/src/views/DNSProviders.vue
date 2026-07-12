@@ -444,6 +444,7 @@ const getProviderLabel = (type: string) => {
                   v-model:value="configFields[field.key]"
                   :type="field.type"
                   :placeholder="t(field.labelKey)"
+                  show-password-on="click"
                 />
               </div>
             </div>
