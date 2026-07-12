@@ -39,6 +39,7 @@
   "deploy.error.huawei_cert_name_query": "Failed to query Huawei Cloud certificate name",
   "deploy.error.huawei_credential_create": "Failed to create Huawei Cloud credentials",
   "deploy.error.huawei_no_certificate_block": "CERTIFICATE type block not found",
+  "deploy.error.huawei_no_pem_block": "PEM certificate block not found",
   "deploy.error.huawei_push_svc": "Failed to push certificate to Huawei Cloud {{.Service}}",
   "deploy.error.huawei_region_invalid": "Invalid Huawei Cloud region: {{.Region}}",
   "deploy.error.huawei_scm_client_create": "Failed to create Huawei Cloud SCM client",

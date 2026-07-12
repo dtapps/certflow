@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed, watch, inject, watchEffect, type Ref } from 'vue'
 import {
   NCard,
   NButton,
@@ -25,10 +25,19 @@ const { t } = i18nStore
 const message = useMessage()
 initMessage(message)
 
+const showCreateModal = inject<Ref<boolean>>('showCreateModal')
+
 const providers = ref<DNSProviderListItem[]>([])
 const isLoading = ref(false)
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
+
+watchEffect(() => {
+  if (showCreateModal?.value) {
+    openCreate()
+    showCreateModal.value = false
+  }
+})
 
 const formData = ref<{
   name: string
@@ -325,27 +334,7 @@ const getProviderLabel = (type: string) => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold">{{ t('dns.title') }}</h1>
-        <p class="text-sm mt-1 opacity-60">{{ t('dns.subtitle') }}</p>
-      </div>
-      <n-button type="primary" @click="openCreate">
-        <template #icon>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </template>
-        {{ t('dns.addProvider') }}
-      </n-button>
-    </div>
-
+  <div class="page mt-4">
     <n-card size="small">
       <n-spin :show="isLoading">
         <n-empty v-if="!isLoading && providers.length === 0" :description="t('dns.noProvider')" />

@@ -1,4 +1,5 @@
 {
+  "error.deploy_no_credential": "Deploy credential not configured",
   "deploy.error.huawei_no_pem_block": "PEM certificate block not found",
   "deploy.error.huawei_no_certificate_block": "CERTIFICATE type block not found",
   "deploy.error.huawei_scm_client_create": "Failed to create Huawei Cloud SCM client",

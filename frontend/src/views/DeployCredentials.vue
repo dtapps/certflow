@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed, watch, inject, watchEffect, type Ref } from 'vue'
 import {
   NCard,
   NButton,
@@ -23,10 +23,19 @@ const i18nStore = useI18nStore()
 const { t } = i18nStore
 const message = useMessage()
 
+const showCreateModal = inject<Ref<boolean>>('showCreateModal')
+
 const credentials = ref<DeployCredentialListItem[]>([])
 const isLoading = ref(false)
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
+
+watchEffect(() => {
+  if (showCreateModal?.value) {
+    openCreate()
+    showCreateModal.value = false
+  }
+})
 
 const formData = ref<{
   name: string
@@ -164,9 +173,12 @@ const handleSave = async () => {
     }
     showModal.value = false
     credentials.value = (await DeployCredentialService.ListDeployCredentials()) ?? []
-    showMessage('保存成功', 'success')
+    showMessage(t('deploy.credentialSaveSuccess'), 'success')
   } catch (e: any) {
-    showMessage('保存失败: ' + translateBackend(e?.message || String(e)), 'error')
+    showMessage(
+      t('deploy.credentialSaveFailed') + ': ' + translateBackend(e?.message || String(e)),
+      'error',
+    )
   }
 }
 
@@ -186,9 +198,12 @@ const handleDelete = async () => {
   try {
     await DeployCredentialService.DeleteDeployCredential(id)
     credentials.value = credentials.value.filter((c) => c.id !== id)
-    showMessage('删除成功', 'success')
+    showMessage(t('deploy.credentialDeleteSuccess'), 'success')
   } catch (e: any) {
-    showMessage('删除失败: ' + translateBackend(e?.message || String(e)), 'error')
+    showMessage(
+      t('deploy.credentialDeleteFailed') + ': ' + translateBackend(e?.message || String(e)),
+      'error',
+    )
   }
 }
 
@@ -212,26 +227,13 @@ watch(
 </script>
 
 <template>
-  <div>
-    <div class="flex items-center justify-end mb-4">
-      <n-button type="primary" @click="openCreate">
-        <template #icon>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </template>
-        新建部署凭证
-      </n-button>
-    </div>
-
-    <n-card :bordered="false">
+  <div class="mt-4">
+    <n-card size="small">
       <n-spin :show="isLoading">
-        <n-empty v-if="!isLoading && credentials.length === 0" description="暂无部署凭证" />
+        <n-empty
+          v-if="!isLoading && credentials.length === 0"
+          :description="t('deploy.credentialEmpty')"
+        />
 
         <div v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
           <div
@@ -241,10 +243,10 @@ watch(
           >
             <div class="flex items-center gap-4">
               <div
-                class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center"
+                class="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center"
               >
                 <svg
-                  class="w-6 h-6 text-blue-500"
+                  class="w-6 h-6 text-green-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -263,13 +265,21 @@ watch(
                   <n-tag size="small" :bordered="false">{{
                     getProviderLabel(c.provider_type)
                   }}</n-tag>
-                  <n-tag v-if="!c.is_active" size="small" :bordered="false">已禁用</n-tag>
+                  <n-tag v-if="!c.is_active" size="small" :bordered="false">{{
+                    t('dns.disabled')
+                  }}</n-tag>
                 </div>
                 <p v-if="c.comment" class="text-sm mt-1 opacity-50">{{ c.comment }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <n-button quaternary circle size="small" @click="openEdit(c)" title="编辑">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                @click="openEdit(c)"
+                :title="t('dns.editTitle')"
+              >
                 <template #icon>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -287,7 +297,7 @@ watch(
                 size="small"
                 type="error"
                 @click="openDeleteModal(c.id)"
-                title="删除"
+                :title="t('deploy.delete')"
               >
                 <template #icon>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,19 +320,19 @@ watch(
     <n-modal
       v-model:show="showModal"
       preset="card"
-      :title="editingId ? '编辑部署凭证' : '新建部署凭证'"
+      :title="editingId ? t('deploy.credentialEdit') : t('deploy.credentialCreate')"
       style="max-width: 560px"
     >
       <n-form label-placement="top">
-        <n-form-item label="名称">
+        <n-form-item :label="t('deploy.name')">
           <n-input v-model:value="formData.name" placeholder="例如: 阿里云 CDN" />
         </n-form-item>
-        <n-form-item label="提供商类型">
+        <n-form-item :label="t('deploy.credentialProviderType')">
           <n-select v-model:value="formData.provider_type" :options="providerTypeOptions" />
         </n-form-item>
         <!-- 动态配置字段 -->
         <div v-if="currentFields.length > 0">
-          <n-form-item label="配置">
+          <n-form-item :label="t('dns.config')">
             <div class="w-full space-y-3">
               <div v-for="field in currentFields" :key="field.key">
                 <label class="block text-xs opacity-60 mb-1">{{ field.label }}</label>
@@ -336,7 +346,7 @@ watch(
           </n-form-item>
         </div>
         <div v-else>
-          <n-form-item label="配置">
+          <n-form-item :label="t('dns.config')">
             <n-input
               type="textarea"
               :value="JSON.stringify(formData.config, null, 2)"
@@ -353,27 +363,27 @@ watch(
             />
           </n-form-item>
         </div>
-        <n-form-item label="备注">
+        <n-form-item :label="t('dns.comment')">
           <n-input v-model:value="formData.comment" placeholder="可选备注" />
         </n-form-item>
-        <n-form-item label="启用">
+        <n-form-item :label="t('dns.enabled')">
           <n-switch v-model:value="formData.is_active" />
         </n-form-item>
       </n-form>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSave">保存</n-button>
+          <n-button @click="showModal = false">{{ t('deploy.cancel') }}</n-button>
+          <n-button type="primary" @click="handleSave">{{ t('deploy.save') }}</n-button>
         </div>
       </template>
     </n-modal>
 
     <!-- 删除确认弹窗 -->
-    <n-modal v-model:show="showDeleteModal" preset="dialog" title="删除">
-      <p>确认删除该部署凭证？</p>
+    <n-modal v-model:show="showDeleteModal" preset="dialog" :title="t('deploy.delete')">
+      <p>{{ t('deploy.credentialDeleteConfirm') }}</p>
       <template #action>
-        <n-button @click="showDeleteModal = false">取消</n-button>
-        <n-button type="error" @click="handleDelete">确认</n-button>
+        <n-button @click="showDeleteModal = false">{{ t('deploy.cancel') }}</n-button>
+        <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
       </template>
     </n-modal>
   </div>

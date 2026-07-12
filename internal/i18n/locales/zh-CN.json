@@ -39,6 +39,7 @@
   "deploy.error.huawei_cert_name_query": "查询华为云证书名称失败",
   "deploy.error.huawei_credential_create": "创建华为云凭据失败",
   "deploy.error.huawei_no_certificate_block": "未找到 CERTIFICATE 类型块",
+  "deploy.error.huawei_no_pem_block": "未找到 PEM 证书块",
   "deploy.error.huawei_push_svc": "推送证书到华为云 {{.Service}} 失败",
   "deploy.error.huawei_region_invalid": "华为云区域无效: {{.Region}}",
   "deploy.error.huawei_scm_client_create": "创建华为云 SCM 客户端失败",
