@@ -1,0 +1,23 @@
+{
+  "app.title": "CertFlow",
+  "app.description": "SSL 证书管理工具",
+  "app.exited": "CertFlow 已退出",
+  "updater.title": "检查更新",
+  "menu.app": "应用",
+  "menu.settings": "设置",
+  "menu.checkUpdate": "检查更新…",
+  "menu.help": "帮助",
+  "menu.about": "关于 CertFlow",
+  "settings.about.version": "版本",
+  "settings.about.buildTime": "构建时间",
+  "settings.about.gitCommit": "Git 提交",
+  "systray.show": "显示窗口",
+  "systray.checkUpdate": "检查更新",
+  "systray.settings": "设置",
+  "systray.applyCert": "申请证书",
+  "systray.scan": "证书扫描",
+  "systray.quit": "退出",
+  "settings.autostart.title": "启动设置",
+  "settings.autostart.enabled": "开机自启动",
+  "settings.autostart.enabled.desc": "登录系统时自动启动 CertFlow"
+}

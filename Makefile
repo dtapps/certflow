@@ -1,10 +1,10 @@
-.PHONY: help bindings ent dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps
+.PHONY: help bindings ent i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps
 
 # 默认目标
 help: ## 显示帮助信息
 	@echo "CertFlow 开发命令"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # ==================== 开发工具 ====================
@@ -18,7 +18,15 @@ bindings: ## 生成 Wails TypeScript 绑定
 ent: ## 生成 Ent ORM 代码
 	go run -tags entc ./entc_generate.go
 
-dev: ## 运行 Wails 开发模式
+i18n: i18n-go i18n-frontend ## 合并所有 i18n 拆分文件到主文件
+
+i18n-go: ## 合并 Go 后端 i18n 拆分文件
+	./scripts/merge-go-i18n.sh
+
+i18n-frontend: ## 合并前端 i18n 拆分文件
+	./scripts/merge-frontend-i18n.sh
+
+dev: i18n ## 运行 Wails 开发模式
 	wails3 dev -port 9246
 
 # ==================== 格式化 / 修复 ====================

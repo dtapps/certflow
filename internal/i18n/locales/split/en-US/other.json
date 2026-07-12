@@ -1,0 +1,23 @@
+{
+  "app.title": "CertFlow",
+  "app.description": "SSL Certificate Manager",
+  "app.exited": "CertFlow exited",
+  "updater.title": "Check for Updates",
+  "menu.app": "App",
+  "menu.settings": "Settings",
+  "menu.checkUpdate": "Check for Updates…",
+  "menu.help": "Help",
+  "menu.about": "About CertFlow",
+  "settings.about.version": "Version",
+  "settings.about.buildTime": "Build Time",
+  "settings.about.gitCommit": "Git Commit",
+  "systray.show": "Show Window",
+  "systray.checkUpdate": "Check for Updates",
+  "systray.settings": "Settings",
+  "systray.applyCert": "Apply Certificate",
+  "systray.scan": "Certificate Scanner",
+  "systray.quit": "Quit",
+  "settings.autostart.title": "Startup Settings",
+  "settings.autostart.enabled": "Launch at Login",
+  "settings.autostart.enabled.desc": "Automatically start CertFlow when you log in"
+}

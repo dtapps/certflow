@@ -1,0 +1,7 @@
+{
+  "notification.cert_applied": "Applied",
+  "notification.cert_expiring": "Expiring",
+  "notification.cert_failed": "Failed",
+  "notification.cert_renewed": "Renewed",
+  "notification.cert_revoked": "Revoked"
+}
