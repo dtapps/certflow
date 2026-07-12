@@ -406,6 +406,8 @@
   "dns.namePlaceholder": "例如: Cloudflare",
   "dns.noProvider": "暂无 DNS 提供商",
   "dns.providerType": "提供商类型 *",
+  "dns.providerTypePlaceholder": "请选择提供商类型",
+  "dns.commentPlaceholder": "可选备注",
   "dns.save": "保存",
   "dns.saveFailed": "DNS 提供商保存失败:",
   "dns.saveSuccess": "DNS 提供商保存成功",

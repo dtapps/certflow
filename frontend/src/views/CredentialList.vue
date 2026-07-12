@@ -153,7 +153,10 @@ const handleDelete = async () => {
     items.value = items.value.filter((item: any) => item.id !== id)
     showMessage(t('dns.deleteSuccess'), 'success')
   } catch (e: any) {
-    showMessage(t('dns.deleteProviderFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
+    showMessage(
+      t('dns.deleteProviderFailed') + ': ' + translateBackend(e?.message || String(e)),
+      'error',
+    )
   }
 }
 
@@ -162,7 +165,9 @@ const getProviderLabel = (type: string) => {
   return pt ? pt.label : type
 }
 
-const iconBgClass = computed(() => `bg-${props.iconColor || 'green'}-50 dark:bg-${props.iconColor || 'green'}-900/30`)
+const iconBgClass = computed(
+  () => `bg-${props.iconColor || 'green'}-50 dark:bg-${props.iconColor || 'green'}-900/30`,
+)
 const iconTextClass = computed(() => `text-${props.iconColor || 'green'}-500`)
 
 watch(
@@ -227,14 +232,24 @@ loadData()
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ item.name }}</h3>
-                  <n-tag size="small" :bordered="false">{{ getProviderLabel(item.provider_type) }}</n-tag>
-                  <n-tag v-if="!item.is_active" size="small" :bordered="false">{{ t('dns.disabled') }}</n-tag>
+                  <n-tag size="small" :bordered="false">{{
+                    getProviderLabel(item.provider_type)
+                  }}</n-tag>
+                  <n-tag v-if="!item.is_active" size="small" :bordered="false">{{
+                    t('dns.disabled')
+                  }}</n-tag>
                 </div>
                 <p v-if="item.comment" class="text-sm mt-1 opacity-50">{{ item.comment }}</p>
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <n-button quaternary circle size="small" @click="openEdit(item)" :title="t('dns.editTitle')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                @click="openEdit(item)"
+                :title="t('dns.editTitle')"
+              >
                 <template #icon>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -246,7 +261,14 @@ loadData()
                   </svg>
                 </template>
               </n-button>
-              <n-button quaternary circle size="small" type="error" @click="openDeleteModal(item.id)" :title="t('dns.deleteTitle')">
+              <n-button
+                quaternary
+                circle
+                size="small"
+                type="error"
+                @click="openDeleteModal(item.id)"
+                :title="t('dns.deleteTitle')"
+              >
                 <template #icon>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -276,7 +298,11 @@ loadData()
           <n-input v-model:value="formData.name" :placeholder="t('dns.namePlaceholder')" />
         </n-form-item>
         <n-form-item :label="t('dns.providerType')">
-          <n-select v-model:value="formData.provider_type" :options="providerTypeOptions" />
+          <n-select
+            v-model:value="formData.provider_type"
+            :options="providerTypeOptions"
+            :placeholder="t('dns.providerTypePlaceholder')"
+          />
         </n-form-item>
         <div v-if="currentFields.length > 0">
           <n-form-item :label="t('dns.config')">
@@ -298,7 +324,13 @@ loadData()
             <n-input
               type="textarea"
               :value="JSON.stringify(formData.config, null, 2)"
-              @update:value="(v: string) => { try { formData.config = JSON.parse(v) } catch {} }"
+              @update:value="
+                (v: string) => {
+                  try {
+                    formData.config = JSON.parse(v)
+                  } catch {}
+                }
+              "
               :placeholder="t('dns.configPlaceholder')"
               :rows="4"
               style="font-family: monospace; font-size: 12px"

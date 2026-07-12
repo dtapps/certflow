@@ -470,6 +470,7 @@
   "dns.namePlaceholder": "e.g. Cloudflare",
   "dns.noProvider": "No DNS Providers",
   "dns.providerType": "Provider Type *",
+  "dns.providerTypePlaceholder": "Select provider type",
   "dns.save": "Save",
   "dns.saveFailed": "Failed to save DNS provider:",
   "dns.saveSuccess": "DNS provider saved successfully",

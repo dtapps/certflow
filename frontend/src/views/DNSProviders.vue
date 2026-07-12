@@ -104,9 +104,7 @@ const providerConfigSchema: Record<
     { key: 'api_key', label: 'API Key', type: 'text' },
     { key: 'api_secret', label: 'API Secret', type: 'password' },
   ],
-  gandiv5: [
-    { key: 'personal_access_token', label: 'Personal Access Token', type: 'password' },
-  ],
+  gandiv5: [{ key: 'personal_access_token', label: 'Personal Access Token', type: 'password' }],
   dynadot: [
     { key: 'api_key', label: 'API Key', type: 'text' },
     { key: 'api_secret', label: 'API Secret', type: 'password' },
