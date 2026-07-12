@@ -262,6 +262,8 @@ func credsFromConfig(provider string, cfg map[string]string) Credentials {
 		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["secret_access_key"], Region: RegionFromConfig(cfg)}
 	case "tencentcloud":
 		return Credentials{AccessKeyID: cfg["secret_id"], AccessKeySecret: cfg["secret_key"], Region: RegionFromConfig(cfg)}
+	case "baidu":
+		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["secret_access_key"], Region: RegionFromConfig(cfg)}
 	}
 	return Credentials{}
 }
@@ -271,6 +273,7 @@ var credKeys = map[string][]string{
 	"aliyun":       {"access_key_id", "access_key_secret", "region_id"},
 	"huawei":       {"access_key_id", "secret_access_key", "region"},
 	"tencentcloud": {"secret_id", "secret_key", "region"},
+	"baidu":        {"access_key_id", "secret_access_key", "region"},
 }
 
 // stripCreds 从 config 中剔除凭证字段，保留服务配置
@@ -336,6 +339,8 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	}
 	// 供部署器在绑定阶段计算证书名称使用（与上传阶段保持一致）
 	svc["cert_domain"] = cert.Domain
+	// 记录部署服务类型，供部署器区分 CDN / 全站加速（DRCDN）。
+	svc["deploy_service"] = target.DeployService
 	d := registry[target.ProviderType.String()]
 	if d == nil {
 		return s.recordFailure(ctx, target, cert, domain,
@@ -371,6 +376,13 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	return &DeployOutcome{TargetID: targetID, TargetName: target.Name, CloudCertID: res.CloudCertID, Success: true, Message: res.Message, RawResponse: res.RawResponse}, nil
 }
 
+// certValidator 可选的证书存在性校验接口：供 ensureUploaded 在复用数据库记录前确认云端证书仍存在，
+// 避免复用旧版本遗留的脏数据（非真实 certId）或已被手动删除的证书。未实现该接口的厂商默认信任
+// 数据库记录（其 certId 由云端返回、本就真实）。
+type certValidator interface {
+	ValidateCert(creds Credentials, certID string) (bool, error)
+}
+
 // ensureUploaded 确保证书已上传到云端：相同「厂商+账号+区域+证书内容」只真正上传一次，
 // 之后直接复用云端证书 ID。去重映射同时保存在内存（快速）与数据库（跨进程持久化）两层，
 // 因此不管是否同一进程、是否重启，都不会重复上传，也不依赖各云厂商的原生去重行为。
@@ -378,7 +390,10 @@ func (s *DeployService) ensureUploaded(ctx context.Context, d Deployer, provider
 	content := cert.CertContent + "\n" + cert.KeyContent
 	fp := sha256.Sum256([]byte(content))
 	fpHex := hex.EncodeToString(fp[:])
-	cacheKey := provider + "|" + creds.AccessKeyID + "|" + creds.Region + "|" + fpHex
+	// 加入部署服务类型，使 CDN 与全站加速（DRCDN）的上传去重相互独立：
+	// 两者证书模型不同（CDN 暂存指纹、DRCDN 注册真实 certId），共享去重会导致 certId 错配。
+	svcType := svc["deploy_service"]
+	cacheKey := provider + "|" + creds.AccessKeyID + "|" + creds.Region + "|" + svcType + "|" + fpHex
 
 	// 1) 内存缓存（同进程内最快）
 	if id, ok := s.cacheGet(cacheKey); ok {
@@ -395,9 +410,19 @@ func (s *DeployService) ensureUploaded(ctx context.Context, d Deployer, provider
 				certupload.CertFingerprint(fpHex),
 			).
 			Only(ctx); err == nil && existing != nil && existing.CloudCertID != "" {
-			s.cachePut(cacheKey, existing.CloudCertID)
-			logging.Debug(i18n.T("log.deploy.reuse_upload_record", "CertID", existing.CloudCertID, "Key", cacheKey))
-			return existing.CloudCertID, "", nil
+			// 复用前校验云端证书是否仍存在（自愈旧版本脏数据 / 被手动删除的证书）：
+			// 仅实现 certValidator 的厂商会校验；未实现的厂商沿用原记录。
+			if v, ok := d.(certValidator); ok {
+				if valid, verr := v.ValidateCert(creds, existing.CloudCertID); verr == nil && !valid {
+					logging.Debug(i18n.T("log.deploy.cert_reupload", "CertID", existing.CloudCertID))
+					existing = nil
+				}
+			}
+			if existing != nil {
+				s.cachePut(cacheKey, existing.CloudCertID)
+				logging.Debug(i18n.T("log.deploy.reuse_upload_record", "CertID", existing.CloudCertID, "Key", cacheKey))
+				return existing.CloudCertID, "", nil
+			}
 		}
 	}
 

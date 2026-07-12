@@ -64,6 +64,7 @@ const providerOptions = [
   { label: t('deploy.provider.aliyun'), value: 'aliyun' },
   { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
   { label: t('deploy.provider.huawei'), value: 'huawei' },
+  { label: t('deploy.provider.baidu'), value: 'baidu' },
 ]
 // 部署服务随云厂商变化：不同厂商提供的可部署目标不同，只展示后端已实现的服务，
 // 避免用户选到不属于该厂商、或后端未实现（只会上传不绑定）的服务。
@@ -87,6 +88,11 @@ const servicesByProvider = computed<{ label: string; value: string }[]>(() => {
         { label: t('deploy.service.cdn'), value: 'cdn' },
         { label: t('deploy.service.waf'), value: 'waf' },
         { label: t('deploy.service.elb'), value: 'elb' },
+      ]
+    case 'baidu':
+      return [
+        { label: t('deploy.service.cdn'), value: 'cdn' },
+        { label: t('deploy.service.drcdn'), value: 'drcdn' },
       ]
     default:
       return [{ label: t('deploy.service.cdn'), value: 'cdn' }]
@@ -114,11 +120,22 @@ function onSiteChange(val: string | null) {
   form.site_name = opt ? opt.label : ''
 }
 
-const dnsOptions = computed(() =>
-  dnsProviders.value
-    .filter((d) => d.provider_type === form.provider_type)
-    .map((d) => ({ label: d.name, value: d.id })),
-)
+// 部署厂商类型 → DNS 提供商枚举值的映射。
+// 注意 DNS 提供商的「百度云」枚举值为 baiducloud，而部署目标使用 baidu，二者不同，
+// 直接按 provider_type 相等过滤会导致百度部署目标复用时找不到 DNS 提供商。
+const dnsTypeByDeployType: Record<string, string[]> = {
+  aliyun: ['aliyun'],
+  tencentcloud: ['tencentcloud'],
+  huawei: ['huawei'],
+  baidu: ['baiducloud'],
+}
+
+const dnsOptions = computed(() => {
+  const want = dnsTypeByDeployType[form.provider_type] || []
+  return dnsProviders.value
+    .filter((d) => want.includes(d.provider_type))
+    .map((d) => ({ label: d.name, value: d.id }))
+})
 
 // 用户手动切换云厂商时调用：当前部署服务可能不属于新厂商，重置为第一项；
 // 同时清掉只属于特定服务（EdgeOne/ESA）的 ZoneId / SiteId 配置，避免脏数据带入保存。
@@ -145,6 +162,8 @@ function credFields() {
     case 'aliyun':
       return { id: 'access_key_id', secret: 'access_key_secret' }
     case 'huawei':
+      return { id: 'access_key_id', secret: 'secret_access_key' }
+    case 'baidu':
       return { id: 'access_key_id', secret: 'secret_access_key' }
     default:
       return { id: 'secret_id', secret: 'secret_key' }
@@ -275,7 +294,13 @@ async function fetchDomains() {
       config: cfg,
     })
     if (!list || list.length === 0) {
-      showMessage(t('deploy.noDomains'), 'warning')
+      // 百度云 CDN 与全站加速（DRCDN）域名共用同一列表但类型不同：选了 CDN 服务却拉不到域名，
+      // 极可能是域名实为 DRCDN 类型。给出针对性提示，引导用户切换部署服务。
+      if (form.provider_type === 'baidu' && form.deploy_service === 'cdn') {
+        showMessage(t('deploy.baidu.cdnNoDomainsHint'), 'warning')
+      } else {
+        showMessage(t('deploy.noDomains'), 'warning')
+      }
     } else {
       domainOptions.value = list.map((d) => ({ label: d, value: d }))
       showMessage(t('deploy.fetchDomains') + ': ' + list.length, 'success')
@@ -427,7 +452,7 @@ onMounted(async () => {
               <n-input v-model:value="form.secret_key" type="password" />
             </n-form-item>
           </template>
-          <n-form-item :label="t('deploy.config.region')">
+          <n-form-item v-if="form.provider_type !== 'baidu'" :label="t('deploy.config.region')">
             <n-select
               v-model:value="form.region"
               :options="regionOptions(form.provider_type, form.deploy_service)"
@@ -497,6 +522,7 @@ onMounted(async () => {
             v-if="
               form.deploy_service === 'cdn' ||
               form.deploy_service === 'dcdn' ||
+              form.deploy_service === 'drcdn' ||
               form.deploy_service === 'edgeone' ||
               form.deploy_service === 'ecdn' ||
               form.deploy_service === 'ga' ||
@@ -509,6 +535,7 @@ onMounted(async () => {
                 v-if="
                   form.deploy_service === 'cdn' ||
                   form.deploy_service === 'dcdn' ||
+                  form.deploy_service === 'drcdn' ||
                   form.deploy_service === 'edgeone' ||
                   form.deploy_service === 'ecdn' ||
                   form.deploy_service === 'esa'
@@ -548,7 +575,11 @@ onMounted(async () => {
                 :options="domainOptions"
                 multiple
                 filterable
-                :tag="form.deploy_service === 'edgeone' || form.deploy_service === 'dcdn'"
+                :tag="
+                  form.deploy_service === 'edgeone' ||
+                  form.deploy_service === 'dcdn' ||
+                  form.deploy_service === 'drcdn'
+                "
                 :placeholder="t('deploy.selectDomain')"
               />
             </div>
