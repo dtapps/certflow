@@ -62,7 +62,6 @@ func TestCreateAndGetByID(t *testing.T) {
 		Name:         "Let's Encrypt",
 		DirectoryURL: "https://acme-v02.api.letsencrypt.org/directory",
 		AccountEmail: "test@example.com",
-		IsDefault:    true,
 		IsActive:     true,
 	}
 
@@ -190,41 +189,6 @@ func TestDelete_NotFound(t *testing.T) {
 	}
 }
 
-// TestSetDefault 测试设置默认 CA 并清除其他默认
-func TestSetDefault(t *testing.T) {
-	client := setupTestDB(t)
-	svc := NewCAService(client, t.TempDir())
-	ctx := context.Background()
-
-	ca1, _ := svc.Create(ctx, CreateCAInput{Name: "CA1", DirectoryURL: "url1", IsDefault: true})
-	ca2, _ := svc.Create(ctx, CreateCAInput{Name: "CA2", DirectoryURL: "url2"})
-
-	result, err := svc.SetDefault(ctx, ca2.ID)
-	if err != nil {
-		t.Fatalf("SetDefault failed: %v", err)
-	}
-	if !result.IsDefault {
-		t.Error("expected CA2 to be default")
-	}
-
-	ca1Updated, _ := svc.GetByID(ctx, ca1.ID)
-	if ca1Updated.IsDefault {
-		t.Error("expected CA1 to no longer be default")
-	}
-}
-
-// TestSetDefault_NotFound 测试设置不存在的 CA 为默认
-func TestSetDefault_NotFound(t *testing.T) {
-	client := setupTestDB(t)
-	svc := NewCAService(client, t.TempDir())
-	ctx := context.Background()
-
-	_, err := svc.SetDefault(ctx, 9999)
-	if err == nil {
-		t.Fatal("expected error for non-existent CA")
-	}
-}
-
 // TestSeedDefaults 测试初始化默认 CA（插入 4 个）
 func TestSeedDefaults(t *testing.T) {
 	client := setupTestDB(t)
@@ -242,17 +206,6 @@ func TestSeedDefaults(t *testing.T) {
 	}
 	if len(list) != 4 {
 		t.Fatalf("expected 4 CAs after SeedDefaults, got %d", len(list))
-	}
-
-	// 验证 Let's Encrypt 是默认 CA
-	defaultCount := 0
-	for _, c := range list {
-		if c.IsDefault {
-			defaultCount++
-		}
-	}
-	if defaultCount != 1 {
-		t.Errorf("expected exactly 1 default CA, got %d", defaultCount)
 	}
 
 	// 重复 SeedDefaults 不应添加更多 CA

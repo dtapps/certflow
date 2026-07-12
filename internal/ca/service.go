@@ -27,7 +27,6 @@ type CreateCAInput struct {
 	Name         string `json:"name"`          // CA 名称
 	DirectoryURL string `json:"directory_url"` // ACME 目录 URL
 	AccountEmail string `json:"account_email"` // 注册邮箱
-	IsDefault    bool   `json:"is_default"`    // 是否设为默认
 	IsActive     bool   `json:"is_active"`     // 是否启用
 }
 
@@ -36,7 +35,6 @@ type UpdateCAInput struct {
 	Name         string `json:"name,omitempty"`          // CA 名称
 	DirectoryURL string `json:"directory_url,omitempty"` // ACME 目录 URL
 	AccountEmail string `json:"account_email,omitempty"` // 注册邮箱
-	IsDefault    *bool  `json:"is_default,omitempty"`    // 是否设为默认
 	IsActive     *bool  `json:"is_active,omitempty"`     // 是否启用
 }
 
@@ -46,7 +44,6 @@ func (s *CAService) Create(ctx context.Context, input CreateCAInput) (*ent.CA, e
 		SetName(input.Name).
 		SetDirectoryURL(input.DirectoryURL).
 		SetAccountEmail(input.AccountEmail).
-		SetIsDefault(input.IsDefault).
 		SetIsActive(input.IsActive)
 
 	result, err := builder.Save(ctx)
@@ -102,9 +99,6 @@ func (s *CAService) Update(ctx context.Context, id int, input UpdateCAInput) (*e
 	if input.AccountEmail != "" {
 		builder.SetAccountEmail(input.AccountEmail)
 	}
-	if input.IsDefault != nil {
-		builder.SetIsDefault(*input.IsDefault)
-	}
 	if input.IsActive != nil {
 		builder.SetIsActive(*input.IsActive)
 	}
@@ -131,29 +125,6 @@ func (s *CAService) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-// SetDefault 设置指定 CA 为默认 CA（会取消其他 CA 的默认状态）
-func (s *CAService) SetDefault(ctx context.Context, id int) (*ent.CA, error) {
-	// 先取消所有 CA 的默认状态
-	err := s.db.CA.Update().
-		SetIsDefault(false).
-		Exec(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("error.unset_default_ca_failed", "Error", err))
-	}
-
-	// 设置指定 CA 为默认
-	result, err := s.db.CA.UpdateOneID(id).
-		SetIsDefault(true).
-		Save(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("%s", i18n.T("error.ca_not_found"))
-		}
-		return nil, fmt.Errorf("%s", i18n.T("error.set_default_ca_failed", "Error", err))
-	}
-	return result, nil
-}
-
 // SeedDefaults 插入默认 CA（仅在首次启动时执行一次）
 func (s *CAService) SeedDefaults(ctx context.Context) error {
 	logging.Info(i18n.T("log.ca_seed_start"))
@@ -172,28 +143,24 @@ func (s *CAService) SeedDefaults(ctx context.Context) error {
 			Name:         "Let's Encrypt",
 			DirectoryURL: "https://acme-v02.api.letsencrypt.org/directory",
 			AccountEmail: "",
-			IsDefault:    true,
 			IsActive:     true,
 		},
 		{
 			Name:         "Buypass",
 			DirectoryURL: "https://api.buypass.com/acme/directory",
 			AccountEmail: "",
-			IsDefault:    false,
 			IsActive:     true,
 		},
 		{
 			Name:         "ZeroSSL",
 			DirectoryURL: "https://acme.zerossl.com/v2/DV90/directory",
 			AccountEmail: "",
-			IsDefault:    false,
 			IsActive:     true,
 		},
 		{
 			Name:         "Let's Encrypt (测试环境)",
 			DirectoryURL: "https://acme-staging-v02.api.letsencrypt.org/directory",
 			AccountEmail: "",
-			IsDefault:    false,
 			IsActive:     true,
 		},
 	}

@@ -32,7 +32,6 @@ const formData = ref({
   name: '',
   directory_url: '',
   account_email: '',
-  is_default: false,
   is_active: true,
 })
 
@@ -53,7 +52,6 @@ const openCreate = () => {
     name: '',
     directory_url: '',
     account_email: '',
-    is_default: false,
     is_active: true,
   }
   showModal.value = true
@@ -65,7 +63,6 @@ const openEdit = (ca: (typeof cas.value)[0]) => {
     name: ca.name,
     directory_url: ca.directory_url,
     account_email: ca.account_email,
-    is_default: ca.is_default,
     is_active: ca.is_active,
   }
   showModal.value = true
@@ -105,16 +102,6 @@ const handleDelete = async () => {
     showMessage(t('ca.deleteSuccess'), 'success')
   } catch (e) {
     showMessage(t('ca.deleteFailed') + ' ' + e, 'error')
-  }
-}
-
-const handleSetDefault = async (id: number) => {
-  try {
-    await CAService.SetDefaultCA(id)
-    cas.value = (await CAService.ListCA()) ?? []
-    showMessage(t('ca.setDefaultSuccess'), 'success')
-  } catch (e) {
-    showMessage(t('ca.setDefaultFailed') + ' ' + e, 'error')
   }
 }
 </script>
@@ -172,9 +159,6 @@ const handleSetDefault = async (id: number) => {
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ ca.name }}</h3>
-                  <n-tag v-if="ca.is_default" type="primary" size="small" :bordered="false">{{
-                    t('ca.default')
-                  }}</n-tag>
                   <n-tag v-if="!ca.is_active" size="small" :bordered="false">{{
                     t('ca.disabled')
                   }}</n-tag>
@@ -184,25 +168,6 @@ const handleSetDefault = async (id: number) => {
               </div>
             </div>
             <div class="flex items-center gap-1">
-              <n-button
-                v-if="!ca.is_default"
-                quaternary
-                circle
-                size="small"
-                @click="handleSetDefault(ca.id)"
-                :title="t('ca.setTitle')"
-              >
-                <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </template>
-              </n-button>
               <n-button
                 quaternary
                 circle
@@ -271,9 +236,6 @@ const handleSetDefault = async (id: number) => {
         </n-form-item>
         <n-form-item :label="t('ca.enabled')">
           <n-switch v-model:value="formData.is_active" />
-        </n-form-item>
-        <n-form-item :label="t('ca.setAsDefault')">
-          <n-switch v-model:value="formData.is_default" />
         </n-form-item>
       </n-form>
       <template #footer>

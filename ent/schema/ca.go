@@ -24,9 +24,6 @@ func (CA) Fields() []ent.Field {
 		field.String("account_email").
 			Optional().
 			Comment("注册邮箱"),
-		field.Bool("is_default").
-			Default(false).
-			Comment("是否为默认 CA"),
 		field.Bool("is_active").
 			Default(true).
 			Comment("是否启用"),

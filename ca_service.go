@@ -24,7 +24,6 @@ type CAListItem struct {
 	Name         string `json:"name"`          // CA 名称
 	DirectoryURL string `json:"directory_url"` // ACME 目录 URL
 	AccountEmail string `json:"account_email"` // 注册邮箱
-	IsDefault    bool   `json:"is_default"`    // 是否为默认 CA
 	IsActive     bool   `json:"is_active"`     // 是否启用
 	CreatedAt    string `json:"created_at"`    // 创建时间
 	UpdatedAt    string `json:"updated_at"`    // 更新时间
@@ -35,7 +34,6 @@ type CreateCACreateRequest struct {
 	Name         string `json:"name"`          // CA 名称
 	DirectoryURL string `json:"directory_url"` // ACME 目录 URL
 	AccountEmail string `json:"account_email"` // 注册邮箱
-	IsDefault    bool   `json:"is_default"`    // 是否设为默认
 	IsActive     bool   `json:"is_active"`     // 是否启用
 }
 
@@ -44,7 +42,6 @@ type CAUpdateRequest struct {
 	Name         string `json:"name,omitempty"`          // CA 名称
 	DirectoryURL string `json:"directory_url,omitempty"` // ACME 目录 URL
 	AccountEmail string `json:"account_email,omitempty"` // 注册邮箱
-	IsDefault    *bool  `json:"is_default,omitempty"`    // 是否设为默认
 	IsActive     *bool  `json:"is_active,omitempty"`     // 是否启用
 }
 
@@ -63,7 +60,6 @@ func (s *CAServiceWrapper) ListCA() ([]CAListItem, error) {
 			Name:         c.Name,
 			DirectoryURL: c.DirectoryURL,
 			AccountEmail: c.AccountEmail,
-			IsDefault:    c.IsDefault,
 			IsActive:     c.IsActive,
 			CreatedAt:    c.CreatedAt.Format(time.DateTime),
 			UpdatedAt:    c.UpdatedAt.Format(time.DateTime),
@@ -79,7 +75,6 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		Name:         input.Name,
 		DirectoryURL: input.DirectoryURL,
 		AccountEmail: input.AccountEmail,
-		IsDefault:    input.IsDefault,
 		IsActive:     input.IsActive,
 	})
 	if err != nil {
@@ -91,7 +86,6 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		Name:         result.Name,
 		DirectoryURL: result.DirectoryURL,
 		AccountEmail: result.AccountEmail,
-		IsDefault:    result.IsDefault,
 		IsActive:     result.IsActive,
 		CreatedAt:    result.CreatedAt.Format(time.DateTime),
 		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
@@ -105,7 +99,6 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		Name:         input.Name,
 		DirectoryURL: input.DirectoryURL,
 		AccountEmail: input.AccountEmail,
-		IsDefault:    input.IsDefault,
 		IsActive:     input.IsActive,
 	})
 	if err != nil {
@@ -117,7 +110,6 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		Name:         result.Name,
 		DirectoryURL: result.DirectoryURL,
 		AccountEmail: result.AccountEmail,
-		IsDefault:    result.IsDefault,
 		IsActive:     result.IsActive,
 		CreatedAt:    result.CreatedAt.Format(time.DateTime),
 		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
@@ -128,26 +120,6 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 func (s *CAServiceWrapper) DeleteCA(id int) error {
 	ctx := context.Background()
 	return s.caService.Delete(ctx, id)
-}
-
-// SetDefaultCA 设置默认 CA
-func (s *CAServiceWrapper) SetDefaultCA(id int) (*CAListItem, error) {
-	ctx := context.Background()
-	result, err := s.caService.SetDefault(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &CAListItem{
-		ID:           result.ID,
-		Name:         result.Name,
-		DirectoryURL: result.DirectoryURL,
-		AccountEmail: result.AccountEmail,
-		IsDefault:    result.IsDefault,
-		IsActive:     result.IsActive,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
-	}, nil
 }
 
 // TestCAConnection 测试 CA 连接
