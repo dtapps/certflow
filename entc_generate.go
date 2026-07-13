@@ -18,4 +18,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("running ent codegen: %v", err)
 	}
+	err = entc.Generate("./ent_log/schema", &gen.Config{
+		Features: []gen.Feature{gen.FeatureUpsert},
+	})
+	if err != nil {
+		log.Fatalf("running ent codegen: %v", err)
+	}
 }

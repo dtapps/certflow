@@ -21,6 +21,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/events"
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
@@ -86,6 +87,13 @@ func main() {
 	}
 	defer logging.Global().Close()
 	logging.Info(i18n.T("log.app_starting"))
+
+	// 初始化 HTTP 请求日志（独立日志库 httplog.db，仅 DEBUG 级别记录）
+	if err := httplog.Init(dataDir); err != nil {
+		logging.Error(i18n.T("error.httplog_init_failed"), err)
+	} else {
+		defer httplog.Close()
+	}
 
 	// 初始化数据库
 	if err := db.Init(dataDir); err != nil {
