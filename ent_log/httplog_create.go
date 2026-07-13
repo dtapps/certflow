@@ -4,7 +4,6 @@ package ent_log
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"time"
@@ -72,7 +71,7 @@ func (_c *HttpLogCreate) SetRequestHeaders(v map[string][]string) *HttpLogCreate
 }
 
 // SetRequestBody sets the "request_body" field.
-func (_c *HttpLogCreate) SetRequestBody(v jsontext.Value) *HttpLogCreate {
+func (_c *HttpLogCreate) SetRequestBody(v []byte) *HttpLogCreate {
 	_c.mutation.SetRequestBody(v)
 	return _c
 }
@@ -98,7 +97,7 @@ func (_c *HttpLogCreate) SetResponseHeaders(v map[string][]string) *HttpLogCreat
 }
 
 // SetResponseBody sets the "response_body" field.
-func (_c *HttpLogCreate) SetResponseBody(v jsontext.Value) *HttpLogCreate {
+func (_c *HttpLogCreate) SetResponseBody(v []byte) *HttpLogCreate {
 	_c.mutation.SetResponseBody(v)
 	return _c
 }
@@ -281,7 +280,7 @@ func (_c *HttpLogCreate) createSpec() (*HttpLog, *sqlgraph.CreateSpec) {
 		_node.RequestHeaders = value
 	}
 	if value, ok := _c.mutation.RequestBody(); ok {
-		_spec.SetField(httplog.FieldRequestBody, field.TypeJSON, value)
+		_spec.SetField(httplog.FieldRequestBody, field.TypeBytes, value)
 		_node.RequestBody = value
 	}
 	if value, ok := _c.mutation.StatusCode(); ok {
@@ -293,7 +292,7 @@ func (_c *HttpLogCreate) createSpec() (*HttpLog, *sqlgraph.CreateSpec) {
 		_node.ResponseHeaders = value
 	}
 	if value, ok := _c.mutation.ResponseBody(); ok {
-		_spec.SetField(httplog.FieldResponseBody, field.TypeJSON, value)
+		_spec.SetField(httplog.FieldResponseBody, field.TypeBytes, value)
 		_node.ResponseBody = value
 	}
 	if value, ok := _c.mutation.ElapseTime(); ok {

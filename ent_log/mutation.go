@@ -4,7 +4,6 @@ package ent_log
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"sync"
@@ -38,13 +37,11 @@ type HttpLogMutation struct {
 	method                 *string
 	url                    *string
 	request_headers        *map[string][]string
-	request_body           *jsontext.Value
-	appendrequest_body     jsontext.Value
+	request_body           *[]byte
 	status_code            *int
 	addstatus_code         *int
 	response_headers       *map[string][]string
-	response_body          *jsontext.Value
-	appendresponse_body    jsontext.Value
+	response_body          *[]byte
 	elapse_time            *int64
 	addelapse_time         *int64
 	process_elapse_time    *int64
@@ -354,13 +351,12 @@ func (m *HttpLogMutation) ResetRequestHeaders() {
 }
 
 // SetRequestBody sets the "request_body" field.
-func (m *HttpLogMutation) SetRequestBody(j jsontext.Value) {
-	m.request_body = &j
-	m.appendrequest_body = nil
+func (m *HttpLogMutation) SetRequestBody(b []byte) {
+	m.request_body = &b
 }
 
 // RequestBody returns the value of the "request_body" field in the mutation.
-func (m *HttpLogMutation) RequestBody() (r jsontext.Value, exists bool) {
+func (m *HttpLogMutation) RequestBody() (r []byte, exists bool) {
 	v := m.request_body
 	if v == nil {
 		return
@@ -371,7 +367,7 @@ func (m *HttpLogMutation) RequestBody() (r jsontext.Value, exists bool) {
 // OldRequestBody returns the old "request_body" field's value of the HttpLog entity.
 // If the HttpLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HttpLogMutation) OldRequestBody(ctx context.Context) (v jsontext.Value, err error) {
+func (m *HttpLogMutation) OldRequestBody(ctx context.Context) (v []byte, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRequestBody is only allowed on UpdateOne operations")
 	}
@@ -385,23 +381,9 @@ func (m *HttpLogMutation) OldRequestBody(ctx context.Context) (v jsontext.Value,
 	return oldValue.RequestBody, nil
 }
 
-// AppendRequestBody adds j to the "request_body" field.
-func (m *HttpLogMutation) AppendRequestBody(j jsontext.Value) {
-	m.appendrequest_body = append(m.appendrequest_body, j...)
-}
-
-// AppendedRequestBody returns the list of values that were appended to the "request_body" field in this mutation.
-func (m *HttpLogMutation) AppendedRequestBody() (jsontext.Value, bool) {
-	if len(m.appendrequest_body) == 0 {
-		return nil, false
-	}
-	return m.appendrequest_body, true
-}
-
 // ClearRequestBody clears the value of the "request_body" field.
 func (m *HttpLogMutation) ClearRequestBody() {
 	m.request_body = nil
-	m.appendrequest_body = nil
 	m.clearedFields[httplog.FieldRequestBody] = struct{}{}
 }
 
@@ -414,7 +396,6 @@ func (m *HttpLogMutation) RequestBodyCleared() bool {
 // ResetRequestBody resets all changes to the "request_body" field.
 func (m *HttpLogMutation) ResetRequestBody() {
 	m.request_body = nil
-	m.appendrequest_body = nil
 	delete(m.clearedFields, httplog.FieldRequestBody)
 }
 
@@ -538,13 +519,12 @@ func (m *HttpLogMutation) ResetResponseHeaders() {
 }
 
 // SetResponseBody sets the "response_body" field.
-func (m *HttpLogMutation) SetResponseBody(j jsontext.Value) {
-	m.response_body = &j
-	m.appendresponse_body = nil
+func (m *HttpLogMutation) SetResponseBody(b []byte) {
+	m.response_body = &b
 }
 
 // ResponseBody returns the value of the "response_body" field in the mutation.
-func (m *HttpLogMutation) ResponseBody() (r jsontext.Value, exists bool) {
+func (m *HttpLogMutation) ResponseBody() (r []byte, exists bool) {
 	v := m.response_body
 	if v == nil {
 		return
@@ -555,7 +535,7 @@ func (m *HttpLogMutation) ResponseBody() (r jsontext.Value, exists bool) {
 // OldResponseBody returns the old "response_body" field's value of the HttpLog entity.
 // If the HttpLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HttpLogMutation) OldResponseBody(ctx context.Context) (v jsontext.Value, err error) {
+func (m *HttpLogMutation) OldResponseBody(ctx context.Context) (v []byte, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldResponseBody is only allowed on UpdateOne operations")
 	}
@@ -569,23 +549,9 @@ func (m *HttpLogMutation) OldResponseBody(ctx context.Context) (v jsontext.Value
 	return oldValue.ResponseBody, nil
 }
 
-// AppendResponseBody adds j to the "response_body" field.
-func (m *HttpLogMutation) AppendResponseBody(j jsontext.Value) {
-	m.appendresponse_body = append(m.appendresponse_body, j...)
-}
-
-// AppendedResponseBody returns the list of values that were appended to the "response_body" field in this mutation.
-func (m *HttpLogMutation) AppendedResponseBody() (jsontext.Value, bool) {
-	if len(m.appendresponse_body) == 0 {
-		return nil, false
-	}
-	return m.appendresponse_body, true
-}
-
 // ClearResponseBody clears the value of the "response_body" field.
 func (m *HttpLogMutation) ClearResponseBody() {
 	m.response_body = nil
-	m.appendresponse_body = nil
 	m.clearedFields[httplog.FieldResponseBody] = struct{}{}
 }
 
@@ -598,7 +564,6 @@ func (m *HttpLogMutation) ResponseBodyCleared() bool {
 // ResetResponseBody resets all changes to the "response_body" field.
 func (m *HttpLogMutation) ResetResponseBody() {
 	m.response_body = nil
-	m.appendresponse_body = nil
 	delete(m.clearedFields, httplog.FieldResponseBody)
 }
 
@@ -1113,7 +1078,7 @@ func (m *HttpLogMutation) SetField(name string, value ent.Value) error {
 		m.SetRequestHeaders(v)
 		return nil
 	case httplog.FieldRequestBody:
-		v, ok := value.(jsontext.Value)
+		v, ok := value.([]byte)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1134,7 +1099,7 @@ func (m *HttpLogMutation) SetField(name string, value ent.Value) error {
 		m.SetResponseHeaders(v)
 		return nil
 	case httplog.FieldResponseBody:
-		v, ok := value.(jsontext.Value)
+		v, ok := value.([]byte)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

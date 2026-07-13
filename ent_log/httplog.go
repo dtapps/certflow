@@ -4,7 +4,6 @@ package ent_log
 
 import (
 	"encoding/json"
-	"encoding/json/jsontext"
 	"fmt"
 	"strings"
 	"time"
@@ -28,13 +27,13 @@ type HttpLog struct {
 	// 请求头
 	RequestHeaders map[string][]string `json:"request_headers,omitempty"`
 	// 请求体
-	RequestBody jsontext.Value `json:"request_body,omitempty"`
+	RequestBody []byte `json:"request_body,omitempty"`
 	// 状态码
 	StatusCode int `json:"status_code,omitempty"`
 	// 响应头
 	ResponseHeaders map[string][]string `json:"response_headers,omitempty"`
 	// 响应体
-	ResponseBody jsontext.Value `json:"response_body,omitempty"`
+	ResponseBody []byte `json:"response_body,omitempty"`
 	// 耗时（毫秒）
 	ElapseTime int64 `json:"elapse_time,omitempty"`
 	// 处理耗时（毫秒）
@@ -115,10 +114,8 @@ func (_m *HttpLog) assignValues(columns []string, values []any) error {
 		case httplog.FieldRequestBody:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field request_body", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.RequestBody); err != nil {
-					return fmt.Errorf("unmarshal field request_body: %w", err)
-				}
+			} else if value != nil {
+				_m.RequestBody = *value
 			}
 		case httplog.FieldStatusCode:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -137,10 +134,8 @@ func (_m *HttpLog) assignValues(columns []string, values []any) error {
 		case httplog.FieldResponseBody:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field response_body", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.ResponseBody); err != nil {
-					return fmt.Errorf("unmarshal field response_body: %w", err)
-				}
+			} else if value != nil {
+				_m.ResponseBody = *value
 			}
 		case httplog.FieldElapseTime:
 			if value, ok := values[i].(*sql.NullInt64); !ok {

@@ -69,9 +69,19 @@ func URL(v string) predicate.HttpLog {
 	return predicate.HttpLog(sql.FieldEQ(FieldURL, v))
 }
 
+// RequestBody applies equality check predicate on the "request_body" field. It's identical to RequestBodyEQ.
+func RequestBody(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldEQ(FieldRequestBody, v))
+}
+
 // StatusCode applies equality check predicate on the "status_code" field. It's identical to StatusCodeEQ.
 func StatusCode(v int) predicate.HttpLog {
 	return predicate.HttpLog(sql.FieldEQ(FieldStatusCode, v))
+}
+
+// ResponseBody applies equality check predicate on the "response_body" field. It's identical to ResponseBodyEQ.
+func ResponseBody(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldEQ(FieldResponseBody, v))
 }
 
 // ElapseTime applies equality check predicate on the "elapse_time" field. It's identical to ElapseTimeEQ.
@@ -339,6 +349,46 @@ func RequestHeadersNotNil() predicate.HttpLog {
 	return predicate.HttpLog(sql.FieldNotNull(FieldRequestHeaders))
 }
 
+// RequestBodyEQ applies the EQ predicate on the "request_body" field.
+func RequestBodyEQ(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldEQ(FieldRequestBody, v))
+}
+
+// RequestBodyNEQ applies the NEQ predicate on the "request_body" field.
+func RequestBodyNEQ(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldNEQ(FieldRequestBody, v))
+}
+
+// RequestBodyIn applies the In predicate on the "request_body" field.
+func RequestBodyIn(vs ...[]byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldIn(FieldRequestBody, vs...))
+}
+
+// RequestBodyNotIn applies the NotIn predicate on the "request_body" field.
+func RequestBodyNotIn(vs ...[]byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldNotIn(FieldRequestBody, vs...))
+}
+
+// RequestBodyGT applies the GT predicate on the "request_body" field.
+func RequestBodyGT(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldGT(FieldRequestBody, v))
+}
+
+// RequestBodyGTE applies the GTE predicate on the "request_body" field.
+func RequestBodyGTE(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldGTE(FieldRequestBody, v))
+}
+
+// RequestBodyLT applies the LT predicate on the "request_body" field.
+func RequestBodyLT(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldLT(FieldRequestBody, v))
+}
+
+// RequestBodyLTE applies the LTE predicate on the "request_body" field.
+func RequestBodyLTE(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldLTE(FieldRequestBody, v))
+}
+
 // RequestBodyIsNil applies the IsNil predicate on the "request_body" field.
 func RequestBodyIsNil() predicate.HttpLog {
 	return predicate.HttpLog(sql.FieldIsNull(FieldRequestBody))
@@ -407,6 +457,46 @@ func ResponseHeadersIsNil() predicate.HttpLog {
 // ResponseHeadersNotNil applies the NotNil predicate on the "response_headers" field.
 func ResponseHeadersNotNil() predicate.HttpLog {
 	return predicate.HttpLog(sql.FieldNotNull(FieldResponseHeaders))
+}
+
+// ResponseBodyEQ applies the EQ predicate on the "response_body" field.
+func ResponseBodyEQ(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldEQ(FieldResponseBody, v))
+}
+
+// ResponseBodyNEQ applies the NEQ predicate on the "response_body" field.
+func ResponseBodyNEQ(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldNEQ(FieldResponseBody, v))
+}
+
+// ResponseBodyIn applies the In predicate on the "response_body" field.
+func ResponseBodyIn(vs ...[]byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldIn(FieldResponseBody, vs...))
+}
+
+// ResponseBodyNotIn applies the NotIn predicate on the "response_body" field.
+func ResponseBodyNotIn(vs ...[]byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldNotIn(FieldResponseBody, vs...))
+}
+
+// ResponseBodyGT applies the GT predicate on the "response_body" field.
+func ResponseBodyGT(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldGT(FieldResponseBody, v))
+}
+
+// ResponseBodyGTE applies the GTE predicate on the "response_body" field.
+func ResponseBodyGTE(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldGTE(FieldResponseBody, v))
+}
+
+// ResponseBodyLT applies the LT predicate on the "response_body" field.
+func ResponseBodyLT(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldLT(FieldResponseBody, v))
+}
+
+// ResponseBodyLTE applies the LTE predicate on the "response_body" field.
+func ResponseBodyLTE(v []byte) predicate.HttpLog {
+	return predicate.HttpLog(sql.FieldLTE(FieldResponseBody, v))
 }
 
 // ResponseBodyIsNil applies the IsNil predicate on the "response_body" field.

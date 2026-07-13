@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"time"
 
 	"entgo.io/ent"
@@ -52,7 +51,7 @@ func (HttpLog) Fields() []ent.Field {
 			Comment("请求头").
 			Annotations(entsql.WithComments(true)),
 
-		field.JSON("request_body", json.RawMessage{}).
+		field.Bytes("request_body").
 			Optional().
 			Immutable().
 			Comment("请求体").
@@ -70,7 +69,7 @@ func (HttpLog) Fields() []ent.Field {
 			Comment("响应头").
 			Annotations(entsql.WithComments(true)),
 
-		field.JSON("response_body", json.RawMessage{}).
+		field.Bytes("response_body").
 			Optional().
 			Immutable().
 			Comment("响应体").
