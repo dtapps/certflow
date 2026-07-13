@@ -317,7 +317,7 @@ const getStepTitle = (step: number) => {
 </script>
 
 <template>
-  <div class="w-full space-y-6">
+  <div class="page">
     <div class="text-center">
       <h1 class="text-2xl font-bold">
         {{ isResumeMode ? t('apply.resumeTitle') : t('apply.title') }}
