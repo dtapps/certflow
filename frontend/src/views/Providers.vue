@@ -27,11 +27,11 @@ const createButtonText = computed(() => {
 </script>
 
 <template>
-  <div class="providers-page">
+  <div class="page">
     <div class="page-header">
       <div>
         <h1 class="text-2xl font-bold">{{ pageTitle }}</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ pageSubtitle }}</p>
+        <p class="text-sm opacity-60 mt-1">{{ pageSubtitle }}</p>
       </div>
       <n-button type="primary" @click="showCreateModal = true">
         <template #icon>
@@ -48,7 +48,7 @@ const createButtonText = computed(() => {
       </n-button>
     </div>
 
-    <n-tabs v-model:value="activeTab" type="line" class="mt-4">
+    <n-tabs v-model:value="activeTab" type="line">
       <n-tab-pane name="dns" :tab="t('dns.credentialTitle')">
         <DNSProviders />
       </n-tab-pane>
@@ -60,12 +60,6 @@ const createButtonText = computed(() => {
 </template>
 
 <style scoped>
-.providers-page {
-  padding: 1.5rem;
-  height: 100%;
-  overflow-y: auto;
-}
-
 .page-header {
   display: flex;
   justify-content: space-between;
