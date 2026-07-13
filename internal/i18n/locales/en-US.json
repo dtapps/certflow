@@ -234,7 +234,7 @@
   "log.acme_account_registered": "ACME account registered/resolved",
   "log.acme_obtain_success": "ACME Obtain successful",
   "log.acme_obtain_verify": "Starting ACME Obtain verification: domain={{.Domain}}",
-  "log.app_starting": "CertFlow starting...",
+  "log.app_starting": "CertFlow starting... version={{.Version}} buildTime={{.BuildTime}}",
   "log.auth_change_password_failed": "Failed to change password: {{.Error}}",
   "log.auth_clear_password_failed": "Failed to clear password: {{.Error}}",
   "log.auth_deactivate_failed": "Failed to deactivate auth method: {{.Error}}",

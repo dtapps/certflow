@@ -204,7 +204,7 @@
   "log.monitor_update_failed": "Failed to update monitored domain: domain={{.Domain}}, error={{.Error}}",
   "log.background_obtain_failed": "Log: background_obtain_failed",
   "log.dns_provider_create_failed": "Log: dns_provider_create_failed",
-  "log.app_starting": "CertFlow starting...",
+  "log.app_starting": "CertFlow starting... version={{.Version}} buildTime={{.BuildTime}}",
   "log.set_window_appearance": "Setting window appearance",
   "log.main_window_nil": "Main window reference is nil",
   "log.updater_check_start": "Starting update check",

@@ -86,7 +86,7 @@ func main() {
 		log.Fatalf(i18n.T("error.create_log_dir_failed")+": %v", err)
 	}
 	defer logging.Global().Close()
-	logging.Info(i18n.T("log.app_starting"))
+	logging.Info(i18n.T("log.app_starting", "Version", currentVersion, "BuildTime", buildTime))
 
 	// 初始化 HTTP 请求日志（独立日志库 httplog.db，仅 DEBUG 级别记录）
 	if err := httplog.Init(dataDir); err != nil {
@@ -241,8 +241,7 @@ func main() {
 			Providers:      []updater.Provider{gh},
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
-					Title:       i18n.T("updater.title"),
-					AlwaysOnTop: true,
+					Title: i18n.T("updater.title"),
 				},
 			},
 		}); err != nil {

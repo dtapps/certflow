@@ -234,7 +234,7 @@
   "log.acme_account_registered": "ACME 账户已注册/解析",
   "log.acme_obtain_success": "ACME Obtain 成功",
   "log.acme_obtain_verify": "开始 ACME Obtain 验证: domain={{.Domain}}",
-  "log.app_starting": "CertFlow 启动中...",
+  "log.app_starting": "CertFlow 启动中... 版本={{.Version}} 打包时间={{.BuildTime}}",
   "log.auth_change_password_failed": "修改密码失败: {{.Error}}",
   "log.auth_clear_password_failed": "清除密码失败: {{.Error}}",
   "log.auth_deactivate_failed": "取消激活状态失败: {{.Error}}",
