@@ -43,6 +43,7 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const showPassword = ref(false)
 const confirmClearPassword = ref(false)
+const confirmClearTOTP = ref(false)
 
 // TOTP 状态
 const isTOTPSet = ref(false)
@@ -65,6 +66,12 @@ const biometricSupported = ref(false)
 // 认证方式状态
 const activeMethod = ref('')
 const availableMethods = ref<string[]>([])
+
+// 认证方式名称映射
+const methodLabel = (method: string) => {
+  if (!method) return '-'
+  return t(`personal.method.${method}`)
+}
 
 onMounted(async () => {
   await loadAuthInfo()
@@ -257,6 +264,7 @@ const clearTOTP = async () => {
     isTOTPSet.value = false
     showTOTPForm.value = false
     totpSetupResult.value = null
+    confirmClearTOTP.value = false
     message.value = { type: 'success', text: t('personal.removedSuccess') }
     await loadAuthInfo()
   } catch (e: any) {
@@ -405,7 +413,7 @@ const switchMethod = async (method: string) => {
         <div class="flex items-center gap-2">
           <span class="text-sm">{{ t('personal.activeMethod') }}:</span>
           <n-tag type="primary" size="small">
-            {{ activeMethod || '-' }}
+            {{ methodLabel(activeMethod) }}
           </n-tag>
         </div>
 
@@ -436,19 +444,12 @@ const switchMethod = async (method: string) => {
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <n-button v-if="activeMethod === 'password'" type="primary" size="small" disabled>
-              {{ t('personal.activeMethod') }}
-            </n-button>
-            <template v-else>
-              <n-button
-                v-if="isPasswordSet"
-                secondary
-                size="small"
-                @click="switchMethod('password')"
-              >
-                {{ t('personal.switchMethod') }}
+          <div class="flex flex-col items-end gap-2">
+            <div class="flex items-center gap-2">
+              <n-button v-if="activeMethod === 'password'" type="primary" size="small" disabled>
+                {{ t('personal.activeMethod') }}
               </n-button>
+
               <n-button
                 v-if="!isPasswordSet"
                 type="primary"
@@ -457,7 +458,16 @@ const switchMethod = async (method: string) => {
               >
                 {{ t('personal.setPassword') }}
               </n-button>
-              <template v-else>
+
+              <template v-if="isPasswordSet">
+                <n-button
+                  v-if="activeMethod !== 'password'"
+                  secondary
+                  size="small"
+                  @click="switchMethod('password')"
+                >
+                  {{ t('personal.switchMethod') }}
+                </n-button>
                 <n-button secondary size="small" @click="showPasswordForm = !showPasswordForm">
                   {{ showPasswordForm ? t('common.cancel') : t('personal.changePassword') }}
                 </n-button>
@@ -473,7 +483,16 @@ const switchMethod = async (method: string) => {
                   {{ t('personal.confirmRemove') }}
                 </n-button>
               </template>
-            </template>
+            </div>
+
+            <n-alert
+              v-if="confirmClearPassword && availableMethods.length <= 1"
+              type="warning"
+              size="small"
+              class="max-w-xs"
+            >
+              {{ t('personal.removeMakesAppOpen') }}
+            </n-alert>
           </div>
         </div>
 
@@ -541,21 +560,47 @@ const switchMethod = async (method: string) => {
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <n-button v-if="activeMethod === 'totp'" type="primary" size="small" disabled>
-              {{ t('personal.activeMethod') }}
-            </n-button>
-            <template v-else>
-              <n-button v-if="isTOTPSet" secondary size="small" @click="switchMethod('totp')">
-                {{ t('personal.switchMethod') }}
+          <div class="flex flex-col items-end gap-2">
+            <div class="flex items-center gap-2">
+              <n-button v-if="activeMethod === 'totp'" type="primary" size="small" disabled>
+                {{ t('personal.activeMethod') }}
               </n-button>
+
               <n-button v-if="!isTOTPSet" type="primary" size="small" @click="setupTOTP">
                 {{ t('personal.setupTOTP') }}
               </n-button>
-              <n-button v-else type="error" size="small" @click="clearTOTP">
-                {{ t('personal.clearTOTP') }}
-              </n-button>
-            </template>
+
+              <template v-if="isTOTPSet">
+                <n-button
+                  v-if="activeMethod !== 'totp'"
+                  secondary
+                  size="small"
+                  @click="switchMethod('totp')"
+                >
+                  {{ t('personal.switchMethod') }}
+                </n-button>
+                <n-button
+                  v-if="!confirmClearTOTP"
+                  type="error"
+                  size="small"
+                  @click="confirmClearTOTP = true"
+                >
+                  {{ t('personal.clearTOTP') }}
+                </n-button>
+                <n-button v-else type="error" size="small" @click="clearTOTP">
+                  {{ t('personal.confirmRemove') }}
+                </n-button>
+              </template>
+            </div>
+
+            <n-alert
+              v-if="confirmClearTOTP && availableMethods.length <= 1"
+              type="warning"
+              size="small"
+              class="max-w-xs"
+            >
+              {{ t('personal.removeMakesAppOpen') }}
+            </n-alert>
           </div>
         </div>
 

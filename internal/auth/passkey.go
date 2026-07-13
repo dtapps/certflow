@@ -317,10 +317,12 @@ func (s *AuthService) ClearPasskey() error {
 	}
 
 	// 再删除 Passkey 认证方式
-	_, err = s.db.AuthMethod.Delete().
+	if _, err := s.db.AuthMethod.Delete().
 		Where(authmethod.MethodEQ("passkey")).
-		Exec(ctx)
-	return err
+		Exec(ctx); err != nil {
+		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
+	}
+	return s.ensureActiveMethod(ctx)
 }
 
 // GetPasskeyInfo 获取 Passkey 信息

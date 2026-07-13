@@ -177,10 +177,12 @@ func (s *AuthService) ClearTOTP() error {
 	}
 
 	// 再删除 TOTP 认证方式
-	_, err = s.db.AuthMethod.Delete().
+	if _, err := s.db.AuthMethod.Delete().
 		Where(authmethod.MethodEQ("totp")).
-		Exec(ctx)
-	return err
+		Exec(ctx); err != nil {
+		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
+	}
+	return s.ensureActiveMethod(ctx)
 }
 
 // CancelTOTP 取消未确认的 TOTP 设置，清理残留数据
@@ -210,8 +212,9 @@ func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 
 	ctx := context.Background()
 
+	// 是否已配置只看记录是否存在，与是否激活无关（激活状态由 activeMethod 单独表达）
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("totp"), authmethod.IsActiveEQ(true)).
+		Where(authmethod.MethodEQ("totp")).
 		WithTotpCredentials().
 		Only(ctx)
 	if err != nil {

@@ -137,6 +137,37 @@ func (s *AuthService) ClearPassword() error {
 	_, err := s.db.AuthMethod.Delete().
 		Where(authmethod.MethodEQ("password")).
 		Exec(ctx)
+	if err != nil {
+		return err
+	}
+	return s.ensureActiveMethod(ctx)
+}
+
+// ensureActiveMethod 删除认证方式后若已无任何激活方式，自动激活另一个已配置的方式。
+// 只有当所有认证方式都被移除时，应用才会变为免验证。
+func (s *AuthService) ensureActiveMethod(ctx context.Context) error {
+	hasActive, err := s.db.AuthMethod.Query().
+		Where(authmethod.IsActiveEQ(true)).
+		Exist(ctx)
+	if err != nil {
+		return err
+	}
+	if hasActive {
+		return nil
+	}
+
+	others, err := s.db.AuthMethod.Query().All(ctx)
+	if err != nil {
+		return err
+	}
+	if len(others) == 0 {
+		return nil
+	}
+
+	_, err = s.db.AuthMethod.Update().
+		Where(authmethod.MethodEQ(others[0].Method)).
+		SetIsActive(true).
+		Save(ctx)
 	return err
 }
 

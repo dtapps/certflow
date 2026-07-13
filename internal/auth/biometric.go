@@ -138,10 +138,12 @@ func (s *AuthService) ClearBiometric() error {
 	ctx := context.Background()
 
 	// 删除生物识别认证方式
-	_, err := s.db.AuthMethod.Delete().
+	if _, err := s.db.AuthMethod.Delete().
 		Where(authmethod.MethodEQ("biometric")).
-		Exec(ctx)
-	return err
+		Exec(ctx); err != nil {
+		return err
+	}
+	return s.ensureActiveMethod(ctx)
 }
 
 // GetBiometricInfo 获取生物识别信息
