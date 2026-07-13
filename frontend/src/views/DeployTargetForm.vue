@@ -68,6 +68,7 @@ const providerOptions = [
   { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
   { label: t('deploy.provider.huawei'), value: 'huawei' },
   { label: t('deploy.provider.baidu'), value: 'baiducloud' },
+  { label: t('deploy.provider.ctyun'), value: 'ctyun' },
 ]
 // 部署服务随云厂商变化：不同厂商提供的可部署目标不同，只展示后端已实现的服务，
 // 避免用户选到不属于该厂商、或后端未实现（只会上传不绑定）的服务。
@@ -96,6 +97,12 @@ const servicesByProvider = computed<{ label: string; value: string }[]>(() => {
       return [
         { label: t('deploy.service.cdn'), value: 'cdn' },
         { label: t('deploy.service.drcdn'), value: 'drcdn' },
+      ]
+    case 'ctyun':
+      return [
+        { label: t('deploy.service.ctcdn'), value: 'ctcdn' },
+        { label: t('deploy.service.icdn'), value: 'icdn' },
+        { label: t('deploy.service.accessone'), value: 'accessone' },
       ]
     default:
       return [{ label: t('deploy.service.cdn'), value: 'cdn' }]
@@ -235,6 +242,7 @@ async function loadEditTarget() {
     form.deploy_service = target.deploy_service
     form.credential_source = target.credential_source
     form.dns_provider_id = target.dns_provider_id
+    form.deploy_credential_id = target.deploy_credential_id
     form.access_key = ''
     form.secret_key = ''
     form.region = cf.region || cf.region_id || ''
@@ -396,7 +404,7 @@ async function save() {
       await DeployService.CreateDeployTarget(input)
     }
     showMessage(t('deploy.saved'), 'success')
-    router.push('/deploy')
+    router.push('/ssl-deploy')
   } catch (e: any) {
     showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
   } finally {
@@ -418,11 +426,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="deploy-form-page">
+  <div class="page">
     <n-spin :show="loading">
-      <n-card :title="editingId ? t('deploy.edit') : t('deploy.create')" :bordered="false">
+      <n-card
+        class="max-w-4xl mx-auto w-full"
+        :title="editingId ? t('deploy.edit') : t('deploy.create')"
+        :bordered="false"
+      >
         <template #header-extra>
-          <n-button @click="router.push('/deploy')">{{ t('deploy.back') }}</n-button>
+          <n-button @click="router.push('/ssl-deploy')">{{ t('deploy.back') }}</n-button>
         </template>
         <n-form :model="form" label-placement="top">
           <n-form-item :label="t('deploy.name')">
@@ -461,11 +473,14 @@ onMounted(async () => {
               clearable
             />
           </n-form-item>
-          <n-form-item v-if="form.credential_source === 'deploy_credential'" label="部署凭证">
+          <n-form-item
+            v-if="form.credential_source === 'deploy_credential'"
+            :label="t('deploy.credentialSource')"
+          >
             <n-select
               v-model:value="form.deploy_credential_id"
               :options="deployCredentialOptions"
-              placeholder="选择部署凭证"
+              :placeholder="t('deploy.selectDns')"
               clearable
             />
           </n-form-item>
@@ -546,7 +561,10 @@ onMounted(async () => {
               form.deploy_service === 'edgeone' ||
               form.deploy_service === 'ecdn' ||
               form.deploy_service === 'ga' ||
-              form.deploy_service === 'esa'
+              form.deploy_service === 'esa' ||
+              form.deploy_service === 'ctcdn' ||
+              form.deploy_service === 'icdn' ||
+              form.deploy_service === 'accessone'
             "
             :label="t('deploy.domains')"
           >
@@ -558,7 +576,10 @@ onMounted(async () => {
                   form.deploy_service === 'drcdn' ||
                   form.deploy_service === 'edgeone' ||
                   form.deploy_service === 'ecdn' ||
-                  form.deploy_service === 'esa'
+                  form.deploy_service === 'esa' ||
+                  form.deploy_service === 'ctcdn' ||
+                  form.deploy_service === 'icdn' ||
+                  form.deploy_service === 'accessone'
                 "
                 :size="8"
                 class="mb-2"
@@ -598,7 +619,10 @@ onMounted(async () => {
                 :tag="
                   form.deploy_service === 'edgeone' ||
                   form.deploy_service === 'dcdn' ||
-                  form.deploy_service === 'drcdn'
+                  form.deploy_service === 'drcdn' ||
+                  form.deploy_service === 'ctcdn' ||
+                  form.deploy_service === 'icdn' ||
+                  form.deploy_service === 'accessone'
                 "
                 :placeholder="t('deploy.selectDomain')"
               />
@@ -616,7 +640,7 @@ onMounted(async () => {
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="router.push('/deploy')">{{ t('deploy.cancel') }}</n-button>
+            <n-button @click="router.push('/ssl-deploy')">{{ t('deploy.cancel') }}</n-button>
             <n-button type="primary" :loading="saving" @click="save">{{
               t('deploy.save')
             }}</n-button>
@@ -626,10 +650,3 @@ onMounted(async () => {
     </n-spin>
   </div>
 </template>
-
-<style scoped>
-.deploy-form-page {
-  max-width: 880px;
-  margin: 0 auto;
-}
-</style>

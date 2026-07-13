@@ -1,5 +1,11 @@
 {
   "error.deploy_no_credential": "Deploy credential not configured",
+  "deploy.error.ctyun_cert_empty": "Certificate content is empty, cannot deploy to CTYun",
+  "deploy.error.ctyun_upload_cert": "Failed to upload certificate to CTYun SSL service",
+  "deploy.error.ctyun_set_https": "Failed to configure HTTPS for CTYun CDN domain",
+  "deploy.error.ctyun_parse_response": "Failed to parse CTYun API response",
+  "deploy.error.ctyun_list_domains": "Failed to list CTYun CDN domains",
+  "deploy.error.ctyun_unknown_service": "Unsupported CTYun deploy service: {{.Service}} (valid: ctcdn / icdn / accessone)",
   "deploy.error.huawei_no_pem_block": "PEM certificate block not found",
   "deploy.error.huawei_no_certificate_block": "CERTIFICATE type block not found",
   "deploy.error.huawei_scm_client_create": "Failed to create Huawei Cloud SCM client",
@@ -193,5 +199,8 @@
   "error.deploy_credential_missing": "Deploy credentials missing, please check the DNS provider config or fill AccessKey/Secret manually",
   "error.deploy_no_dns_provider": "Deploy target has no linked DNS provider credentials",
   "error.deploy_unsupported_provider": "Unsupported cloud provider: {{.Provider}}",
-  "error.deploy_target_not_found": "Deploy target not found"
+  "error.deploy_target_not_found": "Deploy target not found",
+  "error.open_httplog_db_failed": "Failed to open HTTP request log database: {{.Error}}",
+  "error.create_httplog_schema_failed": "Failed to create HTTP request log table: {{.Error}}",
+  "error.httplog_init_failed": "Failed to initialize HTTP request logging: {{.Error}}"
 }

@@ -91,6 +91,7 @@ const providerOptions = [
   { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
   { label: t('deploy.provider.huawei'), value: 'huawei' },
   { label: t('deploy.provider.baidu'), value: 'baiducloud' },
+  { label: t('deploy.provider.ctyun'), value: 'ctyun' },
 ]
 const serviceOptions = [
   { label: t('deploy.service.cdn'), value: 'cdn' },
@@ -307,10 +308,10 @@ function statusType(s?: string) {
 }
 
 function goCreate() {
-  router.push('/deploy/new')
+  router.push('/ssl-deploy/new')
 }
 function goEdit(target: DeployTargetListItem) {
-  router.push(`/deploy/${target.id}/edit`)
+  router.push(`/ssl-deploy/${target.id}/edit`)
 }
 
 onMounted(loadAll)
@@ -364,7 +365,10 @@ onMounted(loadAll)
                       target.credential_source === 'dns_provider'
                         ? t('deploy.credFromDns') +
                           (target.dns_provider_name ? ' · ' + target.dns_provider_name : '')
-                        : t('deploy.credFromSelf')
+                        : t('deploy.credFromCredential') +
+                          (target.deploy_credential_name
+                            ? ' · ' + target.deploy_credential_name
+                            : '')
                     }}
                   </n-tag>
                   <n-tag size="small" :bordered="false" :type="statusType(target.last_status)">

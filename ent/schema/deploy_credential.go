@@ -19,12 +19,7 @@ func (DeployCredential) Fields() []ent.Field {
 			NotEmpty().
 			Comment("凭证名称"),
 		field.Enum("provider_type").
-			Values(
-				// 云厂商
-				"aliyun", "tencentcloud", "huawei", "baiducloud",
-				// 面板
-				"btpanel", "1panel", "acepanel",
-			).
+			Values(DeployProviderTypes...).
 			Comment("提供商类型"),
 		field.Bytes("config").
 			Optional().

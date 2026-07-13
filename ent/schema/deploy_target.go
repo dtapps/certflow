@@ -19,7 +19,7 @@ func (DeployTarget) Fields() []ent.Field {
 			NotEmpty().
 			Comment("部署目标名称"),
 		field.Enum("provider_type").
-			Values("aliyun", "tencentcloud", "huawei", "baiducloud").
+			Values(DeployProviderTypes...).
 			Comment("云厂商"),
 		field.String("deploy_service").
 			NotEmpty().

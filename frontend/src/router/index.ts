@@ -43,16 +43,12 @@ const router = createRouter({
       redirect: '/providers',
     },
     {
-      path: '/deploy',
-      redirect: '/providers',
-    },
-    {
-      path: '/deploy/new',
+      path: '/ssl-deploy/new',
       name: 'deploy-new',
       component: () => import('../views/DeployTargetForm.vue'),
     },
     {
-      path: '/deploy/:id/edit',
+      path: '/ssl-deploy/:id/edit',
       name: 'deploy-edit',
       component: () => import('../views/DeployTargetForm.vue'),
     },

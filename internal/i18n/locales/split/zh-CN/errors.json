@@ -1,5 +1,11 @@
 {
   "error.deploy_no_credential": "未配置部署凭证",
+  "deploy.error.ctyun_cert_empty": "证书内容为空，无法部署到天翼云",
+  "deploy.error.ctyun_upload_cert": "上传证书到天翼云 SSL 证书服务失败",
+  "deploy.error.ctyun_set_https": "为天翼云 CDN 域名配置 HTTPS 证书失败",
+  "deploy.error.ctyun_parse_response": "解析天翼云接口响应失败",
+  "deploy.error.ctyun_list_domains": "获取天翼云 CDN 域名列表失败",
+  "deploy.error.ctyun_unknown_service": "不支持的天翼云部署服务：{{.Service}}（可选：ctcdn / icdn / accessone）",
   "deploy.error.huawei_no_pem_block": "未找到 PEM 证书块",
   "deploy.error.huawei_no_certificate_block": "未找到 CERTIFICATE 类型块",
   "deploy.error.huawei_scm_client_create": "创建华为云 SCM 客户端失败",
@@ -193,5 +199,8 @@
   "error.deploy_credential_missing": "部署凭证缺失，请检查 DNS 提供商配置或自行填写 AccessKey/Secret",
   "error.deploy_no_dns_provider": "部署目标未关联 DNS 提供商凭证",
   "error.deploy_unsupported_provider": "不支持的云厂商: {{.Provider}}",
-  "error.deploy_target_not_found": "部署目标不存在"
+  "error.deploy_target_not_found": "部署目标不存在",
+  "error.open_httplog_db_failed": "打开 HTTP 请求日志数据库失败: {{.Error}}",
+  "error.create_httplog_schema_failed": "创建 HTTP 请求日志表失败: {{.Error}}",
+  "error.httplog_init_failed": "初始化 HTTP 请求日志失败: {{.Error}}"
 }

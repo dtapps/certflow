@@ -8,6 +8,12 @@
   "log.deploy.baidu_list_failed": "百度云 获取域名列表失败 svc={{.Service}} err={{.Err}}",
   "log.deploy.baidu_cert_key_mismatch": "百度云 证书与私钥不匹配 domain={{.Domain}} err={{.Err}}",
   "log.deploy.baidu_list_success": "百度云 获取域名列表成功 svc={{.Service}} count={{.Count}}",
+  "log.deploy.ctyun_upload": "天翼云 上传证书到 SSL 服务 certID={{.CertID}}",
+  "log.deploy.ctyun_deploy_start": "天翼云 部署证书开始 domain={{.Domain}} certID={{.CertID}}",
+  "log.deploy.ctyun_deploy_failed": "天翼云 部署证书失败 domain={{.Domain}} err={{.Err}}",
+  "log.deploy.ctyun_deploy_success": "天翼云 部署证书成功 domain={{.Domain}}",
+  "log.deploy.ctyun_list_raw": "天翼云 获取域名列表原始响应 svc={{.Svc}} body={{.Body}}",
+  "log.deploy.ctyun_list_filter": "天翼云 域名列表按产品过滤 svc={{.Svc}} product={{.Product}} 总数={{.Total}} 命中={{.Matched}}",
   "log.deploy.cert_reupload": "数据库缓存证书云端已不存在，重新上传 certID={{.CertID}}",
   "log.deploy.ent_log_file_failed": "ent SQL 日志文件创建失败，已禁用 ent.Debug 以免 SQL 泄漏到控制台 logDir={{.LogDir}}",
   "log.deploy.huawei_scm_region_fallback": "华为云 SCM 区域 {{.Region}} 不支持，回退到主区域 {{.ScmRegion}}",
@@ -270,5 +276,8 @@
   "log.settings_reload_failed": "配置文件热重载失败: {{.Error}}",
   "log.settings_reloaded": "配置文件已热重载",
   "log.deploy_success": "证书部署成功: 域名 {{.Domain}} -> 目标 {{.Target}}",
-  "log.deploy_failed": "证书部署失败: 目标 {{.Target}} 错误: {{.Error}}"
+  "log.deploy_failed": "证书部署失败: 目标 {{.Target}} 错误: {{.Error}}",
+  "log.httplog.enabled": "已启用 HTTP 请求日志（DEBUG 模式，独立日志库 httplog.db）",
+  "log.httplog.skip_not_debug": "未启用 HTTP 请求日志（日志级别非 DEBUG）",
+  "log.httplog.save_failed": "保存 HTTP 请求日志失败"
 }

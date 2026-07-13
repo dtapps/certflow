@@ -102,6 +102,11 @@ func TestCredsFromConfig(t *testing.T) {
 			wantID:   "ak", wantSec: "sk", wantRgn: "",
 		},
 		{
+			provider: "ctyun",
+			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantID:   "ak", wantSec: "sk", wantRgn: "",
+		},
+		{
 			// 未知厂商返回空凭证
 			provider: "unknown",
 			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},

@@ -8,6 +8,12 @@
   "log.deploy.baidu_list_failed": "Baidu Cloud list domains failed svc={{.Service}} err={{.Err}}",
   "log.deploy.baidu_cert_key_mismatch": "Baidu Cloud cert/key mismatch domain={{.Domain}} err={{.Err}}",
   "log.deploy.baidu_list_success": "Baidu Cloud list domains success svc={{.Service}} count={{.Count}}",
+  "log.deploy.ctyun_upload": "CTYun upload cert to SSL service certID={{.CertID}}",
+  "log.deploy.ctyun_deploy_start": "CTYun deploy cert start domain={{.Domain}} certID={{.CertID}}",
+  "log.deploy.ctyun_deploy_failed": "CTYun deploy cert failed domain={{.Domain}} err={{.Err}}",
+  "log.deploy.ctyun_deploy_success": "CTYun deploy cert success domain={{.Domain}}",
+  "log.deploy.ctyun_list_raw": "CTYun list domains raw response svc={{.Svc}} body={{.Body}}",
+  "log.deploy.ctyun_list_filter": "CTYun domain list filtered by product svc={{.Svc}} product={{.Product}} total={{.Total}} matched={{.Matched}}",
   "log.deploy.cert_reupload": "Cached cert no longer exists in cloud, re-uploading certID={{.CertID}}",
   "log.deploy.ent_log_file_failed": "Failed to create ent SQL log file, ent.Debug disabled to avoid SQL leaking to console logDir={{.LogDir}}",
   "log.deploy.huawei_scm_region_fallback": "Huawei Cloud SCM region {{.Region}} unsupported, fallback to primary region {{.ScmRegion}}",
@@ -270,5 +276,8 @@
   "log.settings_reload_failed": "Failed to reload config file: {{.Error}}",
   "log.settings_reloaded": "Config file reloaded",
   "log.deploy_success": "Certificate deployed: domain {{.Domain}} -> target {{.Target}}",
-  "log.deploy_failed": "Certificate deploy failed: target {{.Target}} error: {{.Error}}"
+  "log.deploy_failed": "Certificate deploy failed: target {{.Target}} error: {{.Error}}",
+  "log.httplog.enabled": "HTTP request logging enabled (DEBUG mode, separate log DB httplog.db)",
+  "log.httplog.skip_not_debug": "HTTP request logging skipped (log level is not DEBUG)",
+  "log.httplog.save_failed": "Failed to save HTTP request log"
 }

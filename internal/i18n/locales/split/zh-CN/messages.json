@@ -21,5 +21,7 @@
   "deploy.message.tencent_ssl_not_implemented": "已上传至腾讯云 SSL（服务 {{.Service}} 暂未实现自动部署）",
   "deploy.message.tencent_cdn_deployed": "已部署到腾讯云加速域名: {{.Domain}}",
   "deploy.message.baidu_cdn_no_domain": "证书已上传（未配置加速域名，跳过部署）",
-  "deploy.message.baidu_deployed": "已部署到百度云 {{.Service}}: {{.Domain}}"
+  "deploy.message.baidu_deployed": "已部署到百度云 {{.Service}}: {{.Domain}}",
+  "deploy.message.ctyun_deployed": "已部署到天翼云 CDN: {{.Domain}}",
+  "deploy.message.ctyun_no_domain": "证书已上传（未配置加速域名，跳过部署）"
 }
