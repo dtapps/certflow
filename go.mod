@@ -8,7 +8,7 @@ require (
 	entgo.io/ent v0.14.6
 	github.com/alibabacloud-go/cas-20200407/v3 v3.0.4
 	github.com/alibabacloud-go/cdn-20180510/v5 v5.2.2
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.3
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.4
 	github.com/alibabacloud-go/dcdn-20180115/v4 v4.1.0
 	github.com/alibabacloud-go/esa-20240910/v3 v3.6.0
 	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
