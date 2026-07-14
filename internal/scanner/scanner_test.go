@@ -13,6 +13,8 @@ import (
 )
 
 func init() {
+	// 生产依赖包（db/httplog）可能已注册同名驱动，重复注册会 panic，故用 recover 兜底。
+	defer func() { _ = recover() }()
 	sql.Register("sqlite3", &sqlite.Driver{})
 }
 

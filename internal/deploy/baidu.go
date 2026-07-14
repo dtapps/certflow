@@ -16,6 +16,7 @@ import (
 	"github.com/baidubce/bce-sdk-go/services/cdn/api"
 	bcecert "github.com/baidubce/bce-sdk-go/services/cert"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 )
@@ -103,6 +104,8 @@ func (d *BaiduDeployer) newClient(creds Credentials) (*cdn.Client, error) {
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.baidu_cdn_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.HTTPClient = httplog.WrapClient(client.HTTPClient)
 	return client, nil
 }
 
@@ -113,6 +116,8 @@ func (d *BaiduDeployer) newCertClient(creds Credentials) (*bcecert.Client, error
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.baidu_cdn_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.HTTPClient = httplog.WrapClient(client.HTTPClient)
 	return client, nil
 }
 

@@ -289,6 +289,8 @@ func credsFromConfig(provider string, cfg map[string]string) Credentials {
 		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["access_key_secret"], Region: RegionFromConfig(cfg)}
 	case "ctyun":
 		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["access_key_secret"], Region: RegionFromConfig(cfg)}
+	case "volcengine":
+		return Credentials{AccessKeyID: cfg["access_key_id"], AccessKeySecret: cfg["access_key_secret"], Region: RegionFromConfig(cfg)}
 	}
 	return Credentials{}
 }
@@ -300,6 +302,7 @@ var credKeys = map[string][]string{
 	"tencentcloud": {"secret_id", "secret_key", "region"},
 	"baiducloud":   {"access_key_id", "access_key_secret"},
 	"ctyun":        {"access_key_id", "access_key_secret"},
+	"volcengine":   {"access_key_id", "access_key_secret"},
 }
 
 // stripCreds 从 config 中剔除凭证字段，保留服务配置

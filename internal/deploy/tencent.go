@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -11,6 +12,7 @@ import (
 	ssl "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl/v20191205"
 	teo "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo/v20220901"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 )
@@ -38,6 +40,8 @@ func (d *TencentDeployer) UploadCert(ctx context.Context, creds Credentials, cer
 	if err != nil {
 		return "", "", i18n.Wrap(err, "deploy.error.tencent_ssl_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	req := ssl.NewUploadCertificateRequest()
 	req.CertificatePublicKey = new(cert.CertPEM)
 	req.CertificatePrivateKey = new(cert.KeyPEM)
@@ -92,6 +96,8 @@ func (d *TencentDeployer) DeployCert(ctx context.Context, creds Credentials, cer
 		if err != nil {
 			return &DeployResult{CloudCertID: certID}, i18n.Wrap(err, "deploy.error.tencent_edgeone_client_create")
 		}
+		// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+		client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 		req := teo.NewModifyHostsCertificateRequest()
 		req.ZoneId = new(zoneID)
 		req.Hosts = common.StringPtrs([]string{host})
@@ -119,6 +125,8 @@ func (d *TencentDeployer) deployTencentCDNDomain(ctx context.Context, creds Cred
 	if err != nil {
 		return &DeployResult{CloudCertID: certID}, i18n.Wrap(err, "deploy.error.tencent_cdn_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	req := cdn.NewUpdateDomainConfigRequest()
 	req.Domain = new(domain)
 	req.Https = &cdn.Https{
@@ -164,6 +172,8 @@ func (d *TencentDeployer) listEdgeOneAccelDomains(ctx context.Context, creds Cre
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.tencent_edgeone_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	logging.Debug(i18n.T("log.deploy.tencent_list_edgeone_domain_start", "Region", region, "ZoneID", zoneID))
 	var domains []string
 	offset := int64(0)
@@ -206,6 +216,8 @@ func (d *TencentDeployer) listECDNDomains(ctx context.Context, creds Credentials
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.tencent_ecdn_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	logging.Debug(i18n.T("log.deploy.tencent_list_ecdn_start", "Region", region))
 	var domains []string
 	offset := int64(0)
@@ -245,6 +257,8 @@ func (d *TencentDeployer) listTencentCDNDomains(ctx context.Context, creds Crede
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.tencent_cdn_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	logging.Debug(i18n.T("log.deploy.tencent_list_cdn_start", "Region", region))
 	var domains []string
 	offset := int64(0)
@@ -285,6 +299,8 @@ func (d *TencentDeployer) listEdgeOneZones(ctx context.Context, creds Credential
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.tencent_edgeone_client_create")
 	}
+	// 包裹带 HTTP 请求日志的 transport（仅 DEBUG 生效）。
+	client.WithHttpTransport(httplog.WrapTransport(&http.Transport{}))
 	logging.Debug(i18n.T("log.deploy.tencent_list_edgeone_zone_start", "Region", region))
 	var zones []string
 	offset := int64(0)

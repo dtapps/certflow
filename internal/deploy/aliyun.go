@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
@@ -16,6 +18,7 @@ import (
 	esa "github.com/alibabacloud-go/esa-20240910/v3/client"
 	ga "github.com/alibabacloud-go/ga-20191120/v4/client"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 )
@@ -48,7 +51,29 @@ func aliyunConfig(creds Credentials, regionID string) *openapi.Config {
 		AccessKeyId:     new(creds.AccessKeyID),
 		AccessKeySecret: new(creds.AccessKeySecret),
 		RegionId:        new(regionID),
+		// 包裹带 HTTP 请求日志的 client（仅 DEBUG 生效），覆盖所有阿里云产品 SDK 的流量。
+		HttpClient: &aliyunLoggingClient{client: &http.Client{}},
 	}
+}
+
+// aliyunLoggingClient 适配阿里云 darabonba 的 dara.HttpClient 接口
+// （Call(request *http.Request, transport *http.Transport)），用带 HTTP 请求日志的
+// transport 发送请求，从而记录阿里云 SDK 流量。transport 由 SDK 按 runtime 配置传入。
+type aliyunLoggingClient struct {
+	mu     sync.Mutex
+	client *http.Client
+}
+
+func (c *aliyunLoggingClient) Call(request *http.Request, transport *http.Transport) (*http.Response, error) {
+	if transport != nil {
+		// 仅当 transport 变化时才包裹，避免重复加锁赋值（WrapTransport 在非 DEBUG 下原样返回）。
+		c.mu.Lock()
+		c.client.Transport = httplog.WrapTransport(transport)
+		c.mu.Unlock()
+	}
+	// 此处 request 由阿里云官方 SDK 构造，URL 为 SDK 依据产品/RegionId 推导的固定 endpoint，
+	// 并非用户可控输入，本函数仅适配 dara.HttpClient 接口转发请求，不存在 SSRF 风险。
+	return c.client.Do(request) // #nosec G704 -- request 由阿里云 SDK 构造，非用户输入
 }
 
 // shortCertHash 计算证书内容短指纹（sha256 前 12 位 hex），用于构造唯一且稳定的 CAS 证书名。

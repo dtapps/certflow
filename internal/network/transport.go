@@ -8,12 +8,13 @@ import (
 	"net/url"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/settings"
 )
 
 // BuildHTTPClient 根据设置构建带有自定义 DNS 和代理的 HTTP 客户端
 func BuildHTTPClient(s settings.Settings) *http.Client {
-	transport := &http.Transport{
+	transport := httplog.WrapTransport(&http.Transport{
 		// 自定义 DNS 解析
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			host, port, err := net.SplitHostPort(addr)
@@ -34,13 +35,17 @@ func BuildHTTPClient(s settings.Settings) *http.Client {
 		},
 		TLSHandshakeTimeout:   30 * time.Second,
 		ResponseHeaderTimeout: 30 * time.Second,
-	}
+	})
 
 	// 配置代理
 	if s.Proxy.Enabled && s.Proxy.Host != "" {
 		proxyURL := buildProxyURL(s.Proxy)
 		if proxyURL != nil {
-			transport.Proxy = http.ProxyURL(proxyURL)
+			// WrapTransport 在 DEBUG 下返回的是 LoggingRoundTripper（不含 Proxy 字段），
+			// 故先解出底层 *http.Transport 再设置代理。
+			if t, ok := transport.(*http.Transport); ok {
+				t.Proxy = http.ProxyURL(proxyURL)
+			}
 		}
 	}
 

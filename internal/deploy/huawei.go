@@ -5,10 +5,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/pem"
+	"net/http"
 	"strings"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/global"
+	config "github.com/huaweicloud/huaweicloud-sdk-go-v3/core/config"
 	cdn "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/cdn/v2"
 	cdnmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/cdn/v2/model"
 	cdnregion "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/cdn/v2/region"
@@ -16,6 +18,7 @@ import (
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/scm/v3/model"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/scm/v3/region"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 )
@@ -94,6 +97,7 @@ func (d *HuaweiDeployer) newScmClient(creds Credentials) (*scm.ScmClient, error)
 	hc, err := scm.ScmClientBuilder().
 		WithCredential(credential).
 		WithRegion(reg).
+		WithHttpConfig(config.DefaultHttpConfig().WithHttpRoundTripper(httplog.WrapTransport(&http.Transport{}))).
 		SafeBuild()
 	if err != nil {
 		return nil, err
@@ -303,6 +307,7 @@ func (d *HuaweiDeployer) newCdnClient(creds Credentials) (*cdn.CdnClient, error)
 	hc, err := cdn.CdnClientBuilder().
 		WithCredential(credential).
 		WithRegion(reg).
+		WithHttpConfig(config.DefaultHttpConfig().WithHttpRoundTripper(httplog.WrapTransport(&http.Transport{}))).
 		SafeBuild()
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.huawei_cdn_client_create")

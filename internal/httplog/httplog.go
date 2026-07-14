@@ -97,6 +97,39 @@ func setupTransport() {
 	logging.Info("%s", i18n.T("log.httplog.enabled"))
 }
 
+// WrapTransport 将任意 RoundTripper 包裹为带 HTTP 请求日志的 RoundTripper。
+// 仅在日志级别为 DEBUG 时包裹；非 DEBUG 直接返回原 transport（零开销）。
+// 业务侧自建 *http.Client / *http.Transport（从而绕开 http.DefaultTransport）时，
+// 必须调用本函数包裹其 transport，否则这些请求不会被 httplog 记录。
+// 注意：base 若已是被包裹的 transport（如 http.DefaultTransport），请勿重复包裹以免重复落库。
+func WrapTransport(base http.RoundTripper) http.RoundTripper {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	if logging.Global() == nil || logging.Global().GetLevel() != logging.DEBUG {
+		return base
+	}
+	return http_log.NewLoggingRoundTripper(base, &entLogSaver{}, nil)
+}
+
+// WrapClient 用 WrapTransport 包裹 client 的 Transport，返回新的 *http.Client（其余字段原样透传）。
+// 用于业务侧直接 new http.Client 的场景，保证其请求也能被记录。
+func WrapClient(client *http.Client) *http.Client {
+	if client == nil {
+		client = &http.Client{}
+	}
+	base := client.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return &http.Client{
+		Transport:     WrapTransport(base),
+		CheckRedirect: client.CheckRedirect,
+		Jar:           client.Jar,
+		Timeout:       client.Timeout,
+	}
+}
+
 // entLogSaver 实现 http_log.LogHandler 接口，将 HTTP 请求日志写入独立的日志数据库。
 // 库的 emit 已在独立 goroutine 中调用本方法，故这里直接同步写入即可。
 type entLogSaver struct{}
