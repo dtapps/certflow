@@ -42,8 +42,7 @@ type SafeSettings = Omit<Settings, 'dns_configs' | 'proxy' | 'log'> & {
 }
 
 const defaultSettings: SafeSettings = {
-  auto_renewal_enabled: true,
-  default_renewal_days: 30,
+  renew_interval: 1,
   auto_check_expiry: true,
   check_interval: 6,
   data_dir: '~/.certflow',
@@ -410,30 +409,50 @@ onMounted(async () => {
 
 <template>
   <div class="page">
-    <div>
-      <h1 class="text-2xl font-bold">{{ t('settings.title') }}</h1>
-      <p class="text-sm mt-1 opacity-50">{{ t('settings.subtitle') }}</p>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold">{{ t('settings.title') }}</h1>
+        <p class="text-sm mt-1 opacity-50">{{ t('settings.subtitle') }}</p>
+      </div>
+      <span :title="t('settings.restartNotice.desc')" class="shrink-0">
+        <n-tag type="warning" :bordered="false" size="small" class="mt-1 cursor-help">
+          {{ t('settings.restartNotice.title') }}
+        </n-tag>
+      </span>
     </div>
 
     <n-spin :show="loading">
       <!-- 续期设置 -->
       <n-card :title="t('settings.renewal.title')" size="small">
         <n-form label-placement="top">
-          <n-form-item :label="t('settings.renewal.auto')">
-            <div class="flex items-center gap-3">
-              <n-switch v-model:value="settings.auto_renewal_enabled" />
-              <span class="text-sm opacity-60">{{ t('settings.renewal.auto.desc') }}</span>
-            </div>
-          </n-form-item>
-          <n-form-item :label="t('settings.renewal.days')">
+          <n-form-item :label="t('settings.renewal.interval')">
             <div class="flex items-center gap-3">
               <n-input-number
-                v-model:value="settings.default_renewal_days"
+                v-model:value="settings.renew_interval"
                 :min="1"
-                :max="90"
+                :max="24"
                 class="input-width"
               />
-              <span class="text-sm opacity-60">{{ t('settings.renewal.days.desc') }}</span>
+              <span class="text-sm opacity-60">{{ t('settings.renewal.interval.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.renewal.auto_check')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="settings.auto_check_expiry" />
+              <span class="text-sm opacity-60">{{ t('settings.renewal.auto_check.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.renewal.expiry_interval')">
+            <div class="flex items-center gap-3">
+              <n-input-number
+                v-model:value="settings.check_interval"
+                :min="1"
+                :max="24"
+                class="input-width"
+              />
+              <span class="text-sm opacity-60">{{
+                t('settings.renewal.expiry_interval.desc')
+              }}</span>
             </div>
           </n-form-item>
         </n-form>
@@ -458,23 +477,6 @@ onMounted(async () => {
             <div class="flex items-center gap-3">
               <n-switch v-model:value="notificationEnabled" />
               <span class="text-sm opacity-60">{{ t('settings.notification.enabled.desc') }}</span>
-            </div>
-          </n-form-item>
-          <n-form-item :label="t('settings.notification.check')">
-            <div class="flex items-center gap-3">
-              <n-switch v-model:value="settings.auto_check_expiry" />
-              <span class="text-sm opacity-60">{{ t('settings.notification.check.desc') }}</span>
-            </div>
-          </n-form-item>
-          <n-form-item :label="t('settings.notification.interval')">
-            <div class="flex items-center gap-3">
-              <n-input-number
-                v-model:value="settings.check_interval"
-                :min="1"
-                :max="24"
-                class="input-width"
-              />
-              <span class="text-sm opacity-60">{{ t('settings.notification.interval.desc') }}</span>
             </div>
           </n-form-item>
           <n-form-item label="">

@@ -91,16 +91,6 @@ export interface ProxyConfig {
  */
 export interface Settings {
     /**
-     * 是否启用自动续期
-     */
-    "auto_renewal_enabled": boolean;
-
-    /**
-     * 默认续期天数
-     */
-    "default_renewal_days": number;
-
-    /**
      * 是否自动检查过期
      */
     "auto_check_expiry": boolean;
@@ -109,6 +99,11 @@ export interface Settings {
      * 检查间隔（小时）
      */
     "check_interval": number;
+
+    /**
+     * 自动续期间隔（小时）
+     */
+    "renew_interval": number;
 
     /**
      * 数据目录

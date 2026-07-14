@@ -51,9 +51,6 @@ func TestNewService_LoadsExisting(t *testing.T) {
 
 func TestDefaultSettings(t *testing.T) {
 	s := DefaultSettings()
-	if s.DefaultRenewalDays == 0 {
-		t.Error("expected non-zero DefaultRenewalDays")
-	}
 	if s.CheckInterval == 0 {
 		t.Error("expected non-zero CheckInterval")
 	}
@@ -79,7 +76,6 @@ func TestGetSaveRoundtrip(t *testing.T) {
 
 	s := svc.Get()
 	s.DataDir = "/tmp/test-data"
-	s.DefaultRenewalDays = 60
 	s.Language = "en-US"
 	s.Theme = "light"
 
@@ -90,9 +86,6 @@ func TestGetSaveRoundtrip(t *testing.T) {
 	got := svc.Get()
 	if got.DataDir != "/tmp/test-data" {
 		t.Errorf("DataDir = %q, want %q", got.DataDir, "/tmp/test-data")
-	}
-	if got.DefaultRenewalDays != 60 {
-		t.Errorf("DefaultRenewalDays = %d, want 60", got.DefaultRenewalDays)
 	}
 	if got.Language != "en-US" {
 		t.Errorf("Language = %q, want %q", got.Language, "en-US")

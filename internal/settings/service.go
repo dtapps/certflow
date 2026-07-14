@@ -46,17 +46,16 @@ type LogConfig struct {
 
 // Settings 应用设置
 type Settings struct {
-	AutoRenewalEnabled bool        `json:"auto_renewal_enabled" mapstructure:"auto_renewal_enabled"` // 是否启用自动续期
-	DefaultRenewalDays int         `json:"default_renewal_days" mapstructure:"default_renewal_days"` // 默认续期天数
-	AutoCheckExpiry    bool        `json:"auto_check_expiry" mapstructure:"auto_check_expiry"`       // 是否自动检查过期
-	CheckInterval      int         `json:"check_interval" mapstructure:"check_interval"`             // 检查间隔（小时）
-	DataDir            string      `json:"data_dir" mapstructure:"data_dir"`                         // 数据目录
-	Language           string      `json:"language" mapstructure:"language"`                         // 语言：zh-CN/en-US/auto
-	Theme              string      `json:"theme" mapstructure:"theme"`                               // 主题：dark/light/auto
-	Prerelease         bool        `json:"prerelease" mapstructure:"prerelease"`                     // 是否检查预发布版本
-	DNSConfigs         []DNSConfig `json:"dns_configs" mapstructure:"dns_configs"`                   // DNS 解析配置列表
-	Proxy              ProxyConfig `json:"proxy" mapstructure:"proxy"`                               // 代理配置
-	Log                LogConfig   `json:"log" mapstructure:"log"`                                   // 日志配置
+	AutoCheckExpiry bool        `json:"auto_check_expiry" mapstructure:"auto_check_expiry"` // 是否自动检查过期
+	CheckInterval   int         `json:"check_interval" mapstructure:"check_interval"`       // 检查间隔（小时）
+	RenewInterval   int         `json:"renew_interval" mapstructure:"renew_interval"`       // 自动续期间隔（小时）
+	DataDir         string      `json:"data_dir" mapstructure:"data_dir"`                   // 数据目录
+	Language        string      `json:"language" mapstructure:"language"`                   // 语言：zh-CN/en-US/auto
+	Theme           string      `json:"theme" mapstructure:"theme"`                         // 主题：dark/light/auto
+	Prerelease      bool        `json:"prerelease" mapstructure:"prerelease"`               // 是否检查预发布版本
+	DNSConfigs      []DNSConfig `json:"dns_configs" mapstructure:"dns_configs"`             // DNS 解析配置列表
+	Proxy           ProxyConfig `json:"proxy" mapstructure:"proxy"`                         // 代理配置
+	Log             LogConfig   `json:"log" mapstructure:"log"`                             // 日志配置
 }
 
 // getSystemDNS 跨平台获取系统 DNS 服务器地址
@@ -140,15 +139,14 @@ func builtinDNSConfigs(systemDNS []string) []DNSConfig {
 // DefaultSettings 返回默认设置
 func DefaultSettings() Settings {
 	return Settings{
-		AutoRenewalEnabled: true,
-		DefaultRenewalDays: 30,
-		AutoCheckExpiry:    true,
-		CheckInterval:      6,
-		DataDir:            "~/.certflow",
-		Language:           "auto",
-		Theme:              "auto",
-		Prerelease:         false,
-		DNSConfigs:         builtinDNSConfigs(nil),
+		AutoCheckExpiry: true,
+		CheckInterval:   6,
+		RenewInterval:   1,
+		DataDir:         "~/.certflow",
+		Language:        "auto",
+		Theme:           "auto",
+		Prerelease:      false,
+		DNSConfigs:      builtinDNSConfigs(nil),
 		Proxy: ProxyConfig{
 			Enabled:  false,
 			Protocol: "http",
@@ -241,10 +239,9 @@ func NewService(dataDir string) (*Service, error) {
 // setDefaults 设置 Viper 默认值
 func (s *Service) setDefaults() {
 	def := DefaultSettings()
-	s.v.SetDefault("auto_renewal_enabled", def.AutoRenewalEnabled)
-	s.v.SetDefault("default_renewal_days", def.DefaultRenewalDays)
 	s.v.SetDefault("auto_check_expiry", def.AutoCheckExpiry)
 	s.v.SetDefault("check_interval", def.CheckInterval)
+	s.v.SetDefault("renew_interval", def.RenewInterval)
 	s.v.SetDefault("data_dir", def.DataDir)
 	s.v.SetDefault("language", def.Language)
 	s.v.SetDefault("theme", def.Theme)
@@ -333,10 +330,9 @@ func (s *Service) writeConfig() error {
 	v.SetConfigFile(s.filePath)
 
 	// 只写入已知字段，不保留已删除的旧 key
-	v.Set("auto_renewal_enabled", s.settings.AutoRenewalEnabled)
-	v.Set("default_renewal_days", s.settings.DefaultRenewalDays)
 	v.Set("auto_check_expiry", s.settings.AutoCheckExpiry)
 	v.Set("check_interval", s.settings.CheckInterval)
+	v.Set("renew_interval", s.settings.RenewInterval)
 	v.Set("data_dir", s.settings.DataDir)
 	v.Set("language", s.settings.Language)
 	v.Set("theme", s.settings.Theme)

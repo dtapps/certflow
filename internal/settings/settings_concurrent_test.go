@@ -21,8 +21,6 @@ func TestConcurrentSaveGet(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			settings := DefaultSettings()
-			settings.AutoRenewalEnabled = idx%2 == 0
-			settings.DefaultRenewalDays = idx
 			settings.Language = "zh-CN"
 
 			// 并发保存
@@ -31,10 +29,7 @@ func TestConcurrentSaveGet(t *testing.T) {
 			}
 
 			// 并发读取
-			got := svc.Get()
-			if got.DefaultRenewalDays != idx {
-				// 可能被其他 goroutine 覆盖，这是正常的
-			}
+			_ = svc.Get()
 		}(i)
 	}
 
@@ -66,7 +61,6 @@ func TestConcurrentOnChange(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			settings := DefaultSettings()
-			settings.AutoRenewalEnabled = idx%2 == 0
 			_ = svc.Save(settings)
 		}(i)
 	}

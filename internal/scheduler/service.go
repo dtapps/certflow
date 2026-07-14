@@ -39,6 +39,77 @@ func (l *gocronLogger) Error(msg string, args ...any) {
 	l.logger.Error(msg, args...)
 }
 
+// GetJob 根据任务 ID 获取对应的 gocron 任务
+func (s *Scheduler) GetJob(jobID string) (gocron.Job, error) {
+	id, err := uuid.Parse(jobID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid job id %s: %w", jobID, err)
+	}
+	for _, job := range s.scheduler.Jobs() {
+		if job.ID() == id {
+			return job, nil
+		}
+	}
+	return nil, fmt.Errorf("job not found: %s", jobID)
+}
+
+// 任务开始前
+func (s *Scheduler) beforePeriodicListener() gocron.EventListener {
+	return gocron.BeforeJobRuns(func(jobID uuid.UUID, jobName string) {
+		s.logJobEvent("log.job_before_run", jobID, jobName, "info", nil)
+	})
+}
+
+// 任务结束后
+func (s *Scheduler) afterPeriodicListener() gocron.EventListener {
+	return gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
+		s.logJobEvent("log.job_after_run", jobID, jobName, "info", nil)
+	})
+}
+
+// 任务异常时
+func (s *Scheduler) panicPeriodicListener() gocron.EventListener {
+	return gocron.AfterJobRunsWithPanic(func(jobID uuid.UUID, jobName string, recoverData any) {
+		s.logJobEvent("log.job_panic", jobID, jobName, "error", recoverData)
+	})
+}
+
+// logJobEvent 统一通过 gocron 日志器打印任务事件（含上次/下次运行时间）
+func (s *Scheduler) logJobEvent(key string, jobID uuid.UUID, jobName string, level string, recoverData any) {
+	lastRun, nextRun := "-", "-"
+	if job, err := s.GetJob(jobID.String()); err == nil {
+		if t, e := job.LastRunStartedAt(); e == nil && !t.IsZero() {
+			lastRun = t.Format(time.DateTime)
+		}
+		if t, e := job.NextRun(); e == nil && !t.IsZero() {
+			nextRun = t.Format(time.DateTime)
+		}
+	}
+	args := []any{
+		"Job", jobName,
+		"ID", jobID.String(),
+		"LastRun", lastRun,
+		"NextRun", nextRun,
+	}
+	if recoverData != nil {
+		args = append(args, "Error", fmt.Sprintf("%v", recoverData))
+	}
+	msg := i18n.T(key, args...)
+	if s.gocronLog != nil {
+		if level == "error" {
+			s.gocronLog.Error(msg)
+		} else {
+			s.gocronLog.Info(msg)
+		}
+	} else {
+		if level == "error" {
+			logging.Error(msg)
+		} else {
+			logging.Info(msg)
+		}
+	}
+}
+
 // Scheduler 提供定时任务调度功能
 type Scheduler struct {
 	db              *ent.Client
@@ -46,6 +117,7 @@ type Scheduler struct {
 	notifService    *notification.NotificationService
 	settingsService *settings.Service
 	scheduler       gocron.Scheduler
+	gocronLog       *gocronLogger
 	certDir         string
 	dataDir         string
 }
@@ -86,6 +158,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	gocronLog := &gocronLogger{
 		logger: logger,
 	}
+	s.gocronLog = gocronLog
 
 	// 创建 gocron 调度器
 	scheduler, err := gocron.NewScheduler(
@@ -97,26 +170,53 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	}
 	s.scheduler = scheduler
 
-	// 添加自动续期任务：每小时检查一次
+	// 从设置读取任务间隔与开关（带兜底默认值，避免设置异常导致间隔为 0）
+	renewInterval := 1
+	checkInterval := 6
+	autoCheckExpiry := true
+	if s.settingsService != nil {
+		st := s.settingsService.Get()
+		if st.RenewInterval > 0 {
+			renewInterval = st.RenewInterval
+		}
+		if st.CheckInterval > 0 {
+			checkInterval = st.CheckInterval
+		}
+		autoCheckExpiry = st.AutoCheckExpiry
+	}
+
+	// 添加自动续期任务：按设置间隔检查
 	_, err = s.scheduler.NewJob(
-		gocron.DurationJob(1*time.Hour),
+		gocron.DurationJob(time.Duration(renewInterval)*time.Hour),
 		gocron.NewTask(s.autoRenewTask),
 		gocron.WithName("auto_renew_certificates"),
 		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
+		gocron.WithEventListeners(
+			s.panicPeriodicListener(),
+			s.beforePeriodicListener(),
+			s.afterPeriodicListener(),
+		),
 	)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.add_renew_job_failed", "Error", err))
 	}
 
-	// 添加证书过期检查任务：每6小时检查一次
-	_, err = s.scheduler.NewJob(
-		gocron.DurationJob(6*time.Hour),
-		gocron.NewTask(s.expiryCheckTask),
-		gocron.WithName("check_expiring_certificates"),
-		gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
-	)
-	if err != nil {
-		return fmt.Errorf("%s", i18n.T("error.add_expiry_check_job_failed", "Error", err))
+	// 仅当开启自动检查过期时，注册证书过期检查任务（开关关闭则不注册，修改需重启生效）
+	if autoCheckExpiry {
+		_, err = s.scheduler.NewJob(
+			gocron.DurationJob(time.Duration(checkInterval)*time.Hour),
+			gocron.NewTask(s.expiryCheckTask),
+			gocron.WithName("check_expiring_certificates"),
+			gocron.WithIdentifier(func() uuid.UUID { id, _ := uuid.NewV7(); return id }()),
+			gocron.WithEventListeners(
+				s.panicPeriodicListener(),
+				s.beforePeriodicListener(),
+				s.afterPeriodicListener(),
+			),
+		)
+		if err != nil {
+			return fmt.Errorf("%s", i18n.T("error.add_expiry_check_job_failed", "Error", err))
+		}
 	}
 
 	// 启动调度器
