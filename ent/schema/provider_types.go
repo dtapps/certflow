@@ -4,7 +4,7 @@ package schema
 // deploy_credential 和 deploy_target 共享此定义
 var DeployProviderTypes = []string{
 	// 云厂商
-	"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun",
+	"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine",
 	// 面板
 	"btpanel", "1panel", "acepanel",
 }

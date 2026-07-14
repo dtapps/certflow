@@ -34,6 +34,10 @@ const providerConfigSchema: Record<
     { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
     { key: 'access_key_secret', labelKey: 'dns.config.access_key_secret', type: 'password' },
   ],
+  volcengine: [
+    { key: 'access_key_id', labelKey: 'dns.config.access_key_id', type: 'text' },
+    { key: 'access_key_secret', labelKey: 'dns.config.access_key_secret', type: 'password' },
+  ],
   btpanel: [
     { key: 'panel_url', labelKey: 'deploy.config.domain', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
@@ -54,6 +58,7 @@ const providerTypes = [
   { value: 'huawei', labelKey: 'deploy.provider.huawei' },
   { value: 'baiducloud', labelKey: 'deploy.provider.baidu' },
   { value: 'ctyun', labelKey: 'deploy.provider.ctyun' },
+  { value: 'volcengine', labelKey: 'deploy.provider.volcengine' },
   { value: 'btpanel', labelKey: 'dns.type.btpanel' },
   { value: '1panel', labelKey: 'dns.type.1panel' },
   { value: 'acepanel', labelKey: 'dns.type.acepanel' },

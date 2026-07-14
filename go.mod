@@ -28,6 +28,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.131
+	github.com/volcengine/volc-sdk-golang v1.0.251
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117
 	go.dtapp.net/library/contrib/http_log v1.0.12
 	golang.org/x/crypto v0.54.0
@@ -133,7 +134,6 @@ require (
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ucloud/ucloud-sdk-go v0.22.90 // indirect
-	github.com/volcengine/volc-sdk-golang v1.0.251 // indirect
 	github.com/vultr/govultr/v3 v3.31.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect

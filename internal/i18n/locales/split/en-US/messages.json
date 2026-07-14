@@ -23,5 +23,7 @@
   "deploy.message.baidu_cdn_no_domain": "Certificate uploaded (no acceleration domain configured, deployment skipped)",
   "deploy.message.baidu_deployed": "Deployed to Baidu Cloud {{.Service}}: {{.Domain}}",
   "deploy.message.ctyun_deployed": "Deployed to CTYun CDN: {{.Domain}}",
-  "deploy.message.ctyun_no_domain": "Certificate uploaded (no acceleration domain configured, deployment skipped)"
+  "deploy.message.ctyun_no_domain": "Certificate uploaded (no acceleration domain configured, deployment skipped)",
+  "deploy.message.volcengine_deployed": "Deployed to Volcengine CDN: {{.Domain}}",
+  "deploy.message.volcengine_no_domain": "Certificate uploaded (no acceleration domain configured, deployment skipped)"
 }

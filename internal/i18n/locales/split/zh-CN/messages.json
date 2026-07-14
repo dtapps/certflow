@@ -23,5 +23,7 @@
   "deploy.message.baidu_cdn_no_domain": "证书已上传（未配置加速域名，跳过部署）",
   "deploy.message.baidu_deployed": "已部署到百度云 {{.Service}}: {{.Domain}}",
   "deploy.message.ctyun_deployed": "已部署到天翼云 CDN: {{.Domain}}",
-  "deploy.message.ctyun_no_domain": "证书已上传（未配置加速域名，跳过部署）"
+  "deploy.message.ctyun_no_domain": "证书已上传（未配置加速域名，跳过部署）",
+  "deploy.message.volcengine_deployed": "已部署到火山引擎 CDN: {{.Domain}}",
+  "deploy.message.volcengine_no_domain": "证书已上传（未配置加速域名，跳过部署）"
 }

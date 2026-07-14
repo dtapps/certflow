@@ -69,6 +69,7 @@ const providerOptions = [
   { label: t('deploy.provider.huawei'), value: 'huawei' },
   { label: t('deploy.provider.baidu'), value: 'baiducloud' },
   { label: t('deploy.provider.ctyun'), value: 'ctyun' },
+  { label: t('deploy.provider.volcengine'), value: 'volcengine' },
 ]
 // 部署服务随云厂商变化：不同厂商提供的可部署目标不同，只展示后端已实现的服务，
 // 避免用户选到不属于该厂商、或后端未实现（只会上传不绑定）的服务。
@@ -104,6 +105,11 @@ const servicesByProvider = computed<{ label: string; value: string }[]>(() => {
         { label: t('deploy.service.icdn'), value: 'icdn' },
         { label: t('deploy.service.accessone'), value: 'accessone' },
       ]
+    case 'volcengine':
+      return [
+        { label: t('deploy.service.cdn'), value: 'cdn' },
+        { label: t('deploy.service.dcdn'), value: 'dcdn' },
+      ]
     default:
       return [{ label: t('deploy.service.cdn'), value: 'cdn' }]
   }
@@ -138,6 +144,7 @@ const dnsTypeByDeployType: Record<string, string[]> = {
   tencentcloud: ['tencentcloud'],
   huawei: ['huawei'],
   baiducloud: ['baiducloud'],
+  volcengine: ['volcengine'],
 }
 
 const dnsOptions = computed(() => {
@@ -181,6 +188,8 @@ function credFields() {
       return { id: 'access_key_id', secret: 'secret_access_key' }
     case 'baiducloud':
       return { id: 'access_key_id', secret: 'secret_access_key' }
+    case 'volcengine':
+      return { id: 'access_key_id', secret: 'access_key_secret' }
     default:
       return { id: 'secret_id', secret: 'secret_key' }
   }
