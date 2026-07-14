@@ -32,8 +32,8 @@ func (s *SysTrayService) SetApp(app *application.App) {
 	s.app = app
 }
 
-// SetMainWindow 设置主窗口引用
-func (s *SysTrayService) SetMainWindow(window application.Window) {
+// setMainWindow 设置主窗口引用（内部初始化用，不暴露给前端 RPC）
+func (s *SysTrayService) setMainWindow(window application.Window) {
 	s.mainWindow = window
 }
 

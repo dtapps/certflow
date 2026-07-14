@@ -36,13 +36,6 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
 }
 
 /**
- * SetMainWindow 设置主窗口引用
- */
-export function SetMainWindow(w: application$0.Window): $CancellablePromise<void> {
-    return $Call.ByID(1199370302, w);
-}
-
-/**
  * ShowMessage 显示原生对话框（前端调用）
  */
 export function ShowMessage(title: string, message: string, msgType: string): $CancellablePromise<void> {

@@ -271,11 +271,11 @@ func main() {
 	})
 
 	// 初始化系统托盘
-	systraySvc.SetMainWindow(mainWindow)
+	systraySvc.setMainWindow(mainWindow)
 	systraySvc.Init()
 
 	// 设置系统服务的主窗口引用
-	systemSvc.SetMainWindow(mainWindow)
+	systemSvc.setMainWindow(mainWindow)
 
 	// 创建应用菜单（含检查更新和设置）
 	appMenu := app.Menu.New()

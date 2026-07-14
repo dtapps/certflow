@@ -36,13 +36,6 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
 }
 
 /**
- * SetMainWindow 设置主窗口引用
- */
-export function SetMainWindow(window: application$0.Window): $CancellablePromise<void> {
-    return $Call.ByID(95751717, window);
-}
-
-/**
  * ShowWindow 显示窗口
  */
 export function ShowWindow(): $CancellablePromise<void> {

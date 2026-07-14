@@ -125,8 +125,6 @@ export interface ScreenManager {
 export interface SystemTrayManager {
 }
 
-export type Window = any;
-
 /**
  * WindowManager manages all window-related operations
  */
