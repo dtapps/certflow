@@ -8,7 +8,8 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 
 ## Features
 
-- **Certificate Management** — Issue, renew, and revoke SSL certificates with 30+ DNS provider auto-verification
+- **Certificate Management** — Issue, renew, revoke, and upload SSL certificates with 30+ DNS provider auto-verification
+- **Certificate Deployment** — One-click deploy certificates to cloud CDN / WAF / load balancer / edge acceleration, supporting Alibaba Cloud, Tencent Cloud, Huawei Cloud, Baidu Cloud, CTYun, and Volcengine
 - **Domain Monitoring** — HTTPS/HTTP health checks and certificate expiration alerts
 - **Auto Renewal** — Scheduled tasks to automatically renew expiring certificates
 - **Certificate Scanning** — Scan and aggregate certificates, view validity and expiration warnings in one place
@@ -62,7 +63,7 @@ make format-frontend   # Format frontend code
 
 ## Tech Stack
 
-- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite; auth uses go-webauthn + pquerna/otp (2FA)
+- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite; auth uses go-webauthn + pquerna/otp (2FA); certificate deployment integrates Alibaba Cloud / Tencent Cloud / Huawei Cloud / Baidu Cloud / CTYun / Volcengine SDKs
 - **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## Repositories

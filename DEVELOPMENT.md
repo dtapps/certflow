@@ -70,6 +70,8 @@ certflow/
 │   ├── scheduler_service.go   # 定时任务服务
 │   ├── monitor_service.go     # 域名监控服务
 │   ├── scanner_service.go     # 证书扫描服务
+│   ├── deploy_service.go      # 证书部署服务（云厂商 CDN/WAF/LB 等）
+│   ├── deploy_credential_service.go # 部署凭证管理服务
 │   ├── notification_service_wrapper.go # 通知服务
 │   ├── settings_service.go    # 设置服务
 │   ├── logging_service_wrapper.go # 日志服务
@@ -84,7 +86,12 @@ certflow/
 │   ├── schema/                # 数据库模型定义
 │   │   ├── ca.go              # CA 实体
 │   │   ├── certificate.go     # 证书实体
+│   │   ├── cert_upload.go     # 上传证书实体
 │   │   ├── dns_provider.go    # DNS 提供商实体
+│   │   ├── deploy_target.go   # 部署目标实体（云厂商/服务/区域配置）
+│   │   ├── deploy_credential.go # 部署凭证实体
+│   │   ├── deploy_log.go      # 部署日志实体
+│   │   ├── provider_types.go  # 厂商/服务类型枚举定义
 │   │   ├── monitored_domain.go # 监控域名实体
 │   │   ├── notification.go    # 通知实体
 │   │   ├── renewal_log.go     # 续期日志实体
@@ -93,14 +100,18 @@ certflow/
 │   │   ├── passkey_credential.go # Passkey 凭据实体（WebAuthn）
 │   │   └── scan_result.go     # 扫描结果实体
 │   └── ...
+├── ent_log/                   # 独立 Ent 包（HTTP 请求日志，单表 HttpLog）
 ├── internal/                  # 内部实现
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
 │   ├── biometric/             # 生物识别 Helper 二进制（Touch ID/Windows Hello）
 │   ├── ca/                    # CA 管理
-│   ├── certificate/           # 证书申请/续期/撤销
+│   ├── certificate/           # 证书申请/续期/撤销/上传
 │   ├── db/                    # 数据库初始化
+│   ├── deploy/                # 证书部署（各云厂商实现：aliyun/tencent/huawei/baidu/ctyun/volcengine）
+│   ├── deploycredential/      # 部署凭证管理
 │   ├── dnsprovider/           # DNS 提供商管理
 │   ├── events/                # 前后端事件定义
+│   ├── httplog/               # HTTP 请求日志（DEBUG 下包裹 transport，落独立库）
 │   ├── i18n/                  # 国际化（嵌入式语言文件）
 │   ├── logging/               # 日志系统（轮转/压缩）
 │   ├── monitor/               # 域名监控
@@ -117,7 +128,12 @@ certflow/
 │   │   │   ├── CertApply.vue           # 证书申请（表单/提交）
 │   │   │   ├── CertDetail.vue          # 证书详情（查看/导出/部署）
 │   │   │   ├── CAConfig.vue            # CA 配置（私有 CA 管理）
+│   │   │   ├── Providers.vue           # DNS 提供商入口
 │   │   │   ├── DNSProviders.vue        # DNS 提供商（凭证管理/验证）
+│   │   │   ├── DeployTargets.vue       # 部署目标列表（管理/执行部署）
+│   │   │   ├── DeployTargetForm.vue    # 部署目标新建/编辑表单
+│   │   │   ├── DeployCredentials.vue   # 部署凭证入口
+│   │   │   ├── CredentialList.vue      # 部署凭证列表（管理）
 │   │   │   ├── Monitor.vue             # 域名监控（健康检查/过期预警）
 │   │   │   ├── Scan.vue                # 证书扫描（归集/有效期）
 │   │   │   ├── Settings.vue            # 设置（应用/更新/关于）
@@ -235,10 +251,47 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 - **CA** — 证书颁发机构配置
 - **Certificate** — SSL 证书信息
+- **CertUpload** — 上传的外部证书
 - **DNSProvider** — DNS 提供商配置
+- **DeployTarget** — 部署目标（厂商/服务/区域）
+- **DeployCredential** — 部署凭证
+- **DeployLog** — 部署执行日志
 - **MonitoredDomain** — 监控域名
 - **Notification** — 通知记录
 - **RenewalLog** — 证书续期日志
+- **ScanResult** — 证书扫描结果
+
+> HTTP 请求日志使用独立的 Ent 包 `ent_log/`（单表 `HttpLog`），落在独立数据库 `dataDir/data/httplog.db`，仅 DEBUG 级别启用。
+
+---
+
+## 证书部署
+
+将已签发/上传的证书部署到云厂商的各类服务。实现位于 `internal/deploy/`，按厂商拆分文件（`aliyun.go`、`tencent.go`、`huawei.go`、`baidu.go`、`ctyun.go`、`volcengine.go`），`service.go` 统一分发。
+
+支持的厂商与服务：
+
+| 厂商 | 支持服务 |
+|------|----------|
+| 阿里云（aliyun） | CDN、全站加速 DCDN、边缘安全加速 ESA、全球加速 GA |
+| 腾讯云（tencentcloud） | CDN、边缘安全加速平台 EdgeOne、ECDN |
+| 华为云（huawei） | CDN、WAF、负载均衡 ELB |
+| 百度云（baiducloud） | CDN、动态加速 DRCDN |
+| 天翼云（ctyun） | 内容分发 CTCDN、多云 CDN ICDN、边缘安全加速 AccessOne |
+| 火山引擎（volcengine） | CDN、全站加速 DCDN |
+
+- 凭证来源支持两种：独立的**部署凭证**（`internal/deploycredential/`）或**复用 DNS 提供商凭证**（`credential_source`）。
+- 前端页面：`DeployTargets.vue`（列表/执行）、`DeployTargetForm.vue`（新建/编辑）、`DeployCredentials.vue` + `CredentialList.vue`（凭证管理）。
+
+---
+
+## HTTP 请求日志
+
+`internal/httplog/` 在 DEBUG 日志级别下，把出站 HTTP 流量记录到独立的 SQLite 库（`ent_log` 包，单表 `HttpLog`）：
+
+- 提供 `WrapTransport(base)` / `WrapClient(client)` 助手，DEBUG 下包裹、否则透传。
+- 已注入 `internal/network.BuildHTTPClient` 与各云 SDK 客户端，覆盖 scanner / monitor / 证书申请（lego）/ 证书部署等出站请求。
+- 生成 `ent_log` 代码：`go run -tags entc ./ent_log/entc_generate.go`。
 
 ---
 
@@ -280,7 +333,7 @@ make lint-go-fix       # 自动修复
 make test              # 运行所有测试
 ```
 
-13 个包均有测试覆盖：auth、ca、certificate、db、dnsprovider、i18n、logging、monitor、network、notification、scanner、scheduler、settings。
+14 个包均有测试覆盖：auth、ca、certificate、db、deploy、dnsprovider、i18n、logging、monitor、network、notification、scanner、scheduler、settings。
 
 ---
 

@@ -70,6 +70,8 @@ certflow/
 │   ├── scheduler_service.go   # Scheduled task service
 │   ├── monitor_service.go     # Domain monitoring service
 │   ├── scanner_service.go     # Certificate scanning service
+│   ├── deploy_service.go      # Certificate deployment service (cloud CDN/WAF/LB, etc.)
+│   ├── deploy_credential_service.go # Deployment credential management service
 │   ├── notification_service_wrapper.go  # Notification service
 │   ├── settings_service.go    # Settings service
 │   ├── logging_service_wrapper.go # Logging service
@@ -84,7 +86,12 @@ certflow/
 │   ├── schema/                # Database model definitions
 │   │   ├── ca.go              # CA entity
 │   │   ├── certificate.go     # Certificate entity
+│   │   ├── cert_upload.go     # Uploaded certificate entity
 │   │   ├── dns_provider.go    # DNS provider entity
+│   │   ├── deploy_target.go   # Deploy target entity (provider/service/region config)
+│   │   ├── deploy_credential.go # Deploy credential entity
+│   │   ├── deploy_log.go      # Deploy log entity
+│   │   ├── provider_types.go  # Provider/service type enum definitions
 │   │   ├── monitored_domain.go # Monitored domain entity
 │   │   ├── notification.go    # Notification entity
 │   │   ├── renewal_log.go     # Renewal log entity
@@ -93,14 +100,18 @@ certflow/
 │   │   ├── passkey_credential.go # Passkey credential entity (WebAuthn)
 │   │   └── scan_result.go     # Scan result entity
 │   └── ...
+├── ent_log/                   # Standalone Ent package (HTTP request logs, single HttpLog table)
 ├── internal/                  # Internal implementations
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
 │   ├── biometric/             # Biometric helper binaries (Touch ID/Windows Hello)
 │   ├── ca/                    # CA management
-│   ├── certificate/           # Certificate issuance/renewal/revocation
+│   ├── certificate/           # Certificate issuance/renewal/revocation/upload
 │   ├── db/                    # Database initialization
+│   ├── deploy/                # Certificate deployment (per-provider: aliyun/tencent/huawei/baidu/ctyun/volcengine)
+│   ├── deploycredential/      # Deployment credential management
 │   ├── dnsprovider/           # DNS provider management
 │   ├── events/                # Frontend-backend event definitions
+│   ├── httplog/               # HTTP request logging (wraps transport under DEBUG, separate DB)
 │   ├── i18n/                  # Internationalization (embedded locale files)
 │   ├── logging/               # Logging system (rotation/compression)
 │   ├── monitor/               # Domain monitoring
@@ -117,7 +128,12 @@ certflow/
 │   │   │   ├── CertApply.vue           # Certificate application (form/submit)
 │   │   │   ├── CertDetail.vue          # Certificate detail (view/export/deploy)
 │   │   │   ├── CAConfig.vue            # CA configuration (private CA management)
+│   │   │   ├── Providers.vue           # DNS providers entry
 │   │   │   ├── DNSProviders.vue        # DNS providers (credentials/verification)
+│   │   │   ├── DeployTargets.vue       # Deploy target list (manage/execute deployment)
+│   │   │   ├── DeployTargetForm.vue    # Deploy target create/edit form
+│   │   │   ├── DeployCredentials.vue   # Deploy credentials entry
+│   │   │   ├── CredentialList.vue      # Deploy credential list (management)
 │   │   │   ├── Monitor.vue             # Domain monitoring (health/expiry alerts)
 │   │   │   ├── Scan.vue                # Certificate scanning (aggregate/validity)
 │   │   │   ├── Settings.vue            # Settings (app/update/about)
@@ -234,10 +250,47 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 
 - **CA** — Certificate authority configuration
 - **Certificate** — SSL certificate information
+- **CertUpload** — Uploaded external certificates
 - **DNSProvider** — DNS provider configuration
+- **DeployTarget** — Deploy target (provider/service/region)
+- **DeployCredential** — Deploy credentials
+- **DeployLog** — Deployment execution logs
 - **MonitoredDomain** — Monitored domains
 - **Notification** — Notification records
 - **RenewalLog** — Certificate renewal logs
+- **ScanResult** — Certificate scan results
+
+> HTTP request logs use a standalone Ent package `ent_log/` (single `HttpLog` table) stored in a separate database `dataDir/data/httplog.db`, enabled only at DEBUG level.
+
+---
+
+## Certificate Deployment
+
+Deploy issued/uploaded certificates to various cloud services. Implemented in `internal/deploy/`, split per provider (`aliyun.go`, `tencent.go`, `huawei.go`, `baidu.go`, `ctyun.go`, `volcengine.go`), with `service.go` dispatching.
+
+Supported providers and services:
+
+| Provider | Supported Services |
+|----------|--------------------|
+| Alibaba Cloud (aliyun) | CDN, DCDN, ESA, GA |
+| Tencent Cloud (tencentcloud) | CDN, EdgeOne, ECDN |
+| Huawei Cloud (huawei) | CDN, WAF, ELB |
+| Baidu Cloud (baiducloud) | CDN, DRCDN |
+| CTYun (ctyun) | CTCDN, ICDN, AccessOne |
+| Volcengine (volcengine) | CDN, DCDN |
+
+- Credential source supports two modes: a standalone **deploy credential** (`internal/deploycredential/`) or **reusing a DNS provider credential** (`credential_source`).
+- Frontend pages: `DeployTargets.vue` (list/execute), `DeployTargetForm.vue` (create/edit), `DeployCredentials.vue` + `CredentialList.vue` (credential management).
+
+---
+
+## HTTP Request Logging
+
+`internal/httplog/` records outbound HTTP traffic to a separate SQLite database (`ent_log` package, single `HttpLog` table) under the DEBUG log level:
+
+- Provides `WrapTransport(base)` / `WrapClient(client)` helpers — wraps under DEBUG, passes through otherwise.
+- Already injected into `internal/network.BuildHTTPClient` and cloud SDK clients, covering scanner / monitor / certificate issuance (lego) / certificate deployment outbound requests.
+- Generate `ent_log` code: `go run -tags entc ./ent_log/entc_generate.go`.
 
 ---
 
@@ -279,7 +332,7 @@ Enabled linters: errcheck, govet, staticcheck, ineffassign, misspell, unconvert,
 make test              # Run all tests
 ```
 
-13 packages with test coverage: auth, ca, certificate, db, dnsprovider, i18n, logging, monitor, network, notification, scanner, scheduler, settings.
+14 packages with test coverage: auth, ca, certificate, db, deploy, dnsprovider, i18n, logging, monitor, network, notification, scanner, scheduler, settings.
 
 ---
 

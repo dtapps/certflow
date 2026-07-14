@@ -8,7 +8,8 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 
 ## 功能特性
 
-- **证书管理** — 申请、续期、撤销 SSL 证书，支持 30+ DNS 提供商自动验证
+- **证书管理** — 申请、续期、撤销、上传 SSL 证书，支持 30+ DNS 提供商自动验证
+- **证书部署** — 一键将证书部署到云厂商 CDN / WAF / 负载均衡 / 边缘加速等，支持阿里云、腾讯云、华为云、百度云、天翼云、火山引擎
 - **域名监控** — HTTPS/HTTP 健康检查，证书过期预警
 - **自动续期** — 定时任务自动续期即将过期的证书
 - **证书扫描** — 扫描并归集证书，统一查看有效期与到期预警
@@ -62,7 +63,7 @@ make format-frontend   # 格式化前端代码
 
 ## 技术栈
 
-- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite；认证使用 go-webauthn + pquerna/otp（2FA）
+- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite；认证使用 go-webauthn + pquerna/otp（2FA）；证书部署对接阿里云 / 腾讯云 / 华为云 / 百度云 / 天翼云 / 火山引擎云 SDK
 - **前端**：Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## 仓库
