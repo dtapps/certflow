@@ -11,6 +11,7 @@ import LoginDialog from './components/LoginDialog.vue'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
 import { useThemeStore } from './stores/theme'
 import { useI18nStore } from './stores/i18n'
+import { useNaiveLocale } from './utils/naive-locale'
 import { EventAuthVerified, EventNavigate } from './utils/events'
 
 const route = useRoute()
@@ -19,6 +20,8 @@ const isAuthenticated = ref(true)
 const themeStore = useThemeStore()
 const { isDark, naiveTheme, naiveThemeOverrides } = storeToRefs(themeStore)
 const { t } = useI18nStore()
+// naive-ui 内置组件语言（跟随应用 i18n 切换）
+const { naiveLocale, naiveDateLocale } = useNaiveLocale()
 
 function handleVerified() {
   isAuthenticated.value = true
@@ -72,7 +75,13 @@ const rootStyle = computed(() => ({
 </script>
 
 <template>
-  <n-config-provider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :style="rootStyle">
+  <n-config-provider
+    :theme="naiveTheme"
+    :theme-overrides="naiveThemeOverrides"
+    :locale="naiveLocale"
+    :date-locale="naiveDateLocale"
+    :style="rootStyle"
+  >
     <n-message-provider>
       <n-dialog-provider>
         <div class="app-root">
