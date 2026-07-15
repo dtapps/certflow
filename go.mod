@@ -8,7 +8,7 @@ require (
 	entgo.io/ent v0.14.6
 	github.com/alibabacloud-go/cas-20200407/v3 v3.0.4
 	github.com/alibabacloud-go/cdn-20180510/v5 v5.2.2
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.3
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.4
 	github.com/alibabacloud-go/dcdn-20180115/v4 v4.1.0
 	github.com/alibabacloud-go/esa-20240910/v3 v3.6.0
 	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
@@ -19,7 +19,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/google/uuid v1.6.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.205
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.206
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
@@ -133,7 +133,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	github.com/ucloud/ucloud-sdk-go v0.22.91 // indirect
+	github.com/ucloud/ucloud-sdk-go v0.22.92 // indirect
 	github.com/vultr/govultr/v3 v3.31.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
