@@ -138,10 +138,27 @@ func main() {
 	dockSvc := NewDockServiceWrapper()
 	autostartSvc := NewAutostartServiceWrapper()
 
+	// 主窗口引用（提前声明，供单实例回调闭包引用）
+	var mainWindow *application.WebviewWindow
+
 	// 创建 Wails 应用
 	app := application.New(application.Options{
 		Name:        "CertFlow",
 		Description: i18n.T("app.description"),
+		// 单实例限制：应用只允许运行一个实例。当用户重复点击图标启动第二个
+		// 实例时，第二个实例会通知第一个实例并自行退出，第一个实例负责将已有
+		// 主窗口恢复并置于最前。
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "net.dtapp.certflow",
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				if mainWindow == nil {
+					return
+				}
+				mainWindow.Restore()
+				mainWindow.Show()
+				mainWindow.Focus()
+			},
+		},
 		Services: []application.Service{
 			application.NewService(NewCAServiceWrapper(caService)),
 			application.NewService(NewDNSProviderServiceWrapper(dnsService)),
@@ -250,7 +267,7 @@ func main() {
 	}
 
 	// 创建主窗口
-	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  i18n.T("app.title"),
 		Width:  1280,
 		Height: 800,
