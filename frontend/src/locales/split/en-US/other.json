@@ -531,7 +531,7 @@
   "nav.deploy": "SSL Deploy",
   "nav.dns": "DNS Providers",
   "nav.monitor": "Domain Monitor",
-  "nav.cloudServices": "Cloud Services",
+  "nav.cloudServices": "Credentials",
   "nav.scan": "Cert Scanner",
   "nav.settings": "Settings",
   "notifications.getUnreadCountFailed": "Failed to get unread count:",

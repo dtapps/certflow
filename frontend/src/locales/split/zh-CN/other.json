@@ -531,7 +531,7 @@
   "nav.deploy": "SSL 部署",
   "nav.dns": "DNS 提供商",
   "nav.monitor": "域名监控",
-  "nav.cloudServices": "云服务",
+  "nav.cloudServices": "凭证",
   "nav.scan": "证书扫描",
   "nav.settings": "设置",
   "notifications.getUnreadCountFailed": "获取未读数量失败:",
