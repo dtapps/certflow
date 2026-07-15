@@ -141,20 +141,25 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
+          cache: true
+
+      - name: 下载 Go 依赖
+        if: ${{ matrix.enabled }}
+        run: go mod download
 
       - name: 安装 pnpm
         if: ${{ matrix.enabled }}
         uses: pnpm/action-setup@v6
         with:
           package_json_file: 'frontend/package.json'
+          cache: true
+          cache_dependency_path: 'frontend/pnpm-lock.yaml'
 
       - name: 安装 Node.js
         if: ${{ matrix.enabled }}
         uses: actions/setup-node@v7
         with:
           node-version-file: 'frontend/.nvmrc'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 安装前端依赖
         if: ${{ matrix.enabled }}
