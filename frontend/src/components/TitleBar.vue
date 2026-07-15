@@ -9,6 +9,10 @@ const props = defineProps<{
   transparent?: boolean
 }>()
 
+// 启用 Vue 3.6 Vapor Mode（实验性编译策略，跳过虚拟 DOM）。
+// 该组件为纯展示、无 slot/teleport/自定义指令，符合 Vapor 兼容范围。
+defineOptions({ vapor: true })
+
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
 const { t } = useI18nStore()
