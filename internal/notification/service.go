@@ -45,6 +45,7 @@ type NotificationOption struct {
 	Subtitle string
 	Body     string
 	Category string
+	Level    string // 状态：success/error/warning/info
 	Data     map[string]any
 	SkipDB   bool // 跳过数据库保存（用于测试通知）
 }
@@ -69,7 +70,12 @@ func (s *NotificationService) GetService() *notifications.NotificationService {
 
 // SendNotification 发送系统通知
 func (s *NotificationService) SendNotification(opt NotificationOption) error {
-	logging.Debug(i18n.T("log.notification_send", "Title", opt.Title, "Category", opt.Category))
+	// 状态兜底为 info，避免空值触发枚举校验失败
+	level := opt.Level
+	if level == "" {
+		level = entnotification.LevelInfo.String()
+	}
+	logging.Debug(i18n.T("log.notification_send", "Title", opt.Title, "Category", opt.Category, "Level", level))
 	id, _ := uuid.NewV7()
 	options := notifications.NotificationOptions{
 		ID:    id.String(),
@@ -94,6 +100,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 			SetTitle(opt.Title).
 			SetBody(opt.Body).
 			SetCategory(entnotification.Category(opt.Category)).
+			SetLevel(entnotification.Level(level)).
 			Save(context.Background())
 		if dbErr != nil {
 			logging.Error(i18n.T("log.save_notification_db_failed", "Error", dbErr))
@@ -106,6 +113,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 			Title:    opt.Title,
 			Body:     opt.Body,
 			Category: opt.Category,
+			Level:    level,
 		}); !ok {
 			logging.Warn("%s", i18n.T("error.notification_failed"))
 		}
@@ -179,6 +187,7 @@ func (s *NotificationService) SendCertApplied(domain, issuer string) error {
 		Title:    i18n.T("notification.cert_applied.title"),
 		Body:     i18n.T("notification.cert_applied.body", "Domain", domain, "Issuer", issuer),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelSuccess.String(),
 	})
 }
 
@@ -188,6 +197,7 @@ func (s *NotificationService) SendCertRenewed(domain, issuer, notAfter string) e
 		Title:    i18n.T("notification.cert_renewed.title"),
 		Body:     i18n.T("notification.cert_renewed.body", "Domain", domain, "Issuer", issuer, "ValidUntil", notAfter),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelSuccess.String(),
 	})
 }
 
@@ -197,6 +207,7 @@ func (s *NotificationService) SendCertRevoked(domain string) error {
 		Title:    i18n.T("notification.cert_revoked.title"),
 		Body:     i18n.T("notification.cert_revoked.body", "Domain", domain),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelWarning.String(),
 	})
 }
 
@@ -211,6 +222,7 @@ func (s *NotificationService) SendCertExpiring(domain string, daysLeft int) erro
 		Subtitle: subtitle,
 		Body:     i18n.T("notification.cert_expiring.body", "Domain", domain, "Days", daysLeft),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelWarning.String(),
 	})
 }
 
@@ -220,6 +232,7 @@ func (s *NotificationService) SendCertApplyFailed(domain, reason string) error {
 		Title:    i18n.T("notification.cert_apply_failed.title"),
 		Body:     i18n.T("notification.cert_apply_failed.body", "Domain", domain, "Error", reason),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelError.String(),
 	})
 }
 
@@ -229,6 +242,7 @@ func (s *NotificationService) SendCertRenewFailed(domain, reason string) error {
 		Title:    i18n.T("notification.cert_renew_failed.title"),
 		Body:     i18n.T("notification.cert_renew_failed.body", "Domain", domain, "Error", reason),
 		Category: entnotification.CategoryCert.String(),
+		Level:    entnotification.LevelError.String(),
 	})
 }
 
@@ -238,6 +252,7 @@ func (s *NotificationService) SendDeploySuccess(domain, target string) error {
 		Title:    i18n.T("notification.deploy_success.title"),
 		Body:     i18n.T("notification.deploy_success.body", "Domain", domain, "Target", target),
 		Category: entnotification.CategoryDeploy.String(),
+		Level:    entnotification.LevelSuccess.String(),
 	})
 }
 
@@ -247,6 +262,7 @@ func (s *NotificationService) SendDeployFailed(domain, target, reason string) er
 		Title:    i18n.T("notification.deploy_failed.title"),
 		Body:     i18n.T("notification.deploy_failed.body", "Domain", domain, "Target", target, "Error", reason),
 		Category: entnotification.CategoryDeploy.String(),
+		Level:    entnotification.LevelError.String(),
 	})
 }
 

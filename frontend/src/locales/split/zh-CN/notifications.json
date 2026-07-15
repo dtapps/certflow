@@ -3,5 +3,14 @@
   "notification.cert_expiring": "即将过期",
   "notification.cert_failed": "申请失败",
   "notification.cert_renewed": "续期成功",
-  "notification.cert_revoked": "已吊销"
+  "notification.cert_revoked": "已吊销",
+  "notification.category.cert": "证书",
+  "notification.category.deploy": "部署",
+  "notification.category.dns": "DNS",
+  "notification.category.monitor": "监控",
+  "notification.category.system": "系统",
+  "notification.level.success": "成功",
+  "notification.level.error": "错误",
+  "notification.level.warning": "警告",
+  "notification.level.info": "信息"
 }

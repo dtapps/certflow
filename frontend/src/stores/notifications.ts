@@ -18,6 +18,7 @@ export interface NotificationItem {
   title: string
   body: string
   category: string
+  level: string
   read: boolean
   created_at: string
 }
@@ -43,6 +44,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         title: item.title,
         body: item.body,
         category: item.category,
+        level: item.level,
         read: item.read,
         created_at: item.created_at,
       }))

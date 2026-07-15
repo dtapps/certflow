@@ -223,11 +223,11 @@ func init() {
 	// notification.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	notification.TitleValidator = notificationDescTitle.Validators[0].(func(string) error)
 	// notificationDescRead is the schema descriptor for read field.
-	notificationDescRead := notificationFields[3].Descriptor()
+	notificationDescRead := notificationFields[4].Descriptor()
 	// notification.DefaultRead holds the default value on creation for the read field.
 	notification.DefaultRead = notificationDescRead.Default.(bool)
 	// notificationDescCreatedAt is the schema descriptor for created_at field.
-	notificationDescCreatedAt := notificationFields[4].Descriptor()
+	notificationDescCreatedAt := notificationFields[5].Descriptor()
 	// notification.DefaultCreatedAt holds the default value on creation for the created_at field.
 	notification.DefaultCreatedAt = notificationDescCreatedAt.Default.(func() time.Time)
 	passkeycredentialFields := schema.PasskeyCredential{}.Fields()

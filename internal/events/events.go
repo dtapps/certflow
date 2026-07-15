@@ -28,7 +28,8 @@ type NotificationPayload struct {
 	Title    string `json:"title"`              // 通知标题
 	Subtitle string `json:"subtitle,omitempty"` // 通知副标题（可选）
 	Body     string `json:"body,omitempty"`     // 通知正文（可选）
-	Category string `json:"category"`           // 通知分类（用于前端区分类型）
+	Category string `json:"category"`           // 通知业务分类
+	Level    string `json:"level"`              // 通知状态（success/error/warning/info）
 }
 
 // ThemeChangedPayload 主题变化事件参数

@@ -9748,6 +9748,7 @@ type NotificationMutation struct {
 	title         *string
 	body          *string
 	category      *notification.Category
+	level         *notification.Level
 	read          *bool
 	created_at    *time.Time
 	clearedFields map[string]struct{}
@@ -9988,6 +9989,55 @@ func (m *NotificationMutation) ResetCategory() {
 	delete(m.clearedFields, notification.FieldCategory)
 }
 
+// SetLevel sets the "level" field.
+func (m *NotificationMutation) SetLevel(n notification.Level) {
+	m.level = &n
+}
+
+// Level returns the value of the "level" field in the mutation.
+func (m *NotificationMutation) Level() (r notification.Level, exists bool) {
+	v := m.level
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLevel returns the old "level" field's value of the Notification entity.
+// If the Notification object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NotificationMutation) OldLevel(ctx context.Context) (v notification.Level, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLevel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLevel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLevel: %w", err)
+	}
+	return oldValue.Level, nil
+}
+
+// ClearLevel clears the value of the "level" field.
+func (m *NotificationMutation) ClearLevel() {
+	m.level = nil
+	m.clearedFields[notification.FieldLevel] = struct{}{}
+}
+
+// LevelCleared returns if the "level" field was cleared in this mutation.
+func (m *NotificationMutation) LevelCleared() bool {
+	_, ok := m.clearedFields[notification.FieldLevel]
+	return ok
+}
+
+// ResetLevel resets all changes to the "level" field.
+func (m *NotificationMutation) ResetLevel() {
+	m.level = nil
+	delete(m.clearedFields, notification.FieldLevel)
+}
+
 // SetRead sets the "read" field.
 func (m *NotificationMutation) SetRead(b bool) {
 	m.read = &b
@@ -10094,7 +10144,7 @@ func (m *NotificationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NotificationMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.title != nil {
 		fields = append(fields, notification.FieldTitle)
 	}
@@ -10103,6 +10153,9 @@ func (m *NotificationMutation) Fields() []string {
 	}
 	if m.category != nil {
 		fields = append(fields, notification.FieldCategory)
+	}
+	if m.level != nil {
+		fields = append(fields, notification.FieldLevel)
 	}
 	if m.read != nil {
 		fields = append(fields, notification.FieldRead)
@@ -10124,6 +10177,8 @@ func (m *NotificationMutation) Field(name string) (ent.Value, bool) {
 		return m.Body()
 	case notification.FieldCategory:
 		return m.Category()
+	case notification.FieldLevel:
+		return m.Level()
 	case notification.FieldRead:
 		return m.Read()
 	case notification.FieldCreatedAt:
@@ -10143,6 +10198,8 @@ func (m *NotificationMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldBody(ctx)
 	case notification.FieldCategory:
 		return m.OldCategory(ctx)
+	case notification.FieldLevel:
+		return m.OldLevel(ctx)
 	case notification.FieldRead:
 		return m.OldRead(ctx)
 	case notification.FieldCreatedAt:
@@ -10176,6 +10233,13 @@ func (m *NotificationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCategory(v)
+		return nil
+	case notification.FieldLevel:
+		v, ok := value.(notification.Level)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLevel(v)
 		return nil
 	case notification.FieldRead:
 		v, ok := value.(bool)
@@ -10227,6 +10291,9 @@ func (m *NotificationMutation) ClearedFields() []string {
 	if m.FieldCleared(notification.FieldCategory) {
 		fields = append(fields, notification.FieldCategory)
 	}
+	if m.FieldCleared(notification.FieldLevel) {
+		fields = append(fields, notification.FieldLevel)
+	}
 	return fields
 }
 
@@ -10247,6 +10314,9 @@ func (m *NotificationMutation) ClearField(name string) error {
 	case notification.FieldCategory:
 		m.ClearCategory()
 		return nil
+	case notification.FieldLevel:
+		m.ClearLevel()
+		return nil
 	}
 	return fmt.Errorf("unknown Notification nullable field %s", name)
 }
@@ -10263,6 +10333,9 @@ func (m *NotificationMutation) ResetField(name string) error {
 		return nil
 	case notification.FieldCategory:
 		m.ResetCategory()
+		return nil
+	case notification.FieldLevel:
+		m.ResetLevel()
 		return nil
 	case notification.FieldRead:
 		m.ResetRead()

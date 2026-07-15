@@ -41,9 +41,14 @@ export interface NotificationPayload {
     "body"?: string;
 
     /**
-     * 通知分类（用于前端区分类型）
+     * 通知业务分类
      */
     "category": string;
+
+    /**
+     * 通知状态（success/error/warning/info）
+     */
+    "level": string;
 }
 
 /**

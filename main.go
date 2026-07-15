@@ -427,6 +427,7 @@ func checkUpdateOnStart(app *application.App) {
 			Title:    i18n.T("notification.update_available_title"),
 			Subtitle: i18n.T("notification.update_available_subtitle", "version", rel.Version),
 			Category: "system",
+			Level:    "info",
 		}); !ok {
 			logging.Warn("%s", i18n.T("error.notification_failed"))
 		}

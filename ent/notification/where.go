@@ -244,6 +244,36 @@ func CategoryNotNil() predicate.Notification {
 	return predicate.Notification(sql.FieldNotNull(FieldCategory))
 }
 
+// LevelEQ applies the EQ predicate on the "level" field.
+func LevelEQ(v Level) predicate.Notification {
+	return predicate.Notification(sql.FieldEQ(FieldLevel, v))
+}
+
+// LevelNEQ applies the NEQ predicate on the "level" field.
+func LevelNEQ(v Level) predicate.Notification {
+	return predicate.Notification(sql.FieldNEQ(FieldLevel, v))
+}
+
+// LevelIn applies the In predicate on the "level" field.
+func LevelIn(vs ...Level) predicate.Notification {
+	return predicate.Notification(sql.FieldIn(FieldLevel, vs...))
+}
+
+// LevelNotIn applies the NotIn predicate on the "level" field.
+func LevelNotIn(vs ...Level) predicate.Notification {
+	return predicate.Notification(sql.FieldNotIn(FieldLevel, vs...))
+}
+
+// LevelIsNil applies the IsNil predicate on the "level" field.
+func LevelIsNil() predicate.Notification {
+	return predicate.Notification(sql.FieldIsNull(FieldLevel))
+}
+
+// LevelNotNil applies the NotNil predicate on the "level" field.
+func LevelNotNil() predicate.Notification {
+	return predicate.Notification(sql.FieldNotNull(FieldLevel))
+}
+
 // ReadEQ applies the EQ predicate on the "read" field.
 func ReadEQ(v bool) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldRead, v))

@@ -81,6 +81,26 @@ func (_u *NotificationUpdate) ClearCategory() *NotificationUpdate {
 	return _u
 }
 
+// SetLevel sets the "level" field.
+func (_u *NotificationUpdate) SetLevel(v notification.Level) *NotificationUpdate {
+	_u.mutation.SetLevel(v)
+	return _u
+}
+
+// SetNillableLevel sets the "level" field if the given value is not nil.
+func (_u *NotificationUpdate) SetNillableLevel(v *notification.Level) *NotificationUpdate {
+	if v != nil {
+		_u.SetLevel(*v)
+	}
+	return _u
+}
+
+// ClearLevel clears the value of the "level" field.
+func (_u *NotificationUpdate) ClearLevel() *NotificationUpdate {
+	_u.mutation.ClearLevel()
+	return _u
+}
+
 // SetRead sets the "read" field.
 func (_u *NotificationUpdate) SetRead(v bool) *NotificationUpdate {
 	_u.mutation.SetRead(v)
@@ -139,6 +159,11 @@ func (_u *NotificationUpdate) check() error {
 			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Notification.category": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Level(); ok {
+		if err := notification.LevelValidator(v); err != nil {
+			return &ValidationError{Name: "level", err: fmt.Errorf(`ent: validator failed for field "Notification.level": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -168,6 +193,12 @@ func (_u *NotificationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.CategoryCleared() {
 		_spec.ClearField(notification.FieldCategory, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Level(); ok {
+		_spec.SetField(notification.FieldLevel, field.TypeEnum, value)
+	}
+	if _u.mutation.LevelCleared() {
+		_spec.ClearField(notification.FieldLevel, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Read(); ok {
 		_spec.SetField(notification.FieldRead, field.TypeBool, value)
@@ -246,6 +277,26 @@ func (_u *NotificationUpdateOne) ClearCategory() *NotificationUpdateOne {
 	return _u
 }
 
+// SetLevel sets the "level" field.
+func (_u *NotificationUpdateOne) SetLevel(v notification.Level) *NotificationUpdateOne {
+	_u.mutation.SetLevel(v)
+	return _u
+}
+
+// SetNillableLevel sets the "level" field if the given value is not nil.
+func (_u *NotificationUpdateOne) SetNillableLevel(v *notification.Level) *NotificationUpdateOne {
+	if v != nil {
+		_u.SetLevel(*v)
+	}
+	return _u
+}
+
+// ClearLevel clears the value of the "level" field.
+func (_u *NotificationUpdateOne) ClearLevel() *NotificationUpdateOne {
+	_u.mutation.ClearLevel()
+	return _u
+}
+
 // SetRead sets the "read" field.
 func (_u *NotificationUpdateOne) SetRead(v bool) *NotificationUpdateOne {
 	_u.mutation.SetRead(v)
@@ -317,6 +368,11 @@ func (_u *NotificationUpdateOne) check() error {
 			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Notification.category": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Level(); ok {
+		if err := notification.LevelValidator(v); err != nil {
+			return &ValidationError{Name: "level", err: fmt.Errorf(`ent: validator failed for field "Notification.level": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -363,6 +419,12 @@ func (_u *NotificationUpdateOne) sqlSave(ctx context.Context) (_node *Notificati
 	}
 	if _u.mutation.CategoryCleared() {
 		_spec.ClearField(notification.FieldCategory, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Level(); ok {
+		_spec.SetField(notification.FieldLevel, field.TypeEnum, value)
+	}
+	if _u.mutation.LevelCleared() {
+		_spec.ClearField(notification.FieldLevel, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Read(); ok {
 		_spec.SetField(notification.FieldRead, field.TypeBool, value)

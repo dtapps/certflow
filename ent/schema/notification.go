@@ -24,7 +24,12 @@ func (Notification) Fields() []ent.Field {
 			Values("cert", "dns", "monitor", "system", "deploy").
 			Default("system").
 			Optional().
-			Comment("通知分类"),
+			Comment("通知业务分类"),
+		field.Enum("level").
+			Values("success", "error", "warning", "info").
+			Default("info").
+			Optional().
+			Comment("通知状态（成功/错误/警告/信息）"),
 		field.Bool("read").
 			Default(false).
 			Comment("是否已读"),

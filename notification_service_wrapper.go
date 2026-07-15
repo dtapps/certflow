@@ -26,7 +26,8 @@ type NotificationItem struct {
 	ID        int    `json:"id"`         // 通知 ID
 	Title     string `json:"title"`      // 通知标题
 	Body      string `json:"body"`       // 通知内容
-	Category  string `json:"category"`   // 通知分类
+	Category  string `json:"category"`   // 通知业务分类
+	Level     string `json:"level"`      // 通知状态（success/error/warning/info）
 	Read      bool   `json:"read"`       // 是否已读
 	CreatedAt string `json:"created_at"` // 创建时间
 }
@@ -66,6 +67,7 @@ func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([
 			Title:     item.Title,
 			Body:      item.Body,
 			Category:  item.Category.String(),
+			Level:     item.Level.String(),
 			Read:      item.Read,
 			CreatedAt: item.CreatedAt.Format(time.DateTime),
 		}

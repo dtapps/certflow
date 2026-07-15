@@ -253,6 +253,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "body", Type: field.TypeString, Nullable: true},
 		{Name: "category", Type: field.TypeEnum, Nullable: true, Enums: []string{"cert", "dns", "monitor", "system", "deploy"}, Default: "system"},
+		{Name: "level", Type: field.TypeEnum, Nullable: true, Enums: []string{"success", "error", "warning", "info"}, Default: "info"},
 		{Name: "read", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 	}

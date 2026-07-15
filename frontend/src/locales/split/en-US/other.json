@@ -782,6 +782,8 @@
   "theme.light": "Light",
   "theme.windowAppearanceFailed": "Failed to set window appearance:",
   "topbar.clear": "Clear",
+  "topbar.filterAll": "All",
+  "topbar.noMatchingNotifications": "No matching notifications",
   "topbar.delete": "Delete",
   "topbar.hoursAgo": "{count}h ago",
   "topbar.justNow": "Just now",

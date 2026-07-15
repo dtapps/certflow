@@ -21,8 +21,10 @@ type Notification struct {
 	Title string `json:"title,omitempty"`
 	// 通知内容
 	Body string `json:"body,omitempty"`
-	// 通知分类
+	// 通知业务分类
 	Category notification.Category `json:"category,omitempty"`
+	// 通知状态（成功/错误/警告/信息）
+	Level notification.Level `json:"level,omitempty"`
 	// 是否已读
 	Read bool `json:"read,omitempty"`
 	// 创建时间
@@ -39,7 +41,7 @@ func (*Notification) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case notification.FieldID:
 			values[i] = new(sql.NullInt64)
-		case notification.FieldTitle, notification.FieldBody, notification.FieldCategory:
+		case notification.FieldTitle, notification.FieldBody, notification.FieldCategory, notification.FieldLevel:
 			values[i] = new(sql.NullString)
 		case notification.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -81,6 +83,12 @@ func (_m *Notification) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field category", values[i])
 			} else if value.Valid {
 				_m.Category = notification.Category(value.String)
+			}
+		case notification.FieldLevel:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field level", values[i])
+			} else if value.Valid {
+				_m.Level = notification.Level(value.String)
 			}
 		case notification.FieldRead:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -138,6 +146,9 @@ func (_m *Notification) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("category=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Category))
+	builder.WriteString(", ")
+	builder.WriteString("level=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Level))
 	builder.WriteString(", ")
 	builder.WriteString("read=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Read))

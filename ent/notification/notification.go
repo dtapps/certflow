@@ -20,6 +20,8 @@ const (
 	FieldBody = "body"
 	// FieldCategory holds the string denoting the category field in the database.
 	FieldCategory = "category"
+	// FieldLevel holds the string denoting the level field in the database.
+	FieldLevel = "level"
 	// FieldRead holds the string denoting the read field in the database.
 	FieldRead = "read"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -34,6 +36,7 @@ var Columns = []string{
 	FieldTitle,
 	FieldBody,
 	FieldCategory,
+	FieldLevel,
 	FieldRead,
 	FieldCreatedAt,
 }
@@ -86,6 +89,34 @@ func CategoryValidator(c Category) error {
 	}
 }
 
+// Level defines the type for the "level" enum field.
+type Level string
+
+// LevelInfo is the default value of the Level enum.
+const DefaultLevel = LevelInfo
+
+// Level values.
+const (
+	LevelSuccess Level = "success"
+	LevelError   Level = "error"
+	LevelWarning Level = "warning"
+	LevelInfo    Level = "info"
+)
+
+func (l Level) String() string {
+	return string(l)
+}
+
+// LevelValidator is a validator for the "level" field enum values. It is called by the builders before save.
+func LevelValidator(l Level) error {
+	switch l {
+	case LevelSuccess, LevelError, LevelWarning, LevelInfo:
+		return nil
+	default:
+		return fmt.Errorf("notification: invalid enum value for level field: %q", l)
+	}
+}
+
 // OrderOption defines the ordering options for the Notification queries.
 type OrderOption func(*sql.Selector)
 
@@ -107,6 +138,11 @@ func ByBody(opts ...sql.OrderTermOption) OrderOption {
 // ByCategory orders the results by the category field.
 func ByCategory(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCategory, opts...).ToFunc()
+}
+
+// ByLevel orders the results by the level field.
+func ByLevel(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLevel, opts...).ToFunc()
 }
 
 // ByRead orders the results by the read field.

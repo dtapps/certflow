@@ -851,9 +851,14 @@ export interface NotificationItem {
     "body": string;
 
     /**
-     * 通知分类
+     * 通知业务分类
      */
     "category": string;
+
+    /**
+     * 通知状态（success/error/warning/info）
+     */
+    "level": string;
 
     /**
      * 是否已读

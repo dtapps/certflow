@@ -540,6 +540,7 @@ func (s *MonitorService) notifyIfProblem(domain string, result checkResult) {
 		Title:    title,
 		Body:     body,
 		Category: "monitor",
+		Level:    "info",
 	})
 }
 

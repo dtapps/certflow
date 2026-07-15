@@ -40,6 +40,14 @@ const { setTheme } = themeStore
 
 const showNotifications = ref(false)
 
+// 通知状态过滤（'' 表示全部）
+const levelFilter = ref('')
+const levelOptions = ['', 'success', 'error', 'warning', 'info']
+const filteredNotifications = computed(() => {
+  if (!levelFilter.value) return notifications.value
+  return notifications.value.filter((n) => n.level === levelFilter.value)
+})
+
 // 动态主题样式
 const topbarStyle = computed(() => ({
   borderBottomColor: isDark.value ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.09)',
@@ -150,33 +158,47 @@ watch(searchQuery, () => {
   debounceTimer = setTimeout(doSearch, 300)
 })
 
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'cert_applied':
-    case 'cert_renewed':
+// 通知状态 → 标签颜色（n-tag 的 type）
+const getLevelColor = (level: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
+  switch (level) {
+    case 'success':
       return 'success'
-    case 'cert_failed':
-    case 'cert_revoked':
+    case 'error':
       return 'error'
-    case 'cert_expiring':
+    case 'warning':
       return 'warning'
     default:
       return 'info'
   }
 }
 
+// 通知状态 → 中文标签
+const getLevelLabel = (level: string) => {
+  switch (level) {
+    case 'success':
+      return t('notification.level.success')
+    case 'error':
+      return t('notification.level.error')
+    case 'warning':
+      return t('notification.level.warning')
+    default:
+      return t('notification.level.info')
+  }
+}
+
+// 通知业务分类 → 中文标签
 const getCategoryLabel = (category: string) => {
   switch (category) {
-    case 'cert_applied':
-      return t('notification.cert_applied')
-    case 'cert_renewed':
-      return t('notification.cert_renewed')
-    case 'cert_failed':
-      return t('notification.cert_failed')
-    case 'cert_revoked':
-      return t('notification.cert_revoked')
-    case 'cert_expiring':
-      return t('notification.cert_expiring')
+    case 'cert':
+      return t('notification.category.cert')
+    case 'deploy':
+      return t('notification.category.deploy')
+    case 'system':
+      return t('notification.category.system')
+    case 'monitor':
+      return t('notification.category.monitor')
+    case 'dns':
+      return t('notification.category.dns')
     default:
       return category
   }
@@ -327,6 +349,19 @@ function handleLocaleSelect(key: string) {
               </n-button>
             </div>
           </div>
+          <div class="flex flex-wrap items-center gap-1 mt-2">
+            <n-button
+              v-for="lv in levelOptions"
+              :key="lv"
+              size="tiny"
+              :type="levelFilter === lv ? 'primary' : 'default'"
+              :secondary="levelFilter === lv"
+              :bordered="levelFilter !== lv"
+              @click="levelFilter = lv"
+            >
+              {{ lv === '' ? t('topbar.filterAll') : getLevelLabel(lv) }}
+            </n-button>
+          </div>
         </template>
 
         <div class="max-h-80 overflow-y-auto">
@@ -337,9 +372,16 @@ function handleLocaleSelect(key: string) {
             <n-icon :size="40" class="mb-2 opacity-40"><NotificationsOutline /></n-icon>
             <p class="text-sm">{{ t('topbar.noNotifications') }}</p>
           </div>
+          <div
+            v-else-if="filteredNotifications.length === 0"
+            class="flex flex-col items-center justify-center py-10 opacity-50"
+          >
+            <n-icon :size="40" class="mb-2 opacity-40"><NotificationsOutline /></n-icon>
+            <p class="text-sm">{{ t('topbar.noMatchingNotifications') }}</p>
+          </div>
 
           <div
-            v-for="item in notifications"
+            v-for="item in filteredNotifications"
             :key="item.id"
             class="notification-item"
             :class="{ 'opacity-60': item.read }"
@@ -348,7 +390,10 @@ function handleLocaleSelect(key: string) {
             <div class="notification-content">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-0.5">
-                  <n-tag :type="getCategoryColor(item.category)" size="tiny" :bordered="false">
+                  <n-tag :type="getLevelColor(item.level)" size="tiny" :bordered="false">
+                    {{ getLevelLabel(item.level) }}
+                  </n-tag>
+                  <n-tag size="tiny" :bordered="false" type="default" class="opacity-50">
                     {{ getCategoryLabel(item.category) }}
                   </n-tag>
                   <p

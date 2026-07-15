@@ -56,6 +56,20 @@ func (_c *NotificationCreate) SetNillableCategory(v *notification.Category) *Not
 	return _c
 }
 
+// SetLevel sets the "level" field.
+func (_c *NotificationCreate) SetLevel(v notification.Level) *NotificationCreate {
+	_c.mutation.SetLevel(v)
+	return _c
+}
+
+// SetNillableLevel sets the "level" field if the given value is not nil.
+func (_c *NotificationCreate) SetNillableLevel(v *notification.Level) *NotificationCreate {
+	if v != nil {
+		_c.SetLevel(*v)
+	}
+	return _c
+}
+
 // SetRead sets the "read" field.
 func (_c *NotificationCreate) SetRead(v bool) *NotificationCreate {
 	_c.mutation.SetRead(v)
@@ -123,6 +137,10 @@ func (_c *NotificationCreate) defaults() {
 		v := notification.DefaultCategory
 		_c.mutation.SetCategory(v)
 	}
+	if _, ok := _c.mutation.Level(); !ok {
+		v := notification.DefaultLevel
+		_c.mutation.SetLevel(v)
+	}
 	if _, ok := _c.mutation.Read(); !ok {
 		v := notification.DefaultRead
 		_c.mutation.SetRead(v)
@@ -146,6 +164,11 @@ func (_c *NotificationCreate) check() error {
 	if v, ok := _c.mutation.Category(); ok {
 		if err := notification.CategoryValidator(v); err != nil {
 			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Notification.category": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Level(); ok {
+		if err := notification.LevelValidator(v); err != nil {
+			return &ValidationError{Name: "level", err: fmt.Errorf(`ent: validator failed for field "Notification.level": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Read(); !ok {
@@ -192,6 +215,10 @@ func (_c *NotificationCreate) createSpec() (*Notification, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Category(); ok {
 		_spec.SetField(notification.FieldCategory, field.TypeEnum, value)
 		_node.Category = value
+	}
+	if value, ok := _c.mutation.Level(); ok {
+		_spec.SetField(notification.FieldLevel, field.TypeEnum, value)
+		_node.Level = value
 	}
 	if value, ok := _c.mutation.Read(); ok {
 		_spec.SetField(notification.FieldRead, field.TypeBool, value)
@@ -298,6 +325,24 @@ func (u *NotificationUpsert) UpdateCategory() *NotificationUpsert {
 // ClearCategory clears the value of the "category" field.
 func (u *NotificationUpsert) ClearCategory() *NotificationUpsert {
 	u.SetNull(notification.FieldCategory)
+	return u
+}
+
+// SetLevel sets the "level" field.
+func (u *NotificationUpsert) SetLevel(v notification.Level) *NotificationUpsert {
+	u.Set(notification.FieldLevel, v)
+	return u
+}
+
+// UpdateLevel sets the "level" field to the value that was provided on create.
+func (u *NotificationUpsert) UpdateLevel() *NotificationUpsert {
+	u.SetExcluded(notification.FieldLevel)
+	return u
+}
+
+// ClearLevel clears the value of the "level" field.
+func (u *NotificationUpsert) ClearLevel() *NotificationUpsert {
+	u.SetNull(notification.FieldLevel)
 	return u
 }
 
@@ -411,6 +456,27 @@ func (u *NotificationUpsertOne) UpdateCategory() *NotificationUpsertOne {
 func (u *NotificationUpsertOne) ClearCategory() *NotificationUpsertOne {
 	return u.Update(func(s *NotificationUpsert) {
 		s.ClearCategory()
+	})
+}
+
+// SetLevel sets the "level" field.
+func (u *NotificationUpsertOne) SetLevel(v notification.Level) *NotificationUpsertOne {
+	return u.Update(func(s *NotificationUpsert) {
+		s.SetLevel(v)
+	})
+}
+
+// UpdateLevel sets the "level" field to the value that was provided on create.
+func (u *NotificationUpsertOne) UpdateLevel() *NotificationUpsertOne {
+	return u.Update(func(s *NotificationUpsert) {
+		s.UpdateLevel()
+	})
+}
+
+// ClearLevel clears the value of the "level" field.
+func (u *NotificationUpsertOne) ClearLevel() *NotificationUpsertOne {
+	return u.Update(func(s *NotificationUpsert) {
+		s.ClearLevel()
 	})
 }
 
@@ -692,6 +758,27 @@ func (u *NotificationUpsertBulk) UpdateCategory() *NotificationUpsertBulk {
 func (u *NotificationUpsertBulk) ClearCategory() *NotificationUpsertBulk {
 	return u.Update(func(s *NotificationUpsert) {
 		s.ClearCategory()
+	})
+}
+
+// SetLevel sets the "level" field.
+func (u *NotificationUpsertBulk) SetLevel(v notification.Level) *NotificationUpsertBulk {
+	return u.Update(func(s *NotificationUpsert) {
+		s.SetLevel(v)
+	})
+}
+
+// UpdateLevel sets the "level" field to the value that was provided on create.
+func (u *NotificationUpsertBulk) UpdateLevel() *NotificationUpsertBulk {
+	return u.Update(func(s *NotificationUpsert) {
+		s.UpdateLevel()
+	})
+}
+
+// ClearLevel clears the value of the "level" field.
+func (u *NotificationUpsertBulk) ClearLevel() *NotificationUpsertBulk {
+	return u.Update(func(s *NotificationUpsert) {
+		s.ClearLevel()
 	})
 }
 
