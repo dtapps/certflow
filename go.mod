@@ -24,7 +24,7 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.116
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.133
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.134
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.131
