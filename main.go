@@ -339,6 +339,11 @@ func main() {
 			app.Quit()
 		})
 
+	// 标准编辑菜单（撤销/重做/剪切/复制/粘贴/全选）。macOS 上系统快捷键
+	//（Cmd+C/V/X/A/Z 等）是通过菜单项的 accelerator 路由到 WebView 的，
+	// 缺失该菜单会导致应用内复制、粘贴等失效。
+	appMenu.AddRole(application.EditMenu)
+
 	helpSubmenu := appMenu.AddSubmenu(i18n.T("menu.help"))
 	helpSubmenu.Add(i18n.T("menu.about")).
 		OnClick(func(ctx *application.Context) {
