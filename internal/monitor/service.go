@@ -13,6 +13,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
+	entnotification "cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/network"
@@ -536,11 +537,19 @@ func (s *MonitorService) notifyIfProblem(domain string, result checkResult) {
 		return
 	}
 
+	level := entnotification.LevelInfo.String()
+	switch result.status {
+	case "error", "expired":
+		level = entnotification.LevelError.String()
+	case "warning":
+		level = entnotification.LevelWarning.String()
+	}
+
 	_ = s.notifService.SendNotification(notification.NotificationOption{
 		Title:    title,
 		Body:     body,
 		Category: "monitor",
-		Level:    "info",
+		Level:    level,
 	})
 }
 
