@@ -28,7 +28,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.131
-	github.com/volcengine/volc-sdk-golang v1.0.251
+	github.com/volcengine/volc-sdk-golang v1.0.252
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117
 	go.dtapp.net/library/contrib/http_log v1.0.12
 	golang.org/x/crypto v0.54.0

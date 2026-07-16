@@ -738,8 +738,8 @@ github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqri
 github.com/ucloud/ucloud-sdk-go v0.22.92 h1:HuT+JQfyEx9OFhluTQ/Zusb6obB+2kJ9OJlU/JREHR4=
 github.com/ucloud/ucloud-sdk-go v0.22.92/go.mod h1:dyLmFHmUfgb4RZKYQP9IArlvQ2pxzFthfhwxRzOEPIw=
 github.com/urfave/cli/v2 v2.3.0/go.mod h1:LJmUH05zAU44vOAcrfzZQKsZbVcdbOG8rtL3/XcUArI=
-github.com/volcengine/volc-sdk-golang v1.0.251 h1:N/3jkDfY+w/U/MC8T91Pvhpv8nBK4ESsxE7ykLWntlg=
-github.com/volcengine/volc-sdk-golang v1.0.251/go.mod h1:zHJlaqiMbIB+0mcrsZPTwOb3FB7S/0MCfqlnO8R7hlM=
+github.com/volcengine/volc-sdk-golang v1.0.252 h1:Gtyj+E0k5KV2oQhHs47Op4uMQhR+RYGwhpEHkukwk/4=
+github.com/volcengine/volc-sdk-golang v1.0.252/go.mod h1:zHJlaqiMbIB+0mcrsZPTwOb3FB7S/0MCfqlnO8R7hlM=
 github.com/vultr/govultr/v3 v3.31.2 h1:2l3/KDvfemG+4azw4LLquJoh9mFOAVEdBXtPPzix3ac=
 github.com/vultr/govultr/v3 v3.31.2/go.mod h1:2zyUw9yADQaGwKnwDesmIOlBNLrm7edsCfWHFJpWKf8=
 github.com/wailsapp/wails/v3 v3.0.0-alpha2.117 h1:udyjqPG3AIgkod5QDR/WblCkpV8R86BFPSrsWxSyt5Y=
