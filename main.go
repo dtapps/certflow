@@ -400,7 +400,9 @@ func main() {
 	})
 
 	// 启动后异步检查更新
-	checkUpdateOnStart(app)
+	if currentVersion != "dev" {
+		checkUpdateOnStart(app)
+	}
 
 	// 运行应用
 	if err := app.Run(); err != nil {
