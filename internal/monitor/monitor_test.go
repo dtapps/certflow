@@ -87,7 +87,6 @@ func TestCreate(t *testing.T) {
 		Port:          443,
 		CheckType:     "https",
 		CheckInterval: 3600,
-		Enabled:       true,
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -111,7 +110,6 @@ func TestCreate_DefaultPortAndInterval(t *testing.T) {
 	item, err := svc.Create(ctx, CreateInput{
 		Domain:    "example.com",
 		CheckType: "https",
-		Enabled:   true,
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -137,8 +135,8 @@ func TestList(t *testing.T) {
 		t.Errorf("expected empty list, got %d", len(list))
 	}
 
-	svc.Create(ctx, CreateInput{Domain: "a.com", CheckType: "https", Enabled: true})
-	svc.Create(ctx, CreateInput{Domain: "b.com", CheckType: "http", Enabled: false})
+	svc.Create(ctx, CreateInput{Domain: "a.com", CheckType: "https"})
+	svc.Create(ctx, CreateInput{Domain: "b.com", CheckType: "http"})
 
 	list, err = svc.List(ctx)
 	if err != nil {
@@ -157,15 +155,13 @@ func TestUpdate(t *testing.T) {
 	created, _ := svc.Create(ctx, CreateInput{
 		Domain:    "old.com",
 		CheckType: "https",
-		Enabled:   true,
 	})
 
-	updated, err := svc.Update(ctx, created.ID, CreateInput{
+	updated, err := svc.Update(ctx, created.ID, UpdateInput{
 		Domain:        "new.com",
 		Port:          8080,
 		CheckType:     "http",
 		CheckInterval: 7200,
-		Enabled:       false,
 	})
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
@@ -186,7 +182,6 @@ func TestDelete(t *testing.T) {
 	created, _ := svc.Create(ctx, CreateInput{
 		Domain:    "example.com",
 		CheckType: "https",
-		Enabled:   true,
 	})
 
 	if err := svc.Delete(ctx, created.ID); err != nil {

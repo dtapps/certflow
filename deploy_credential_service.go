@@ -35,7 +35,6 @@ type CreateDeployCredentialRequest struct {
 	Name         string            `json:"name"`          // 凭证名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
 	Config       map[string]string `json:"config"`        // 配置参数
-	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注
 }
 
@@ -44,7 +43,6 @@ type UpdateDeployCredentialRequest struct {
 	Name         string            `json:"name"`          // 凭证名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
 	Config       map[string]string `json:"config"`        // 配置参数
-	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注
 }
 
@@ -99,7 +97,6 @@ func (s *DeployCredentialServiceWrapper) CreateDeployCredential(input CreateDepl
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
 		Config:       input.Config,
-		IsActive:     input.IsActive,
 		Comment:      input.Comment,
 	})
 	if err != nil {
@@ -125,13 +122,31 @@ func (s *DeployCredentialServiceWrapper) UpdateDeployCredential(id int, input Up
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
 		Config:       input.Config,
-		IsActive:     input.IsActive,
 		Comment:      input.Comment,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	return &DeployCredentialListItem{
+		ID:           result.ID,
+		Name:         result.Name,
+		ProviderType: result.ProviderType,
+		Config:       result.Config,
+		IsActive:     result.IsActive,
+		Comment:      result.Comment,
+		CreatedAt:    result.CreatedAt,
+		UpdatedAt:    result.UpdatedAt,
+	}, nil
+}
+
+// SetActive 设置部署凭证的启用状态
+func (s *DeployCredentialServiceWrapper) SetActive(id int, active bool) (*DeployCredentialListItem, error) {
+	ctx := context.Background()
+	result, err := s.credentialService.SetActive(ctx, id, active)
+	if err != nil {
+		return nil, err
+	}
 	return &DeployCredentialListItem{
 		ID:           result.ID,
 		Name:         result.Name,

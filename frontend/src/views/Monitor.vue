@@ -41,7 +41,6 @@ const formData = ref({
   check_type: 'ssl',
   url: '',
   check_interval: 3600,
-  enabled: true,
 })
 
 const loadDomains = async () => {
@@ -67,7 +66,6 @@ const openCreate = () => {
     check_type: 'https',
     url: '',
     check_interval: 3600,
-    enabled: true,
   }
   showAddModal.value = true
 }
@@ -80,7 +78,6 @@ const openEdit = (item: MonitoredDomainItem) => {
     check_type: item.check_type,
     url: item.url,
     check_interval: item.check_interval,
-    enabled: item.enabled,
   }
   showEditModal.value = true
 }
@@ -237,18 +234,16 @@ const checkTypeOptions = [
 ]
 
 const togglingId = ref<number | null>(null)
-const handleToggleEnabled = async (id: number) => {
-  togglingId.value = id
+const handleToggleEnabled = async (item: any, value: boolean) => {
+  const prev = item.enabled
+  togglingId.value = item.id
+  item.enabled = value
   try {
-    const updated = await MonitorService.ToggleEnabled(id)
-    if (updated) {
-      const idx = domains.value.findIndex((d) => d.id === id)
-      if (idx !== -1) {
-        domains.value[idx].enabled = updated.enabled
-      }
-    }
-  } catch (e) {
-    showMessage(t('monitor.toggleFailed') + ' ' + e, 'error')
+    await MonitorService.SetActive(item.id, value)
+    showMessage(value ? t('common.enabledSuccess') : t('common.disabledSuccess'), 'success')
+  } catch (e: any) {
+    item.enabled = prev
+    showMessage(t('common.toggleFailed') + ' ' + (e?.message || String(e)), 'error')
   } finally {
     togglingId.value = null
   }
@@ -388,7 +383,7 @@ const handleToggleEnabled = async (id: number) => {
                     :value="item.enabled"
                     :loading="togglingId === item.id"
                     size="small"
-                    @update:value="handleToggleEnabled(item.id)"
+                    @update:value="(v: boolean) => handleToggleEnabled(item, v)"
                     :title="item.enabled ? t('monitor.disable') : t('monitor.enable')"
                   />
                   <n-button
@@ -618,9 +613,6 @@ const handleToggleEnabled = async (id: number) => {
         </n-form-item>
         <n-form-item :label="t('monitor.checkInterval') + ' (' + t('monitor.intervalHint') + ')'">
           <n-input-number v-model:value="formData.check_interval" :min="60" style="width: 100%" />
-        </n-form-item>
-        <n-form-item :label="t('dns.enabled')">
-          <n-switch v-model:value="formData.enabled" />
         </n-form-item>
       </n-form>
       <template #footer>

@@ -85,14 +85,22 @@ type MonitoredDomainItem struct {
 	UpdatedAt         string   `json:"updated_at"`           // 更新时间
 }
 
-// CreateInput 创建/更新监控域名请求
+// CreateInput 创建监控域名请求
 type CreateInput struct {
 	Domain        string `json:"domain"`         // 域名
 	Port          int    `json:"port"`           // 端口号
 	CheckType     string `json:"check_type"`     // 检查类型：https/http
 	URL           string `json:"url"`            // 自定义检查 URL
 	CheckInterval int    `json:"check_interval"` // 检查间隔（秒）
-	Enabled       bool   `json:"enabled"`        // 是否启用
+}
+
+// UpdateInput 更新监控域名请求
+type UpdateInput struct {
+	Domain        string `json:"domain"`         // 域名
+	Port          int    `json:"port"`           // 端口号
+	CheckType     string `json:"check_type"`     // 检查类型：https/http
+	URL           string `json:"url"`            // 自定义检查 URL
+	CheckInterval int    `json:"check_interval"` // 检查间隔（秒）
 }
 
 func toItem(m *ent.MonitoredDomain) *MonitoredDomainItem {
@@ -160,7 +168,6 @@ func (s *MonitorService) Create(ctx context.Context, input CreateInput) (*Monito
 		SetCheckType(monitoreddomain.CheckType(input.CheckType)).
 		SetURL(input.URL).
 		SetCheckInterval(input.CheckInterval).
-		SetEnabled(input.Enabled).
 		SetStatus(monitoreddomain.StatusUnknown).
 		Save(ctx)
 	if err != nil {
@@ -170,14 +177,13 @@ func (s *MonitorService) Create(ctx context.Context, input CreateInput) (*Monito
 }
 
 // Update 更新监控域名
-func (s *MonitorService) Update(ctx context.Context, id int, input CreateInput) (*MonitoredDomainItem, error) {
+func (s *MonitorService) Update(ctx context.Context, id int, input UpdateInput) (*MonitoredDomainItem, error) {
 	m, err := s.db.MonitoredDomain.UpdateOneID(id).
 		SetDomain(input.Domain).
 		SetPort(input.Port).
 		SetCheckType(monitoreddomain.CheckType(input.CheckType)).
 		SetURL(input.URL).
 		SetCheckInterval(input.CheckInterval).
-		SetEnabled(input.Enabled).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.update_monitored_domain_failed", "Error", err))
@@ -185,14 +191,13 @@ func (s *MonitorService) Update(ctx context.Context, id int, input CreateInput) 
 	return toItem(m), nil
 }
 
-// ToggleEnabled 切换监控域名的启用状态
-func (s *MonitorService) ToggleEnabled(ctx context.Context, id int) (*MonitoredDomainItem, error) {
-	m, err := s.db.MonitoredDomain.Get(ctx, id)
-	if err != nil {
+// SetActive 设置监控域名的启用状态
+func (s *MonitorService) SetActive(ctx context.Context, id int, active bool) (*MonitoredDomainItem, error) {
+	if _, err := s.db.MonitoredDomain.Get(ctx, id); err != nil {
 		return nil, err
 	}
 	updated, err := s.db.MonitoredDomain.UpdateOneID(id).
-		SetEnabled(!m.Enabled).
+		SetEnabled(active).
 		Save(ctx)
 	if err != nil {
 		return nil, err

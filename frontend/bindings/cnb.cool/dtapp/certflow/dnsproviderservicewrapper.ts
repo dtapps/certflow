@@ -43,6 +43,13 @@ export function ListDNSProviders(): $CancellablePromise<$models.DNSProviderListI
 }
 
 /**
+ * SetActive 设置 DNS 提供商的启用状态
+ */
+export function SetActive(id: number, active: boolean): $CancellablePromise<$models.DNSProviderListItem | null> {
+    return $Call.ByID(544552946, id, active);
+}
+
+/**
  * UpdateDNSProvider 更新 DNS 提供商
  */
 export function UpdateDNSProvider(id: number, input: $models.UpdateDNSProviderRequest): $CancellablePromise<$models.DNSProviderListItem | null> {

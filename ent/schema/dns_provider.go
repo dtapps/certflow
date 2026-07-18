@@ -30,7 +30,7 @@ func (DNSProvider) Fields() []ent.Field {
 			Optional().
 			Comment("配置 JSON"),
 		field.Bool("is_active").
-			Default(true).
+			Default(false).
 			Comment("是否启用"),
 		field.String("comment").
 			Optional().

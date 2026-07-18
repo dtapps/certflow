@@ -82,6 +82,10 @@ const updateItem = async (id: number, data: any) => {
 const deleteItem = async (id: number) => {
   return await DeployCredentialService.DeleteDeployCredential(id)
 }
+
+const setActiveItem = async (id: number, active: boolean) => {
+  await DeployCredentialService.SetActive(id, active)
+}
 </script>
 
 <template>
@@ -99,5 +103,6 @@ const deleteItem = async (id: number) => {
     :create-item="createItem"
     :update-item="updateItem"
     :delete-item="deleteItem"
+    :set-active-item="setActiveItem"
   />
 </template>

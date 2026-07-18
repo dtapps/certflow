@@ -25,7 +25,7 @@ func (DeployCredential) Fields() []ent.Field {
 			Optional().
 			Comment("配置 JSON（API 密钥等）"),
 		field.Bool("is_active").
-			Default(true).
+			Default(false).
 			Comment("是否启用"),
 		field.String("comment").
 			Optional().

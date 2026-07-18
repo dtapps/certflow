@@ -48,7 +48,6 @@ type CreateDNSProviderRequest struct {
 	Name         string            `json:"name"`          // 提供商名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
 	Config       map[string]string `json:"config"`        // 配置参数
-	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注
 }
 
@@ -57,7 +56,6 @@ type UpdateDNSProviderRequest struct {
 	Name         string            `json:"name,omitempty"`          // 提供商名称
 	ProviderType string            `json:"provider_type,omitempty"` // 提供商类型
 	Config       map[string]string `json:"config,omitempty"`        // 配置参数
-	IsActive     *bool             `json:"is_active,omitempty"`     // 是否启用
 	Comment      string            `json:"comment,omitempty"`       // 备注
 }
 
@@ -96,7 +94,6 @@ func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderReq
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
 		Config:       input.Config,
-		IsActive:     input.IsActive,
 		Comment:      input.Comment,
 	})
 	if err != nil {
@@ -122,13 +119,31 @@ func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSPro
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
 		Config:       input.Config,
-		IsActive:     input.IsActive,
 		Comment:      input.Comment,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	return &DNSProviderListItem{
+		ID:           result.ID,
+		Name:         result.Name,
+		ProviderType: result.ProviderType.String(),
+		Config:       convertConfig(result.Config),
+		IsActive:     result.IsActive,
+		Comment:      result.Comment,
+		CreatedAt:    result.CreatedAt.Format(time.DateTime),
+		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+	}, nil
+}
+
+// SetActive 设置 DNS 提供商的启用状态
+func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProviderListItem, error) {
+	ctx := context.Background()
+	result, err := s.dnsService.SetActive(ctx, id, active)
+	if err != nil {
+		return nil, err
+	}
 	return &DNSProviderListItem{
 		ID:           result.ID,
 		Name:         result.Name,

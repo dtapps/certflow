@@ -32,7 +32,7 @@ func (MonitoredDomain) Fields() []ent.Field {
 			Default(3600).
 			Comment("检查间隔（秒）"),
 		field.Bool("enabled").
-			Default(true).
+			Default(false).
 			Comment("是否启用监控"),
 		field.Enum("status").
 			Values("ok", "warning", "error", "expired", "unknown").

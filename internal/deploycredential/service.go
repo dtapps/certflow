@@ -35,7 +35,6 @@ type CreateDeployCredentialInput struct {
 	Name         string            `json:"name"`
 	ProviderType string            `json:"provider_type"`
 	Config       map[string]string `json:"config"`
-	IsActive     bool              `json:"is_active"`
 	Comment      string            `json:"comment"`
 }
 
@@ -44,7 +43,6 @@ type UpdateDeployCredentialInput struct {
 	Name         string            `json:"name"`
 	ProviderType string            `json:"provider_type"`
 	Config       map[string]string `json:"config"`
-	IsActive     bool              `json:"is_active"`
 	Comment      string            `json:"comment"`
 }
 
@@ -107,7 +105,6 @@ func (s *Service) Create(ctx context.Context, input CreateDeployCredentialInput)
 		SetName(input.Name).
 		SetProviderType(deploycredential.ProviderType(input.ProviderType)).
 		SetConfig(configBytes).
-		SetIsActive(input.IsActive).
 		SetComment(input.Comment).
 		Save(ctx)
 	if err != nil {
@@ -133,7 +130,6 @@ func (s *Service) Update(ctx context.Context, id int, input UpdateDeployCredenti
 		SetName(input.Name).
 		SetProviderType(deploycredential.ProviderType(input.ProviderType)).
 		SetConfig(configBytes).
-		SetIsActive(input.IsActive).
 		SetComment(input.Comment).
 		Save(ctx)
 	if err != nil {
@@ -144,6 +140,31 @@ func (s *Service) Update(ctx context.Context, id int, input UpdateDeployCredenti
 		Name:         item.Name,
 		ProviderType: string(item.ProviderType),
 		Config:       input.Config,
+		IsActive:     item.IsActive,
+		Comment:      item.Comment,
+		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+// SetActive 设置部署凭证的启用状态
+func (s *Service) SetActive(ctx context.Context, id int, active bool) (*DeployCredentialListItem, error) {
+	if _, err := s.db.DeployCredential.Get(ctx, id); err != nil {
+		return nil, err
+	}
+	item, err := s.db.DeployCredential.UpdateOneID(id).SetIsActive(active).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	config := make(map[string]string)
+	if item.Config != nil {
+		config = parseConfig(item.Config)
+	}
+	return &DeployCredentialListItem{
+		ID:           item.ID,
+		Name:         item.Name,
+		ProviderType: string(item.ProviderType),
+		Config:       config,
 		IsActive:     item.IsActive,
 		Comment:      item.Comment,
 		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),

@@ -26,7 +26,6 @@ type CreateDNSProviderInput struct {
 	Name         string            `json:"name"`          // 提供商名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
 	Config       map[string]string `json:"config"`        // 配置参数
-	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注
 }
 
@@ -35,7 +34,6 @@ type UpdateDNSProviderInput struct {
 	Name         string            `json:"name,omitempty"`          // 提供商名称
 	ProviderType string            `json:"provider_type,omitempty"` // 提供商类型
 	Config       map[string]string `json:"config,omitempty"`        // 配置参数
-	IsActive     *bool             `json:"is_active,omitempty"`     // 是否启用
 	Comment      string            `json:"comment,omitempty"`       // 备注
 }
 
@@ -49,7 +47,6 @@ func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProvider
 		SetName(input.Name).
 		SetProviderType(dnsprovider.ProviderType(input.ProviderType)).
 		SetConfig(configJSON).
-		SetIsActive(input.IsActive).
 		SetComment(input.Comment)
 
 	result, err := builder.Save(ctx)
@@ -57,6 +54,17 @@ func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProvider
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_create_failed", "Error", err))
 	}
 	return result, nil
+}
+
+// SetActive 设置 DNS 提供商的启用状态
+func (s *DNSProviderService) SetActive(ctx context.Context, id int, active bool) (*ent.DNSProvider, error) {
+	if _, err := s.db.DNSProvider.Get(ctx, id); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_found"))
+		}
+		return nil, err
+	}
+	return s.db.DNSProvider.UpdateOneID(id).SetIsActive(active).Save(ctx)
 }
 
 // GetByID 根据 ID 获取 DNS 提供商
@@ -119,9 +127,6 @@ func (s *DNSProviderService) Update(ctx context.Context, id int, input UpdateDNS
 			return nil, fmt.Errorf("%s", i18n.T("error.dns_config_marshal_failed", "Error", err))
 		}
 		builder.SetConfig(configJSON)
-	}
-	if input.IsActive != nil {
-		builder.SetIsActive(*input.IsActive)
 	}
 	if input.Comment != "" {
 		builder.SetComment(input.Comment)

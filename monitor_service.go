@@ -30,13 +30,13 @@ func (s *MonitorServiceWrapper) Create(input monitor.CreateInput) (*monitor.Moni
 }
 
 // Update 更新监控域名
-func (s *MonitorServiceWrapper) Update(id int, input monitor.CreateInput) (*monitor.MonitoredDomainItem, error) {
+func (s *MonitorServiceWrapper) Update(id int, input monitor.UpdateInput) (*monitor.MonitoredDomainItem, error) {
 	return s.monitorService.Update(context.Background(), id, input)
 }
 
-// ToggleEnabled 切换监控域名的启用状态
-func (s *MonitorServiceWrapper) ToggleEnabled(id int) (*monitor.MonitoredDomainItem, error) {
-	return s.monitorService.ToggleEnabled(context.Background(), id)
+// SetActive 设置监控域名的启用状态
+func (s *MonitorServiceWrapper) SetActive(id int, active bool) (*monitor.MonitoredDomainItem, error) {
+	return s.monitorService.SetActive(context.Background(), id, active)
 }
 
 // Delete 删除监控域名

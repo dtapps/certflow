@@ -376,11 +376,6 @@ export interface CreateDNSProviderRequest {
     "config": { [_ in string]?: string } | null;
 
     /**
-     * 是否启用
-     */
-    "is_active": boolean;
-
-    /**
      * 备注
      */
     "comment": string;
@@ -404,11 +399,6 @@ export interface CreateDeployCredentialRequest {
      * 配置参数
      */
     "config": { [_ in string]?: string } | null;
-
-    /**
-     * 是否启用
-     */
-    "is_active": boolean;
 
     /**
      * 备注
@@ -986,11 +976,6 @@ export interface UpdateDNSProviderRequest {
     "config"?: { [_ in string]?: string } | null;
 
     /**
-     * 是否启用
-     */
-    "is_active"?: boolean | null;
-
-    /**
      * 备注
      */
     "comment"?: string;
@@ -1014,11 +999,6 @@ export interface UpdateDeployCredentialRequest {
      * 配置参数
      */
     "config": { [_ in string]?: string } | null;
-
-    /**
-     * 是否启用
-     */
-    "is_active": boolean;
 
     /**
      * 备注

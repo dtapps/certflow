@@ -43,6 +43,13 @@ export function ListDeployCredentials(): $CancellablePromise<$models.DeployCrede
 }
 
 /**
+ * SetActive 设置部署凭证的启用状态
+ */
+export function SetActive(id: number, active: boolean): $CancellablePromise<$models.DeployCredentialListItem | null> {
+    return $Call.ByID(2891396778, id, active);
+}
+
+/**
  * UpdateDeployCredential 更新部署凭证
  */
 export function UpdateDeployCredential(id: number, input: $models.UpdateDeployCredentialRequest): $CancellablePromise<$models.DeployCredentialListItem | null> {

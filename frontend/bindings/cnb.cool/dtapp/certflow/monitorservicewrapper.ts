@@ -43,6 +43,13 @@ export function List(): $CancellablePromise<(monitor$0.MonitoredDomainItem | nul
 }
 
 /**
+ * SetActive 设置监控域名的启用状态
+ */
+export function SetActive(id: number, active: boolean): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
+    return $Call.ByID(2564808074, id, active);
+}
+
+/**
  * SetUserAgent 设置 User-Agent
  */
 export function SetUserAgent(ua: string): $CancellablePromise<void> {
@@ -50,15 +57,8 @@ export function SetUserAgent(ua: string): $CancellablePromise<void> {
 }
 
 /**
- * ToggleEnabled 切换监控域名的启用状态
- */
-export function ToggleEnabled(id: number): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
-    return $Call.ByID(2247204237, id);
-}
-
-/**
  * Update 更新监控域名
  */
-export function Update(id: number, input: monitor$0.CreateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
+export function Update(id: number, input: monitor$0.UpdateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
     return $Call.ByID(3363052401, id, input);
 }

@@ -30,6 +30,7 @@ const props = defineProps<{
   createItem: (data: any) => Promise<any>
   updateItem: (id: number, data: any) => Promise<any>
   deleteItem: (id: number) => Promise<void>
+  setActiveItem?: (id: number, active: boolean) => Promise<void>
 }>()
 
 const i18nStore = useI18nStore()
@@ -42,18 +43,33 @@ const items = ref<any[]>([])
 const isLoading = ref(false)
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
+const togglingId = ref<number | null>(null)
+
+const handleToggleActive = async (item: any, value: boolean) => {
+  if (!props.setActiveItem) return
+  const prev = item.is_active
+  togglingId.value = item.id
+  item.is_active = value
+  try {
+    await props.setActiveItem(item.id, value)
+    showMessage(value ? t('common.enabledSuccess') : t('common.disabledSuccess'), 'success')
+  } catch (e: any) {
+    item.is_active = prev
+    showMessage(t('common.toggleFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
+  } finally {
+    togglingId.value = null
+  }
+}
 
 const formData = ref<{
   name: string
   provider_type: string
   config: Record<string, string>
-  is_active: boolean
   comment: string
 }>({
   name: '',
   provider_type: '',
   config: {},
-  is_active: true,
   comment: '',
 })
 
@@ -94,7 +110,6 @@ const openCreate = () => {
     name: '',
     provider_type: props.providerTypes[0]?.value || '',
     config: {},
-    is_active: true,
     comment: '',
   }
   const fields = props.configSchema[formData.value.provider_type] || []
@@ -112,7 +127,6 @@ const openEdit = (item: any) => {
     name: item.name,
     provider_type: item.provider_type,
     config: (item.config ?? {}) as Record<string, string>,
-    is_active: item.is_active,
     comment: item.comment,
   }
   parseConfigFromMap(item.config as Record<string, string>)
@@ -243,6 +257,14 @@ loadData()
               </div>
             </div>
             <div class="flex items-center gap-1">
+              <n-switch
+                v-if="props.setActiveItem"
+                :value="item.is_active"
+                :loading="togglingId === item.id"
+                size="small"
+                :title="item.is_active ? t('common.disableTitle') : t('common.enableTitle')"
+                @update:value="(v: boolean) => handleToggleActive(item, v)"
+              />
               <n-button
                 quaternary
                 circle
@@ -339,9 +361,6 @@ loadData()
         </div>
         <n-form-item :label="t('dns.comment')">
           <n-input v-model:value="formData.comment" :placeholder="t('dns.commentPlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('dns.enabled')">
-          <n-switch v-model:value="formData.is_active" />
         </n-form-item>
       </n-form>
       <template #footer>
