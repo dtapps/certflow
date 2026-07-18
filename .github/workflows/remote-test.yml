@@ -1,0 +1,238 @@
+name: Desktop GUI Remote Test Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: Select test system
+        required: true
+        type: choice
+        options:
+          # macOS
+          - macos-26-intel
+          - macos-26
+          - macos-15-intel
+          - macos-15
+          - macos-14-large
+          - macos-14
+
+          # Windows
+          - windows-2025
+          - windows-2022
+          - windows-11-arm
+          - windows-11-vs2026-arm
+
+          # Linux
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
+          - ubuntu-slim
+
+      duration:
+        description: Keep running time (minutes)
+        required: true
+        default: "30"
+
+
+jobs:
+  remote-test:
+
+    name: Start GUI Remote Test Environment
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+
+      - name: Show environment
+        shell: bash
+        run: |
+          echo "================================"
+          echo "Runner: ${{ inputs.runner }}"
+          echo "OS: $RUNNER_OS"
+
+          if [[ "$RUNNER_OS" != "Windows" ]]; then
+            uname -a
+          fi
+
+          echo "================================"
+
+
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          tags: tag:github-runner
+
+
+      - name: Show Tailscale IP
+        shell: bash
+        run: |
+          echo "================================"
+          echo "Tailscale IP:"
+          tailscale ip
+          echo "================================"
+
+
+      # ============================
+      # macOS
+      # ============================
+
+      - name: Install RustDesk macOS
+        if: startsWith(inputs.runner, 'macos-')
+        shell: bash
+        env:
+          REMOTE_PASS: ${{ secrets.REMOTE_PASSWORD }}
+        run: |
+          echo "Installing RustDesk..."
+
+          brew install --cask rustdesk
+
+          sleep 10
+
+          open -a RustDesk
+
+          sleep 15
+
+          /Applications/RustDesk.app/Contents/MacOS/RustDesk \
+            --password "$REMOTE_PASS" || true
+
+          echo "RustDesk configured."
+
+
+      # ============================
+      # Windows
+      # ============================
+
+      - name: Install RustDesk Windows
+        if: startsWith(inputs.runner, 'windows-')
+        shell: powershell
+        env:
+          REMOTE_PASS: ${{ secrets.REMOTE_PASSWORD }}
+        run: |
+          Write-Host "Installing RustDesk..."
+
+          winget install `
+            --id RustDesk.RustDesk `
+            --silent `
+            --accept-package-agreements `
+            --accept-source-agreements
+
+          Start-Sleep -Seconds 15
+
+          $RustDesk = "C:\Program Files\RustDesk\rustdesk.exe"
+
+          if (Test-Path $RustDesk) {
+              Start-Process $RustDesk
+          }
+
+          Start-Sleep -Seconds 10
+
+          if (Test-Path $RustDesk) {
+              & $RustDesk --password $env:REMOTE_PASS
+          }
+
+          Write-Host "RustDesk configured."
+
+
+      # ============================
+      # Linux
+      # ============================
+
+      - name: Install RustDesk Linux
+        if: startsWith(inputs.runner, 'ubuntu-')
+        shell: bash
+        env:
+          REMOTE_PASS: ${{ secrets.REMOTE_PASSWORD }}
+        run: |
+          set -euxo pipefail
+
+          echo "Installing desktop..."
+
+          sudo apt-get update
+
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ubuntu-desktop \
+            xserver-xorg-video-dummy \
+            lightdm \
+            curl \
+            jq
+
+          ARCH=$(uname -m)
+
+          case "$ARCH" in
+            x86_64)
+              PATTERN='x86_64\.deb$'
+              ;;
+            aarch64|arm64)
+              PATTERN='aarch64\.deb$'
+              ;;
+            *)
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+              ;;
+          esac
+
+          URL=$(
+            curl -fsSL https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
+            | jq -r '.assets[].browser_download_url' \
+            | grep -E "$PATTERN" \
+            | head -n1
+          )
+
+          echo "Download:"
+          echo "$URL"
+
+          curl -fL "$URL" -o rustdesk.deb
+
+          sudo apt install -fy ./rustdesk.deb
+
+          sudo rustdesk --option allow-linux-headless Y
+
+          sudo rustdesk --password "$REMOTE_PASS"
+
+          sudo systemctl enable rustdesk || true
+          sudo systemctl restart rustdesk || true
+
+          echo "RustDesk configured."
+
+
+      # ============================
+      # Show ID
+      # ============================
+
+      - name: Show RustDesk ID
+        shell: bash
+        run: |
+          echo "================================"
+          echo "RustDesk ID:"
+
+          case "$RUNNER_OS" in
+
+            Linux)
+              sudo rustdesk --get-id
+              ;;
+
+            macOS)
+              /Applications/RustDesk.app/Contents/MacOS/RustDesk --get-id || true
+              ;;
+
+            Windows)
+              powershell.exe -Command "& 'C:\Program Files\RustDesk\RustDesk.exe' --get-id | Out-String"
+              ;;
+
+          esac
+
+          echo "================================"
+
+
+      - name: Keep environment alive
+        shell: bash
+        run: |
+          echo "================================"
+          echo "Remote environment ready."
+          echo "Duration: ${{ inputs.duration }} minutes."
+          echo "================================"
+
+          sleep $(( ${{ inputs.duration }} * 60 ))
