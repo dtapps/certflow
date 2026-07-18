@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   NCard,
   NButton,
@@ -14,6 +14,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
+import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservicewrapper'
 import type { CAListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { initMessage, showMessage } from '../utils/message'
@@ -32,8 +33,16 @@ const formData = ref({
   name: '',
   directory_url: '',
   account_email: '',
-  is_active: true,
+  eab_kid: '',
+  eab_hmac: '',
 })
+
+// 仅当 CA 类型需要 EAB 时才显示 EAB 获取说明
+const eabRequiredDirs = [
+  'https://acme.zerossl.com/v2/DV90/directory',
+  'https://acme.litessl.com/acme/v2/directory',
+]
+const showEabHint = computed(() => eabRequiredDirs.includes(formData.value.directory_url))
 
 onMounted(async () => {
   isLoading.value = true
@@ -52,7 +61,8 @@ const openCreate = () => {
     name: '',
     directory_url: '',
     account_email: '',
-    is_active: true,
+    eab_kid: '',
+    eab_hmac: '',
   }
   showModal.value = true
 }
@@ -63,7 +73,8 @@ const openEdit = (ca: (typeof cas.value)[0]) => {
     name: ca.name,
     directory_url: ca.directory_url,
     account_email: ca.account_email,
-    is_active: ca.is_active,
+    eab_kid: ca.eab_kid || '',
+    eab_hmac: ca.eab_hmac || '',
   }
   showModal.value = true
 }
@@ -103,6 +114,24 @@ const handleDelete = async () => {
   } catch (e) {
     showMessage(t('ca.deleteFailed') + ' ' + e, 'error')
   }
+}
+
+// 在列表中切换 CA 启用状态（独立接口，统一校验由后端完成）
+const toggleActive = async (ca: (typeof cas.value)[0], val: boolean) => {
+  try {
+    await CAService.SetCAActive(ca.id, val)
+    ca.is_active = val
+    showMessage(val ? t('ca.enabledSuccess') : t('ca.disabledSuccess'), 'success')
+  } catch (e) {
+    showMessage(t('ca.toggleFailed') + ' ' + e, 'error')
+  }
+}
+
+// 通过系统默认浏览器打开 FreeSSL（获取 EAB 凭据）
+const openFreessl = () => {
+  BrowserService.OpenURL('https://freessl.cn/').catch((e) =>
+    console.error(t('ca.eabLinkFailed'), e),
+  )
 }
 </script>
 
@@ -159,6 +188,9 @@ const handleDelete = async () => {
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ ca.name }}</h3>
+                  <n-tag v-if="ca.is_builtin" size="small" type="info" :bordered="false">{{
+                    t('ca.builtin')
+                  }}</n-tag>
                   <n-tag v-if="!ca.is_active" size="small" :bordered="false">{{
                     t('ca.disabled')
                   }}</n-tag>
@@ -168,6 +200,11 @@ const handleDelete = async () => {
               </div>
             </div>
             <div class="flex items-center gap-1">
+              <n-switch
+                :value="ca.is_active"
+                @update:value="(v: boolean) => toggleActive(ca, v)"
+                :title="ca.is_active ? t('ca.disableTitle') : t('ca.enableTitle')"
+              />
               <n-button
                 quaternary
                 circle
@@ -191,8 +228,9 @@ const handleDelete = async () => {
                 circle
                 size="small"
                 type="error"
+                :disabled="ca.is_builtin"
+                :title="ca.is_builtin ? t('ca.builtinNoDelete') : t('ca.deleteTitle')"
                 @click="openDeleteModal(ca.id)"
-                :title="t('ca.deleteTitle')"
               >
                 <template #icon>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,11 +270,24 @@ const handleDelete = async () => {
           <n-input
             v-model:value="formData.account_email"
             :placeholder="t('ca.accountEmailPlaceholder')"
+            :input-props="{ type: 'email', autocomplete: 'email' }"
           />
         </n-form-item>
-        <n-form-item :label="t('ca.enabled')">
-          <n-switch v-model:value="formData.is_active" />
+        <n-form-item :label="t('ca.eabKid')">
+          <n-input v-model:value="formData.eab_kid" :placeholder="t('ca.eabKidPlaceholder')" />
         </n-form-item>
+        <n-form-item :label="t('ca.eabHmac')">
+          <n-input
+            v-model:value="formData.eab_hmac"
+            type="password"
+            show-password-on="click"
+            :placeholder="t('ca.eabHmacPlaceholder')"
+          />
+        </n-form-item>
+        <n-alert v-if="showEabHint" type="info" :show-icon="true" class="mt-1 mb-2">
+          <span>{{ t('ca.eabHint') }}</span>
+          <a href="#" @click.prevent="openFreessl" class="underline">freessl.cn</a>
+        </n-alert>
       </n-form>
       <template #footer>
         <div class="flex justify-end gap-2">

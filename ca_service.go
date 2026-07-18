@@ -24,6 +24,9 @@ type CAListItem struct {
 	Name         string `json:"name"`          // CA 名称
 	DirectoryURL string `json:"directory_url"` // ACME 目录 URL
 	AccountEmail string `json:"account_email"` // 注册邮箱
+	EabKid       string `json:"eab_kid"`       // EAB KID（部分 CA 需要）
+	EabHmac      string `json:"eab_hmac"`      // EAB HMAC Key（部分 CA 需要）
+	IsBuiltin    bool   `json:"is_builtin"`    // 是否内置 CA
 	IsActive     bool   `json:"is_active"`     // 是否启用
 	CreatedAt    string `json:"created_at"`    // 创建时间
 	UpdatedAt    string `json:"updated_at"`    // 更新时间
@@ -34,15 +37,17 @@ type CreateCACreateRequest struct {
 	Name         string `json:"name"`          // CA 名称
 	DirectoryURL string `json:"directory_url"` // ACME 目录 URL
 	AccountEmail string `json:"account_email"` // 注册邮箱
-	IsActive     bool   `json:"is_active"`     // 是否启用
+	EabKid       string `json:"eab_kid"`       // EAB KID（部分 CA 需要）
+	EabHmac      string `json:"eab_hmac"`      // EAB HMAC Key（部分 CA 需要）
 }
 
 // CAUpdateRequest 更新 CA 请求
 type CAUpdateRequest struct {
-	Name         string `json:"name,omitempty"`          // CA 名称
-	DirectoryURL string `json:"directory_url,omitempty"` // ACME 目录 URL
-	AccountEmail string `json:"account_email,omitempty"` // 注册邮箱
-	IsActive     *bool  `json:"is_active,omitempty"`     // 是否启用
+	Name         string  `json:"name,omitempty"`          // CA 名称
+	DirectoryURL string  `json:"directory_url,omitempty"` // ACME 目录 URL
+	AccountEmail string  `json:"account_email,omitempty"` // 注册邮箱
+	EabKid       *string `json:"eab_kid,omitempty"`       // EAB KID（部分 CA 需要）
+	EabHmac      *string `json:"eab_hmac,omitempty"`      // EAB HMAC Key（部分 CA 需要）
 }
 
 // ListCA 获取所有 CA
@@ -60,6 +65,9 @@ func (s *CAServiceWrapper) ListCA() ([]CAListItem, error) {
 			Name:         c.Name,
 			DirectoryURL: c.DirectoryURL,
 			AccountEmail: c.AccountEmail,
+			EabKid:       c.EabKid,
+			EabHmac:      c.EabHmac,
+			IsBuiltin:    c.IsBuiltin,
 			IsActive:     c.IsActive,
 			CreatedAt:    c.CreatedAt.Format(time.DateTime),
 			UpdatedAt:    c.UpdatedAt.Format(time.DateTime),
@@ -75,7 +83,8 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		Name:         input.Name,
 		DirectoryURL: input.DirectoryURL,
 		AccountEmail: input.AccountEmail,
-		IsActive:     input.IsActive,
+		EabKid:       input.EabKid,
+		EabHmac:      input.EabHmac,
 	})
 	if err != nil {
 		return nil, err
@@ -86,6 +95,9 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		Name:         result.Name,
 		DirectoryURL: result.DirectoryURL,
 		AccountEmail: result.AccountEmail,
+		EabKid:       result.EabKid,
+		EabHmac:      result.EabHmac,
+		IsBuiltin:    result.IsBuiltin,
 		IsActive:     result.IsActive,
 		CreatedAt:    result.CreatedAt.Format(time.DateTime),
 		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
@@ -99,7 +111,8 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		Name:         input.Name,
 		DirectoryURL: input.DirectoryURL,
 		AccountEmail: input.AccountEmail,
-		IsActive:     input.IsActive,
+		EabKid:       input.EabKid,
+		EabHmac:      input.EabHmac,
 	})
 	if err != nil {
 		return nil, err
@@ -110,6 +123,9 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		Name:         result.Name,
 		DirectoryURL: result.DirectoryURL,
 		AccountEmail: result.AccountEmail,
+		EabKid:       result.EabKid,
+		EabHmac:      result.EabHmac,
+		IsBuiltin:    result.IsBuiltin,
 		IsActive:     result.IsActive,
 		CreatedAt:    result.CreatedAt.Format(time.DateTime),
 		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
@@ -120,6 +136,28 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 func (s *CAServiceWrapper) DeleteCA(id int) error {
 	ctx := context.Background()
 	return s.caService.Delete(ctx, id)
+}
+
+// SetCAActive 启用/禁用 CA（独立接口）
+func (s *CAServiceWrapper) SetCAActive(id int, active bool) (*CAListItem, error) {
+	ctx := context.Background()
+	result, err := s.caService.SetActive(ctx, id, active)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CAListItem{
+		ID:           result.ID,
+		Name:         result.Name,
+		DirectoryURL: result.DirectoryURL,
+		AccountEmail: result.AccountEmail,
+		EabKid:       result.EabKid,
+		EabHmac:      result.EabHmac,
+		IsBuiltin:    result.IsBuiltin,
+		IsActive:     result.IsActive,
+		CreatedAt:    result.CreatedAt.Format(time.DateTime),
+		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+	}, nil
 }
 
 // TestCAConnection 测试 CA 连接

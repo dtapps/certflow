@@ -64,7 +64,6 @@ func TestCreateAndGetByID(t *testing.T) {
 		Name:         "Let's Encrypt",
 		DirectoryURL: "https://acme-v02.api.letsencrypt.org/directory",
 		AccountEmail: "test@example.com",
-		IsActive:     true,
 	}
 
 	created, err := svc.Create(ctx, input)

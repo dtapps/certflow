@@ -20,8 +20,14 @@ const (
 	FieldDirectoryURL = "directory_url"
 	// FieldAccountEmail holds the string denoting the account_email field in the database.
 	FieldAccountEmail = "account_email"
+	// FieldEabKid holds the string denoting the eab_kid field in the database.
+	FieldEabKid = "eab_kid"
+	// FieldEabHmac holds the string denoting the eab_hmac field in the database.
+	FieldEabHmac = "eab_hmac"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
+	// FieldIsBuiltin holds the string denoting the is_builtin field in the database.
+	FieldIsBuiltin = "is_builtin"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -45,7 +51,10 @@ var Columns = []string{
 	FieldName,
 	FieldDirectoryURL,
 	FieldAccountEmail,
+	FieldEabKid,
+	FieldEabHmac,
 	FieldIsActive,
+	FieldIsBuiltin,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -67,6 +76,8 @@ var (
 	DirectoryURLValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
+	// DefaultIsBuiltin holds the default value on creation for the "is_builtin" field.
+	DefaultIsBuiltin bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -98,9 +109,24 @@ func ByAccountEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountEmail, opts...).ToFunc()
 }
 
+// ByEabKid orders the results by the eab_kid field.
+func ByEabKid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEabKid, opts...).ToFunc()
+}
+
+// ByEabHmac orders the results by the eab_hmac field.
+func ByEabHmac(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEabHmac, opts...).ToFunc()
+}
+
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByIsBuiltin orders the results by the is_builtin field.
+func ByIsBuiltin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsBuiltin, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

@@ -70,9 +70,24 @@ func AccountEmail(v string) predicate.CA {
 	return predicate.CA(sql.FieldEQ(FieldAccountEmail, v))
 }
 
+// EabKid applies equality check predicate on the "eab_kid" field. It's identical to EabKidEQ.
+func EabKid(v string) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldEabKid, v))
+}
+
+// EabHmac applies equality check predicate on the "eab_hmac" field. It's identical to EabHmacEQ.
+func EabHmac(v string) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldEabHmac, v))
+}
+
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.CA {
 	return predicate.CA(sql.FieldEQ(FieldIsActive, v))
+}
+
+// IsBuiltin applies equality check predicate on the "is_builtin" field. It's identical to IsBuiltinEQ.
+func IsBuiltin(v bool) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldIsBuiltin, v))
 }
 
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
@@ -290,6 +305,156 @@ func AccountEmailContainsFold(v string) predicate.CA {
 	return predicate.CA(sql.FieldContainsFold(FieldAccountEmail, v))
 }
 
+// EabKidEQ applies the EQ predicate on the "eab_kid" field.
+func EabKidEQ(v string) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldEabKid, v))
+}
+
+// EabKidNEQ applies the NEQ predicate on the "eab_kid" field.
+func EabKidNEQ(v string) predicate.CA {
+	return predicate.CA(sql.FieldNEQ(FieldEabKid, v))
+}
+
+// EabKidIn applies the In predicate on the "eab_kid" field.
+func EabKidIn(vs ...string) predicate.CA {
+	return predicate.CA(sql.FieldIn(FieldEabKid, vs...))
+}
+
+// EabKidNotIn applies the NotIn predicate on the "eab_kid" field.
+func EabKidNotIn(vs ...string) predicate.CA {
+	return predicate.CA(sql.FieldNotIn(FieldEabKid, vs...))
+}
+
+// EabKidGT applies the GT predicate on the "eab_kid" field.
+func EabKidGT(v string) predicate.CA {
+	return predicate.CA(sql.FieldGT(FieldEabKid, v))
+}
+
+// EabKidGTE applies the GTE predicate on the "eab_kid" field.
+func EabKidGTE(v string) predicate.CA {
+	return predicate.CA(sql.FieldGTE(FieldEabKid, v))
+}
+
+// EabKidLT applies the LT predicate on the "eab_kid" field.
+func EabKidLT(v string) predicate.CA {
+	return predicate.CA(sql.FieldLT(FieldEabKid, v))
+}
+
+// EabKidLTE applies the LTE predicate on the "eab_kid" field.
+func EabKidLTE(v string) predicate.CA {
+	return predicate.CA(sql.FieldLTE(FieldEabKid, v))
+}
+
+// EabKidContains applies the Contains predicate on the "eab_kid" field.
+func EabKidContains(v string) predicate.CA {
+	return predicate.CA(sql.FieldContains(FieldEabKid, v))
+}
+
+// EabKidHasPrefix applies the HasPrefix predicate on the "eab_kid" field.
+func EabKidHasPrefix(v string) predicate.CA {
+	return predicate.CA(sql.FieldHasPrefix(FieldEabKid, v))
+}
+
+// EabKidHasSuffix applies the HasSuffix predicate on the "eab_kid" field.
+func EabKidHasSuffix(v string) predicate.CA {
+	return predicate.CA(sql.FieldHasSuffix(FieldEabKid, v))
+}
+
+// EabKidIsNil applies the IsNil predicate on the "eab_kid" field.
+func EabKidIsNil() predicate.CA {
+	return predicate.CA(sql.FieldIsNull(FieldEabKid))
+}
+
+// EabKidNotNil applies the NotNil predicate on the "eab_kid" field.
+func EabKidNotNil() predicate.CA {
+	return predicate.CA(sql.FieldNotNull(FieldEabKid))
+}
+
+// EabKidEqualFold applies the EqualFold predicate on the "eab_kid" field.
+func EabKidEqualFold(v string) predicate.CA {
+	return predicate.CA(sql.FieldEqualFold(FieldEabKid, v))
+}
+
+// EabKidContainsFold applies the ContainsFold predicate on the "eab_kid" field.
+func EabKidContainsFold(v string) predicate.CA {
+	return predicate.CA(sql.FieldContainsFold(FieldEabKid, v))
+}
+
+// EabHmacEQ applies the EQ predicate on the "eab_hmac" field.
+func EabHmacEQ(v string) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldEabHmac, v))
+}
+
+// EabHmacNEQ applies the NEQ predicate on the "eab_hmac" field.
+func EabHmacNEQ(v string) predicate.CA {
+	return predicate.CA(sql.FieldNEQ(FieldEabHmac, v))
+}
+
+// EabHmacIn applies the In predicate on the "eab_hmac" field.
+func EabHmacIn(vs ...string) predicate.CA {
+	return predicate.CA(sql.FieldIn(FieldEabHmac, vs...))
+}
+
+// EabHmacNotIn applies the NotIn predicate on the "eab_hmac" field.
+func EabHmacNotIn(vs ...string) predicate.CA {
+	return predicate.CA(sql.FieldNotIn(FieldEabHmac, vs...))
+}
+
+// EabHmacGT applies the GT predicate on the "eab_hmac" field.
+func EabHmacGT(v string) predicate.CA {
+	return predicate.CA(sql.FieldGT(FieldEabHmac, v))
+}
+
+// EabHmacGTE applies the GTE predicate on the "eab_hmac" field.
+func EabHmacGTE(v string) predicate.CA {
+	return predicate.CA(sql.FieldGTE(FieldEabHmac, v))
+}
+
+// EabHmacLT applies the LT predicate on the "eab_hmac" field.
+func EabHmacLT(v string) predicate.CA {
+	return predicate.CA(sql.FieldLT(FieldEabHmac, v))
+}
+
+// EabHmacLTE applies the LTE predicate on the "eab_hmac" field.
+func EabHmacLTE(v string) predicate.CA {
+	return predicate.CA(sql.FieldLTE(FieldEabHmac, v))
+}
+
+// EabHmacContains applies the Contains predicate on the "eab_hmac" field.
+func EabHmacContains(v string) predicate.CA {
+	return predicate.CA(sql.FieldContains(FieldEabHmac, v))
+}
+
+// EabHmacHasPrefix applies the HasPrefix predicate on the "eab_hmac" field.
+func EabHmacHasPrefix(v string) predicate.CA {
+	return predicate.CA(sql.FieldHasPrefix(FieldEabHmac, v))
+}
+
+// EabHmacHasSuffix applies the HasSuffix predicate on the "eab_hmac" field.
+func EabHmacHasSuffix(v string) predicate.CA {
+	return predicate.CA(sql.FieldHasSuffix(FieldEabHmac, v))
+}
+
+// EabHmacIsNil applies the IsNil predicate on the "eab_hmac" field.
+func EabHmacIsNil() predicate.CA {
+	return predicate.CA(sql.FieldIsNull(FieldEabHmac))
+}
+
+// EabHmacNotNil applies the NotNil predicate on the "eab_hmac" field.
+func EabHmacNotNil() predicate.CA {
+	return predicate.CA(sql.FieldNotNull(FieldEabHmac))
+}
+
+// EabHmacEqualFold applies the EqualFold predicate on the "eab_hmac" field.
+func EabHmacEqualFold(v string) predicate.CA {
+	return predicate.CA(sql.FieldEqualFold(FieldEabHmac, v))
+}
+
+// EabHmacContainsFold applies the ContainsFold predicate on the "eab_hmac" field.
+func EabHmacContainsFold(v string) predicate.CA {
+	return predicate.CA(sql.FieldContainsFold(FieldEabHmac, v))
+}
+
 // IsActiveEQ applies the EQ predicate on the "is_active" field.
 func IsActiveEQ(v bool) predicate.CA {
 	return predicate.CA(sql.FieldEQ(FieldIsActive, v))
@@ -298,6 +463,16 @@ func IsActiveEQ(v bool) predicate.CA {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.CA {
 	return predicate.CA(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// IsBuiltinEQ applies the EQ predicate on the "is_builtin" field.
+func IsBuiltinEQ(v bool) predicate.CA {
+	return predicate.CA(sql.FieldEQ(FieldIsBuiltin, v))
+}
+
+// IsBuiltinNEQ applies the NEQ predicate on the "is_builtin" field.
+func IsBuiltinNEQ(v bool) predicate.CA {
+	return predicate.CA(sql.FieldNEQ(FieldIsBuiltin, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

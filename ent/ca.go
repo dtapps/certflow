@@ -23,8 +23,14 @@ type CA struct {
 	DirectoryURL string `json:"directory_url,omitempty"`
 	// 注册邮箱
 	AccountEmail string `json:"account_email,omitempty"`
+	// EAB KID（部分 CA 如 LiteSSL/ZeroSSL 需要）
+	EabKid string `json:"eab_kid,omitempty"`
+	// EAB HMAC Key（部分 CA 如 LiteSSL/ZeroSSL 需要）
+	EabHmac string `json:"eab_hmac,omitempty"`
 	// 是否启用
 	IsActive bool `json:"is_active,omitempty"`
+	// 是否内置 CA（仅创建时可设置，禁止修改；内置 CA 禁止删除）
+	IsBuiltin bool `json:"is_builtin,omitempty"`
 	// 创建时间
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// 更新时间
@@ -58,11 +64,11 @@ func (*CA) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ca.FieldIsActive:
+		case ca.FieldIsActive, ca.FieldIsBuiltin:
 			values[i] = new(sql.NullBool)
 		case ca.FieldID:
 			values[i] = new(sql.NullInt64)
-		case ca.FieldName, ca.FieldDirectoryURL, ca.FieldAccountEmail:
+		case ca.FieldName, ca.FieldDirectoryURL, ca.FieldAccountEmail, ca.FieldEabKid, ca.FieldEabHmac:
 			values[i] = new(sql.NullString)
 		case ca.FieldCreatedAt, ca.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -105,11 +111,29 @@ func (_m *CA) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AccountEmail = value.String
 			}
+		case ca.FieldEabKid:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field eab_kid", values[i])
+			} else if value.Valid {
+				_m.EabKid = value.String
+			}
+		case ca.FieldEabHmac:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field eab_hmac", values[i])
+			} else if value.Valid {
+				_m.EabHmac = value.String
+			}
 		case ca.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
+			}
+		case ca.FieldIsBuiltin:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_builtin", values[i])
+			} else if value.Valid {
+				_m.IsBuiltin = value.Bool
 			}
 		case ca.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -173,8 +197,17 @@ func (_m *CA) String() string {
 	builder.WriteString("account_email=")
 	builder.WriteString(_m.AccountEmail)
 	builder.WriteString(", ")
+	builder.WriteString("eab_kid=")
+	builder.WriteString(_m.EabKid)
+	builder.WriteString(", ")
+	builder.WriteString("eab_hmac=")
+	builder.WriteString(_m.EabHmac)
+	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
+	builder.WriteString(", ")
+	builder.WriteString("is_builtin=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsBuiltin))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -24,9 +24,19 @@ func (CA) Fields() []ent.Field {
 		field.String("account_email").
 			Optional().
 			Comment("注册邮箱"),
+		field.String("eab_kid").
+			Optional().
+			Comment("EAB KID（部分 CA 如 LiteSSL/ZeroSSL 需要）"),
+		field.String("eab_hmac").
+			Optional().
+			Comment("EAB HMAC Key（部分 CA 如 LiteSSL/ZeroSSL 需要）"),
 		field.Bool("is_active").
-			Default(true).
+			Default(false).
 			Comment("是否启用"),
+		field.Bool("is_builtin").
+			Default(false).
+			Immutable().
+			Comment("是否内置 CA（仅创建时可设置，禁止修改；内置 CA 禁止删除）"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable().

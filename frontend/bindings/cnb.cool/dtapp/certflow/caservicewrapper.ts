@@ -36,6 +36,13 @@ export function ListCA(): $CancellablePromise<$models.CAListItem[] | null> {
 }
 
 /**
+ * SetCAActive 启用/禁用 CA（独立接口）
+ */
+export function SetCAActive(id: number, active: boolean): $CancellablePromise<$models.CAListItem | null> {
+    return $Call.ByID(944996372, id, active);
+}
+
+/**
  * TestCAConnection 测试 CA 连接
  */
 export function TestCAConnection(id: number): $CancellablePromise<string> {

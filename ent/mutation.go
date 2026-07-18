@@ -803,7 +803,10 @@ type CAMutation struct {
 	name                *string
 	directory_url       *string
 	account_email       *string
+	eab_kid             *string
+	eab_hmac            *string
 	is_active           *bool
+	is_builtin          *bool
 	created_at          *time.Time
 	updated_at          *time.Time
 	clearedFields       map[string]struct{}
@@ -1034,6 +1037,104 @@ func (m *CAMutation) ResetAccountEmail() {
 	delete(m.clearedFields, ca.FieldAccountEmail)
 }
 
+// SetEabKid sets the "eab_kid" field.
+func (m *CAMutation) SetEabKid(s string) {
+	m.eab_kid = &s
+}
+
+// EabKid returns the value of the "eab_kid" field in the mutation.
+func (m *CAMutation) EabKid() (r string, exists bool) {
+	v := m.eab_kid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEabKid returns the old "eab_kid" field's value of the CA entity.
+// If the CA object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CAMutation) OldEabKid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEabKid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEabKid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEabKid: %w", err)
+	}
+	return oldValue.EabKid, nil
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (m *CAMutation) ClearEabKid() {
+	m.eab_kid = nil
+	m.clearedFields[ca.FieldEabKid] = struct{}{}
+}
+
+// EabKidCleared returns if the "eab_kid" field was cleared in this mutation.
+func (m *CAMutation) EabKidCleared() bool {
+	_, ok := m.clearedFields[ca.FieldEabKid]
+	return ok
+}
+
+// ResetEabKid resets all changes to the "eab_kid" field.
+func (m *CAMutation) ResetEabKid() {
+	m.eab_kid = nil
+	delete(m.clearedFields, ca.FieldEabKid)
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (m *CAMutation) SetEabHmac(s string) {
+	m.eab_hmac = &s
+}
+
+// EabHmac returns the value of the "eab_hmac" field in the mutation.
+func (m *CAMutation) EabHmac() (r string, exists bool) {
+	v := m.eab_hmac
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEabHmac returns the old "eab_hmac" field's value of the CA entity.
+// If the CA object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CAMutation) OldEabHmac(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEabHmac is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEabHmac requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEabHmac: %w", err)
+	}
+	return oldValue.EabHmac, nil
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (m *CAMutation) ClearEabHmac() {
+	m.eab_hmac = nil
+	m.clearedFields[ca.FieldEabHmac] = struct{}{}
+}
+
+// EabHmacCleared returns if the "eab_hmac" field was cleared in this mutation.
+func (m *CAMutation) EabHmacCleared() bool {
+	_, ok := m.clearedFields[ca.FieldEabHmac]
+	return ok
+}
+
+// ResetEabHmac resets all changes to the "eab_hmac" field.
+func (m *CAMutation) ResetEabHmac() {
+	m.eab_hmac = nil
+	delete(m.clearedFields, ca.FieldEabHmac)
+}
+
 // SetIsActive sets the "is_active" field.
 func (m *CAMutation) SetIsActive(b bool) {
 	m.is_active = &b
@@ -1068,6 +1169,42 @@ func (m *CAMutation) OldIsActive(ctx context.Context) (v bool, err error) {
 // ResetIsActive resets all changes to the "is_active" field.
 func (m *CAMutation) ResetIsActive() {
 	m.is_active = nil
+}
+
+// SetIsBuiltin sets the "is_builtin" field.
+func (m *CAMutation) SetIsBuiltin(b bool) {
+	m.is_builtin = &b
+}
+
+// IsBuiltin returns the value of the "is_builtin" field in the mutation.
+func (m *CAMutation) IsBuiltin() (r bool, exists bool) {
+	v := m.is_builtin
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsBuiltin returns the old "is_builtin" field's value of the CA entity.
+// If the CA object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CAMutation) OldIsBuiltin(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsBuiltin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsBuiltin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsBuiltin: %w", err)
+	}
+	return oldValue.IsBuiltin, nil
+}
+
+// ResetIsBuiltin resets all changes to the "is_builtin" field.
+func (m *CAMutation) ResetIsBuiltin() {
+	m.is_builtin = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1230,7 +1367,7 @@ func (m *CAMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CAMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.name != nil {
 		fields = append(fields, ca.FieldName)
 	}
@@ -1240,8 +1377,17 @@ func (m *CAMutation) Fields() []string {
 	if m.account_email != nil {
 		fields = append(fields, ca.FieldAccountEmail)
 	}
+	if m.eab_kid != nil {
+		fields = append(fields, ca.FieldEabKid)
+	}
+	if m.eab_hmac != nil {
+		fields = append(fields, ca.FieldEabHmac)
+	}
 	if m.is_active != nil {
 		fields = append(fields, ca.FieldIsActive)
+	}
+	if m.is_builtin != nil {
+		fields = append(fields, ca.FieldIsBuiltin)
 	}
 	if m.created_at != nil {
 		fields = append(fields, ca.FieldCreatedAt)
@@ -1263,8 +1409,14 @@ func (m *CAMutation) Field(name string) (ent.Value, bool) {
 		return m.DirectoryURL()
 	case ca.FieldAccountEmail:
 		return m.AccountEmail()
+	case ca.FieldEabKid:
+		return m.EabKid()
+	case ca.FieldEabHmac:
+		return m.EabHmac()
 	case ca.FieldIsActive:
 		return m.IsActive()
+	case ca.FieldIsBuiltin:
+		return m.IsBuiltin()
 	case ca.FieldCreatedAt:
 		return m.CreatedAt()
 	case ca.FieldUpdatedAt:
@@ -1284,8 +1436,14 @@ func (m *CAMutation) OldField(ctx context.Context, name string) (ent.Value, erro
 		return m.OldDirectoryURL(ctx)
 	case ca.FieldAccountEmail:
 		return m.OldAccountEmail(ctx)
+	case ca.FieldEabKid:
+		return m.OldEabKid(ctx)
+	case ca.FieldEabHmac:
+		return m.OldEabHmac(ctx)
 	case ca.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case ca.FieldIsBuiltin:
+		return m.OldIsBuiltin(ctx)
 	case ca.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case ca.FieldUpdatedAt:
@@ -1320,12 +1478,33 @@ func (m *CAMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAccountEmail(v)
 		return nil
+	case ca.FieldEabKid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEabKid(v)
+		return nil
+	case ca.FieldEabHmac:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEabHmac(v)
+		return nil
 	case ca.FieldIsActive:
 		v, ok := value.(bool)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
+		return nil
+	case ca.FieldIsBuiltin:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsBuiltin(v)
 		return nil
 	case ca.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -1374,6 +1553,12 @@ func (m *CAMutation) ClearedFields() []string {
 	if m.FieldCleared(ca.FieldAccountEmail) {
 		fields = append(fields, ca.FieldAccountEmail)
 	}
+	if m.FieldCleared(ca.FieldEabKid) {
+		fields = append(fields, ca.FieldEabKid)
+	}
+	if m.FieldCleared(ca.FieldEabHmac) {
+		fields = append(fields, ca.FieldEabHmac)
+	}
 	return fields
 }
 
@@ -1390,6 +1575,12 @@ func (m *CAMutation) ClearField(name string) error {
 	switch name {
 	case ca.FieldAccountEmail:
 		m.ClearAccountEmail()
+		return nil
+	case ca.FieldEabKid:
+		m.ClearEabKid()
+		return nil
+	case ca.FieldEabHmac:
+		m.ClearEabHmac()
 		return nil
 	}
 	return fmt.Errorf("unknown CA nullable field %s", name)
@@ -1408,8 +1599,17 @@ func (m *CAMutation) ResetField(name string) error {
 	case ca.FieldAccountEmail:
 		m.ResetAccountEmail()
 		return nil
+	case ca.FieldEabKid:
+		m.ResetEabKid()
+		return nil
+	case ca.FieldEabHmac:
+		m.ResetEabHmac()
+		return nil
 	case ca.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case ca.FieldIsBuiltin:
+		m.ResetIsBuiltin()
 		return nil
 	case ca.FieldCreatedAt:
 		m.ResetCreatedAt()

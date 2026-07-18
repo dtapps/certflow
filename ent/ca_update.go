@@ -77,6 +77,46 @@ func (_u *CAUpdate) ClearAccountEmail() *CAUpdate {
 	return _u
 }
 
+// SetEabKid sets the "eab_kid" field.
+func (_u *CAUpdate) SetEabKid(v string) *CAUpdate {
+	_u.mutation.SetEabKid(v)
+	return _u
+}
+
+// SetNillableEabKid sets the "eab_kid" field if the given value is not nil.
+func (_u *CAUpdate) SetNillableEabKid(v *string) *CAUpdate {
+	if v != nil {
+		_u.SetEabKid(*v)
+	}
+	return _u
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (_u *CAUpdate) ClearEabKid() *CAUpdate {
+	_u.mutation.ClearEabKid()
+	return _u
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (_u *CAUpdate) SetEabHmac(v string) *CAUpdate {
+	_u.mutation.SetEabHmac(v)
+	return _u
+}
+
+// SetNillableEabHmac sets the "eab_hmac" field if the given value is not nil.
+func (_u *CAUpdate) SetNillableEabHmac(v *string) *CAUpdate {
+	if v != nil {
+		_u.SetEabHmac(*v)
+	}
+	return _u
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (_u *CAUpdate) ClearEabHmac() *CAUpdate {
+	_u.mutation.ClearEabHmac()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *CAUpdate) SetIsActive(v bool) *CAUpdate {
 	_u.mutation.SetIsActive(v)
@@ -213,6 +253,18 @@ func (_u *CAUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.AccountEmailCleared() {
 		_spec.ClearField(ca.FieldAccountEmail, field.TypeString)
 	}
+	if value, ok := _u.mutation.EabKid(); ok {
+		_spec.SetField(ca.FieldEabKid, field.TypeString, value)
+	}
+	if _u.mutation.EabKidCleared() {
+		_spec.ClearField(ca.FieldEabKid, field.TypeString)
+	}
+	if value, ok := _u.mutation.EabHmac(); ok {
+		_spec.SetField(ca.FieldEabHmac, field.TypeString, value)
+	}
+	if _u.mutation.EabHmacCleared() {
+		_spec.ClearField(ca.FieldEabHmac, field.TypeString)
+	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)
 	}
@@ -329,6 +381,46 @@ func (_u *CAUpdateOne) SetNillableAccountEmail(v *string) *CAUpdateOne {
 // ClearAccountEmail clears the value of the "account_email" field.
 func (_u *CAUpdateOne) ClearAccountEmail() *CAUpdateOne {
 	_u.mutation.ClearAccountEmail()
+	return _u
+}
+
+// SetEabKid sets the "eab_kid" field.
+func (_u *CAUpdateOne) SetEabKid(v string) *CAUpdateOne {
+	_u.mutation.SetEabKid(v)
+	return _u
+}
+
+// SetNillableEabKid sets the "eab_kid" field if the given value is not nil.
+func (_u *CAUpdateOne) SetNillableEabKid(v *string) *CAUpdateOne {
+	if v != nil {
+		_u.SetEabKid(*v)
+	}
+	return _u
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (_u *CAUpdateOne) ClearEabKid() *CAUpdateOne {
+	_u.mutation.ClearEabKid()
+	return _u
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (_u *CAUpdateOne) SetEabHmac(v string) *CAUpdateOne {
+	_u.mutation.SetEabHmac(v)
+	return _u
+}
+
+// SetNillableEabHmac sets the "eab_hmac" field if the given value is not nil.
+func (_u *CAUpdateOne) SetNillableEabHmac(v *string) *CAUpdateOne {
+	if v != nil {
+		_u.SetEabHmac(*v)
+	}
+	return _u
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (_u *CAUpdateOne) ClearEabHmac() *CAUpdateOne {
+	_u.mutation.ClearEabHmac()
 	return _u
 }
 
@@ -497,6 +589,18 @@ func (_u *CAUpdateOne) sqlSave(ctx context.Context) (_node *CA, err error) {
 	}
 	if _u.mutation.AccountEmailCleared() {
 		_spec.ClearField(ca.FieldAccountEmail, field.TypeString)
+	}
+	if value, ok := _u.mutation.EabKid(); ok {
+		_spec.SetField(ca.FieldEabKid, field.TypeString, value)
+	}
+	if _u.mutation.EabKidCleared() {
+		_spec.ClearField(ca.FieldEabKid, field.TypeString)
+	}
+	if value, ok := _u.mutation.EabHmac(); ok {
+		_spec.SetField(ca.FieldEabHmac, field.TypeString, value)
+	}
+	if _u.mutation.EabHmacCleared() {
+		_spec.ClearField(ca.FieldEabHmac, field.TypeString)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)

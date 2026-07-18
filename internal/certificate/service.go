@@ -166,16 +166,28 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 	}
 
 	// 注册账户（如果尚未注册）
-	reg, err := client.Registration.Register(ctx, registration.RegisterOptions{
-		TermsOfServiceAgreed: true,
-	})
-	if err != nil {
-		logging.Warn(i18n.T("log.register_acme_account_warn", "Error", err))
+	var reg *acme.ExtendedAccount
+	var regErr error
+	if caEntity.EabKid != "" && caEntity.EabHmac != "" {
+		// 配置了 EAB（如 LiteSSL / ZeroSSL 等强制要求的 CA）
+		logging.Debug(i18n.T("log.acme_register_eab", "Kid", caEntity.EabKid))
+		reg, regErr = client.Registration.RegisterWithExternalAccountBinding(ctx, registration.RegisterEABOptions{
+			TermsOfServiceAgreed: true,
+			Kid:                  caEntity.EabKid,
+			HmacEncoded:          caEntity.EabHmac,
+		})
+	} else {
+		reg, regErr = client.Registration.Register(ctx, registration.RegisterOptions{
+			TermsOfServiceAgreed: true,
+		})
+	}
+	if regErr != nil {
+		logging.Warn(i18n.T("log.register_acme_account_warn", "Error", regErr))
 		// 如果注册失败，尝试通过 key 解析账户
-		reg, err = client.Registration.ResolveAccountByKey(ctx)
-		if err != nil {
-			logging.Error(i18n.T("log.register_acme_account_failed", "Error", err))
-			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", err))
+		reg, regErr = client.Registration.ResolveAccountByKey(ctx)
+		if regErr != nil {
+			logging.Error(i18n.T("log.register_acme_account_failed", "Error", regErr))
+			return nil, fmt.Errorf("%s", i18n.T("error.register_acme_account_failed", "Error", regErr))
 		}
 	}
 	logging.Debug(i18n.T("log.acme_account_registered"))

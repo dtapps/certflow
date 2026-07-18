@@ -29,7 +29,10 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "directory_url", Type: field.TypeString},
 		{Name: "account_email", Type: field.TypeString, Nullable: true},
-		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "eab_kid", Type: field.TypeString, Nullable: true},
+		{Name: "eab_hmac", Type: field.TypeString, Nullable: true},
+		{Name: "is_active", Type: field.TypeBool, Default: false},
+		{Name: "is_builtin", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

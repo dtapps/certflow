@@ -49,6 +49,34 @@ func (_c *CACreate) SetNillableAccountEmail(v *string) *CACreate {
 	return _c
 }
 
+// SetEabKid sets the "eab_kid" field.
+func (_c *CACreate) SetEabKid(v string) *CACreate {
+	_c.mutation.SetEabKid(v)
+	return _c
+}
+
+// SetNillableEabKid sets the "eab_kid" field if the given value is not nil.
+func (_c *CACreate) SetNillableEabKid(v *string) *CACreate {
+	if v != nil {
+		_c.SetEabKid(*v)
+	}
+	return _c
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (_c *CACreate) SetEabHmac(v string) *CACreate {
+	_c.mutation.SetEabHmac(v)
+	return _c
+}
+
+// SetNillableEabHmac sets the "eab_hmac" field if the given value is not nil.
+func (_c *CACreate) SetNillableEabHmac(v *string) *CACreate {
+	if v != nil {
+		_c.SetEabHmac(*v)
+	}
+	return _c
+}
+
 // SetIsActive sets the "is_active" field.
 func (_c *CACreate) SetIsActive(v bool) *CACreate {
 	_c.mutation.SetIsActive(v)
@@ -59,6 +87,20 @@ func (_c *CACreate) SetIsActive(v bool) *CACreate {
 func (_c *CACreate) SetNillableIsActive(v *bool) *CACreate {
 	if v != nil {
 		_c.SetIsActive(*v)
+	}
+	return _c
+}
+
+// SetIsBuiltin sets the "is_builtin" field.
+func (_c *CACreate) SetIsBuiltin(v bool) *CACreate {
+	_c.mutation.SetIsBuiltin(v)
+	return _c
+}
+
+// SetNillableIsBuiltin sets the "is_builtin" field if the given value is not nil.
+func (_c *CACreate) SetNillableIsBuiltin(v *bool) *CACreate {
+	if v != nil {
+		_c.SetIsBuiltin(*v)
 	}
 	return _c
 }
@@ -145,6 +187,10 @@ func (_c *CACreate) defaults() {
 		v := ca.DefaultIsActive
 		_c.mutation.SetIsActive(v)
 	}
+	if _, ok := _c.mutation.IsBuiltin(); !ok {
+		v := ca.DefaultIsBuiltin
+		_c.mutation.SetIsBuiltin(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := ca.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -175,6 +221,9 @@ func (_c *CACreate) check() error {
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "CA.is_active"`)}
+	}
+	if _, ok := _c.mutation.IsBuiltin(); !ok {
+		return &ValidationError{Name: "is_builtin", err: errors.New(`ent: missing required field "CA.is_builtin"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "CA.created_at"`)}
@@ -221,9 +270,21 @@ func (_c *CACreate) createSpec() (*CA, *sqlgraph.CreateSpec) {
 		_spec.SetField(ca.FieldAccountEmail, field.TypeString, value)
 		_node.AccountEmail = value
 	}
+	if value, ok := _c.mutation.EabKid(); ok {
+		_spec.SetField(ca.FieldEabKid, field.TypeString, value)
+		_node.EabKid = value
+	}
+	if value, ok := _c.mutation.EabHmac(); ok {
+		_spec.SetField(ca.FieldEabHmac, field.TypeString, value)
+		_node.EabHmac = value
+	}
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(ca.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.IsBuiltin(); ok {
+		_spec.SetField(ca.FieldIsBuiltin, field.TypeBool, value)
+		_node.IsBuiltin = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(ca.FieldCreatedAt, field.TypeTime, value)
@@ -343,6 +404,42 @@ func (u *CAUpsert) ClearAccountEmail() *CAUpsert {
 	return u
 }
 
+// SetEabKid sets the "eab_kid" field.
+func (u *CAUpsert) SetEabKid(v string) *CAUpsert {
+	u.Set(ca.FieldEabKid, v)
+	return u
+}
+
+// UpdateEabKid sets the "eab_kid" field to the value that was provided on create.
+func (u *CAUpsert) UpdateEabKid() *CAUpsert {
+	u.SetExcluded(ca.FieldEabKid)
+	return u
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (u *CAUpsert) ClearEabKid() *CAUpsert {
+	u.SetNull(ca.FieldEabKid)
+	return u
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (u *CAUpsert) SetEabHmac(v string) *CAUpsert {
+	u.Set(ca.FieldEabHmac, v)
+	return u
+}
+
+// UpdateEabHmac sets the "eab_hmac" field to the value that was provided on create.
+func (u *CAUpsert) UpdateEabHmac() *CAUpsert {
+	u.SetExcluded(ca.FieldEabHmac)
+	return u
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (u *CAUpsert) ClearEabHmac() *CAUpsert {
+	u.SetNull(ca.FieldEabHmac)
+	return u
+}
+
 // SetIsActive sets the "is_active" field.
 func (u *CAUpsert) SetIsActive(v bool) *CAUpsert {
 	u.Set(ca.FieldIsActive, v)
@@ -378,6 +475,9 @@ func (u *CAUpsert) UpdateUpdatedAt() *CAUpsert {
 func (u *CAUpsertOne) UpdateNewValues() *CAUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.IsBuiltin(); exists {
+			s.SetIgnore(ca.FieldIsBuiltin)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(ca.FieldCreatedAt)
 		}
@@ -458,6 +558,48 @@ func (u *CAUpsertOne) UpdateAccountEmail() *CAUpsertOne {
 func (u *CAUpsertOne) ClearAccountEmail() *CAUpsertOne {
 	return u.Update(func(s *CAUpsert) {
 		s.ClearAccountEmail()
+	})
+}
+
+// SetEabKid sets the "eab_kid" field.
+func (u *CAUpsertOne) SetEabKid(v string) *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.SetEabKid(v)
+	})
+}
+
+// UpdateEabKid sets the "eab_kid" field to the value that was provided on create.
+func (u *CAUpsertOne) UpdateEabKid() *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.UpdateEabKid()
+	})
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (u *CAUpsertOne) ClearEabKid() *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.ClearEabKid()
+	})
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (u *CAUpsertOne) SetEabHmac(v string) *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.SetEabHmac(v)
+	})
+}
+
+// UpdateEabHmac sets the "eab_hmac" field to the value that was provided on create.
+func (u *CAUpsertOne) UpdateEabHmac() *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.UpdateEabHmac()
+	})
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (u *CAUpsertOne) ClearEabHmac() *CAUpsertOne {
+	return u.Update(func(s *CAUpsert) {
+		s.ClearEabHmac()
 	})
 }
 
@@ -665,6 +807,9 @@ func (u *CAUpsertBulk) UpdateNewValues() *CAUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.IsBuiltin(); exists {
+				s.SetIgnore(ca.FieldIsBuiltin)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(ca.FieldCreatedAt)
 			}
@@ -746,6 +891,48 @@ func (u *CAUpsertBulk) UpdateAccountEmail() *CAUpsertBulk {
 func (u *CAUpsertBulk) ClearAccountEmail() *CAUpsertBulk {
 	return u.Update(func(s *CAUpsert) {
 		s.ClearAccountEmail()
+	})
+}
+
+// SetEabKid sets the "eab_kid" field.
+func (u *CAUpsertBulk) SetEabKid(v string) *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.SetEabKid(v)
+	})
+}
+
+// UpdateEabKid sets the "eab_kid" field to the value that was provided on create.
+func (u *CAUpsertBulk) UpdateEabKid() *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.UpdateEabKid()
+	})
+}
+
+// ClearEabKid clears the value of the "eab_kid" field.
+func (u *CAUpsertBulk) ClearEabKid() *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.ClearEabKid()
+	})
+}
+
+// SetEabHmac sets the "eab_hmac" field.
+func (u *CAUpsertBulk) SetEabHmac(v string) *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.SetEabHmac(v)
+	})
+}
+
+// UpdateEabHmac sets the "eab_hmac" field to the value that was provided on create.
+func (u *CAUpsertBulk) UpdateEabHmac() *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.UpdateEabHmac()
+	})
+}
+
+// ClearEabHmac clears the value of the "eab_hmac" field.
+func (u *CAUpsertBulk) ClearEabHmac() *CAUpsertBulk {
+	return u.Update(func(s *CAUpsert) {
+		s.ClearEabHmac()
 	})
 }
 

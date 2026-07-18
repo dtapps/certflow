@@ -106,6 +106,21 @@ export interface CAListItem {
     "account_email": string;
 
     /**
+     * EAB KID（部分 CA 需要）
+     */
+    "eab_kid": string;
+
+    /**
+     * EAB HMAC Key（部分 CA 需要）
+     */
+    "eab_hmac": string;
+
+    /**
+     * 是否内置 CA
+     */
+    "is_builtin": boolean;
+
+    /**
      * 是否启用
      */
     "is_active": boolean;
@@ -141,9 +156,14 @@ export interface CAUpdateRequest {
     "account_email"?: string;
 
     /**
-     * 是否启用
+     * EAB KID（部分 CA 需要）
      */
-    "is_active"?: boolean | null;
+    "eab_kid"?: string | null;
+
+    /**
+     * EAB HMAC Key（部分 CA 需要）
+     */
+    "eab_hmac"?: string | null;
 }
 
 /**
@@ -326,9 +346,14 @@ export interface CreateCACreateRequest {
     "account_email": string;
 
     /**
-     * 是否启用
+     * EAB KID（部分 CA 需要）
      */
-    "is_active": boolean;
+    "eab_kid": string;
+
+    /**
+     * EAB HMAC Key（部分 CA 需要）
+     */
+    "eab_hmac": string;
 }
 
 /**

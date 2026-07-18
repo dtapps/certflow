@@ -53,15 +53,19 @@ func init() {
 	// ca.DirectoryURLValidator is a validator for the "directory_url" field. It is called by the builders before save.
 	ca.DirectoryURLValidator = caDescDirectoryURL.Validators[0].(func(string) error)
 	// caDescIsActive is the schema descriptor for is_active field.
-	caDescIsActive := caFields[3].Descriptor()
+	caDescIsActive := caFields[5].Descriptor()
 	// ca.DefaultIsActive holds the default value on creation for the is_active field.
 	ca.DefaultIsActive = caDescIsActive.Default.(bool)
+	// caDescIsBuiltin is the schema descriptor for is_builtin field.
+	caDescIsBuiltin := caFields[6].Descriptor()
+	// ca.DefaultIsBuiltin holds the default value on creation for the is_builtin field.
+	ca.DefaultIsBuiltin = caDescIsBuiltin.Default.(bool)
 	// caDescCreatedAt is the schema descriptor for created_at field.
-	caDescCreatedAt := caFields[4].Descriptor()
+	caDescCreatedAt := caFields[7].Descriptor()
 	// ca.DefaultCreatedAt holds the default value on creation for the created_at field.
 	ca.DefaultCreatedAt = caDescCreatedAt.Default.(func() time.Time)
 	// caDescUpdatedAt is the schema descriptor for updated_at field.
-	caDescUpdatedAt := caFields[5].Descriptor()
+	caDescUpdatedAt := caFields[8].Descriptor()
 	// ca.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	ca.DefaultUpdatedAt = caDescUpdatedAt.Default.(func() time.Time)
 	// ca.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

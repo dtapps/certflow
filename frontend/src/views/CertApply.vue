@@ -87,7 +87,7 @@ onMounted(async () => {
       CAService.ListCA(),
       DNSProviderService.ListDNSProviders(),
     ])
-    cas.value = caList ?? []
+    cas.value = (caList ?? []).filter((c) => c.is_active)
     dnsProviders.value = dnsList ?? []
 
     // 检查是否是继续申请模式（从证书列表跳转过来）
