@@ -793,5 +793,8 @@
   "topbar.noResults": "无搜索结果",
   "topbar.notifications": "通知",
   "topbar.personalCenter": "个人中心",
-  "topbar.search": "搜索证书、CA..."
+  "topbar.search": "搜索证书、CA...",
+  "topbar.loadingMore": "加载中...",
+  "topbar.noMoreNotifications": "没有更多了",
+  "topbar.scrollForMore": "下滑加载更多"
 }

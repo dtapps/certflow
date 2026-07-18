@@ -26,8 +26,16 @@ const searchResults = ref<{ type: string; id: number; name: string }[]>([])
 const showResults = ref(false)
 const router = useRouter()
 const notificationsStore = useNotificationsStore()
-const { notifications, unreadCount } = storeToRefs(notificationsStore)
-const { markAllRead, markRead, clearAll, remove } = notificationsStore
+const { notifications, unreadCount, hasMore, loadingMore } = storeToRefs(notificationsStore)
+const { markAllRead, markRead, clearAll, remove, loadMore } = notificationsStore
+
+// 通知列表滚动到底部时加载更多
+const onNotificationsScroll = (e: Event) => {
+  const el = e.target as HTMLElement
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < 40) {
+    loadMore()
+  }
+}
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
@@ -364,7 +372,7 @@ function handleLocaleSelect(key: string) {
           </div>
         </template>
 
-        <div class="max-h-80 overflow-y-auto">
+        <div class="max-h-80 overflow-y-auto" @scroll="onNotificationsScroll">
           <div
             v-if="notifications.length === 0"
             class="flex flex-col items-center justify-center py-10 opacity-50"
@@ -415,6 +423,17 @@ function handleLocaleSelect(key: string) {
                 </template>
               </n-button>
             </div>
+          </div>
+
+          <!-- 加载更多 / 到底提示 -->
+          <div
+            v-if="filteredNotifications.length > 0"
+            class="flex items-center justify-center gap-2 py-3 text-xs opacity-50"
+          >
+            <n-spin v-if="loadingMore" size="small" />
+            <span v-if="loadingMore">{{ t('topbar.loadingMore') }}</span>
+            <span v-else-if="!hasMore">{{ t('topbar.noMoreNotifications') }}</span>
+            <span v-else>{{ t('topbar.scrollForMore') }}</span>
           </div>
         </div>
       </n-popover>

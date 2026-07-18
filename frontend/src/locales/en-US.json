@@ -864,12 +864,15 @@
   "topbar.filterAll": "All",
   "topbar.hoursAgo": "{count}h ago",
   "topbar.justNow": "Just now",
+  "topbar.loadingMore": "Loading...",
   "topbar.markAllRead": "Mark all read",
   "topbar.minutesAgo": "{count} min ago",
   "topbar.noMatchingNotifications": "No matching notifications",
+  "topbar.noMoreNotifications": "No more",
   "topbar.noNotifications": "No notifications",
   "topbar.noResults": "No results found",
   "topbar.notifications": "Notifications",
   "topbar.personalCenter": "Personal Center",
+  "topbar.scrollForMore": "Scroll for more",
   "topbar.search": "Search certificates, CA..."
 }

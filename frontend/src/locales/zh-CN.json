@@ -864,12 +864,15 @@
   "topbar.filterAll": "全部",
   "topbar.hoursAgo": "{count} 小时前",
   "topbar.justNow": "刚刚",
+  "topbar.loadingMore": "加载中...",
   "topbar.markAllRead": "全部已读",
   "topbar.minutesAgo": "{count} 分钟前",
   "topbar.noMatchingNotifications": "无匹配的通知",
+  "topbar.noMoreNotifications": "没有更多了",
   "topbar.noNotifications": "暂无通知",
   "topbar.noResults": "无搜索结果",
   "topbar.notifications": "通知",
   "topbar.personalCenter": "个人中心",
+  "topbar.scrollForMore": "下滑加载更多",
   "topbar.search": "搜索证书、CA..."
 }

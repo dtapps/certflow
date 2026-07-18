@@ -793,5 +793,8 @@
   "topbar.noResults": "No results found",
   "topbar.notifications": "Notifications",
   "topbar.personalCenter": "Personal Center",
-  "topbar.search": "Search certificates, CA..."
+  "topbar.search": "Search certificates, CA...",
+  "topbar.loadingMore": "Loading...",
+  "topbar.noMoreNotifications": "No more",
+  "topbar.scrollForMore": "Scroll for more"
 }

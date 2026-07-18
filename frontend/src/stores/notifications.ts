@@ -31,25 +31,58 @@ export const useNotificationsStore = defineStore('notifications', () => {
   let eventListenerRegistered = false
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
+  // 分页加载状态
+  const PAGE_SIZE = 50
+  const offset = ref(0)
+  const hasMore = ref(false)
+  const loadingMore = ref(false)
+
+  function mapItems(items: $models.NotificationItem[]) {
+    return items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      body: item.body,
+      category: item.category,
+      level: item.level,
+      read: item.read,
+      created_at: item.created_at,
+    }))
+  }
+
   // 方法
   async function refreshList() {
     try {
-      const items = await ListNotifications(50, 0)
+      const items = await ListNotifications(PAGE_SIZE, 0)
+      offset.value = 0
       if (!items) {
         notifications.value = []
+        hasMore.value = false
         return
       }
-      notifications.value = items.map((item: $models.NotificationItem) => ({
-        id: item.id,
-        title: item.title,
-        body: item.body,
-        category: item.category,
-        level: item.level,
-        read: item.read,
-        created_at: item.created_at,
-      }))
+      notifications.value = mapItems(items)
+      hasMore.value = items.length === PAGE_SIZE
     } catch (e) {
       console.error(t('notifications.loadListFailed'), e)
+    }
+  }
+
+  // 加载更多（滚动到底部时调用）
+  async function loadMore() {
+    if (loadingMore.value || !hasMore.value) return
+    loadingMore.value = true
+    try {
+      const items = await ListNotifications(PAGE_SIZE, offset.value + PAGE_SIZE)
+      if (items && items.length > 0) {
+        offset.value += PAGE_SIZE
+        notifications.value.push(...mapItems(items))
+        hasMore.value = items.length === PAGE_SIZE
+      } else {
+        hasMore.value = false
+      }
+    } catch (e) {
+      console.error(t('notifications.loadListFailed'), e)
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -115,6 +148,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   return {
     notifications,
     unreadCount,
+    hasMore,
+    loadingMore,
     init,
     markAllRead,
     clearAll,
@@ -122,5 +157,6 @@ export const useNotificationsStore = defineStore('notifications', () => {
     markRead,
     refreshList,
     refreshUnread,
+    loadMore,
   }
 })
