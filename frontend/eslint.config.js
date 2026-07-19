@@ -12,6 +12,16 @@ if (existsSync(autoImportEslintrc)) {
 }
 
 export default [
+  {
+    // 忽略自动生成/产物文件，避免无意义 lint 报错与格式化改动
+    ignores: [
+      'node_modules',
+      'dist',
+      'bindings',
+      'src/auto-imports.d.ts',
+      'src/components.d.ts',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/essential'],
