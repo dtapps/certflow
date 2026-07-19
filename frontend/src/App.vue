@@ -7,6 +7,7 @@ import { Events } from '@wailsio/runtime'
 import Sidebar from './components/Sidebar.vue'
 import TitleBar from './components/TitleBar.vue'
 import TopBar from './components/TopBar.vue'
+import ActionBar from './components/ActionBar.vue'
 import LoginDialog from './components/LoginDialog.vue'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
 import { useThemeStore } from './stores/theme'
@@ -105,6 +106,8 @@ const rootStyle = computed(() => ({
                     <component :is="Component" :key="route.path" />
                   </router-view>
                 </main>
+                <!-- 公共底部操作栏：默认隐藏，由页面通过 actionBar store 控制 -->
+                <ActionBar />
               </div>
             </div>
           </div>
