@@ -190,7 +190,7 @@ func TestDelete_NotFound(t *testing.T) {
 	}
 }
 
-// TestSeedDefaults 测试初始化默认 CA（插入 4 个）
+// TestSeedDefaults 测试初始化默认 CA（插入 5 个）
 func TestSeedDefaults(t *testing.T) {
 	client := setupTestDB(t)
 	tmpDir := t.TempDir()
@@ -205,8 +205,8 @@ func TestSeedDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}
-	if len(list) != 4 {
-		t.Fatalf("expected 4 CAs after SeedDefaults, got %d", len(list))
+	if len(list) != 5 {
+		t.Fatalf("expected 5 CAs after SeedDefaults, got %d", len(list))
 	}
 
 	// 重复 SeedDefaults 不应添加更多 CA
@@ -214,7 +214,7 @@ func TestSeedDefaults(t *testing.T) {
 		t.Fatalf("SeedDefaults second call failed: %v", err)
 	}
 	list2, _ := svc.List(ctx)
-	if len(list2) != 4 {
-		t.Errorf("expected still 4 CAs after second SeedDefaults, got %d", len(list2))
+	if len(list2) != 5 {
+		t.Errorf("expected still 5 CAs after second SeedDefaults, got %d", len(list2))
 	}
 }

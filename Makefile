@@ -1,5 +1,9 @@
 .PHONY: help bindings ent i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps
 
+# 过滤 macOS 链接器噪声（ld: warning / was built for newer / ignoring duplicate libraries），
+# 让真正的编译/测试/检查错误清晰可见。用法：<命令> $(FILTER) || exit 1
+FILTER := 2>&1 | grep -vE 'ld: warning|was built for newer|ignoring duplicate libraries'
+
 # 默认目标
 help: ## 显示帮助信息
 	@echo "CertFlow 开发命令"
@@ -48,10 +52,10 @@ format-frontend-fix: ## 修复前端代码（Vue + TypeScript）
 
 # ==================== 检查 / 测试 ====================
 
-check: lint-go lint-frontend test-go ## 检查和测试（全部）
+check: lint-go lint-frontend test-go fuzz-go ## 检查和测试（全部）
 
 lint-go: ## Go 代码检查
-	golangci-lint run ./...
+	golangci-lint run ./... $(FILTER) || exit 1
 
 lint-go-fix: ## Go 代码检查（自动修复）
 	golangci-lint run --fix ./...
@@ -60,10 +64,10 @@ lint-frontend: ## 前端 TypeScript 类型检查
 	cd frontend && pnpm exec vue-tsc --noEmit
 
 test-go: ## Go 后端测试
-	go test -vet=off ./internal/... -count=1
+	go test -vet=off -v ./internal/... -count=1 $(FILTER) || exit 1
 
 fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s）
-	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/...
+	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/... $(FILTER) || exit 1
 
 # ==================== 构建打包 ====================
 
