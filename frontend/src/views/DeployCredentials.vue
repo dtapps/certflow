@@ -98,7 +98,6 @@ const setActiveItem = async (id: number, active: boolean) => {
     :edit-text="t('deploy.credentialEdit')"
     :provider-types="providerTypes"
     :config-schema="providerConfigSchema"
-    icon-color="blue"
     :load-items="loadItems"
     :create-item="createItem"
     :update-item="updateItem"

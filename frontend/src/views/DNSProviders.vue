@@ -208,7 +208,6 @@ const setActiveItem = async (id: number, active: boolean) => {
     :edit-text="t('dns.editProvider')"
     :provider-types="providerTypes"
     :config-schema="providerConfigSchema"
-    icon-color="green"
     :load-items="loadItems"
     :create-item="createItem"
     :update-item="updateItem"

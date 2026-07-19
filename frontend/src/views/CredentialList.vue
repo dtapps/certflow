@@ -16,6 +16,7 @@ import {
 } from 'naive-ui'
 import { useI18nStore } from '../stores/i18n'
 import { showMessage, translateBackend } from '../utils/message'
+import ProviderIcon from '../components/ProviderIcon.vue'
 
 const props = defineProps<{
   title: string
@@ -25,7 +26,6 @@ const props = defineProps<{
   editText: string
   providerTypes: { value: string; labelKey: string }[]
   configSchema: Record<string, { key: string; labelKey: string; type: 'text' | 'password' }[]>
-  iconColor?: string
   loadItems: () => Promise<any[]>
   createItem: (data: any) => Promise<any>
   updateItem: (id: number, data: any) => Promise<any>
@@ -182,11 +182,6 @@ const getProviderLabel = (type: string) => {
   return pt ? t(pt.labelKey) : type
 }
 
-const iconBgClass = computed(
-  () => `bg-${props.iconColor || 'green'}-50 dark:bg-${props.iconColor || 'green'}-900/30`,
-)
-const iconTextClass = computed(() => `text-${props.iconColor || 'green'}-500`)
-
 watch(
   () => formData.value.provider_type,
   (newType) => {
@@ -227,25 +222,7 @@ loadData()
             class="flex items-center justify-between px-6 py-4"
           >
             <div class="flex items-center gap-4">
-              <div
-                class="w-12 h-12 rounded-xl flex items-center justify-center"
-                :class="iconBgClass"
-              >
-                <svg
-                  class="w-6 h-6"
-                  :class="iconTextClass"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
-                  />
-                </svg>
-              </div>
+              <ProviderIcon :provider-type="item.provider_type" :name="item.name" :size="36" />
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ item.name }}</h3>

@@ -21,6 +21,7 @@ import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservic
 import type { CAListItem, DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import CAIcon from '../components/CAIcon.vue'
+import ProviderIcon from '../components/ProviderIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -63,12 +64,13 @@ const casOptions = computed(() =>
 )
 
 const dnsOptions = computed(() => {
-  const manual = { label: t('apply.manualDNS'), value: 0 }
+  const manual = { label: t('apply.manualDNS'), value: 0, providerType: '' }
   return [
     manual,
     ...dnsProviders.value.map((p) => ({
       label: p.name,
       value: p.id,
+      providerType: p.provider_type,
     })),
   ]
 })
@@ -438,23 +440,26 @@ const getStepTitle = (step: number) => {
           @click="formData.dnsProviderId = dns.value"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-green-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <template v-if="dns.value === 0">
+              <div
+                class="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
-                />
-              </svg>
-            </div>
+                <svg
+                  class="w-5 h-5 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"
+                  />
+                </svg>
+              </div>
+            </template>
+            <ProviderIcon v-else :provider-type="dns.providerType" :name="dns.label" :size="28" />
             <div>
               <p class="font-medium">{{ dns.label }}</p>
               <p class="text-xs opacity-50">
@@ -512,7 +517,18 @@ const getStepTitle = (step: number) => {
               class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
             >
               <span class="opacity-60">{{ t('apply.dnsLabel') }}</span>
-              <span>{{ dnsOptions.find((d) => d.value === formData.dnsProviderId)?.label }}</span>
+              <span class="flex items-center gap-2">
+                <template v-if="formData.dnsProviderId === 0">🌐</template>
+                <ProviderIcon
+                  v-else
+                  :provider-type="
+                    dnsOptions.find((d) => d.value === formData.dnsProviderId)?.providerType || ''
+                  "
+                  :name="dnsOptions.find((d) => d.value === formData.dnsProviderId)?.label || ''"
+                  :size="24"
+                />
+                {{ dnsOptions.find((d) => d.value === formData.dnsProviderId)?.label }}
+              </span>
             </div>
             <div
               class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
