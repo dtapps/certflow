@@ -20,6 +20,7 @@ import * as ClipboardService from '@bindings/cnb.cool/dtapp/certflow/clipboardse
 import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservicewrapper'
 import type { CAListItem, DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
+import CAIcon from '../components/CAIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -403,23 +404,7 @@ const getStepTitle = (step: number) => {
           @click="caItem.account_email !== '' && (formData.caId = caItem.id)"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-purple-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </div>
+            <CAIcon :directory-url="caItem.directory_url" :name="caItem.name" :size="28" />
             <div class="flex-1">
               <div class="flex items-center gap-2">
                 <p class="font-medium">{{ caItem.name }}</p>
@@ -514,7 +499,14 @@ const getStepTitle = (step: number) => {
               class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
             >
               <span class="opacity-60">{{ t('apply.caLabel') }}</span>
-              <span>{{ cas.find((c) => c.id === formData.caId)?.name }}</span>
+              <span class="flex items-center gap-2">
+                <CAIcon
+                  :directory-url="cas.find((c) => c.id === formData.caId)?.directory_url"
+                  :name="cas.find((c) => c.id === formData.caId)?.name || ''"
+                  :size="24"
+                />
+                {{ cas.find((c) => c.id === formData.caId)?.name }}
+              </span>
             </div>
             <div
               class="flex justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"

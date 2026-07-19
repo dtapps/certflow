@@ -20,6 +20,7 @@ import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservic
 import type { CAListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { initMessage, showMessage } from '../utils/message'
+import CAIcon from '../components/CAIcon.vue'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
@@ -212,23 +213,7 @@ const openFreessl = () => {
         <div v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
           <div v-for="ca in cas" :key="ca.id" class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center gap-4">
-              <div
-                class="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"
-              >
-                <svg
-                  class="w-6 h-6 text-purple-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
+              <CAIcon :directory-url="ca.directory_url" :name="ca.name" :size="30" />
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-medium">{{ ca.name }}</h3>
