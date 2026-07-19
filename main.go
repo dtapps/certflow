@@ -103,6 +103,7 @@ func main() {
 
 	// 创建内部服务
 	caService := ca.NewCAService(db.Client, dataDir)
+	caService.SetSettingsProvider(settingsService.Get)
 	dnsService := dnsprovider.NewDNSProviderService(db.Client)
 	certService := certificate.NewCertificateService(db.Client, dataDir)
 	notifService := notification.NewNotificationService()

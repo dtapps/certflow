@@ -55,7 +55,10 @@ const handleToggleActive = async (item: any, value: boolean) => {
     showMessage(value ? t('common.enabledSuccess') : t('common.disabledSuccess'), 'success')
   } catch (e: any) {
     item.is_active = prev
-    showMessage(t('common.toggleFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
+    showMessage(
+      t('common.toggleFailed') + ': ' + translateBackend(e?.message || String(e)),
+      'error',
+    )
   } finally {
     togglingId.value = null
   }

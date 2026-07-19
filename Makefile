@@ -99,7 +99,7 @@ setup: deps bindings ent ## 完整项目初始化
 
 push: ## 推送到所有远程仓库
 	git push origin HEAD
-	git push github HEAD
+	git push cnb HEAD
 	git push gitea HEAD
 	git push gitlab HEAD
 	git push gitee HEAD
@@ -108,7 +108,7 @@ push: ## 推送到所有远程仓库
 
 push-force: ## 强制推送到所有远程仓库（忽略冲突）
 	git push --force origin HEAD
-	git push --force github HEAD
+	git push --force cnb HEAD
 	git push --force gitea HEAD
 	git push --force gitlab HEAD
 	git push --force gitee HEAD

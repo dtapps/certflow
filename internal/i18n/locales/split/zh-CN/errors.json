@@ -176,6 +176,8 @@
   "error.serialize_settings_failed": "序列化设置失败: {{.Error}}",
   "error.write_settings_file_failed": "写入设置文件失败: {{.Error}}",
   "error.ca_test_connection_success": "CA '{{.Name}}' 连接测试成功（目录 URL: {{.URL}}）",
+  "error.ca_dir_url_unreachable": "目录 URL 无法访问: {{.Error}}",
+  "error.ca_dir_url_invalid": "目录 URL 返回的不是有效的 ACME 目录",
   "error.create_db_dir_failed": "创建数据库目录失败: {{.Error}}",
   "error.open_db_failed": "初始化数据库失败",
   "error.create_schema_failed": "初始化失败",

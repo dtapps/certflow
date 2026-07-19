@@ -166,6 +166,12 @@ func (s *CAServiceWrapper) TestCAConnection(id int) (string, error) {
 	return s.caService.TestConnection(ctx, id)
 }
 
+// CheckDirectoryURL 验证 ACME 目录 URL 是否可访问（按 URL，不依赖已有记录）
+func (s *CAServiceWrapper) CheckDirectoryURL(rawURL string) (string, error) {
+	ctx := context.Background()
+	return s.caService.CheckDirectoryURL(ctx, rawURL)
+}
+
 // ServiceStartup 实现 Wails 服务接口
 func (s *CAServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil

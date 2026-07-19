@@ -2,24 +2,34 @@ package ca
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/ent/ca"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"cnb.cool/dtapp/certflow/internal/network"
 	"cnb.cool/dtapp/certflow/internal/settings"
 )
 
 // CAService 提供 CA 管理功能
 type CAService struct {
-	db      *ent.Client
-	dataDir string
+	db               *ent.Client
+	dataDir          string
+	settingsProvider func() settings.Settings
 }
 
 // NewCAService 创建新的 CA 服务
 func NewCAService(client *ent.Client, dataDir string) *CAService {
 	return &CAService{db: client, dataDir: dataDir}
+}
+
+// SetSettingsProvider 注入设置提供者（用于 DNS/代理配置）
+func (s *CAService) SetSettingsProvider(fn func() settings.Settings) {
+	s.settingsProvider = fn
 }
 
 // builtinCARequirement 描述某内置 CA 启用时必须填写的字段
@@ -329,4 +339,50 @@ func (s *CAService) TestConnection(ctx context.Context, id int) (string, error) 
 
 	// TODO: 实现 ACME 目录 URL 验证
 	return fmt.Sprintf(i18n.T("error.ca_test_connection_success", "Name", caEntity.Name, "URL", caEntity.DirectoryURL)), nil
+}
+
+// CheckDirectoryURL 验证 ACME 目录 URL 是否可访问且为有效的 ACME 目录
+func (s *CAService) CheckDirectoryURL(ctx context.Context, rawURL string) (string, error) {
+	logging.Info(i18n.T("log.ca_test_connection", "URL", rawURL))
+	if rawURL == "" {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_directory_url_required"))
+	}
+
+	// 复用统一 HTTP 客户端（自定义 DNS + 代理 + httplog），未注入时回退默认
+	var client *http.Client
+	if s.settingsProvider != nil {
+		client = network.BuildHTTPClient(s.settingsProvider())
+	} else {
+		client = &http.Client{Timeout: 15 * time.Second}
+	}
+
+	// 单独控制本次请求超时，避免受默认客户端 60s 影响
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_invalid_url", "URL", rawURL))
+	}
+	req.Header.Set("User-Agent", "CertFlow/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_dir_url_unreachable", "Error", err.Error()))
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_dir_url_unreachable", "Error", fmt.Sprintf("HTTP %d", resp.StatusCode)))
+	}
+
+	var dir map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&dir); err != nil {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_dir_url_invalid"))
+	}
+	if _, ok := dir["newNonce"]; !ok {
+		return "", fmt.Errorf("%s", i18n.T("error.ca_dir_url_invalid"))
+	}
+
+	return i18n.T("ca.dir_url_ok"), nil
 }

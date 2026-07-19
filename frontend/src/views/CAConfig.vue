@@ -4,6 +4,7 @@ import {
   NCard,
   NButton,
   NInput,
+  NInputGroup,
   NSwitch,
   NSpin,
   NModal,
@@ -11,6 +12,7 @@ import {
   NFormItem,
   NEmpty,
   NTag,
+  NAlert,
   useMessage,
 } from 'naive-ui'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
@@ -28,6 +30,7 @@ const cas = ref<CAListItem[]>([])
 const isLoading = ref(false)
 const showModal = ref(false)
 const editingCA = ref<number | null>(null)
+const editingIsBuiltin = ref(false)
 
 const formData = ref({
   name: '',
@@ -57,6 +60,7 @@ onMounted(async () => {
 
 const openCreate = () => {
   editingCA.value = null
+  editingIsBuiltin.value = false
   formData.value = {
     name: '',
     directory_url: '',
@@ -69,6 +73,7 @@ const openCreate = () => {
 
 const openEdit = (ca: (typeof cas.value)[0]) => {
   editingCA.value = ca.id
+  editingIsBuiltin.value = ca.is_builtin
   formData.value = {
     name: ca.name,
     directory_url: ca.directory_url,
@@ -80,6 +85,26 @@ const openEdit = (ca: (typeof cas.value)[0]) => {
 }
 
 const handleSave = async () => {
+  // 表单必填与格式校验
+  const name = formData.value.name.trim()
+  const dirURL = formData.value.directory_url.trim()
+  const email = formData.value.account_email.trim()
+  if (!name) {
+    showMessage(t('ca.nameRequired'), 'warning')
+    return
+  }
+  if (!dirURL) {
+    showMessage(t('ca.directoryURLRequired'), 'warning')
+    return
+  }
+  if (!email) {
+    showMessage(t('ca.emailRequired'), 'warning')
+    return
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showMessage(t('ca.emailInvalid'), 'warning')
+    return
+  }
   try {
     if (editingCA.value) {
       await CAService.UpdateCA(editingCA.value, formData.value)
@@ -91,6 +116,25 @@ const handleSave = async () => {
     showMessage(t('ca.saveSuccess'), 'success')
   } catch (e) {
     showMessage(t('ca.saveFailed') + ' ' + e, 'error')
+  }
+}
+
+// 验证目录 URL 是否可访问（不依赖已有 CA 记录）
+const isTesting = ref(false)
+const handleTestDirectoryURL = async () => {
+  const dirURL = formData.value.directory_url.trim()
+  if (!dirURL) {
+    showMessage(t('ca.directoryURLRequired'), 'warning')
+    return
+  }
+  isTesting.value = true
+  try {
+    const msg = await CAService.CheckDirectoryURL(dirURL)
+    showMessage(msg, 'success')
+  } catch (e) {
+    showMessage(String(e), 'error')
+  } finally {
+    isTesting.value = false
   }
 }
 
@@ -258,14 +302,27 @@ const openFreessl = () => {
     >
       <n-form label-placement="top">
         <n-form-item :label="t('ca.name')">
-          <n-input v-model:value="formData.name" :placeholder="t('ca.namePlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('ca.directoryURL')">
           <n-input
-            v-model:value="formData.directory_url"
-            :placeholder="t('ca.directoryURLPlaceholder')"
+            v-model:value="formData.name"
+            :placeholder="t('ca.namePlaceholder')"
+            :disabled="editingIsBuiltin"
           />
         </n-form-item>
+        <n-form-item :label="t('ca.directoryURL')">
+          <n-input-group>
+            <n-input
+              v-model:value="formData.directory_url"
+              :placeholder="t('ca.directoryURLPlaceholder')"
+              :disabled="editingIsBuiltin"
+            />
+            <n-button type="primary" secondary :loading="isTesting" @click="handleTestDirectoryURL">
+              {{ t('ca.testDirectoryURL') }}
+            </n-button>
+          </n-input-group>
+        </n-form-item>
+        <n-alert v-if="editingIsBuiltin" type="warning" :show-icon="true" class="mt-1 mb-2">
+          {{ t('ca.builtinReadonlyHint') }}
+        </n-alert>
         <n-form-item :label="t('ca.accountEmail')">
           <n-input
             v-model:value="formData.account_email"

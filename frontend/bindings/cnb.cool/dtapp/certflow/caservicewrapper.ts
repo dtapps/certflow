@@ -15,6 +15,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 /**
+ * CheckDirectoryURL 验证 ACME 目录 URL 是否可访问（按 URL，不依赖已有记录）
+ */
+export function CheckDirectoryURL(rawURL: string): $CancellablePromise<string> {
+    return $Call.ByID(4114789158, rawURL);
+}
+
+/**
  * CreateCA 创建 CA
  */
 export function CreateCA(input: $models.CreateCACreateRequest): $CancellablePromise<$models.CAListItem | null> {

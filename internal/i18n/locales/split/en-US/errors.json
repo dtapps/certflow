@@ -176,6 +176,8 @@
   "error.serialize_settings_failed": "Failed to serialize settings: {{.Error}}",
   "error.write_settings_file_failed": "Failed to write settings file: {{.Error}}",
   "error.ca_test_connection_success": "CA '{{.Name}}' connection test successful (Directory URL: {{.URL}})",
+  "error.ca_dir_url_unreachable": "Directory URL is unreachable: {{.Error}}",
+  "error.ca_dir_url_invalid": "The directory URL did not return a valid ACME directory",
   "error.create_db_dir_failed": "Failed to create database directory: {{.Error}}",
   "error.open_db_failed": "Failed to initialize database",
   "error.create_schema_failed": "Initialization failed",
