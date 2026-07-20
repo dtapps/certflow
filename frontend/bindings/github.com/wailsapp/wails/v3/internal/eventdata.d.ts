@@ -18,6 +18,7 @@ declare module "@wailsio/runtime" {
             "notification": events$0.NotificationPayload;
             "theme_changed": events$0.ThemeChangedPayload;
             "time": events$0.TimePayload;
+            "window_resized": events$0.WindowResizedPayload;
         }
     }
 }

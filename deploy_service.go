@@ -35,6 +35,7 @@ type DeployTargetListItem struct {
 	DeployCredentialName string            `json:"deploy_credential_name"` // 关联部署凭证名称
 	IsActive             bool              `json:"is_active"`              // 是否启用
 	Comment              string            `json:"comment"`                // 备注
+	CertIds              []int             `json:"cert_ids"`               // 关联证书 ID 列表
 	LastStatus           string            `json:"last_status"`            // 最近一次部署状态（success/failed）
 	LastError            string            `json:"last_error"`             // 最近一次部署错误信息
 	LastDeployedAt       string            `json:"last_deployed_at"`       // 最近部署时间
@@ -107,6 +108,13 @@ func toDeployTargetListItem(t *ent.DeployTarget) DeployTargetListItem {
 		id := t.Edges.DeployCredential.ID
 		item.DeployCredentialID = &id
 		item.DeployCredentialName = t.Edges.DeployCredential.Name
+	}
+	if len(t.Edges.Certificates) > 0 {
+		ids := make([]int, len(t.Edges.Certificates))
+		for i, c := range t.Edges.Certificates {
+			ids[i] = c.ID
+		}
+		item.CertIds = ids
 	}
 	if !t.LastDeployedAt.IsZero() {
 		item.LastDeployedAt = t.LastDeployedAt.Format(time.DateTime)

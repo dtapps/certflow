@@ -17,8 +17,6 @@ declare module 'vue' {
     NCard: typeof import('naive-ui')['NCard']
     NInputNumber: typeof import('naive-ui')['NInputNumber']
     NSpin: typeof import('naive-ui')['NSpin']
-    NTabPane: typeof import('naive-ui')['NTabPane']
-    NTabs: typeof import('naive-ui')['NTabs']
     ProviderIcon: typeof import('./components/ProviderIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

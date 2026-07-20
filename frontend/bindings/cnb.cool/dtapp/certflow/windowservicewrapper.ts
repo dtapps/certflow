@@ -19,6 +19,14 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as $models from "./models.js";
 
 /**
+ * GetWindowSize 获取主窗口当前尺寸
+ * https://v3.wails.io/zh-cn/reference/window/#size
+ */
+export function GetWindowSize(): $CancellablePromise<$models.WindowSize> {
+    return $Call.ByID(7655511);
+}
+
+/**
  * OpenHTMLWindow 用指定 HTML 内容打开新窗口
  */
 export function OpenHTMLWindow(opts: $models.HTMLWindowOptions): $CancellablePromise<void> {

@@ -68,5 +68,6 @@ export type {
     TXTRecordItem,
     UpdateDNSProviderRequest,
     UpdateDeployCredentialRequest,
-    UpdateDeployTargetRequest
+    UpdateDeployTargetRequest,
+    WindowSize
 } from "./models.js";

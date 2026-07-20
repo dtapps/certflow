@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('../views/DeployTargetForm.vue'),
     },
     {
+      path: '/ssl-deploy/:id',
+      name: 'deploy-detail',
+      component: () => import('../views/DeployTargetDetail.vue'),
+    },
+    {
       path: '/ssl-deploy/:id/edit',
       name: 'deploy-edit',
       component: () => import('../views/DeployTargetForm.vue'),

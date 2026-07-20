@@ -716,6 +716,11 @@ export interface DeployTargetListItem {
     "comment": string;
 
     /**
+     * 关联证书 ID 列表
+     */
+    "cert_ids": number[] | null;
+
+    /**
      * 最近一次部署状态（success/failed）
      */
     "last_status": string;
@@ -1054,4 +1059,19 @@ export interface UpdateDeployTargetRequest {
      * 备注
      */
     "comment"?: string;
+}
+
+/**
+ * WindowSize 窗口尺寸
+ */
+export interface WindowSize {
+    /**
+     * 窗口宽度（像素）
+     */
+    "width": number;
+
+    /**
+     * 窗口高度（像素）
+     */
+    "height": number;
 }

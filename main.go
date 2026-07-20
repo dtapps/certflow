@@ -53,6 +53,7 @@ func init() {
 	application.RegisterEvent[events.ThemeChangedPayload](events.EventThemeChanged)
 	application.RegisterEvent[events.LocaleChangedPayload](events.EventLocaleChanged)
 	application.RegisterEvent[events.NavigatePayload](events.EventNavigate)
+	application.RegisterEvent[events.WindowResizedPayload](events.EventWindowResized)
 }
 
 func main() {
@@ -286,6 +287,19 @@ func main() {
 	mainWindow.OnWindowEvent(wailsEvents.Mac.WebViewDidFinishNavigation, func(event *application.WindowEvent) {
 		mainWindow.Show()
 		mainWindow.Focus()
+	})
+
+	// 将主窗口引用交给窗口服务，供其调用 window.Size() 获取尺寸
+	windowSvc.setMainWindow(mainWindow)
+
+	// 监听窗口尺寸变化（Go 端 WindowDidResize 事件），向 frontend 广播最新尺寸
+	// https://v3.wails.io/zh-cn/reference/window/#size
+	mainWindow.OnWindowEvent(wailsEvents.Common.WindowDidResize, func(event *application.WindowEvent) {
+		width, height := mainWindow.Size()
+		app.Event.Emit(events.EventWindowResized, events.WindowResizedPayload{
+			Width:  width,
+			Height: height,
+		})
 	})
 
 	// 初始化系统托盘

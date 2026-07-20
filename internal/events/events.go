@@ -14,6 +14,8 @@ const (
 	EventLocaleChanged = "locale_changed"
 	// EventNavigate 导航事件
 	EventNavigate = "navigate"
+	// EventWindowResized 窗口尺寸变化事件
+	EventWindowResized = "window_resized"
 )
 
 // ---- 事件 Payload 结构体 ----
@@ -45,4 +47,10 @@ type LocaleChangedPayload struct {
 // NavigatePayload 导航事件参数
 type NavigatePayload struct {
 	Path string `json:"path"` // 目标路由路径
+}
+
+// WindowResizedPayload 窗口尺寸变化事件参数
+type WindowResizedPayload struct {
+	Width  int `json:"width"`  // 窗口宽度（像素）
+	Height int `json:"height"` // 窗口高度（像素）
 }

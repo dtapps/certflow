@@ -162,12 +162,22 @@ func (s *DeployService) Delete(ctx context.Context, id int) error {
 
 // Get 获取部署目标
 func (s *DeployService) Get(ctx context.Context, id int) (*ent.DeployTarget, error) {
-	return s.db.DeployTarget.Get(ctx, id)
+	return s.db.DeployTarget.Query().
+		Where(deploytarget.ID(id)).
+		WithDNSProvider().
+		WithDeployCredential().
+		WithCertificates().
+		Only(ctx)
 }
 
 // List 获取所有部署目标（带凭证来源信息）
 func (s *DeployService) List(ctx context.Context) ([]*ent.DeployTarget, error) {
-	return s.db.DeployTarget.Query().WithDNSProvider().WithDeployCredential().Order(ent.Desc("created_at")).All(ctx)
+	return s.db.DeployTarget.Query().
+		WithDNSProvider().
+		WithDeployCredential().
+		WithCertificates().
+		Order(ent.Desc("created_at")).
+		All(ctx)
 }
 
 // LinkCert 关联证书到部署目标

@@ -9,7 +9,14 @@ import (
 
 // WindowServiceWrapper 窗口管理服务
 type WindowServiceWrapper struct {
-	app *application.App
+	app        *application.App
+	mainWindow application.Window
+}
+
+// WindowSize 窗口尺寸
+type WindowSize struct {
+	Width  int `json:"width"`  // 窗口宽度（像素）
+	Height int `json:"height"` // 窗口高度（像素）
 }
 
 // NewWindowServiceWrapper 创建系统窗口服务
@@ -21,6 +28,22 @@ func NewWindowServiceWrapper() *WindowServiceWrapper {
 // SetApp 设置 app 引用
 func (s *WindowServiceWrapper) SetApp(app *application.App) {
 	s.app = app
+}
+
+// setMainWindow 设置主窗口引用（内部初始化用，不暴露给前端 RPC）
+func (s *WindowServiceWrapper) setMainWindow(w application.Window) {
+	s.mainWindow = w
+}
+
+// GetWindowSize 获取主窗口当前尺寸
+// https://v3.wails.io/zh-cn/reference/window/#size
+func (s *WindowServiceWrapper) GetWindowSize() WindowSize {
+	if s.mainWindow == nil {
+		return WindowSize{Width: 1280, Height: 800}
+	}
+	// 使用 Wails v3 Go 端 window.Size() 获取窗口尺寸
+	width, height := s.mainWindow.Size()
+	return WindowSize{Width: width, Height: height}
 }
 
 // HTMLWindowOptions 通用 HTML 窗口参数

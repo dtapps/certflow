@@ -70,3 +70,18 @@ export interface TimePayload {
      */
     "time": string;
 }
+
+/**
+ * WindowResizedPayload 窗口尺寸变化事件参数
+ */
+export interface WindowResizedPayload {
+    /**
+     * 窗口宽度（像素）
+     */
+    "width": number;
+
+    /**
+     * 窗口高度（像素）
+     */
+    "height": number;
+}

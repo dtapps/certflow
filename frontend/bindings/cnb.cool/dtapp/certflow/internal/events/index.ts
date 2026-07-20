@@ -6,5 +6,6 @@ export type {
     NavigatePayload,
     NotificationPayload,
     ThemeChangedPayload,
-    TimePayload
+    TimePayload,
+    WindowResizedPayload
 } from "./models.js";
