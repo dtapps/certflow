@@ -13,7 +13,7 @@ require (
 	github.com/alibabacloud-go/esa-20240910/v3 v3.8.0
 	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
 	github.com/alibabacloud-go/tea v1.5.2
-	github.com/baidubce/bce-sdk-go v0.9.271
+	github.com/baidubce/bce-sdk-go v0.9.272
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-acme/lego/v5 v5.2.2
 	github.com/go-co-op/gocron/v2 v2.22.0
