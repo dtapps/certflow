@@ -72,7 +72,7 @@ func TestConcurrentPureHelpers(t *testing.T) {
 			if RegionFromConfig(cfg) != "cn-hangzhou" {
 				t.Errorf("RegionFromConfig mismatch")
 			}
-			c := credsFromConfig("aliyun", cfg)
+			c := credsFromConfig("aliyun", "deploy_credential", cfg)
 			if c.AccessKeyID != "ak" || c.AccessKeySecret != "sk" {
 				t.Errorf("credsFromConfig mismatch")
 			}

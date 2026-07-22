@@ -74,51 +74,69 @@ func TestCertName(t *testing.T) {
 }
 
 func TestCredsFromConfig(t *testing.T) {
+	const (
+		deploy = "deploy_credential"
+		dns    = "dns_provider"
+	)
 	cases := []struct {
-		provider string
-		cfg      map[string]string
-		wantID   string
-		wantSec  string
-		wantRgn  string
+		provider   string
+		credSource string
+		cfg        map[string]string
+		wantID     string
+		wantSec    string
+		wantRgn    string
 	}{
 		{
-			provider: "aliyun",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk", "region_id": "cn-hangzhou"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "cn-hangzhou",
+			provider: "aliyun", credSource: deploy,
+			cfg:    map[string]string{"access_key_id": "ak", "access_key_secret": "sk", "region_id": "cn-hangzhou"},
+			wantID: "ak", wantSec: "sk", wantRgn: "cn-hangzhou",
 		},
 		{
-			provider: "huawei",
-			cfg:      map[string]string{"access_key_id": "ak", "secret_access_key": "sk", "region": "cn-north-4"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "cn-north-4",
+			provider: "huawei", credSource: deploy,
+			cfg:    map[string]string{"access_key_id": "ak", "secret_access_key": "sk", "region": "cn-north-4"},
+			wantID: "ak", wantSec: "sk", wantRgn: "cn-north-4",
 		},
 		{
-			provider: "tencentcloud",
-			cfg:      map[string]string{"secret_id": "ak", "secret_key": "sk", "region": "ap-guangzhou"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "ap-guangzhou",
+			provider: "tencentcloud", credSource: deploy,
+			cfg:    map[string]string{"secret_id": "ak", "secret_key": "sk", "region": "ap-guangzhou"},
+			wantID: "ak", wantSec: "sk", wantRgn: "ap-guangzhou",
 		},
 		{
-			provider: "baiducloud",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "",
+			// 部署凭证来源：百度云 SK 读 access_key_secret
+			provider: "baiducloud", credSource: deploy,
+			cfg:    map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantID: "ak", wantSec: "sk", wantRgn: "",
 		},
 		{
-			provider: "ctyun",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
-			wantID:   "ak", wantSec: "sk", wantRgn: "",
+			// DNS 凭证来源：百度云 SK 读 secret_access_key（与前一项同值不同 key）
+			provider: "baiducloud", credSource: dns,
+			cfg:    map[string]string{"access_key_id": "ak", "secret_access_key": "sk"},
+			wantID: "ak", wantSec: "sk", wantRgn: "",
+		},
+		{
+			// DNS 凭证来源：火山引擎 AK/SK 为 access_key/secret_key
+			provider: "volcengine", credSource: dns,
+			cfg:    map[string]string{"access_key": "ak", "secret_key": "sk"},
+			wantID: "ak", wantSec: "sk", wantRgn: "",
+		},
+		{
+			provider: "ctyun", credSource: deploy,
+			cfg:    map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantID: "ak", wantSec: "sk", wantRgn: "",
 		},
 		{
 			// 未知厂商返回空凭证
-			provider: "unknown",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
-			wantID:   "", wantSec: "", wantRgn: "",
+			provider: "unknown", credSource: deploy,
+			cfg:    map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantID: "", wantSec: "", wantRgn: "",
 		},
 	}
 	for _, c := range cases {
-		t.Run(c.provider, func(t *testing.T) {
-			creds := credsFromConfig(c.provider, c.cfg)
+		t.Run(c.provider+"/"+c.credSource, func(t *testing.T) {
+			creds := credsFromConfig(c.provider, c.credSource, c.cfg)
 			if creds.AccessKeyID != c.wantID || creds.AccessKeySecret != c.wantSec || creds.Region != c.wantRgn {
-				t.Errorf("credsFromConfig(%q) = %+v, want id=%q sec=%q region=%q",
-					c.provider, creds, c.wantID, c.wantSec, c.wantRgn)
+				t.Errorf("credsFromConfig(%q,%q) = %+v, want id=%q sec=%q region=%q",
+					c.provider, c.credSource, creds, c.wantID, c.wantSec, c.wantRgn)
 			}
 		})
 	}
