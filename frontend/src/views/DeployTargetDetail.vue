@@ -212,6 +212,37 @@ const targetDomains = computed<string[]>(() => {
 
 const selectedDomains = ref<string[]>([])
 const domainOptions = ref<{ label: string; value: string }[]>([])
+const fetchingDomains = ref(false)
+
+// 加速域名全选 / 清空
+const selectAllDomains = () => {
+  selectedDomains.value = domainOptions.value.map((o) => o.value)
+}
+const clearDomains = () => {
+  selectedDomains.value = []
+}
+
+// 获取域名：调用云接口拉取该部署目标已配置凭证下的真实可部署域名，刷新下拉选项
+const fetchDomains = async () => {
+  if (!target.value) return
+  fetchingDomains.value = true
+  try {
+    const list = await DeployService.ListCDNDomains(target.value.id)
+    if (!list || list.length === 0) {
+      showMessage(t('deploy.noDomains'), 'warning')
+    } else {
+      domainOptions.value = list.map((d) => ({ label: d, value: d }))
+      showMessage(t('deploy.fetchDomains') + ': ' + list.length, 'success')
+    }
+  } catch (e: any) {
+    showMessage(
+      t('deploy.operationFailed') + ': ' + translateBackend(e?.message || String(e)),
+      'error',
+    )
+  } finally {
+    fetchingDomains.value = false
+  }
+}
 
 const certOptions = computed(() => {
   const list = certificates.value || []
@@ -380,10 +411,9 @@ function goDeployTab() {
 onMounted(async () => {
   try {
     await Promise.all([loadTarget(), loadCertificates(), loadLogs()])
-    // 域名已在创建/编辑时的 config 中配置，进入部署 tab 直接作为可选项并预选，无需从云端拉取即可一键部署
+    // 域名已在创建/编辑时的 config 中配置，进入部署 tab 直接作为可选项（默认不预选，由用户点「全选」或勾选）
     const doms = targetDomains.value
     domainOptions.value = doms.map((d) => ({ label: d, value: d }))
-    if (doms.length) selectedDomains.value = [...doms]
     if (route.query.tab === 'deploy') activeTab.value = 'deploy'
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
@@ -604,7 +634,32 @@ onMounted(async () => {
             <n-tab-pane name="deploy" :tab="t('deploy.deploy')">
               <div class="space-y-4">
                 <div>
-                  <div class="text-sm opacity-60 mb-1">{{ t('deploy.domains') }}</div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm opacity-60">{{ t('deploy.domains') }}</span>
+                    <n-space size="small">
+                      <n-button
+                        size="tiny"
+                        :loading="fetchingDomains"
+                        @click="fetchDomains"
+                      >
+                        {{ t('deploy.fetchDomains') }}
+                      </n-button>
+                      <n-button
+                        size="tiny"
+                        :disabled="domainOptions.length === 0"
+                        @click="selectAllDomains"
+                      >
+                        {{ t('deploy.selectAll') }}
+                      </n-button>
+                      <n-button
+                        size="tiny"
+                        :disabled="selectedDomains.length === 0"
+                        @click="clearDomains"
+                      >
+                        {{ t('deploy.clearSelection') }}
+                      </n-button>
+                    </n-space>
+                  </div>
                   <n-select
                     v-model:value="selectedDomains"
                     :options="domainOptions"

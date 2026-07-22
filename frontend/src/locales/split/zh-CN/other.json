@@ -412,6 +412,8 @@
   "deploy.selectDomain": "选择域名",
   "deploy.selectDomainFirst": "请先选择域名",
   "deploy.selectDomains": "选择域名（可多选）",
+  "deploy.selectAll": "全选",
+  "deploy.clearSelection": "清空",
   "deploy.service": "部署服务",
   "deploy.service.cdn": "CDN",
   "deploy.service.dcdn": "全站加速 DCDN",

@@ -412,6 +412,8 @@
   "deploy.selectDomain": "Select Domain",
   "deploy.selectDomainFirst": "Please select a domain first",
   "deploy.selectDomains": "Select domains (multiple)",
+  "deploy.selectAll": "Select All",
+  "deploy.clearSelection": "Clear",
   "deploy.service": "Deploy Service",
   "deploy.service.cdn": "CDN",
   "deploy.service.dcdn": "Dynamic Route CDN (DCDN)",

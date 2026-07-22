@@ -534,7 +534,7 @@ onUnmounted(() => {
 <template>
   <div class="page">
     <n-spin :show="loading">
-      <div class="max-w-4xl mx-auto w-full">
+      <div class="w-full">
         <div class="mb-5">
           <h1 class="text-2xl font-bold">
             {{ editingId ? t('deploy.edit') : t('deploy.create') }}
