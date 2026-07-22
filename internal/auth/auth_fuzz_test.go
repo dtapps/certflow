@@ -8,7 +8,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent"
 	esql "entgo.io/ent/dialect/sql"
-	_ "modernc.org/sqlite"
+	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 )
 
 func newFuzzClient(t *testing.T) *ent.Client {

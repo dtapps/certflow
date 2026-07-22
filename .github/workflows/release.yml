@@ -50,6 +50,13 @@ on:
         description: '启用生物识别认证（Touch ID / Windows Hello）'
         type: boolean
         default: false
+      sqlite_driver:
+        description: 'SQLite 驱动：modernc（纯 Go，默认）/ mattn（CGO，性能更佳需 C 编译器）'
+        type: choice
+        options:
+          - modernc
+          - mattn
+        default: modernc
 
 permissions:
   contents: write
@@ -182,6 +189,22 @@ jobs:
           $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
           echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
+      # mattn 是 CGO 驱动，Windows 需要 MinGW 提供的 gcc 才能编译。
+      # 注：choco 安装的 mingw 为 x86_64 工具链，仅能产出 windows/amd64 的 mattn 二进制；
+      # windows/arm64 选择 mattn 时需另行准备 aarch64 MinGW 工具链（此处未处理）。
+      - name: 安装 MinGW（mattn 需要 CGO 编译器）
+        if: ${{ matrix.enabled && inputs.sqlite_driver == 'mattn' && runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          choco install mingw -y
+          $mingwBin = "${env:ProgramData}\chocolatey\lib\mingw\tools\install\mingw64\bin"
+          if (Test-Path $mingwBin) {
+            echo $mingwBin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+            echo "CC=$mingwBin\gcc.exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          } else {
+            Write-Warning "MinGW 未出现在预期路径 $mingwBin，mattn (CGO) 构建可能失败"
+          }
+
       # 编译 Windows 生物识别 Helper（仅在启用 biometric 且为 Windows 平台时）
       - name: 安装 .NET SDK
         if: ${{ matrix.enabled && inputs.biometric && runner.os == 'Windows' }}
@@ -215,26 +238,52 @@ jobs:
           cp biometric_helper ../../internal/biometric/binaries/macos/
           echo "macOS biometric helper compiled and copied"
 
+      # 根据输入选择 SQLite 驱动：默认 modernc（纯 Go）；可选 mattn（CGO）。
+      # darwin/linux 的 native 构建任务已硬编码 CGO_ENABLED=1 且 runner 自带编译器，mattn 直接可用；
+      # Windows native 任务读取 CGO_ENABLED Task 变量（默认 0），故 mattn 需显式传入 CGO_ENABLED=1。
+      # 将 EXTRA_TAGS / CGO_FLAG 写入 $GITHUB_ENV，供后续构建与打包步骤复用。
+      - name: 配置 SQLite 驱动
+        if: ${{ matrix.enabled }}
+        shell: bash
+        run: |
+          EXTRA_TAGS=""
+          if [ "${{ inputs.biometric }}" = "true" ]; then
+            EXTRA_TAGS="biometric"
+          fi
+          if [ "${{ inputs.sqlite_driver }}" = "mattn" ]; then
+            if [ -n "$EXTRA_TAGS" ]; then
+              EXTRA_TAGS="$EXTRA_TAGS sqlite_mattn"
+            else
+              EXTRA_TAGS="sqlite_mattn"
+            fi
+            echo "CGO_FLAG=CGO_ENABLED=1" >> "$GITHUB_ENV"
+            echo "::notice::使用 mattn/go-sqlite3（CGO）构建 SQLite"
+          else
+            echo "CGO_FLAG=" >> "$GITHUB_ENV"
+            echo "::notice::使用 modernc.org/sqlite（纯 Go）构建 SQLite（默认）"
+          fi
+          echo "EXTRA_TAGS=$EXTRA_TAGS" >> "$GITHUB_ENV"
+
       # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
         run: |
           EXTRA_ARGS=""
-          if [ "${{ inputs.biometric }}" = "true" ]; then
-            EXTRA_ARGS="EXTRA_TAGS=biometric"
+          if [ -n "$EXTRA_TAGS" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
           fi
-          wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $EXTRA_ARGS
+          wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
         run: |
           EXTRA_ARGS=""
-          if [ "${{ inputs.biometric }}" = "true" ]; then
-            EXTRA_ARGS="EXTRA_TAGS=biometric"
+          if [ -n "$EXTRA_TAGS" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
           fi
-          wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $EXTRA_ARGS
+          wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
       - name: macOS 签名与公证

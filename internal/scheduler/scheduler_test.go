@@ -8,15 +8,9 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/ent/certificate"
+	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 	esql "entgo.io/ent/dialect/sql"
-	sqlite "modernc.org/sqlite"
 )
-
-func init() {
-	// 生产依赖包（db/httplog）可能已注册同名驱动，重复注册会 panic，故用 recover 兜底。
-	defer func() { _ = recover() }()
-	sql.Register("sqlite3", &sqlite.Driver{})
-}
 
 func setupTestDB(t *testing.T) *ent.Client {
 	t.Helper()

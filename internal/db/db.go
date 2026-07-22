@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,15 +10,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"cnb.cool/dtapp/certflow/internal/sqlite"
 	"entgo.io/ent/dialect"
-	"modernc.org/sqlite"
 )
-
-func init() {
-	// modernc.org/sqlite 默认注册驱动名为 "sqlite"，但 ent 的 dialect.SQLite 是 "sqlite3"
-	// 将 modernc 驱动注册为 "sqlite3" 以兼容 ent
-	sql.Register(dialect.SQLite, &sqlite.Driver{})
-}
 
 // DB 全局数据库客户端
 var Client *ent.Client
@@ -30,7 +23,7 @@ func Init(dataDir string) error {
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return fmt.Errorf("%s", i18n.T("error.create_db_dir_failed", "Error", err))
 	}
-	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout=5000", filepath.Join(dbDir, "certflow.db"))
+	dsn := sqlite.BuildDSN(filepath.Join(dbDir, "certflow.db"))
 
 	// 配置 ent 客户端选项
 	opts := []ent.Option{}

@@ -9,7 +9,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent"
 	esql "entgo.io/ent/dialect/sql"
-	_ "modernc.org/sqlite"
+	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 )
 
 func newConcurrentTestService(t *testing.T) *AuthService {

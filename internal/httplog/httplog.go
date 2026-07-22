@@ -2,7 +2,6 @@ package httplog
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,9 +13,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent_log/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"cnb.cool/dtapp/certflow/internal/sqlite"
 	"entgo.io/ent/dialect"
 	"go.dtapp.net/library/contrib/http_log"
-	"modernc.org/sqlite"
 )
 
 // dbFileName 独立的 HTTP 请求日志数据库文件名（存放在 dataDir/data 下，与主库 certflow.db 分离）
@@ -27,13 +26,6 @@ var (
 	mu     sync.RWMutex
 	once   sync.Once
 )
-
-func init() {
-	// modernc.org/sqlite 注册为 "sqlite3" 以兼容 ent 的 dialect.SQLite。
-	// db 包已注册过，重复注册会 panic，故用 recover 兜底。
-	defer func() { _ = recover() }()
-	sql.Register(dialect.SQLite, &sqlite.Driver{})
-}
 
 // Init 初始化 HTTP 请求日志：打开独立的日志库，并在日志级别为 DEBUG 时
 // 将 http.DefaultTransport / http.DefaultClient 包裹为 LoggingRoundTripper，
@@ -56,8 +48,7 @@ func initClient(dataDir string) error {
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return fmt.Errorf("%s", i18n.T("error.create_db_dir_failed", "Error", err))
 	}
-	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout=5000",
-		filepath.Join(dbDir, dbFileName))
+	dsn := sqlite.BuildDSN(filepath.Join(dbDir, dbFileName))
 
 	c, err := ent_log.Open(dialect.SQLite, dsn)
 	if err != nil {
