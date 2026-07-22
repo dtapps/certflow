@@ -53,6 +53,7 @@
   "log.deploy.aliyun_dcdn_deploy_success": "Alibaba Cloud DCDN deploy success domain={{.Domain}}",
   "log.deploy.aliyun_esa_deploy_failed": "Alibaba Cloud ESA deploy failed siteID={{.SiteID}} err={{.Err}} resp={{.Resp}}",
   "log.deploy.aliyun_esa_deploy_success": "Alibaba Cloud ESA deploy success siteID={{.SiteID}}",
+  "log.deploy.aliyun_esa_deploy_exists": "Alibaba Cloud ESA certificate already exists, treated as idempotent success siteID={{.SiteID}} esaCertID={{.EsaCertID}}",
   "log.deploy.aliyun_ga_deploy_failed": "Alibaba Cloud GA deploy failed acc={{.Acc}} listener={{.Listener}} err={{.Err}} resp={{.Resp}}",
   "log.deploy.aliyun_ga_deploy_success": "Alibaba Cloud GA deploy success acc={{.Acc}} listener={{.Listener}} domain={{.Domain}}",
   "log.deploy.aliyun_list_cdn_start": "Alibaba Cloud list CDN domains start region={{.Region}}",

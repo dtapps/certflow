@@ -10,6 +10,7 @@
   "deploy.message.aliyun_dcdn_deployed": "已部署到阿里云 DCDN: {{.Domain}}",
   "deploy.message.aliyun_cas_no_esa_site": "证书已上传至 CAS（未配置 ESA SiteId，跳过部署）",
   "deploy.message.aliyun_esa_deployed": "已部署到阿里云 ESA (SiteId: {{.SiteID}})",
+  "deploy.message.aliyun_esa_already_deployed": "证书已存在于阿里云 ESA 站点 (SiteId: {{.SiteID}})，无需重复部署",
   "deploy.message.aliyun_cas_no_ga_ids": "证书已上传至 CAS（未配置 GA 实例ID/监听器ID，跳过部署）",
   "deploy.message.aliyun_cas_no_ga_domain": "证书已上传至 CAS（未配置 GA 加速域名，跳过部署）",
   "deploy.message.aliyun_ga_deployed": "已部署到阿里云 GA (监听器: {{.ListenerID}}, 域名: {{.Domain}})",

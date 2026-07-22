@@ -53,6 +53,7 @@
   "log.deploy.aliyun_dcdn_deploy_success": "阿里云 DCDN 部署成功 domain={{.Domain}}",
   "log.deploy.aliyun_esa_deploy_failed": "阿里云 ESA 部署失败 siteID={{.SiteID}} err={{.Err}} resp={{.Resp}}",
   "log.deploy.aliyun_esa_deploy_success": "阿里云 ESA 部署成功 siteID={{.SiteID}}",
+  "log.deploy.aliyun_esa_deploy_exists": "阿里云 ESA 证书已存在，视为幂等成功 siteID={{.SiteID}} esaCertID={{.EsaCertID}}",
   "log.deploy.aliyun_ga_deploy_failed": "阿里云 GA 部署失败 acc={{.Acc}} listener={{.Listener}} err={{.Err}} resp={{.Resp}}",
   "log.deploy.aliyun_ga_deploy_success": "阿里云 GA 部署成功 acc={{.Acc}} listener={{.Listener}} domain={{.Domain}}",
   "log.deploy.aliyun_list_cdn_start": "阿里云 列举 CDN 域名 开始 region={{.Region}}",

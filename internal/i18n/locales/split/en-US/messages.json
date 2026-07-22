@@ -10,6 +10,7 @@
   "deploy.message.aliyun_dcdn_deployed": "Deployed to Alibaba Cloud DCDN: {{.Domain}}",
   "deploy.message.aliyun_cas_no_esa_site": "Certificate uploaded to CAS (no ESA SiteId configured, deployment skipped)",
   "deploy.message.aliyun_esa_deployed": "Deployed to Alibaba Cloud ESA (SiteId: {{.SiteID}})",
+  "deploy.message.aliyun_esa_already_deployed": "Certificate already exists in Alibaba Cloud ESA site (SiteId: {{.SiteID}}); no redeploy needed",
   "deploy.message.aliyun_cas_no_ga_ids": "Certificate uploaded to CAS (no GA instance ID/listener ID configured, deployment skipped)",
   "deploy.message.aliyun_cas_no_ga_domain": "Certificate uploaded to CAS (no GA acceleration domain configured, deployment skipped)",
   "deploy.message.aliyun_ga_deployed": "Deployed to Alibaba Cloud GA (listener: {{.ListenerID}}, domain: {{.Domain}})",

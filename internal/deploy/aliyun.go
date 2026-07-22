@@ -150,6 +150,45 @@ func findCASCertByName(client *cas.Client, name string) (string, error) {
 	return "", nil
 }
 
+// findESACertByCasID 在指定 ESA 站点下按 CAS 证书 ID 查找已导入的证书，返回其 ESA 证书 ID。
+// SetCertificate 报 Certificate.Duplicated 时用于确认「同一 CAS 证书是否已存在于站点」，
+// 从而将重复部署识别为幂等成功。ListCertificates 结果里的 CasId 为字符串，与传入的
+// certID（CAS 证书 ID 字符串）精确比对。
+func findESACertByCasID(client *esa.Client, siteID int64, casID string) (string, error) {
+	page := int32(1)
+	for {
+		req := &esa.ListCertificatesRequest{
+			SiteId:     new(siteID),
+			PageNumber: new(int64(page)),
+			PageSize:   new(int64(100)),
+		}
+		resp, err := client.ListCertificates(req)
+		if err != nil {
+			return "", err
+		}
+		if resp == nil || resp.Body == nil {
+			return "", nil
+		}
+		for _, item := range resp.Body.Result {
+			if item == nil || item.CasId == nil || *item.CasId != casID {
+				continue
+			}
+			if item.Id != nil {
+				return *item.Id, nil
+			}
+		}
+		total := int64(0)
+		if resp.Body.TotalCount != nil {
+			total = *resp.Body.TotalCount
+		}
+		if total == 0 || len(resp.Body.Result) == 0 || int64(page)*100 >= total || page >= 100 {
+			break
+		}
+		page++
+	}
+	return "", nil
+}
+
 // DeployCert 将已上传的证书绑定部署到阿里云目标服务（CDN / ESA）
 func (d *AliyunDeployer) DeployCert(ctx context.Context, creds Credentials, certID string, svc string, svcConfig map[string]string) (*DeployResult, error) {
 	name := certName(svcConfig["cert_domain"], svcConfig)
@@ -240,6 +279,16 @@ func (d *AliyunDeployer) DeployCert(ctx context.Context, creds Credentials, cert
 		}
 		resp, err := client.SetCertificate(req)
 		if err != nil {
+			// 证书名称已存在（Certificate.Duplicated）：多为同一张 CAS 证书重复部署到该站点
+			// （手动重跑或续期后二次部署）。ESA 导入 CAS 证书时按内容派生名称，同名即同证书，
+			// 已在站点内存在。此时按 CasId 回查站点已有证书确认存在，则视为「已部署」幂等成功，
+			// 而非报错，避免用户看到 Certificate.Duplicated。
+			if strings.Contains(err.Error(), "Certificate.Duplicated") {
+				if existID, ferr := findESACertByCasID(client, siteIDInt, certID); ferr == nil && existID != "" {
+					logging.Debug(i18n.T("log.deploy.aliyun_esa_deploy_exists", "SiteID", siteID, "EsaCertID", existID))
+					return &DeployResult{CloudCertID: certID, Message: i18n.T("deploy.message.aliyun_esa_already_deployed", "SiteID", siteID)}, nil
+				}
+			}
 			logging.Debug(i18n.T("log.deploy.aliyun_esa_deploy_failed", "SiteID", siteID, "Err", err, "Resp", respDump(resp)))
 			return &DeployResult{CloudCertID: certID}, i18n.Wrap(err, "deploy.error.aliyun_esa_deploy")
 		}
