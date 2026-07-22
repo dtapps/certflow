@@ -1,4 +1,4 @@
-.PHONY: help bindings ent i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps
+.PHONY: help bindings ent i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend
 
 # 过滤 macOS 链接器噪声（ld: warning / was built for newer / ignoring duplicate libraries），
 # 让真正的编译/测试/检查错误清晰可见。用法：<命令> $(FILTER) || exit 1
@@ -35,7 +35,7 @@ dev: i18n ## 运行 Wails 开发模式
 
 # ==================== 格式化 / 修复 ====================
 
-format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix ## 格式化和修复（全部）
+format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix format-i18n ## 格式化和修复（全部）
 
 format-go-fmt: ## 格式化 Go 代码
 	gofmt -w -s .
@@ -49,6 +49,19 @@ format-frontend-write: ## 格式化前端代码（Vue + TypeScript）
 
 format-frontend-fix: ## 修复前端代码（Vue + TypeScript）
 	cd frontend && pnpm exec eslint --fix "src/**/*.{vue,ts,js}"
+
+# ==================== i18n JSON 格式化 ====================
+
+format-i18n: format-i18n-go format-i18n-frontend ## 格式化 Go 与前端 i18n JSON 文件
+
+format-i18n-go: ## 格式化 Go 后端 i18n JSON 文件（internal/i18n 下全部）
+	cd frontend && pnpm exec prettier --config .prettierrc --write \
+		"../internal/i18n/**/*.json"
+
+format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分文件）
+	cd frontend && pnpm exec prettier --config .prettierrc --write \
+		"src/locales/*.json" \
+		"src/locales/split/**/*.json"
 
 # ==================== 检查 / 测试 ====================
 

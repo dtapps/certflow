@@ -209,11 +209,11 @@
   "log.monitor_http_info": "HTTP check: domain={{.Domain}}, url={{.URL}}, statusCode={{.StatusCode}}, time={{.ResponseTime}}ms",
   "log.monitor_check_result": "Manual check result: domain={{.Domain}}, status={{.Status}}, remainingDays={{.RemainingDays}}",
   "log.monitor_check_done": "Background check completed: count={{.Count}}",
-	"log.monitor_query_failed": "Failed to query monitored domains: {{.Error}}",
-	"log.monitor_update_failed": "Failed to update monitored domain: domain={{.Domain}}, error={{.Error}}",
-	"log.monitor_checklog_failed": "Failed to write check history: domain={{.Domain}}, error={{.Error}}",
-	"log.monitor_checklog_cleanup": "Cleaned up expired check history: count={{.Count}}, retentionDays={{.Days}}",
-	"log.monitor_checklog_cleanup_failed": "Failed to clean up check history: error={{.Error}}",
+  "log.monitor_query_failed": "Failed to query monitored domains: {{.Error}}",
+  "log.monitor_update_failed": "Failed to update monitored domain: domain={{.Domain}}, error={{.Error}}",
+  "log.monitor_checklog_failed": "Failed to write check history: domain={{.Domain}}, error={{.Error}}",
+  "log.monitor_checklog_cleanup": "Cleaned up expired check history: count={{.Count}}, retentionDays={{.Days}}",
+  "log.monitor_checklog_cleanup_failed": "Failed to clean up check history: error={{.Error}}",
   "log.background_obtain_failed": "Log: background_obtain_failed",
   "log.dns_provider_create_failed": "Log: dns_provider_create_failed",
   "log.app_starting": "CertFlow starting... version={{.Version}} buildTime={{.BuildTime}}",
@@ -294,5 +294,7 @@
   "log.deploy_failed": "Certificate deploy failed: target {{.Target}} error: {{.Error}}",
   "log.httplog.enabled": "HTTP request logging enabled (DEBUG mode, separate log DB httplog.db)",
   "log.httplog.skip_not_debug": "HTTP request logging skipped (log level is not DEBUG)",
-  "log.httplog.save_failed": "Failed to save HTTP request log"
+  "log.httplog.save_failed": "Failed to save HTTP request log",
+  "log.updater_mirror_download": "Downloading via mirror: source={{.Source}} url={{.URL}}",
+  "log.updater_mirror_failed": "Mirror source failed, trying next: source={{.Source}} error={{.Error}}"
 }

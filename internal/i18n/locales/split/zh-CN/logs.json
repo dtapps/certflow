@@ -209,11 +209,11 @@
   "log.monitor_http_info": "HTTP 检查: domain={{.Domain}}, url={{.URL}}, statusCode={{.StatusCode}}, time={{.ResponseTime}}ms",
   "log.monitor_check_result": "手动检查结果: domain={{.Domain}}, status={{.Status}}, remainingDays={{.RemainingDays}}",
   "log.monitor_check_done": "后台检查完成: count={{.Count}}",
-	"log.monitor_query_failed": "查询监控域名失败: {{.Error}}",
-	"log.monitor_update_failed": "更新监控域名失败: domain={{.Domain}}, error={{.Error}}",
-	"log.monitor_checklog_failed": "写入检查历史失败: domain={{.Domain}}, error={{.Error}}",
-	"log.monitor_checklog_cleanup": "已清理过期监控历史: count={{.Count}}, retentionDays={{.Days}}",
-	"log.monitor_checklog_cleanup_failed": "清理监控历史失败: error={{.Error}}",
+  "log.monitor_query_failed": "查询监控域名失败: {{.Error}}",
+  "log.monitor_update_failed": "更新监控域名失败: domain={{.Domain}}, error={{.Error}}",
+  "log.monitor_checklog_failed": "写入检查历史失败: domain={{.Domain}}, error={{.Error}}",
+  "log.monitor_checklog_cleanup": "已清理过期监控历史: count={{.Count}}, retentionDays={{.Days}}",
+  "log.monitor_checklog_cleanup_failed": "清理监控历史失败: error={{.Error}}",
   "log.background_obtain_failed": "日志: background_obtain_failed",
   "log.dns_provider_create_failed": "日志: dns_provider_create_failed",
   "log.app_starting": "CertFlow 启动中... 版本={{.Version}} 打包时间={{.BuildTime}}",
@@ -294,5 +294,7 @@
   "log.deploy_failed": "证书部署失败: 目标 {{.Target}} 错误: {{.Error}}",
   "log.httplog.enabled": "已启用 HTTP 请求日志（DEBUG 模式，独立日志库 httplog.db）",
   "log.httplog.skip_not_debug": "未启用 HTTP 请求日志（日志级别非 DEBUG）",
-  "log.httplog.save_failed": "保存 HTTP 请求日志失败"
+  "log.httplog.save_failed": "保存 HTTP 请求日志失败",
+  "log.updater_mirror_download": "使用镜像下载: 源={{.Source}} 地址={{.URL}}",
+  "log.updater_mirror_failed": "镜像源失败，尝试下一个: 源={{.Source}} 错误={{.Error}}"
 }

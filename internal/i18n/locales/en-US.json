@@ -538,6 +538,8 @@
   "log.updater_matcher_skip_plat": "  -> skip: platform mismatch (want {{.Plat}})",
   "log.updater_matcher_skip_sig": "  -> skip: signature/checksum sidecar",
   "log.updater_matcher_start": "AssetMatcher matching started: platform={{.Plat}} arch={{.Arch}} candidates={{.Count}}",
+  "log.updater_mirror_download": "Downloading via mirror: source={{.Source}} url={{.URL}}",
+  "log.updater_mirror_failed": "Mirror source failed, trying next: source={{.Source}} error={{.Error}}",
   "log.updater_ready": "Update ready, preparing to restart",
   "log.wait_dns_challenge": "Waiting for DNS challenge info...",
   "menu.about": "About CertFlow",

@@ -538,6 +538,8 @@
   "log.updater_matcher_skip_plat": "  -> 跳过：平台不匹配（需要 {{.Plat}}）",
   "log.updater_matcher_skip_sig": "  -> 跳过：签名/校验侧车文件",
   "log.updater_matcher_start": "AssetMatcher 开始匹配：平台={{.Plat}} 架构={{.Arch}} 候选资源数={{.Count}}",
+  "log.updater_mirror_download": "使用镜像下载: 源={{.Source}} 地址={{.URL}}",
+  "log.updater_mirror_failed": "镜像源失败，尝试下一个: 源={{.Source}} 错误={{.Error}}",
   "log.updater_ready": "更新就绪，准备重启",
   "log.wait_dns_challenge": "等待 DNS 挑战信息...",
   "menu.about": "关于 CertFlow",

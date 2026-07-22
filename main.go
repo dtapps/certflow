@@ -204,7 +204,7 @@ func main() {
 
 	// 配置自更新功能
 	// https://v3.wails.io/guides/updater/
-	gh, err := github.New(github.Config{
+	gh, err := newMirrorProvider(github.Config{
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
 		Prerelease:    settingsService.Get().Prerelease,
@@ -388,15 +388,19 @@ func main() {
 		schedulerService.Stop()
 	}()
 
-	// updater 重启前主动释放资源，确保进程快速退出
-	// Windows 上 helper 需要替换 exe 文件，如果父进程退不掉会导致文件占用
+	// updater 下载安装完成（EventUpdateReady）后主动停掉后台任务，
+	// 避免它们在二进制替换 / 重启前继续写库或占用资源。
+	// 注意：这里【不能】关闭数据库。此时进程并未退出（要等用户点击
+	// Restart 触发 Quit 才退出），前端仍在运行并周期性调用后端绑定
+	// （如未读通知数量 CountUnread），过早关闭 DB 会导致
+	// "sql: database is closed" 错误。数据库由 main 的 defer db.Close()
+	// 在进程真正退出时统一关闭。
 	var cleanupOnce sync.Once
 	cleanup := func() {
 		cleanupOnce.Do(func() {
 			schedulerService.Stop()
 			monitorService.Stop()
 			cancel()
-			db.Close()
 		})
 	}
 
