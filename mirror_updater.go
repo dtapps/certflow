@@ -20,22 +20,23 @@ import (
 //     任一级失败（HTTP 非 2xx 或文件大小不符）自动降级下一级；
 //   - 英文用户直接走官方 GitHub（github provider 原始行为）。
 //
-// 注：CNB 不是标准 GitHub API 兼容镜像，其 release 资源下载路径需按实际镜像
-// 仓库确认后调整 cnbDownloadTpl；即便地址暂不正确，也会自动回退到 daocloud/官方。
+// 注：CNB 不是标准 GitHub API 兼容镜像，其 release 资源下载路径与 GitHub 仓库
+// 不同（CNB 仓库为 dtapp/certflow，GitHub 为 dtapps/certflow），故两个模板均写死
+// 仓库路径；即便地址暂不正确，也会自动回退到 daocloud/官方。
 
 const (
-	// cnbDownloadTpl：CNB 镜像的 release 资源下载地址模板。
-	// 占位符：{owner} {repo} {tag} {file}
-	cnbDownloadTpl = "https://cnb.cool/{owner}/{repo}/-/releases/download/{tag}/{file}"
+	// cnbDownloadTpl：CNB 镜像的 release 资源下载地址模板（写死仓库 dtapp/certflow）。
+	// 占位符：{tag} {file}
+	cnbDownloadTpl = "https://cnb.cool/dtapp/certflow/-/releases/download/{tag}/{file}"
 
-	// daoCloudDownloadTpl：daocloud 的 GitHub 文件代理，路径与 GitHub 一致。
-	daoCloudDownloadTpl = "https://files.m.daocloud.io/github.com/{owner}/{repo}/releases/download/{tag}/{file}"
+	// daoCloudDownloadTpl：daocloud 的 GitHub 文件代理，路径与 GitHub 一致（dtapps/certflow）。
+	// 占位符：{tag} {file}
+	daoCloudDownloadTpl = "https://files.m.daocloud.io/github.com/dtapps/certflow/releases/download/{tag}/{file}"
 )
 
 // mirrorProvider 包装 github.Provider，仅重写下載地址。
 type mirrorProvider struct {
 	*github.Provider
-	repo   string
 	client *http.Client
 }
 
@@ -47,7 +48,6 @@ func newMirrorProvider(cfg github.Config) (*mirrorProvider, error) {
 	}
 	return &mirrorProvider{
 		Provider: gh,
-		repo:     cfg.Repository,
 		client:   &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
@@ -79,7 +79,7 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 		url    string
 	}
 	var candidates []candidate
-	if u := m.buildURL(cnbDownloadTpl, tag, file); u != "" {
+	if u := m.buildURL(cnbDownloadTpl, tag, stripUpdaterPrefix(file)); u != "" {
 		candidates = append(candidates, candidate{"cnb", u})
 	}
 	if u := m.buildURL(daoCloudDownloadTpl, tag, file); u != "" {
@@ -106,20 +106,16 @@ func (m *mirrorProvider) buildURL(tpl, tag, file string) string {
 	if tag == "" || file == "" {
 		return ""
 	}
-	owner, repo := repoParts(m.repo)
-	u := strings.ReplaceAll(tpl, "{owner}", owner)
-	u = strings.ReplaceAll(u, "{repo}", repo)
-	u = strings.ReplaceAll(u, "{tag}", tag)
+	u := strings.ReplaceAll(tpl, "{tag}", tag)
 	u = strings.ReplaceAll(u, "{file}", file)
 	return u
 }
 
-func repoParts(repo string) (string, string) {
-	parts := strings.SplitN(repo, "/", 2)
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return repo, ""
+// stripUpdaterPrefix 去掉 Wails updater 给升级文件加的 updater- 前缀。
+// CNB 镜像仓库的升级文件使用原始文件名（无前缀），而 GitHub/daocloud 保留前缀，
+// 故拼 CNB 下载地址时需去掉该前缀，否则命中 404。
+func stripUpdaterPrefix(name string) string {
+	return strings.TrimPrefix(name, "updater-")
 }
 
 // downloadFrom 从指定 URL 流式下载到 dst，并做基础防护。
