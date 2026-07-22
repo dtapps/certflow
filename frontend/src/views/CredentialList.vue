@@ -12,6 +12,7 @@ import {
   NFormItem,
   NEmpty,
   NTag,
+  NCheckbox,
   useMessage,
 } from 'naive-ui'
 import { useI18nStore } from '../stores/i18n'
@@ -182,6 +183,93 @@ const getProviderLabel = (type: string) => {
   return pt ? t(pt.labelKey) : type
 }
 
+// 批量操作
+const selectedIds = ref<number[]>([])
+const isSelected = (id: number) => selectedIds.value.includes(id)
+const isAllSelected = computed(
+  () => items.value.length > 0 && items.value.every((i) => selectedIds.value.includes(i.id)),
+)
+const isIndeterminate = computed(() => {
+  const n = items.value.filter((i) => selectedIds.value.includes(i.id)).length
+  return n > 0 && n < items.value.length
+})
+const toggleSelect = (id: number) => {
+  const i = selectedIds.value.indexOf(id)
+  if (i >= 0) selectedIds.value.splice(i, 1)
+  else selectedIds.value.push(id)
+}
+const toggleSelectAll = () => {
+  selectedIds.value = isAllSelected.value ? [] : items.value.map((i) => i.id)
+}
+const clearSelection = () => {
+  selectedIds.value = []
+}
+
+async function runBatch(fn: (id: number) => Promise<unknown>, successKey: string) {
+  const ids = selectedIds.value.slice()
+  let ok = 0
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        await fn(id)
+        ok++
+      } catch (e: any) {
+        showMessage(
+          t('credential.batchFailed') + translateBackend(e?.message || String(e)),
+          'error',
+        )
+      }
+    }),
+  )
+  if (ok > 0) showMessage(t(successKey, { count: ok }), 'success')
+  clearSelection()
+  await loadData()
+}
+
+const batchEnable = () =>
+  props.setActiveItem
+    ? runBatch((id) => props.setActiveItem!(id, true), 'credential.batchEnabled')
+    : Promise.resolve()
+const batchDisable = () =>
+  props.setActiveItem
+    ? runBatch((id) => props.setActiveItem!(id, false), 'credential.batchDisabled')
+    : Promise.resolve()
+
+const showBatchDeleteModal = ref(false)
+const batchDeleting = ref(false)
+
+function batchDelete() {
+  if (selectedIds.value.length === 0) return
+  showBatchDeleteModal.value = true
+}
+
+async function confirmBatchDelete() {
+  const ids = selectedIds.value.slice()
+  batchDeleting.value = true
+  let ok = 0
+  try {
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await props.deleteItem(id)
+          ok++
+        } catch (e: any) {
+          showMessage(
+            t('credential.batchFailed') + translateBackend(e?.message || String(e)),
+            'error',
+          )
+        }
+      }),
+    )
+    if (ok > 0) showMessage(t('credential.batchDeleted', { count: ok }), 'success')
+  } finally {
+    batchDeleting.value = false
+    showBatchDeleteModal.value = false
+    clearSelection()
+    await loadData()
+  }
+}
+
 watch(
   () => formData.value.provider_type,
   (newType) => {
@@ -211,6 +299,37 @@ loadData()
 
 <template>
   <div>
+    <!-- 批量操作栏 -->
+    <div v-if="items.length > 0" class="flex items-center justify-between mb-3 px-1">
+      <div class="flex items-center gap-3">
+        <n-checkbox
+          :checked="isAllSelected"
+          :indeterminate="isIndeterminate"
+          @update:checked="toggleSelectAll"
+        >
+          {{ t('credential.selectAll') }}
+        </n-checkbox>
+        <span v-if="selectedIds.length > 0" class="text-sm opacity-60">
+          {{ t('credential.selectedCount', { count: selectedIds.length }) }}
+        </span>
+      </div>
+      <div v-if="selectedIds.length > 0" class="flex items-center gap-2">
+        <template v-if="props.setActiveItem">
+          <n-button size="small" type="primary" secondary @click="batchEnable">{{
+            t('credential.batchEnable')
+          }}</n-button>
+          <n-button size="small" secondary @click="batchDisable">{{
+            t('credential.batchDisable')
+          }}</n-button>
+        </template>
+        <n-button size="small" type="error" secondary @click="batchDelete">{{
+          t('credential.batchDelete')
+        }}</n-button>
+        <n-button size="small" quaternary @click="clearSelection">{{
+          t('common.cancel')
+        }}</n-button>
+      </div>
+    </div>
     <n-card size="small">
       <n-spin :show="isLoading">
         <n-empty v-if="!isLoading && items.length === 0" :description="emptyText" />
@@ -222,6 +341,13 @@ loadData()
             class="flex items-center justify-between px-6 py-4"
           >
             <div class="flex items-center gap-4">
+              <span @click.stop>
+                <n-checkbox
+                  size="small"
+                  :checked="isSelected(item.id)"
+                  @update:checked="toggleSelect(item.id)"
+                />
+              </span>
               <ProviderIcon :provider-type="item.provider_type" :name="item.name" :size="36" />
               <div>
                 <div class="flex items-center gap-2">
@@ -357,6 +483,22 @@ loadData()
       <template #action>
         <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
         <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 批量删除确认弹窗 -->
+    <n-modal
+      v-model:show="showBatchDeleteModal"
+      preset="dialog"
+      :title="t('credential.batchDelete')"
+    >
+      <p>{{ t('credential.batchDeleteConfirm', { count: selectedIds.length }) }}</p>
+      <p class="text-sm opacity-60 mt-2">{{ t('credential.batchDeleteConfirmDesc') }}</p>
+      <template #action>
+        <n-button @click="showBatchDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" :loading="batchDeleting" @click="confirmBatchDelete">{{
+          t('common.confirm')
+        }}</n-button>
       </template>
     </n-modal>
   </div>
