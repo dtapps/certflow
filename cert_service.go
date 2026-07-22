@@ -114,23 +114,34 @@ func (s *CertificateServiceWrapper) ListCertificates() ([]CertificateListItem, e
 		if !c.NotAfter.IsZero() {
 			notAfter = c.NotAfter.Format(time.DateTime)
 		}
+		// 查询关联的 CA 与 DNS 提供商名称（与 GetCertificateInfo 保持一致）
+		caName := ""
+		if ca, err := c.QueryCa().Only(ctx); err == nil {
+			caName = ca.Name
+		}
+		dnsProviderName := ""
+		if dp, err := c.QueryDNSProvider().Only(ctx); err == nil {
+			dnsProviderName = dp.Name
+		}
 		items[i] = CertificateListItem{
-			ID:            c.ID,
-			Domain:        c.Domain,
-			Sans:          c.Sans,
-			CertContent:   c.CertContent,
-			KeyContent:    c.KeyContent,
-			Issuer:        c.Issuer,
-			NotBefore:     notBefore,
-			NotAfter:      notAfter,
-			Status:        c.Status.String(),
-			AutoRenew:     c.AutoRenew,
-			RenewalDays:   c.RenewalDays,
-			LastError:     c.LastError,
-			LastRenewedAt: lastRenewed,
-			KeyType:       c.KeyType.String(),
-			CreatedAt:     c.CreatedAt.Format(time.DateTime),
-			UpdatedAt:     c.UpdatedAt.Format(time.DateTime),
+			ID:              c.ID,
+			Domain:          c.Domain,
+			Sans:            c.Sans,
+			CertContent:     c.CertContent,
+			KeyContent:      c.KeyContent,
+			Issuer:          c.Issuer,
+			NotBefore:       notBefore,
+			NotAfter:        notAfter,
+			Status:          c.Status.String(),
+			AutoRenew:       c.AutoRenew,
+			RenewalDays:     c.RenewalDays,
+			LastError:       c.LastError,
+			LastRenewedAt:   lastRenewed,
+			KeyType:         c.KeyType.String(),
+			CAName:          caName,
+			DNSProviderName: dnsProviderName,
+			CreatedAt:       c.CreatedAt.Format(time.DateTime),
+			UpdatedAt:       c.UpdatedAt.Format(time.DateTime),
 		}
 	}
 	return items, nil

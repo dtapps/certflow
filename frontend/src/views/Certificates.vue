@@ -7,6 +7,7 @@ import {
   NButton,
   NDataTable,
   NTag,
+  NSwitch,
   NModal,
   NSpin,
   NEmpty,
@@ -29,6 +30,7 @@ const searchQuery = ref('')
 const statusFilter = ref<string | null>('all')
 const certificates = ref<CertificateListItem[]>([])
 const isLoading = ref(false)
+const switchingId = ref<number | null>(null)
 
 const statusOptions = [
   { label: t('certs.allStatus'), value: 'all' },
@@ -97,6 +99,22 @@ const handleRetry = (cert: CertificateListItem) => {
   }
 }
 
+const toggleAutoRenew = async (cert: CertificateListItem, val: boolean) => {
+  if (switchingId.value !== null) return
+  switchingId.value = cert.id
+  const prev = cert.auto_renew
+  cert.auto_renew = val
+  try {
+    await CertificateService.UpdateCertificateSettings(cert.id, val, cert.renewal_days)
+    showMessage(val ? t('certs.autoRenewOn') : t('certs.autoRenewOff'), 'success')
+  } catch (e) {
+    cert.auto_renew = prev
+    showMessage(t('certs.updateFailed') + ' ' + e, 'error')
+  } finally {
+    switchingId.value = null
+  }
+}
+
 const columns: DataTableColumns<CertificateListItem> = [
   {
     title: t('certs.domain'),
@@ -143,6 +161,13 @@ const columns: DataTableColumns<CertificateListItem> = [
     key: 'issuer',
   },
   {
+    title: t('cert.caName'),
+    key: 'ca_name',
+    render(row) {
+      return row.ca_name ? h('span', row.ca_name) : h('span', { class: 'opacity-50' }, '—')
+    },
+  },
+  {
     title: t('certs.status'),
     key: 'status',
     render(row) {
@@ -172,24 +197,19 @@ const columns: DataTableColumns<CertificateListItem> = [
     },
   },
   {
-    title: t('certs.autoRenew'),
-    key: 'auto_renew',
-    render(row) {
-      return row.auto_renew
-        ? h(
-            NTag,
-            { type: 'success', size: 'small', bordered: false },
-            { default: () => t('certs.enabled') },
-          )
-        : h('span', { class: 'opacity-50' }, t('certs.disabled'))
-    },
-  },
-  {
     title: t('certs.actions'),
     key: 'actions',
     align: 'right',
     render(row) {
       return h('div', { class: 'flex items-center justify-end gap-2' }, [
+        h('div', { onClick: (e: MouseEvent) => e.stopPropagation() }, [
+          h(NSwitch, {
+            value: row.auto_renew,
+            size: 'small',
+            loading: switchingId.value === row.id,
+            'onUpdate:value': (val: boolean) => toggleAutoRenew(row, val),
+          }),
+        ]),
         row.status === 'pending'
           ? h(
               NButton,
