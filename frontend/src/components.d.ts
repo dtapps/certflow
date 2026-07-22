@@ -16,6 +16,7 @@ declare module 'vue' {
     LoginDialog: typeof import('./components/LoginDialog.vue')['default']
     MonitorTrendChart: typeof import('./components/MonitorTrendChart.vue')['default']
     NCard: typeof import('naive-ui')['NCard']
+    NCheckbox: typeof import('naive-ui')['NCheckbox']
     NInputNumber: typeof import('naive-ui')['NInputNumber']
     NSelect: typeof import('naive-ui')['NSelect']
     NSpin: typeof import('naive-ui')['NSpin']

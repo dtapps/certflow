@@ -196,6 +196,76 @@ const toggleExpand = (id: number) => {
   expandedId.value = expandedId.value === id ? null : id
 }
 
+// ===== 批量选择 =====
+const selectedIds = ref<number[]>([])
+const isSelected = (id: number) => selectedIds.value.includes(id)
+const isAllSelected = computed(
+  () =>
+    filteredDomains.value.length > 0 &&
+    filteredDomains.value.every((d) => selectedIds.value.includes(d.id)),
+)
+const isIndeterminate = computed(() => {
+  const n = filteredDomains.value.filter((d) => selectedIds.value.includes(d.id)).length
+  return n > 0 && n < filteredDomains.value.length
+})
+const toggleSelect = (id: number) => {
+  const i = selectedIds.value.indexOf(id)
+  if (i >= 0) selectedIds.value.splice(i, 1)
+  else selectedIds.value.push(id)
+}
+const toggleSelectAll = () => {
+  selectedIds.value = isAllSelected.value ? [] : filteredDomains.value.map((d) => d.id)
+}
+const clearSelection = () => {
+  selectedIds.value = []
+}
+
+// ===== 批量操作 =====
+const batchBusy = ref(false)
+const showBatchDeleteModal = ref(false)
+
+const runBatch = async (fn: (id: number) => Promise<any>, successMsg: string) => {
+  if (selectedIds.value.length === 0) return
+  batchBusy.value = true
+  try {
+    await Promise.all(selectedIds.value.map(fn))
+    await loadDomains()
+    showMessage(successMsg, 'success')
+  } catch (e) {
+    showMessage(t('monitor.batchFailed') + ' ' + String(e), 'error')
+  } finally {
+    batchBusy.value = false
+    clearSelection()
+  }
+}
+const batchEnable = (enabled: boolean) =>
+  runBatch(
+    (id) => MonitorService.SetActive(id, enabled),
+    enabled
+      ? t('monitor.batchEnabled', { count: selectedIds.value.length })
+      : t('monitor.batchDisabled', { count: selectedIds.value.length }),
+  )
+const batchRefresh = () =>
+  runBatch(
+    (id) => MonitorService.CheckNow(id),
+    t('monitor.batchRefreshed', { count: selectedIds.value.length }),
+  )
+const batchDelete = async () => {
+  if (selectedIds.value.length === 0) return
+  batchBusy.value = true
+  try {
+    await Promise.all(selectedIds.value.map((id) => MonitorService.Delete(id)))
+    await loadDomains()
+    showMessage(t('monitor.batchDeleted', { count: selectedIds.value.length }), 'success')
+    showBatchDeleteModal.value = false
+  } catch (e) {
+    showMessage(t('monitor.batchFailed') + ' ' + String(e), 'error')
+  } finally {
+    batchBusy.value = false
+    clearSelection()
+  }
+}
+
 const searchQuery = ref('')
 const statusFilter = ref('all')
 
@@ -317,6 +387,45 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
             />
           </div>
 
+          <!-- 批量操作栏 -->
+          <div class="flex items-center gap-3 mb-3">
+            <n-checkbox
+              :checked="isAllSelected"
+              :indeterminate="isIndeterminate"
+              @update:checked="toggleSelectAll"
+            >
+              {{ t('monitor.selectAll') }}
+            </n-checkbox>
+            <span v-if="selectedIds.length > 0" class="text-xs opacity-60">
+              {{ t('monitor.selectedCount', { count: selectedIds.length }) }}
+            </span>
+            <div class="flex-1"></div>
+            <template v-if="selectedIds.length > 0">
+              <n-button size="small" :disabled="batchBusy" @click="batchEnable(true)">
+                {{ t('monitor.batchEnable') }}
+              </n-button>
+              <n-button size="small" :disabled="batchBusy" @click="batchEnable(false)">
+                {{ t('monitor.batchDisable') }}
+              </n-button>
+              <n-button
+                size="small"
+                :loading="batchBusy"
+                :disabled="batchBusy"
+                @click="batchRefresh"
+              >
+                {{ t('monitor.batchRefresh') }}
+              </n-button>
+              <n-button
+                size="small"
+                type="error"
+                :disabled="batchBusy"
+                @click="showBatchDeleteModal = true"
+              >
+                {{ t('monitor.batchDelete') }}
+              </n-button>
+            </template>
+          </div>
+
           <n-empty v-if="filteredDomains.length === 0" :description="t('monitor.noMatch')" />
 
           <div v-else class="space-y-3">
@@ -328,6 +437,13 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
+                  <span @click.stop>
+                    <n-checkbox
+                      size="small"
+                      :checked="isSelected(item.id)"
+                      @update:checked="toggleSelect(item.id)"
+                    />
+                  </span>
                   <div
                     class="w-10 h-10 rounded-lg flex items-center justify-center"
                     :class="
@@ -549,11 +665,7 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
                   {{ t('monitor.error') }}: {{ item.last_check_error }}
                 </p>
               </div>
-              <MonitorTrendChart
-                v-if="expandedId === item.id"
-                :domain-id="item.id"
-                @click.stop
-              />
+              <MonitorTrendChart v-if="expandedId === item.id" :domain-id="item.id" @click.stop />
             </div>
           </div>
         </template>
@@ -637,6 +749,18 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
       <template #action>
         <n-button @click="showDeleteModal = false">{{ t('common.cancel') }}</n-button>
         <n-button type="error" @click="handleDelete">{{ t('common.confirm') }}</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 批量删除确认弹窗 -->
+    <n-modal v-model:show="showBatchDeleteModal" preset="dialog" :title="t('monitor.batchDelete')">
+      <p>{{ t('monitor.batchDeleteConfirm', { count: selectedIds.length }) }}</p>
+      <p class="text-xs opacity-60 mt-1">{{ t('monitor.batchDeleteConfirmDesc') }}</p>
+      <template #action>
+        <n-button @click="showBatchDeleteModal = false">{{ t('common.cancel') }}</n-button>
+        <n-button type="error" :loading="batchBusy" @click="batchDelete">{{
+          t('common.confirm')
+        }}</n-button>
       </template>
     </n-modal>
   </div>
