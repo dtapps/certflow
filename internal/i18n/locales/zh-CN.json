@@ -270,6 +270,7 @@
   "log.ca_config_debug": "CA 配置: name={{.Name}}, dir={{.Dir}}, email={{.Email}}",
   "log.ca_email_not_configured": "CA '{{.Name}}' 未配置注册邮箱",
   "log.ca_seed_skip": "已预置过默认 CA，跳过",
+  "log.ca_seed_skip_existing": "内置 CA 已存在，跳过: URL={{.URL}}",
   "log.ca_seed_start": "开始预置默认 CA",
   "log.ca_set_active": "设置 CA 启用状态: ID={{.ID}}, Active={{.Active}}",
   "log.ca_test_connection": "测试 CA 连接: ID={{.ID}}",

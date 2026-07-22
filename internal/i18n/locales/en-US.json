@@ -270,6 +270,7 @@
   "log.ca_config_debug": "CA config: name={{.Name}}, dir={{.Dir}}, email={{.Email}}",
   "log.ca_email_not_configured": "CA '{{.Name}}' has no registered email",
   "log.ca_seed_skip": "Default CAs already seeded, skipping",
+  "log.ca_seed_skip_existing": "Built-in CA already exists, skipping: URL={{.URL}}",
   "log.ca_seed_start": "Seeding default CAs",
   "log.ca_set_active": "Set CA active status: ID={{.ID}}, Active={{.Active}}",
   "log.ca_test_connection": "Testing CA connection: ID={{.ID}}",

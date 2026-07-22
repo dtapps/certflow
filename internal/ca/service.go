@@ -271,7 +271,10 @@ func (s *CAService) SetActive(ctx context.Context, id int, active bool) (*ent.CA
 	return result, nil
 }
 
-// SeedDefaults 插入默认 CA（仅在首次启动时执行一次）
+// SeedDefaults 插入默认 CA（仅在首次启动时执行一次）。
+// 关键：按 directory_url 幂等去重。即便 seeded 标记丢失导致重复调用，
+// 也不会重复插入内置 CA、不会覆盖用户已配置的内置 CA（含 EAB），
+// 从而避免“IsBuiltin 被恢复 / EabKid、EabHmac 被清空”的问题。
 func (s *CAService) SeedDefaults(ctx context.Context) error {
 	logging.Info(i18n.T("log.ca_seed_start"))
 	// 检查 settings 中的 seeded 标记
@@ -319,7 +322,21 @@ func (s *CAService) SeedDefaults(ctx context.Context) error {
 		},
 	}
 
+	// 已存在的 directory_url 集合，重复启动时不重复插入
+	existing, err := s.List(ctx)
+	if err != nil {
+		return err
+	}
+	have := make(map[string]struct{}, len(existing))
+	for _, c := range existing {
+		have[c.DirectoryURL] = struct{}{}
+	}
+
 	for _, input := range defaults {
+		if _, ok := have[input.DirectoryURL]; ok {
+			logging.Debug(i18n.T("log.ca_seed_skip_existing", "URL", input.DirectoryURL))
+			continue
+		}
 		if _, err := s.Create(ctx, input); err != nil {
 			return err
 		}
