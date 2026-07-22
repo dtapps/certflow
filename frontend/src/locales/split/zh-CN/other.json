@@ -902,5 +902,7 @@
   "topbar.search": "搜索证书、CA...",
   "topbar.loadingMore": "加载中...",
   "topbar.noMoreNotifications": "没有更多了",
-  "topbar.scrollForMore": "下滑加载更多"
+  "topbar.scrollForMore": "下滑加载更多",
+  "clipboard.wailsFallback": "Wails 剪贴板不可用，回退到浏览器剪贴板：",
+  "clipboard.copyFailed": "复制失败："
 }

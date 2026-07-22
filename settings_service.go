@@ -33,7 +33,7 @@ func (s *SettingsServiceWrapper) SaveSettings(input settings.Settings) error {
 	// 同步语言设置到后端 i18n
 	i18n.SetLocale(input.Language)
 	if err := s.settingsService.Save(input); err != nil {
-		logging.Error("%s: %v", i18n.T("log.settings_save_failed"), err)
+		logging.Error(i18n.T("log.settings_save_failed", "Error", err))
 		return err
 	}
 	return nil

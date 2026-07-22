@@ -223,6 +223,8 @@
   "certs.subtitle": "管理所有 SSL 证书",
   "certs.title": "证书管理",
   "certs.updateFailed": "更新失败",
+  "clipboard.copyFailed": "复制失败：",
+  "clipboard.wailsFallback": "Wails 剪贴板不可用，回退到浏览器剪贴板：",
   "common.actions": "操作",
   "common.add": "添加",
   "common.apply": "申请证书",

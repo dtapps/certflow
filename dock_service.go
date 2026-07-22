@@ -41,7 +41,7 @@ func (s *DockServiceWrapper) ShowAppIcon() {
 // SetBadge 设置 Dock 徽章
 func (s *DockServiceWrapper) SetBadge(label string) error {
 	if err := s.dockService.SetBadge(label); err != nil {
-		logging.Warn("%s: %v", i18n.T("log.set_badge_failed"), err)
+		logging.Warn(i18n.T("log.set_badge_failed", "Error", err))
 		return err
 	}
 	return nil
@@ -50,7 +50,7 @@ func (s *DockServiceWrapper) SetBadge(label string) error {
 // RemoveBadge 移除 Dock 徽章
 func (s *DockServiceWrapper) RemoveBadge() error {
 	if err := s.dockService.RemoveBadge(); err != nil {
-		logging.Warn("%s: %v", i18n.T("log.remove_badge_failed"), err)
+		logging.Warn(i18n.T("log.remove_badge_failed", "Error", err))
 		return err
 	}
 	return nil

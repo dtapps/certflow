@@ -902,5 +902,7 @@
   "topbar.search": "Search certificates, CA...",
   "topbar.loadingMore": "Loading...",
   "topbar.noMoreNotifications": "No more",
-  "topbar.scrollForMore": "Scroll for more"
+  "topbar.scrollForMore": "Scroll for more",
+  "clipboard.wailsFallback": "Wails clipboard unavailable, falling back to browser clipboard:",
+  "clipboard.copyFailed": "Copy failed:"
 }

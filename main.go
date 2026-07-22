@@ -91,7 +91,7 @@ func main() {
 
 	// 初始化 HTTP 请求日志（独立日志库 httplog.db，仅 DEBUG 级别记录）
 	if err := httplog.Init(dataDir); err != nil {
-		logging.Error(i18n.T("error.httplog_init_failed"), err)
+		logging.Error(i18n.T("error.httplog_init_failed", "Error", err))
 	} else {
 		defer httplog.Close()
 	}

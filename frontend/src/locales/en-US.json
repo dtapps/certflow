@@ -223,6 +223,8 @@
   "certs.subtitle": "Manage all SSL certificates",
   "certs.title": "Certificate Management",
   "certs.updateFailed": "Update failed",
+  "clipboard.copyFailed": "Copy failed:",
+  "clipboard.wailsFallback": "Wails clipboard unavailable, falling back to browser clipboard:",
   "common.actions": "Actions",
   "common.add": "Add",
   "common.apply": "Apply Certificate",
