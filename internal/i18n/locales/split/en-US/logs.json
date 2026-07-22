@@ -258,6 +258,7 @@
   "log.open_url_failed": "Failed to open URL: {{.URL}}, {{.Error}}",
   "log.set_badge_failed": "Failed to set dock badge: {{.Error}}",
   "log.remove_badge_failed": "Failed to remove dock badge: {{.Error}}",
+  "log.clipboard_set": "Clipboard set: text={{.Text}}",
   "log.clipboard_set_failed": "Failed to set clipboard",
   "log.settings_save_failed": "Failed to save settings: {{.Error}}",
   "log.notification_list_failed": "Failed to get notification list: {{.Error}}",

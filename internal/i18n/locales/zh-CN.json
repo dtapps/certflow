@@ -305,6 +305,7 @@
   "log.cert_send_renewed_notification": "发送证书续期成功通知: domain={{.Domain}}",
   "log.cert_send_revoke_notification": "发送证书撤销通知: domain={{.Domain}}",
   "log.check_notification_permission_failed": "检查通知权限失败: {{.Error}}",
+  "log.clipboard_set": "设置剪贴板: text={{.Text}}",
   "log.clipboard_set_failed": "设置剪贴板失败",
   "log.create_acme_client_failed": "创建 ACME 客户端失败: {{.Error}}",
   "log.create_renewal_log_failed": "创建续期日志失败 (证书 {{.ID}}): {{.Error}}",

@@ -23,6 +23,7 @@ import {
 } from 'naive-ui'
 import * as DeployService from '@bindings/cnb.cool/dtapp/certflow/deployservicewrapper'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
+import { copyToClipboard as copyText } from '../utils/clipboard'
 import type {
   DeployTargetListItem,
   DeployLogListItem,
@@ -52,14 +53,12 @@ const certificates = ref<CertificateListItem[]>([])
 // 复制字段标记（用于显示复制成功图标）
 const copiedField = ref('')
 const copyToClipboard = async (text: string, field: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
+  const ok = await copyText(text)
+  if (ok) {
     copiedField.value = field
     setTimeout(() => {
       if (copiedField.value === field) copiedField.value = ''
     }, 2000)
-  } catch (e) {
-    console.error('copy failed', e)
   }
 }
 

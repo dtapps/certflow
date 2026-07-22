@@ -258,6 +258,7 @@
   "log.open_url_failed": "打开 URL 失败: {{.URL}}, {{.Error}}",
   "log.set_badge_failed": "设置 Dock 徽章失败: {{.Error}}",
   "log.remove_badge_failed": "移除 Dock 徽章失败: {{.Error}}",
+  "log.clipboard_set": "设置剪贴板: text={{.Text}}",
   "log.clipboard_set_failed": "设置剪贴板失败",
   "log.settings_save_failed": "保存设置失败: {{.Error}}",
   "log.notification_list_failed": "获取通知列表失败: {{.Error}}",

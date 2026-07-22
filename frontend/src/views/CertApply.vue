@@ -16,8 +16,8 @@ import {
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import * as CAService from '@bindings/cnb.cool/dtapp/certflow/caservicewrapper'
 import * as DNSProviderService from '@bindings/cnb.cool/dtapp/certflow/dnsproviderservicewrapper'
-import * as ClipboardService from '@bindings/cnb.cool/dtapp/certflow/clipboardservicewrapper'
 import * as BrowserService from '@bindings/cnb.cool/dtapp/certflow/browserservicewrapper'
+import { copyToClipboard } from '../utils/clipboard'
 import type { CAListItem, DNSProviderListItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { useActionBarStore } from '../stores/actionBar'
@@ -298,10 +298,6 @@ const submitApply = async () => {
   } finally {
     isSubmitting.value = false
   }
-}
-
-const copyToClipboard = async (text: string) => {
-  await ClipboardService.SetText(text)
 }
 
 const verifyDNSOnline = (record: { name: string; value: string }) => {

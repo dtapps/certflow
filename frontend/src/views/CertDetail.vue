@@ -17,6 +17,7 @@ import {
 } from 'naive-ui'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
 import * as SchedulerService from '@bindings/cnb.cool/dtapp/certflow/schedulerservicewrapper'
+import { copyToClipboard as copyText } from '../utils/clipboard'
 import type { CertificateListItem, RenewalLogItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { getStatusBadge, getDaysLeft, getDaysLeftClass } from '../utils/certificate'
@@ -128,11 +129,13 @@ const saveSettings = async () => {
 }
 
 const copyToClipboard = async (text: string, field: string) => {
-  await navigator.clipboard.writeText(text)
-  copiedField.value = field
-  setTimeout(() => {
-    copiedField.value = ''
-  }, 2000)
+  const ok = await copyText(text)
+  if (ok) {
+    copiedField.value = field
+    setTimeout(() => {
+      copiedField.value = ''
+    }, 2000)
+  }
 }
 
 const loadCertDetails = async () => {

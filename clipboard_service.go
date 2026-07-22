@@ -26,6 +26,7 @@ func (s *ClipboardServiceWrapper) SetApp(app *application.App) {
 
 // SetText 设置剪贴板文本
 func (s *ClipboardServiceWrapper) SetText(text string) bool {
+	logging.Debug("%s", i18n.T("log.clipboard_set", "text", text))
 	if !s.app.Clipboard.SetText(text) {
 		logging.Warn("%s", i18n.T("log.clipboard_set_failed"))
 		return false

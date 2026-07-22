@@ -305,6 +305,7 @@
   "log.cert_send_renewed_notification": "Sending certificate renewed notification: domain={{.Domain}}",
   "log.cert_send_revoke_notification": "Sending certificate revoked notification: domain={{.Domain}}",
   "log.check_notification_permission_failed": "Failed to check notification permission: {{.Error}}",
+  "log.clipboard_set": "Clipboard set: text={{.Text}}",
   "log.clipboard_set_failed": "Failed to set clipboard",
   "log.create_acme_client_failed": "Failed to create ACME client: {{.Error}}",
   "log.create_renewal_log_failed": "Failed to create renewal log (cert {{.ID}}): {{.Error}}",
