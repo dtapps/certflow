@@ -106,6 +106,11 @@ export interface Settings {
     "renew_interval": number;
 
     /**
+     * 监控检查历史保留天数（超期自动清理）
+     */
+    "monitor_history_days": number;
+
+    /**
      * 数据目录
      */
     "data_dir": string;

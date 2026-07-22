@@ -3,6 +3,7 @@
 
 export type {
     CreateInput,
+    MonitorCheckLogItem,
     MonitoredDomainItem,
     UpdateInput
 } from "./models.js";

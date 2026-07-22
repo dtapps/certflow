@@ -7,6 +7,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // ID filters vertices based on their ID field.
@@ -1272,6 +1273,29 @@ func UpdatedAtLT(v time.Time) predicate.MonitoredDomain {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.MonitoredDomain {
 	return predicate.MonitoredDomain(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasCheckLogs applies the HasEdge predicate on the "check_logs" edge.
+func HasCheckLogs() predicate.MonitoredDomain {
+	return predicate.MonitoredDomain(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CheckLogsTable, CheckLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCheckLogsWith applies the HasEdge predicate on the "check_logs" edge with a given conditions (other predicates).
+func HasCheckLogsWith(preds ...predicate.MonitorCheckLog) predicate.MonitoredDomain {
+	return predicate.MonitoredDomain(func(s *sql.Selector) {
+		step := newCheckLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

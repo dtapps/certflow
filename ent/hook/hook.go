@@ -105,6 +105,18 @@ func (f DeployTargetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeployTargetMutation", m)
 }
 
+// The MonitorCheckLogFunc type is an adapter to allow the use of ordinary
+// function as MonitorCheckLog mutator.
+type MonitorCheckLogFunc func(context.Context, *ent.MonitorCheckLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MonitorCheckLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MonitorCheckLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MonitorCheckLogMutation", m)
+}
+
 // The MonitoredDomainFunc type is an adapter to allow the use of ordinary
 // function as MonitoredDomain mutator.
 type MonitoredDomainFunc func(context.Context, *ent.MonitoredDomainMutation) (ent.Value, error)

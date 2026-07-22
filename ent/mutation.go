@@ -17,6 +17,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/passkeycredential"
@@ -46,6 +47,7 @@ const (
 	TypeDeployCredential  = "DeployCredential"
 	TypeDeployLog         = "DeployLog"
 	TypeDeployTarget      = "DeployTarget"
+	TypeMonitorCheckLog   = "MonitorCheckLog"
 	TypeMonitoredDomain   = "MonitoredDomain"
 	TypeNotification      = "Notification"
 	TypePasskeyCredential = "PasskeyCredential"
@@ -7995,6 +7997,853 @@ func (m *DeployTargetMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown DeployTarget edge %s", name)
 }
 
+// MonitorCheckLogMutation represents an operation that mutates the MonitorCheckLog nodes in the graph.
+type MonitorCheckLogMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int
+	checked_at             *time.Time
+	status                 *monitorchecklog.Status
+	cert_remaining_days    *int
+	addcert_remaining_days *int
+	response_time_ms       *int
+	addresponse_time_ms    *int
+	http_status_code       *int
+	addhttp_status_code    *int
+	last_check_error       *string
+	clearedFields          map[string]struct{}
+	domain                 *int
+	cleareddomain          bool
+	done                   bool
+	oldValue               func(context.Context) (*MonitorCheckLog, error)
+	predicates             []predicate.MonitorCheckLog
+}
+
+var _ ent.Mutation = (*MonitorCheckLogMutation)(nil)
+
+// monitorchecklogOption allows management of the mutation configuration using functional options.
+type monitorchecklogOption func(*MonitorCheckLogMutation)
+
+// newMonitorCheckLogMutation creates new mutation for the MonitorCheckLog entity.
+func newMonitorCheckLogMutation(c config, op Op, opts ...monitorchecklogOption) *MonitorCheckLogMutation {
+	m := &MonitorCheckLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMonitorCheckLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMonitorCheckLogID sets the ID field of the mutation.
+func withMonitorCheckLogID(id int) monitorchecklogOption {
+	return func(m *MonitorCheckLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MonitorCheckLog
+		)
+		m.oldValue = func(ctx context.Context) (*MonitorCheckLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MonitorCheckLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMonitorCheckLog sets the old MonitorCheckLog of the mutation.
+func withMonitorCheckLog(node *MonitorCheckLog) monitorchecklogOption {
+	return func(m *MonitorCheckLogMutation) {
+		m.oldValue = func(context.Context) (*MonitorCheckLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MonitorCheckLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MonitorCheckLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MonitorCheckLogMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MonitorCheckLogMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MonitorCheckLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCheckedAt sets the "checked_at" field.
+func (m *MonitorCheckLogMutation) SetCheckedAt(t time.Time) {
+	m.checked_at = &t
+}
+
+// CheckedAt returns the value of the "checked_at" field in the mutation.
+func (m *MonitorCheckLogMutation) CheckedAt() (r time.Time, exists bool) {
+	v := m.checked_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCheckedAt returns the old "checked_at" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldCheckedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCheckedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCheckedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCheckedAt: %w", err)
+	}
+	return oldValue.CheckedAt, nil
+}
+
+// ResetCheckedAt resets all changes to the "checked_at" field.
+func (m *MonitorCheckLogMutation) ResetCheckedAt() {
+	m.checked_at = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *MonitorCheckLogMutation) SetStatus(value monitorchecklog.Status) {
+	m.status = &value
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *MonitorCheckLogMutation) Status() (r monitorchecklog.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldStatus(ctx context.Context) (v monitorchecklog.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *MonitorCheckLogMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetCertRemainingDays sets the "cert_remaining_days" field.
+func (m *MonitorCheckLogMutation) SetCertRemainingDays(i int) {
+	m.cert_remaining_days = &i
+	m.addcert_remaining_days = nil
+}
+
+// CertRemainingDays returns the value of the "cert_remaining_days" field in the mutation.
+func (m *MonitorCheckLogMutation) CertRemainingDays() (r int, exists bool) {
+	v := m.cert_remaining_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertRemainingDays returns the old "cert_remaining_days" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldCertRemainingDays(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertRemainingDays is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertRemainingDays requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertRemainingDays: %w", err)
+	}
+	return oldValue.CertRemainingDays, nil
+}
+
+// AddCertRemainingDays adds i to the "cert_remaining_days" field.
+func (m *MonitorCheckLogMutation) AddCertRemainingDays(i int) {
+	if m.addcert_remaining_days != nil {
+		*m.addcert_remaining_days += i
+	} else {
+		m.addcert_remaining_days = &i
+	}
+}
+
+// AddedCertRemainingDays returns the value that was added to the "cert_remaining_days" field in this mutation.
+func (m *MonitorCheckLogMutation) AddedCertRemainingDays() (r int, exists bool) {
+	v := m.addcert_remaining_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCertRemainingDays clears the value of the "cert_remaining_days" field.
+func (m *MonitorCheckLogMutation) ClearCertRemainingDays() {
+	m.cert_remaining_days = nil
+	m.addcert_remaining_days = nil
+	m.clearedFields[monitorchecklog.FieldCertRemainingDays] = struct{}{}
+}
+
+// CertRemainingDaysCleared returns if the "cert_remaining_days" field was cleared in this mutation.
+func (m *MonitorCheckLogMutation) CertRemainingDaysCleared() bool {
+	_, ok := m.clearedFields[monitorchecklog.FieldCertRemainingDays]
+	return ok
+}
+
+// ResetCertRemainingDays resets all changes to the "cert_remaining_days" field.
+func (m *MonitorCheckLogMutation) ResetCertRemainingDays() {
+	m.cert_remaining_days = nil
+	m.addcert_remaining_days = nil
+	delete(m.clearedFields, monitorchecklog.FieldCertRemainingDays)
+}
+
+// SetResponseTimeMs sets the "response_time_ms" field.
+func (m *MonitorCheckLogMutation) SetResponseTimeMs(i int) {
+	m.response_time_ms = &i
+	m.addresponse_time_ms = nil
+}
+
+// ResponseTimeMs returns the value of the "response_time_ms" field in the mutation.
+func (m *MonitorCheckLogMutation) ResponseTimeMs() (r int, exists bool) {
+	v := m.response_time_ms
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResponseTimeMs returns the old "response_time_ms" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldResponseTimeMs(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResponseTimeMs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResponseTimeMs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResponseTimeMs: %w", err)
+	}
+	return oldValue.ResponseTimeMs, nil
+}
+
+// AddResponseTimeMs adds i to the "response_time_ms" field.
+func (m *MonitorCheckLogMutation) AddResponseTimeMs(i int) {
+	if m.addresponse_time_ms != nil {
+		*m.addresponse_time_ms += i
+	} else {
+		m.addresponse_time_ms = &i
+	}
+}
+
+// AddedResponseTimeMs returns the value that was added to the "response_time_ms" field in this mutation.
+func (m *MonitorCheckLogMutation) AddedResponseTimeMs() (r int, exists bool) {
+	v := m.addresponse_time_ms
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearResponseTimeMs clears the value of the "response_time_ms" field.
+func (m *MonitorCheckLogMutation) ClearResponseTimeMs() {
+	m.response_time_ms = nil
+	m.addresponse_time_ms = nil
+	m.clearedFields[monitorchecklog.FieldResponseTimeMs] = struct{}{}
+}
+
+// ResponseTimeMsCleared returns if the "response_time_ms" field was cleared in this mutation.
+func (m *MonitorCheckLogMutation) ResponseTimeMsCleared() bool {
+	_, ok := m.clearedFields[monitorchecklog.FieldResponseTimeMs]
+	return ok
+}
+
+// ResetResponseTimeMs resets all changes to the "response_time_ms" field.
+func (m *MonitorCheckLogMutation) ResetResponseTimeMs() {
+	m.response_time_ms = nil
+	m.addresponse_time_ms = nil
+	delete(m.clearedFields, monitorchecklog.FieldResponseTimeMs)
+}
+
+// SetHTTPStatusCode sets the "http_status_code" field.
+func (m *MonitorCheckLogMutation) SetHTTPStatusCode(i int) {
+	m.http_status_code = &i
+	m.addhttp_status_code = nil
+}
+
+// HTTPStatusCode returns the value of the "http_status_code" field in the mutation.
+func (m *MonitorCheckLogMutation) HTTPStatusCode() (r int, exists bool) {
+	v := m.http_status_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHTTPStatusCode returns the old "http_status_code" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldHTTPStatusCode(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHTTPStatusCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHTTPStatusCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHTTPStatusCode: %w", err)
+	}
+	return oldValue.HTTPStatusCode, nil
+}
+
+// AddHTTPStatusCode adds i to the "http_status_code" field.
+func (m *MonitorCheckLogMutation) AddHTTPStatusCode(i int) {
+	if m.addhttp_status_code != nil {
+		*m.addhttp_status_code += i
+	} else {
+		m.addhttp_status_code = &i
+	}
+}
+
+// AddedHTTPStatusCode returns the value that was added to the "http_status_code" field in this mutation.
+func (m *MonitorCheckLogMutation) AddedHTTPStatusCode() (r int, exists bool) {
+	v := m.addhttp_status_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearHTTPStatusCode clears the value of the "http_status_code" field.
+func (m *MonitorCheckLogMutation) ClearHTTPStatusCode() {
+	m.http_status_code = nil
+	m.addhttp_status_code = nil
+	m.clearedFields[monitorchecklog.FieldHTTPStatusCode] = struct{}{}
+}
+
+// HTTPStatusCodeCleared returns if the "http_status_code" field was cleared in this mutation.
+func (m *MonitorCheckLogMutation) HTTPStatusCodeCleared() bool {
+	_, ok := m.clearedFields[monitorchecklog.FieldHTTPStatusCode]
+	return ok
+}
+
+// ResetHTTPStatusCode resets all changes to the "http_status_code" field.
+func (m *MonitorCheckLogMutation) ResetHTTPStatusCode() {
+	m.http_status_code = nil
+	m.addhttp_status_code = nil
+	delete(m.clearedFields, monitorchecklog.FieldHTTPStatusCode)
+}
+
+// SetLastCheckError sets the "last_check_error" field.
+func (m *MonitorCheckLogMutation) SetLastCheckError(s string) {
+	m.last_check_error = &s
+}
+
+// LastCheckError returns the value of the "last_check_error" field in the mutation.
+func (m *MonitorCheckLogMutation) LastCheckError() (r string, exists bool) {
+	v := m.last_check_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastCheckError returns the old "last_check_error" field's value of the MonitorCheckLog entity.
+// If the MonitorCheckLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MonitorCheckLogMutation) OldLastCheckError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastCheckError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastCheckError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastCheckError: %w", err)
+	}
+	return oldValue.LastCheckError, nil
+}
+
+// ClearLastCheckError clears the value of the "last_check_error" field.
+func (m *MonitorCheckLogMutation) ClearLastCheckError() {
+	m.last_check_error = nil
+	m.clearedFields[monitorchecklog.FieldLastCheckError] = struct{}{}
+}
+
+// LastCheckErrorCleared returns if the "last_check_error" field was cleared in this mutation.
+func (m *MonitorCheckLogMutation) LastCheckErrorCleared() bool {
+	_, ok := m.clearedFields[monitorchecklog.FieldLastCheckError]
+	return ok
+}
+
+// ResetLastCheckError resets all changes to the "last_check_error" field.
+func (m *MonitorCheckLogMutation) ResetLastCheckError() {
+	m.last_check_error = nil
+	delete(m.clearedFields, monitorchecklog.FieldLastCheckError)
+}
+
+// SetDomainID sets the "domain" edge to the MonitoredDomain entity by id.
+func (m *MonitorCheckLogMutation) SetDomainID(id int) {
+	m.domain = &id
+}
+
+// ClearDomain clears the "domain" edge to the MonitoredDomain entity.
+func (m *MonitorCheckLogMutation) ClearDomain() {
+	m.cleareddomain = true
+}
+
+// DomainCleared reports if the "domain" edge to the MonitoredDomain entity was cleared.
+func (m *MonitorCheckLogMutation) DomainCleared() bool {
+	return m.cleareddomain
+}
+
+// DomainID returns the "domain" edge ID in the mutation.
+func (m *MonitorCheckLogMutation) DomainID() (id int, exists bool) {
+	if m.domain != nil {
+		return *m.domain, true
+	}
+	return
+}
+
+// DomainIDs returns the "domain" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DomainID instead. It exists only for internal usage by the builders.
+func (m *MonitorCheckLogMutation) DomainIDs() (ids []int) {
+	if id := m.domain; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDomain resets all changes to the "domain" edge.
+func (m *MonitorCheckLogMutation) ResetDomain() {
+	m.domain = nil
+	m.cleareddomain = false
+}
+
+// Where appends a list predicates to the MonitorCheckLogMutation builder.
+func (m *MonitorCheckLogMutation) Where(ps ...predicate.MonitorCheckLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MonitorCheckLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MonitorCheckLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MonitorCheckLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MonitorCheckLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MonitorCheckLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MonitorCheckLog).
+func (m *MonitorCheckLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MonitorCheckLogMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.checked_at != nil {
+		fields = append(fields, monitorchecklog.FieldCheckedAt)
+	}
+	if m.status != nil {
+		fields = append(fields, monitorchecklog.FieldStatus)
+	}
+	if m.cert_remaining_days != nil {
+		fields = append(fields, monitorchecklog.FieldCertRemainingDays)
+	}
+	if m.response_time_ms != nil {
+		fields = append(fields, monitorchecklog.FieldResponseTimeMs)
+	}
+	if m.http_status_code != nil {
+		fields = append(fields, monitorchecklog.FieldHTTPStatusCode)
+	}
+	if m.last_check_error != nil {
+		fields = append(fields, monitorchecklog.FieldLastCheckError)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MonitorCheckLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case monitorchecklog.FieldCheckedAt:
+		return m.CheckedAt()
+	case monitorchecklog.FieldStatus:
+		return m.Status()
+	case monitorchecklog.FieldCertRemainingDays:
+		return m.CertRemainingDays()
+	case monitorchecklog.FieldResponseTimeMs:
+		return m.ResponseTimeMs()
+	case monitorchecklog.FieldHTTPStatusCode:
+		return m.HTTPStatusCode()
+	case monitorchecklog.FieldLastCheckError:
+		return m.LastCheckError()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MonitorCheckLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case monitorchecklog.FieldCheckedAt:
+		return m.OldCheckedAt(ctx)
+	case monitorchecklog.FieldStatus:
+		return m.OldStatus(ctx)
+	case monitorchecklog.FieldCertRemainingDays:
+		return m.OldCertRemainingDays(ctx)
+	case monitorchecklog.FieldResponseTimeMs:
+		return m.OldResponseTimeMs(ctx)
+	case monitorchecklog.FieldHTTPStatusCode:
+		return m.OldHTTPStatusCode(ctx)
+	case monitorchecklog.FieldLastCheckError:
+		return m.OldLastCheckError(ctx)
+	}
+	return nil, fmt.Errorf("unknown MonitorCheckLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MonitorCheckLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case monitorchecklog.FieldCheckedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCheckedAt(v)
+		return nil
+	case monitorchecklog.FieldStatus:
+		v, ok := value.(monitorchecklog.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case monitorchecklog.FieldCertRemainingDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertRemainingDays(v)
+		return nil
+	case monitorchecklog.FieldResponseTimeMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResponseTimeMs(v)
+		return nil
+	case monitorchecklog.FieldHTTPStatusCode:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHTTPStatusCode(v)
+		return nil
+	case monitorchecklog.FieldLastCheckError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastCheckError(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MonitorCheckLogMutation) AddedFields() []string {
+	var fields []string
+	if m.addcert_remaining_days != nil {
+		fields = append(fields, monitorchecklog.FieldCertRemainingDays)
+	}
+	if m.addresponse_time_ms != nil {
+		fields = append(fields, monitorchecklog.FieldResponseTimeMs)
+	}
+	if m.addhttp_status_code != nil {
+		fields = append(fields, monitorchecklog.FieldHTTPStatusCode)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MonitorCheckLogMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case monitorchecklog.FieldCertRemainingDays:
+		return m.AddedCertRemainingDays()
+	case monitorchecklog.FieldResponseTimeMs:
+		return m.AddedResponseTimeMs()
+	case monitorchecklog.FieldHTTPStatusCode:
+		return m.AddedHTTPStatusCode()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MonitorCheckLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case monitorchecklog.FieldCertRemainingDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCertRemainingDays(v)
+		return nil
+	case monitorchecklog.FieldResponseTimeMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddResponseTimeMs(v)
+		return nil
+	case monitorchecklog.FieldHTTPStatusCode:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHTTPStatusCode(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MonitorCheckLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(monitorchecklog.FieldCertRemainingDays) {
+		fields = append(fields, monitorchecklog.FieldCertRemainingDays)
+	}
+	if m.FieldCleared(monitorchecklog.FieldResponseTimeMs) {
+		fields = append(fields, monitorchecklog.FieldResponseTimeMs)
+	}
+	if m.FieldCleared(monitorchecklog.FieldHTTPStatusCode) {
+		fields = append(fields, monitorchecklog.FieldHTTPStatusCode)
+	}
+	if m.FieldCleared(monitorchecklog.FieldLastCheckError) {
+		fields = append(fields, monitorchecklog.FieldLastCheckError)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MonitorCheckLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MonitorCheckLogMutation) ClearField(name string) error {
+	switch name {
+	case monitorchecklog.FieldCertRemainingDays:
+		m.ClearCertRemainingDays()
+		return nil
+	case monitorchecklog.FieldResponseTimeMs:
+		m.ClearResponseTimeMs()
+		return nil
+	case monitorchecklog.FieldHTTPStatusCode:
+		m.ClearHTTPStatusCode()
+		return nil
+	case monitorchecklog.FieldLastCheckError:
+		m.ClearLastCheckError()
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MonitorCheckLogMutation) ResetField(name string) error {
+	switch name {
+	case monitorchecklog.FieldCheckedAt:
+		m.ResetCheckedAt()
+		return nil
+	case monitorchecklog.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case monitorchecklog.FieldCertRemainingDays:
+		m.ResetCertRemainingDays()
+		return nil
+	case monitorchecklog.FieldResponseTimeMs:
+		m.ResetResponseTimeMs()
+		return nil
+	case monitorchecklog.FieldHTTPStatusCode:
+		m.ResetHTTPStatusCode()
+		return nil
+	case monitorchecklog.FieldLastCheckError:
+		m.ResetLastCheckError()
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MonitorCheckLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.domain != nil {
+		edges = append(edges, monitorchecklog.EdgeDomain)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MonitorCheckLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case monitorchecklog.EdgeDomain:
+		if id := m.domain; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MonitorCheckLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MonitorCheckLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MonitorCheckLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareddomain {
+		edges = append(edges, monitorchecklog.EdgeDomain)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MonitorCheckLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case monitorchecklog.EdgeDomain:
+		return m.cleareddomain
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MonitorCheckLogMutation) ClearEdge(name string) error {
+	switch name {
+	case monitorchecklog.EdgeDomain:
+		m.ClearDomain()
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MonitorCheckLogMutation) ResetEdge(name string) error {
+	switch name {
+	case monitorchecklog.EdgeDomain:
+		m.ResetDomain()
+		return nil
+	}
+	return fmt.Errorf("unknown MonitorCheckLog edge %s", name)
+}
+
 // MonitoredDomainMutation represents an operation that mutates the MonitoredDomain nodes in the graph.
 type MonitoredDomainMutation struct {
 	config
@@ -8032,6 +8881,9 @@ type MonitoredDomainMutation struct {
 	created_at              *time.Time
 	updated_at              *time.Time
 	clearedFields           map[string]struct{}
+	check_logs              map[int]struct{}
+	removedcheck_logs       map[int]struct{}
+	clearedcheck_logs       bool
 	done                    bool
 	oldValue                func(context.Context) (*MonitoredDomain, error)
 	predicates              []predicate.MonitoredDomain
@@ -9242,6 +10094,60 @@ func (m *MonitoredDomainMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// AddCheckLogIDs adds the "check_logs" edge to the MonitorCheckLog entity by ids.
+func (m *MonitoredDomainMutation) AddCheckLogIDs(ids ...int) {
+	if m.check_logs == nil {
+		m.check_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.check_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCheckLogs clears the "check_logs" edge to the MonitorCheckLog entity.
+func (m *MonitoredDomainMutation) ClearCheckLogs() {
+	m.clearedcheck_logs = true
+}
+
+// CheckLogsCleared reports if the "check_logs" edge to the MonitorCheckLog entity was cleared.
+func (m *MonitoredDomainMutation) CheckLogsCleared() bool {
+	return m.clearedcheck_logs
+}
+
+// RemoveCheckLogIDs removes the "check_logs" edge to the MonitorCheckLog entity by IDs.
+func (m *MonitoredDomainMutation) RemoveCheckLogIDs(ids ...int) {
+	if m.removedcheck_logs == nil {
+		m.removedcheck_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.check_logs, ids[i])
+		m.removedcheck_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCheckLogs returns the removed IDs of the "check_logs" edge to the MonitorCheckLog entity.
+func (m *MonitoredDomainMutation) RemovedCheckLogsIDs() (ids []int) {
+	for id := range m.removedcheck_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CheckLogsIDs returns the "check_logs" edge IDs in the mutation.
+func (m *MonitoredDomainMutation) CheckLogsIDs() (ids []int) {
+	for id := range m.check_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCheckLogs resets all changes to the "check_logs" edge.
+func (m *MonitoredDomainMutation) ResetCheckLogs() {
+	m.check_logs = nil
+	m.clearedcheck_logs = false
+	m.removedcheck_logs = nil
+}
+
 // Where appends a list predicates to the MonitoredDomainMutation builder.
 func (m *MonitoredDomainMutation) Where(ps ...predicate.MonitoredDomain) {
 	m.predicates = append(m.predicates, ps...)
@@ -9893,49 +10799,85 @@ func (m *MonitoredDomainMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MonitoredDomainMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.check_logs != nil {
+		edges = append(edges, monitoreddomain.EdgeCheckLogs)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *MonitoredDomainMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case monitoreddomain.EdgeCheckLogs:
+		ids := make([]ent.Value, 0, len(m.check_logs))
+		for id := range m.check_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MonitoredDomainMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedcheck_logs != nil {
+		edges = append(edges, monitoreddomain.EdgeCheckLogs)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *MonitoredDomainMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case monitoreddomain.EdgeCheckLogs:
+		ids := make([]ent.Value, 0, len(m.removedcheck_logs))
+		for id := range m.removedcheck_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MonitoredDomainMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcheck_logs {
+		edges = append(edges, monitoreddomain.EdgeCheckLogs)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *MonitoredDomainMutation) EdgeCleared(name string) bool {
+	switch name {
+	case monitoreddomain.EdgeCheckLogs:
+		return m.clearedcheck_logs
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *MonitoredDomainMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown MonitoredDomain unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *MonitoredDomainMutation) ResetEdge(name string) error {
+	switch name {
+	case monitoreddomain.EdgeCheckLogs:
+		m.ResetCheckLogs()
+		return nil
+	}
 	return fmt.Errorf("unknown MonitoredDomain edge %s", name)
 }
 

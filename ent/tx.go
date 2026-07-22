@@ -28,6 +28,8 @@ type Tx struct {
 	DeployLog *DeployLogClient
 	// DeployTarget is the client for interacting with the DeployTarget builders.
 	DeployTarget *DeployTargetClient
+	// MonitorCheckLog is the client for interacting with the MonitorCheckLog builders.
+	MonitorCheckLog *MonitorCheckLogClient
 	// MonitoredDomain is the client for interacting with the MonitoredDomain builders.
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
@@ -179,6 +181,7 @@ func (tx *Tx) init() {
 	tx.DeployCredential = NewDeployCredentialClient(tx.config)
 	tx.DeployLog = NewDeployLogClient(tx.config)
 	tx.DeployTarget = NewDeployTargetClient(tx.config)
+	tx.MonitorCheckLog = NewMonitorCheckLogClient(tx.config)
 	tx.MonitoredDomain = NewMonitoredDomainClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.PasskeyCredential = NewPasskeyCredentialClient(tx.config)

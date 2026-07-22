@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -17,53 +16,54 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
-// MonitoredDomainQuery is the builder for querying MonitoredDomain entities.
-type MonitoredDomainQuery struct {
+// MonitorCheckLogQuery is the builder for querying MonitorCheckLog entities.
+type MonitorCheckLogQuery struct {
 	config
-	ctx           *QueryContext
-	order         []monitoreddomain.OrderOption
-	inters        []Interceptor
-	predicates    []predicate.MonitoredDomain
-	withCheckLogs *MonitorCheckLogQuery
+	ctx        *QueryContext
+	order      []monitorchecklog.OrderOption
+	inters     []Interceptor
+	predicates []predicate.MonitorCheckLog
+	withDomain *MonitoredDomainQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the MonitoredDomainQuery builder.
-func (_q *MonitoredDomainQuery) Where(ps ...predicate.MonitoredDomain) *MonitoredDomainQuery {
+// Where adds a new predicate for the MonitorCheckLogQuery builder.
+func (_q *MonitorCheckLogQuery) Where(ps ...predicate.MonitorCheckLog) *MonitorCheckLogQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *MonitoredDomainQuery) Limit(limit int) *MonitoredDomainQuery {
+func (_q *MonitorCheckLogQuery) Limit(limit int) *MonitorCheckLogQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *MonitoredDomainQuery) Offset(offset int) *MonitoredDomainQuery {
+func (_q *MonitorCheckLogQuery) Offset(offset int) *MonitorCheckLogQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *MonitoredDomainQuery) Unique(unique bool) *MonitoredDomainQuery {
+func (_q *MonitorCheckLogQuery) Unique(unique bool) *MonitorCheckLogQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *MonitoredDomainQuery) Order(o ...monitoreddomain.OrderOption) *MonitoredDomainQuery {
+func (_q *MonitorCheckLogQuery) Order(o ...monitorchecklog.OrderOption) *MonitorCheckLogQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryCheckLogs chains the current query on the "check_logs" edge.
-func (_q *MonitoredDomainQuery) QueryCheckLogs() *MonitorCheckLogQuery {
-	query := (&MonitorCheckLogClient{config: _q.config}).Query()
+// QueryDomain chains the current query on the "domain" edge.
+func (_q *MonitorCheckLogQuery) QueryDomain() *MonitoredDomainQuery {
+	query := (&MonitoredDomainClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -73,9 +73,9 @@ func (_q *MonitoredDomainQuery) QueryCheckLogs() *MonitorCheckLogQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(monitoreddomain.Table, monitoreddomain.FieldID, selector),
-			sqlgraph.To(monitorchecklog.Table, monitorchecklog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, monitoreddomain.CheckLogsTable, monitoreddomain.CheckLogsColumn),
+			sqlgraph.From(monitorchecklog.Table, monitorchecklog.FieldID, selector),
+			sqlgraph.To(monitoreddomain.Table, monitoreddomain.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, monitorchecklog.DomainTable, monitorchecklog.DomainColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -83,21 +83,21 @@ func (_q *MonitoredDomainQuery) QueryCheckLogs() *MonitorCheckLogQuery {
 	return query
 }
 
-// First returns the first MonitoredDomain entity from the query.
-// Returns a *NotFoundError when no MonitoredDomain was found.
-func (_q *MonitoredDomainQuery) First(ctx context.Context) (*MonitoredDomain, error) {
+// First returns the first MonitorCheckLog entity from the query.
+// Returns a *NotFoundError when no MonitorCheckLog was found.
+func (_q *MonitorCheckLogQuery) First(ctx context.Context) (*MonitorCheckLog, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{monitoreddomain.Label}
+		return nil, &NotFoundError{monitorchecklog.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) FirstX(ctx context.Context) *MonitoredDomain {
+func (_q *MonitorCheckLogQuery) FirstX(ctx context.Context) *MonitorCheckLog {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -105,22 +105,22 @@ func (_q *MonitoredDomainQuery) FirstX(ctx context.Context) *MonitoredDomain {
 	return node
 }
 
-// FirstID returns the first MonitoredDomain ID from the query.
-// Returns a *NotFoundError when no MonitoredDomain ID was found.
-func (_q *MonitoredDomainQuery) FirstID(ctx context.Context) (id int, err error) {
+// FirstID returns the first MonitorCheckLog ID from the query.
+// Returns a *NotFoundError when no MonitorCheckLog ID was found.
+func (_q *MonitorCheckLogQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{monitoreddomain.Label}
+		err = &NotFoundError{monitorchecklog.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) FirstIDX(ctx context.Context) int {
+func (_q *MonitorCheckLogQuery) FirstIDX(ctx context.Context) int {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -128,10 +128,10 @@ func (_q *MonitoredDomainQuery) FirstIDX(ctx context.Context) int {
 	return id
 }
 
-// Only returns a single MonitoredDomain entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one MonitoredDomain entity is found.
-// Returns a *NotFoundError when no MonitoredDomain entities are found.
-func (_q *MonitoredDomainQuery) Only(ctx context.Context) (*MonitoredDomain, error) {
+// Only returns a single MonitorCheckLog entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one MonitorCheckLog entity is found.
+// Returns a *NotFoundError when no MonitorCheckLog entities are found.
+func (_q *MonitorCheckLogQuery) Only(ctx context.Context) (*MonitorCheckLog, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -140,14 +140,14 @@ func (_q *MonitoredDomainQuery) Only(ctx context.Context) (*MonitoredDomain, err
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{monitoreddomain.Label}
+		return nil, &NotFoundError{monitorchecklog.Label}
 	default:
-		return nil, &NotSingularError{monitoreddomain.Label}
+		return nil, &NotSingularError{monitorchecklog.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) OnlyX(ctx context.Context) *MonitoredDomain {
+func (_q *MonitorCheckLogQuery) OnlyX(ctx context.Context) *MonitorCheckLog {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -155,10 +155,10 @@ func (_q *MonitoredDomainQuery) OnlyX(ctx context.Context) *MonitoredDomain {
 	return node
 }
 
-// OnlyID is like Only, but returns the only MonitoredDomain ID in the query.
-// Returns a *NotSingularError when more than one MonitoredDomain ID is found.
+// OnlyID is like Only, but returns the only MonitorCheckLog ID in the query.
+// Returns a *NotSingularError when more than one MonitorCheckLog ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *MonitoredDomainQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *MonitorCheckLogQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -167,15 +167,15 @@ func (_q *MonitoredDomainQuery) OnlyID(ctx context.Context) (id int, err error) 
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{monitoreddomain.Label}
+		err = &NotFoundError{monitorchecklog.Label}
 	default:
-		err = &NotSingularError{monitoreddomain.Label}
+		err = &NotSingularError{monitorchecklog.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) OnlyIDX(ctx context.Context) int {
+func (_q *MonitorCheckLogQuery) OnlyIDX(ctx context.Context) int {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -183,18 +183,18 @@ func (_q *MonitoredDomainQuery) OnlyIDX(ctx context.Context) int {
 	return id
 }
 
-// All executes the query and returns a list of MonitoredDomains.
-func (_q *MonitoredDomainQuery) All(ctx context.Context) ([]*MonitoredDomain, error) {
+// All executes the query and returns a list of MonitorCheckLogs.
+func (_q *MonitorCheckLogQuery) All(ctx context.Context) ([]*MonitorCheckLog, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*MonitoredDomain, *MonitoredDomainQuery]()
-	return withInterceptors[[]*MonitoredDomain](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*MonitorCheckLog, *MonitorCheckLogQuery]()
+	return withInterceptors[[]*MonitorCheckLog](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) AllX(ctx context.Context) []*MonitoredDomain {
+func (_q *MonitorCheckLogQuery) AllX(ctx context.Context) []*MonitorCheckLog {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -202,20 +202,20 @@ func (_q *MonitoredDomainQuery) AllX(ctx context.Context) []*MonitoredDomain {
 	return nodes
 }
 
-// IDs executes the query and returns a list of MonitoredDomain IDs.
-func (_q *MonitoredDomainQuery) IDs(ctx context.Context) (ids []int, err error) {
+// IDs executes the query and returns a list of MonitorCheckLog IDs.
+func (_q *MonitorCheckLogQuery) IDs(ctx context.Context) (ids []int, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(monitoreddomain.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(monitorchecklog.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) IDsX(ctx context.Context) []int {
+func (_q *MonitorCheckLogQuery) IDsX(ctx context.Context) []int {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -224,16 +224,16 @@ func (_q *MonitoredDomainQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (_q *MonitoredDomainQuery) Count(ctx context.Context) (int, error) {
+func (_q *MonitorCheckLogQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*MonitoredDomainQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*MonitorCheckLogQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) CountX(ctx context.Context) int {
+func (_q *MonitorCheckLogQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -242,7 +242,7 @@ func (_q *MonitoredDomainQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *MonitoredDomainQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *MonitorCheckLogQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -255,7 +255,7 @@ func (_q *MonitoredDomainQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *MonitoredDomainQuery) ExistX(ctx context.Context) bool {
+func (_q *MonitorCheckLogQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -263,33 +263,33 @@ func (_q *MonitoredDomainQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the MonitoredDomainQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the MonitorCheckLogQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *MonitoredDomainQuery) Clone() *MonitoredDomainQuery {
+func (_q *MonitorCheckLogQuery) Clone() *MonitorCheckLogQuery {
 	if _q == nil {
 		return nil
 	}
-	return &MonitoredDomainQuery{
-		config:        _q.config,
-		ctx:           _q.ctx.Clone(),
-		order:         append([]monitoreddomain.OrderOption{}, _q.order...),
-		inters:        append([]Interceptor{}, _q.inters...),
-		predicates:    append([]predicate.MonitoredDomain{}, _q.predicates...),
-		withCheckLogs: _q.withCheckLogs.Clone(),
+	return &MonitorCheckLogQuery{
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]monitorchecklog.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.MonitorCheckLog{}, _q.predicates...),
+		withDomain: _q.withDomain.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithCheckLogs tells the query-builder to eager-load the nodes that are connected to
-// the "check_logs" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MonitoredDomainQuery) WithCheckLogs(opts ...func(*MonitorCheckLogQuery)) *MonitoredDomainQuery {
-	query := (&MonitorCheckLogClient{config: _q.config}).Query()
+// WithDomain tells the query-builder to eager-load the nodes that are connected to
+// the "domain" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MonitorCheckLogQuery) WithDomain(opts ...func(*MonitoredDomainQuery)) *MonitorCheckLogQuery {
+	query := (&MonitoredDomainClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withCheckLogs = query
+	_q.withDomain = query
 	return _q
 }
 
@@ -299,19 +299,19 @@ func (_q *MonitoredDomainQuery) WithCheckLogs(opts ...func(*MonitorCheckLogQuery
 // Example:
 //
 //	var v []struct {
-//		Domain string `json:"domain,omitempty"`
+//		CheckedAt time.Time `json:"checked_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.MonitoredDomain.Query().
-//		GroupBy(monitoreddomain.FieldDomain).
+//	client.MonitorCheckLog.Query().
+//		GroupBy(monitorchecklog.FieldCheckedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *MonitoredDomainQuery) GroupBy(field string, fields ...string) *MonitoredDomainGroupBy {
+func (_q *MonitorCheckLogQuery) GroupBy(field string, fields ...string) *MonitorCheckLogGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &MonitoredDomainGroupBy{build: _q}
+	grbuild := &MonitorCheckLogGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = monitoreddomain.Label
+	grbuild.label = monitorchecklog.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -322,26 +322,26 @@ func (_q *MonitoredDomainQuery) GroupBy(field string, fields ...string) *Monitor
 // Example:
 //
 //	var v []struct {
-//		Domain string `json:"domain,omitempty"`
+//		CheckedAt time.Time `json:"checked_at,omitempty"`
 //	}
 //
-//	client.MonitoredDomain.Query().
-//		Select(monitoreddomain.FieldDomain).
+//	client.MonitorCheckLog.Query().
+//		Select(monitorchecklog.FieldCheckedAt).
 //		Scan(ctx, &v)
-func (_q *MonitoredDomainQuery) Select(fields ...string) *MonitoredDomainSelect {
+func (_q *MonitorCheckLogQuery) Select(fields ...string) *MonitorCheckLogSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &MonitoredDomainSelect{MonitoredDomainQuery: _q}
-	sbuild.label = monitoreddomain.Label
+	sbuild := &MonitorCheckLogSelect{MonitorCheckLogQuery: _q}
+	sbuild.label = monitorchecklog.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a MonitoredDomainSelect configured with the given aggregations.
-func (_q *MonitoredDomainQuery) Aggregate(fns ...AggregateFunc) *MonitoredDomainSelect {
+// Aggregate returns a MonitorCheckLogSelect configured with the given aggregations.
+func (_q *MonitorCheckLogQuery) Aggregate(fns ...AggregateFunc) *MonitorCheckLogSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *MonitoredDomainQuery) prepareQuery(ctx context.Context) error {
+func (_q *MonitorCheckLogQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -353,7 +353,7 @@ func (_q *MonitoredDomainQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !monitoreddomain.ValidColumn(f) {
+		if !monitorchecklog.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -367,19 +367,26 @@ func (_q *MonitoredDomainQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *MonitoredDomainQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MonitoredDomain, error) {
+func (_q *MonitorCheckLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MonitorCheckLog, error) {
 	var (
-		nodes       = []*MonitoredDomain{}
+		nodes       = []*MonitorCheckLog{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			_q.withCheckLogs != nil,
+			_q.withDomain != nil,
 		}
 	)
+	if _q.withDomain != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, monitorchecklog.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*MonitoredDomain).scanValues(nil, columns)
+		return (*MonitorCheckLog).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &MonitoredDomain{config: _q.config}
+		node := &MonitorCheckLog{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -393,49 +400,49 @@ func (_q *MonitoredDomainQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withCheckLogs; query != nil {
-		if err := _q.loadCheckLogs(ctx, query, nodes,
-			func(n *MonitoredDomain) { n.Edges.CheckLogs = []*MonitorCheckLog{} },
-			func(n *MonitoredDomain, e *MonitorCheckLog) { n.Edges.CheckLogs = append(n.Edges.CheckLogs, e) }); err != nil {
+	if query := _q.withDomain; query != nil {
+		if err := _q.loadDomain(ctx, query, nodes, nil,
+			func(n *MonitorCheckLog, e *MonitoredDomain) { n.Edges.Domain = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *MonitoredDomainQuery) loadCheckLogs(ctx context.Context, query *MonitorCheckLogQuery, nodes []*MonitoredDomain, init func(*MonitoredDomain), assign func(*MonitoredDomain, *MonitorCheckLog)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*MonitoredDomain)
+func (_q *MonitorCheckLogQuery) loadDomain(ctx context.Context, query *MonitoredDomainQuery, nodes []*MonitorCheckLog, init func(*MonitorCheckLog), assign func(*MonitorCheckLog, *MonitoredDomain)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*MonitorCheckLog)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].monitored_domain_check_logs == nil {
+			continue
 		}
+		fk := *nodes[i].monitored_domain_check_logs
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.MonitorCheckLog(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(monitoreddomain.CheckLogsColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(monitoreddomain.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.monitored_domain_check_logs
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "monitored_domain_check_logs" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "monitored_domain_check_logs" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "monitored_domain_check_logs" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
 
-func (_q *MonitoredDomainQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *MonitorCheckLogQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -444,8 +451,8 @@ func (_q *MonitoredDomainQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *MonitoredDomainQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(monitoreddomain.Table, monitoreddomain.Columns, sqlgraph.NewFieldSpec(monitoreddomain.FieldID, field.TypeInt))
+func (_q *MonitorCheckLogQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(monitorchecklog.Table, monitorchecklog.Columns, sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -454,9 +461,9 @@ func (_q *MonitoredDomainQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, monitoreddomain.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, monitorchecklog.FieldID)
 		for i := range fields {
-			if fields[i] != monitoreddomain.FieldID {
+			if fields[i] != monitorchecklog.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -484,12 +491,12 @@ func (_q *MonitoredDomainQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *MonitoredDomainQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *MonitorCheckLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(monitoreddomain.Table)
+	t1 := builder.Table(monitorchecklog.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = monitoreddomain.Columns
+		columns = monitorchecklog.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -516,28 +523,28 @@ func (_q *MonitoredDomainQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// MonitoredDomainGroupBy is the group-by builder for MonitoredDomain entities.
-type MonitoredDomainGroupBy struct {
+// MonitorCheckLogGroupBy is the group-by builder for MonitorCheckLog entities.
+type MonitorCheckLogGroupBy struct {
 	selector
-	build *MonitoredDomainQuery
+	build *MonitorCheckLogQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *MonitoredDomainGroupBy) Aggregate(fns ...AggregateFunc) *MonitoredDomainGroupBy {
+func (_g *MonitorCheckLogGroupBy) Aggregate(fns ...AggregateFunc) *MonitorCheckLogGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *MonitoredDomainGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *MonitorCheckLogGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*MonitoredDomainQuery, *MonitoredDomainGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*MonitorCheckLogQuery, *MonitorCheckLogGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *MonitoredDomainGroupBy) sqlScan(ctx context.Context, root *MonitoredDomainQuery, v any) error {
+func (_g *MonitorCheckLogGroupBy) sqlScan(ctx context.Context, root *MonitorCheckLogQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -564,28 +571,28 @@ func (_g *MonitoredDomainGroupBy) sqlScan(ctx context.Context, root *MonitoredDo
 	return sql.ScanSlice(rows, v)
 }
 
-// MonitoredDomainSelect is the builder for selecting fields of MonitoredDomain entities.
-type MonitoredDomainSelect struct {
-	*MonitoredDomainQuery
+// MonitorCheckLogSelect is the builder for selecting fields of MonitorCheckLog entities.
+type MonitorCheckLogSelect struct {
+	*MonitorCheckLogQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *MonitoredDomainSelect) Aggregate(fns ...AggregateFunc) *MonitoredDomainSelect {
+func (_s *MonitorCheckLogSelect) Aggregate(fns ...AggregateFunc) *MonitorCheckLogSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *MonitoredDomainSelect) Scan(ctx context.Context, v any) error {
+func (_s *MonitorCheckLogSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*MonitoredDomainQuery, *MonitoredDomainSelect](ctx, _s.MonitoredDomainQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*MonitorCheckLogQuery, *MonitorCheckLogSelect](ctx, _s.MonitorCheckLogQuery, _s, _s.inters, v)
 }
 
-func (_s *MonitoredDomainSelect) sqlScan(ctx context.Context, root *MonitoredDomainQuery, v any) error {
+func (_s *MonitorCheckLogSelect) sqlScan(ctx context.Context, root *MonitorCheckLogQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

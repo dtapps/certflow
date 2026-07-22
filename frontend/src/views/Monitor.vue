@@ -20,6 +20,7 @@ import * as MonitorService from '@bindings/cnb.cool/dtapp/certflow/monitorservic
 import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/internal/monitor/models'
 import { useI18nStore } from '../stores/i18n'
 import { initMessage, showMessage } from '../utils/message'
+import MonitorTrendChart from '../components/MonitorTrendChart.vue'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
@@ -548,6 +549,11 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
                   {{ t('monitor.error') }}: {{ item.last_check_error }}
                 </p>
               </div>
+              <MonitorTrendChart
+                v-if="expandedId === item.id"
+                :domain-id="item.id"
+                @click.stop
+              />
             </div>
           </div>
         </template>

@@ -13,6 +13,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/passkeycredential"
@@ -176,6 +177,12 @@ func init() {
 	deploytarget.DefaultUpdatedAt = deploytargetDescUpdatedAt.Default.(func() time.Time)
 	// deploytarget.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	deploytarget.UpdateDefaultUpdatedAt = deploytargetDescUpdatedAt.UpdateDefault.(func() time.Time)
+	monitorchecklogFields := schema.MonitorCheckLog{}.Fields()
+	_ = monitorchecklogFields
+	// monitorchecklogDescCheckedAt is the schema descriptor for checked_at field.
+	monitorchecklogDescCheckedAt := monitorchecklogFields[0].Descriptor()
+	// monitorchecklog.DefaultCheckedAt holds the default value on creation for the checked_at field.
+	monitorchecklog.DefaultCheckedAt = monitorchecklogDescCheckedAt.Default.(func() time.Time)
 	monitoreddomainFields := schema.MonitoredDomain{}.Fields()
 	_ = monitoreddomainFields
 	// monitoreddomainDescDomain is the schema descriptor for domain field.

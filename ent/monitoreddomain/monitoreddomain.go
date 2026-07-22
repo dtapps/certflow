@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -60,8 +61,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeCheckLogs holds the string denoting the check_logs edge name in mutations.
+	EdgeCheckLogs = "check_logs"
 	// Table holds the table name of the monitoreddomain in the database.
 	Table = "monitored_domains"
+	// CheckLogsTable is the table that holds the check_logs relation/edge.
+	CheckLogsTable = "monitor_check_logs"
+	// CheckLogsInverseTable is the table name for the MonitorCheckLog entity.
+	// It exists in this package in order to avoid circular dependency with the "monitorchecklog" package.
+	CheckLogsInverseTable = "monitor_check_logs"
+	// CheckLogsColumn is the table column denoting the check_logs relation/edge.
+	CheckLogsColumn = "monitored_domain_check_logs"
 )
 
 // Columns holds all SQL columns for monitoreddomain fields.
@@ -298,4 +308,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCheckLogsCount orders the results by check_logs count.
+func ByCheckLogsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCheckLogsStep(), opts...)
+	}
+}
+
+// ByCheckLogs orders the results by check_logs terms.
+func ByCheckLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCheckLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newCheckLogsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CheckLogsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CheckLogsTable, CheckLogsColumn),
+	)
 }

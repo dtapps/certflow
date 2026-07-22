@@ -217,6 +217,31 @@ var (
 			},
 		},
 	}
+	// MonitorCheckLogsColumns holds the columns for the "monitor_check_logs" table.
+	MonitorCheckLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "checked_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"ok", "warning", "error", "expired", "unknown"}, Default: "unknown"},
+		{Name: "cert_remaining_days", Type: field.TypeInt, Nullable: true},
+		{Name: "response_time_ms", Type: field.TypeInt, Nullable: true},
+		{Name: "http_status_code", Type: field.TypeInt, Nullable: true},
+		{Name: "last_check_error", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "monitored_domain_check_logs", Type: field.TypeInt},
+	}
+	// MonitorCheckLogsTable holds the schema information for the "monitor_check_logs" table.
+	MonitorCheckLogsTable = &schema.Table{
+		Name:       "monitor_check_logs",
+		Columns:    MonitorCheckLogsColumns,
+		PrimaryKey: []*schema.Column{MonitorCheckLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "monitor_check_logs_monitored_domains_check_logs",
+				Columns:    []*schema.Column{MonitorCheckLogsColumns[7]},
+				RefColumns: []*schema.Column{MonitoredDomainsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// MonitoredDomainsColumns holds the columns for the "monitored_domains" table.
 	MonitoredDomainsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -379,6 +404,7 @@ var (
 		DeployCredentialsTable,
 		DeployLogsTable,
 		DeployTargetsTable,
+		MonitorCheckLogsTable,
 		MonitoredDomainsTable,
 		NotificationsTable,
 		PasskeyCredentialsTable,
@@ -395,6 +421,7 @@ func init() {
 	DeployLogsTable.ForeignKeys[0].RefTable = DeployTargetsTable
 	DeployTargetsTable.ForeignKeys[0].RefTable = DNSProvidersTable
 	DeployTargetsTable.ForeignKeys[1].RefTable = DeployCredentialsTable
+	MonitorCheckLogsTable.ForeignKeys[0].RefTable = MonitoredDomainsTable
 	PasskeyCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable
 	RenewalLogsTable.ForeignKeys[0].RefTable = CertificatesTable
 	TotpCredentialsTable.ForeignKeys[0].RefTable = AuthMethodsTable

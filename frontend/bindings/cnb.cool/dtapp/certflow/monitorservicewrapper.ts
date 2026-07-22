@@ -43,6 +43,14 @@ export function List(): $CancellablePromise<(monitor$0.MonitoredDomainItem | nul
 }
 
 /**
+ * ListHistory 获取监控域名的检查历史记录（用于趋势图）。
+ * id: 监控域名ID；days: 查询最近多少天；返回检查历史列表。
+ */
+export function ListHistory(id: number, days: number): $CancellablePromise<(monitor$0.MonitorCheckLogItem | null)[] | null> {
+    return $Call.ByID(1259614592, id, days);
+}
+
+/**
  * SetActive 设置监控域名的启用状态
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {

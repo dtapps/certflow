@@ -30,6 +30,9 @@ type DeployLog func(*sql.Selector)
 // DeployTarget is the predicate function for deploytarget builders.
 type DeployTarget func(*sql.Selector)
 
+// MonitorCheckLog is the predicate function for monitorchecklog builders.
+type MonitorCheckLog func(*sql.Selector)
+
 // MonitoredDomain is the predicate function for monitoreddomain builders.
 type MonitoredDomain func(*sql.Selector)
 

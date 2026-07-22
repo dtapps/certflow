@@ -32,6 +32,46 @@ export interface CreateInput {
 }
 
 /**
+ * MonitorCheckLogItem 检查历史记录条目（前端趋势图用）
+ */
+export interface MonitorCheckLogItem {
+    /**
+     * 历史记录 ID
+     */
+    "id": number;
+
+    /**
+     * 检查时间
+     */
+    "checked_at": string;
+
+    /**
+     * 状态：ok/warning/error/expired/unknown
+     */
+    "status": string;
+
+    /**
+     * 证书剩余天数（无证书时为 null）
+     */
+    "cert_remaining_days": number | null;
+
+    /**
+     * 响应时间（毫秒，无数据时为 null）
+     */
+    "response_time_ms": number | null;
+
+    /**
+     * HTTP 响应码（无数据时为 null）
+     */
+    "http_status_code": number | null;
+
+    /**
+     * 检查错误信息
+     */
+    "last_check_error": string;
+}
+
+/**
  * MonitoredDomainItem 监控域名条目（前端展示用）
  */
 export interface MonitoredDomainItem {

@@ -45,6 +45,7 @@ const defaultSettings: SafeSettings = {
   renew_interval: 1,
   auto_check_expiry: true,
   check_interval: 6,
+  monitor_history_days: 90,
   data_dir: '~/.certflow',
   language: 'auto',
   theme: 'auto',
@@ -483,6 +484,23 @@ onMounted(async () => {
             <n-button @click="handleTestNotification">
               {{ t('settings.notification.test') }}
             </n-button>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 监控设置 -->
+      <n-card :title="t('settings.monitor.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.monitor.historyDays')">
+            <div class="flex items-center gap-3">
+              <n-input-number
+                v-model:value="settings.monitor_history_days"
+                :min="1"
+                :max="3650"
+                class="input-width"
+              />
+              <span class="text-sm opacity-60">{{ t('settings.monitor.historyDays.desc') }}</span>
+            </div>
           </n-form-item>
         </n-form>
       </n-card>

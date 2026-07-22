@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	entnotification "cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/internal/i18n"
@@ -85,6 +86,17 @@ type MonitoredDomainItem struct {
 	UpdatedAt         string   `json:"updated_at"`           // 更新时间
 }
 
+// MonitorCheckLogItem 检查历史记录条目（前端趋势图用）
+type MonitorCheckLogItem struct {
+	ID                int    `json:"id"`                  // 历史记录 ID
+	CheckedAt         string `json:"checked_at"`          // 检查时间
+	Status            string `json:"status"`              // 状态：ok/warning/error/expired/unknown
+	CertRemainingDays *int   `json:"cert_remaining_days"` // 证书剩余天数（无证书时为 null）
+	ResponseTimeMs    *int   `json:"response_time_ms"`    // 响应时间（毫秒，无数据时为 null）
+	HTTPStatusCode    *int   `json:"http_status_code"`    // HTTP 响应码（无数据时为 null）
+	LastCheckError    string `json:"last_check_error"`    // 检查错误信息
+}
+
 // CreateInput 创建监控域名请求
 type CreateInput struct {
 	Domain        string `json:"domain"`         // 域名
@@ -137,6 +149,54 @@ func formatTime(t time.Time) string {
 		return ""
 	}
 	return t.Format(time.DateTime)
+}
+
+// createCheckLog 将一次检查结果写入历史表（趋势图数据源）
+func (s *MonitorService) createCheckLog(ctx context.Context, m *ent.MonitoredDomain, result checkResult) {
+	create := s.db.MonitorCheckLog.Create().
+		SetDomain(m).
+		SetStatus(monitorchecklog.Status(result.status)).
+		SetCheckedAt(time.Now()).
+		SetLastCheckError(result.checkError).
+		SetResponseTimeMs(result.responseTimeMs).
+		SetHTTPStatusCode(result.httpStatusCode)
+	if result.certRemainingDays > 0 {
+		create.SetCertRemainingDays(result.certRemainingDays)
+	}
+	if _, err := create.Save(ctx); err != nil {
+		logging.Error(i18n.T("log.monitor_checklog_failed", "Domain", m.Domain, "Error", err))
+	}
+}
+
+// ListHistory 获取监控域名的检查历史（用于趋势图）
+func (s *MonitorService) ListHistory(ctx context.Context, id, days int) ([]*MonitorCheckLogItem, error) {
+	if days <= 0 {
+		days = 30
+	}
+	since := time.Now().AddDate(0, 0, -days)
+	logs, err := s.db.MonitorCheckLog.Query().
+		Where(
+			monitorchecklog.HasDomainWith(monitoreddomain.ID(id)),
+			monitorchecklog.CheckedAtGTE(since),
+		).
+		Order(ent.Asc("checked_at")).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*MonitorCheckLogItem, len(logs))
+	for i, l := range logs {
+		items[i] = &MonitorCheckLogItem{
+			ID:                l.ID,
+			CheckedAt:         formatTime(l.CheckedAt),
+			Status:            l.Status.String(),
+			CertRemainingDays: l.CertRemainingDays,
+			ResponseTimeMs:    l.ResponseTimeMs,
+			HTTPStatusCode:    l.HTTPStatusCode,
+			LastCheckError:    l.LastCheckError,
+		}
+	}
+	return items, nil
 }
 
 // List 获取所有监控域名
@@ -241,6 +301,7 @@ func (s *MonitorService) CheckNow(ctx context.Context, id int) (*MonitoredDomain
 	if err != nil {
 		return nil, err
 	}
+	s.createCheckLog(ctx, m, result)
 
 	updated, err := s.db.MonitoredDomain.Get(ctx, id)
 	if err != nil {
@@ -442,13 +503,49 @@ func (s *MonitorService) monitorLoop() {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
+	// 每天清理一次过期的检查历史
+	cleanupTicker := time.NewTicker(24 * time.Hour)
+	defer cleanupTicker.Stop()
+
+	// 启动时先执行一次清理
+	s.cleanupHistory()
+
 	for {
 		select {
 		case <-s.stopChan:
 			return
 		case <-ticker.C:
 			s.runChecks()
+		case <-cleanupTicker.C:
+			s.cleanupHistory()
 		}
+	}
+}
+
+// historyRetentionDays 返回检查历史保留天数（来自设置，默认 90 天）
+func (s *MonitorService) historyRetentionDays() int {
+	days := 90
+	if s.settingsProvider != nil {
+		if d := s.settingsProvider().MonitorHistoryDays; d > 0 {
+			days = d
+		}
+	}
+	return days
+}
+
+// cleanupHistory 清理超过保留期限的检查历史记录
+func (s *MonitorService) cleanupHistory() {
+	days := s.historyRetentionDays()
+	before := time.Now().AddDate(0, 0, -days)
+	n, err := s.db.MonitorCheckLog.Delete().
+		Where(monitorchecklog.CheckedAtLT(before)).
+		Exec(context.Background())
+	if err != nil {
+		logging.Error(i18n.T("log.monitor_checklog_cleanup_failed", "Error", err.Error()))
+		return
+	}
+	if n > 0 {
+		logging.Info(i18n.T("log.monitor_checklog_cleanup", "Count", n, "Days", days))
 	}
 }
 
@@ -494,6 +591,7 @@ func (s *MonitorService) runChecks() {
 		if err != nil {
 			logging.Error(i18n.T("log.monitor_update_failed", "Domain", m.Domain, "Error", err))
 		}
+		s.createCheckLog(ctx, m, result)
 
 		s.notifyIfProblem(m.Domain, result)
 	}

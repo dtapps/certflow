@@ -19,6 +19,7 @@ import (
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/notification"
 	"cnb.cool/dtapp/certflow/ent/passkeycredential"
@@ -52,6 +53,8 @@ type Client struct {
 	DeployLog *DeployLogClient
 	// DeployTarget is the client for interacting with the DeployTarget builders.
 	DeployTarget *DeployTargetClient
+	// MonitorCheckLog is the client for interacting with the MonitorCheckLog builders.
+	MonitorCheckLog *MonitorCheckLogClient
 	// MonitoredDomain is the client for interacting with the MonitoredDomain builders.
 	MonitoredDomain *MonitoredDomainClient
 	// Notification is the client for interacting with the Notification builders.
@@ -83,6 +86,7 @@ func (c *Client) init() {
 	c.DeployCredential = NewDeployCredentialClient(c.config)
 	c.DeployLog = NewDeployLogClient(c.config)
 	c.DeployTarget = NewDeployTargetClient(c.config)
+	c.MonitorCheckLog = NewMonitorCheckLogClient(c.config)
 	c.MonitoredDomain = NewMonitoredDomainClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.PasskeyCredential = NewPasskeyCredentialClient(c.config)
@@ -189,6 +193,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		DeployCredential:  NewDeployCredentialClient(cfg),
 		DeployLog:         NewDeployLogClient(cfg),
 		DeployTarget:      NewDeployTargetClient(cfg),
+		MonitorCheckLog:   NewMonitorCheckLogClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
 		Notification:      NewNotificationClient(cfg),
 		PasskeyCredential: NewPasskeyCredentialClient(cfg),
@@ -222,6 +227,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		DeployCredential:  NewDeployCredentialClient(cfg),
 		DeployLog:         NewDeployLogClient(cfg),
 		DeployTarget:      NewDeployTargetClient(cfg),
+		MonitorCheckLog:   NewMonitorCheckLogClient(cfg),
 		MonitoredDomain:   NewMonitoredDomainClient(cfg),
 		Notification:      NewNotificationClient(cfg),
 		PasskeyCredential: NewPasskeyCredentialClient(cfg),
@@ -258,9 +264,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider,
-		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitoredDomain,
-		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
-		c.TOTPCredential,
+		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitorCheckLog,
+		c.MonitoredDomain, c.Notification, c.PasskeyCredential, c.RenewalLog,
+		c.ScanResult, c.TOTPCredential,
 	} {
 		n.Use(hooks...)
 	}
@@ -271,9 +277,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuthMethod, c.CA, c.CertUpload, c.Certificate, c.DNSProvider,
-		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitoredDomain,
-		c.Notification, c.PasskeyCredential, c.RenewalLog, c.ScanResult,
-		c.TOTPCredential,
+		c.DeployCredential, c.DeployLog, c.DeployTarget, c.MonitorCheckLog,
+		c.MonitoredDomain, c.Notification, c.PasskeyCredential, c.RenewalLog,
+		c.ScanResult, c.TOTPCredential,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -298,6 +304,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.DeployLog.mutate(ctx, m)
 	case *DeployTargetMutation:
 		return c.DeployTarget.mutate(ctx, m)
+	case *MonitorCheckLogMutation:
+		return c.MonitorCheckLog.mutate(ctx, m)
 	case *MonitoredDomainMutation:
 		return c.MonitoredDomain.mutate(ctx, m)
 	case *NotificationMutation:
@@ -1603,6 +1611,155 @@ func (c *DeployTargetClient) mutate(ctx context.Context, m *DeployTargetMutation
 	}
 }
 
+// MonitorCheckLogClient is a client for the MonitorCheckLog schema.
+type MonitorCheckLogClient struct {
+	config
+}
+
+// NewMonitorCheckLogClient returns a client for the MonitorCheckLog from the given config.
+func NewMonitorCheckLogClient(c config) *MonitorCheckLogClient {
+	return &MonitorCheckLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `monitorchecklog.Hooks(f(g(h())))`.
+func (c *MonitorCheckLogClient) Use(hooks ...Hook) {
+	c.hooks.MonitorCheckLog = append(c.hooks.MonitorCheckLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `monitorchecklog.Intercept(f(g(h())))`.
+func (c *MonitorCheckLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MonitorCheckLog = append(c.inters.MonitorCheckLog, interceptors...)
+}
+
+// Create returns a builder for creating a MonitorCheckLog entity.
+func (c *MonitorCheckLogClient) Create() *MonitorCheckLogCreate {
+	mutation := newMonitorCheckLogMutation(c.config, OpCreate)
+	return &MonitorCheckLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MonitorCheckLog entities.
+func (c *MonitorCheckLogClient) CreateBulk(builders ...*MonitorCheckLogCreate) *MonitorCheckLogCreateBulk {
+	return &MonitorCheckLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MonitorCheckLogClient) MapCreateBulk(slice any, setFunc func(*MonitorCheckLogCreate, int)) *MonitorCheckLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MonitorCheckLogCreateBulk{err: fmt.Errorf("calling to MonitorCheckLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MonitorCheckLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MonitorCheckLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MonitorCheckLog.
+func (c *MonitorCheckLogClient) Update() *MonitorCheckLogUpdate {
+	mutation := newMonitorCheckLogMutation(c.config, OpUpdate)
+	return &MonitorCheckLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MonitorCheckLogClient) UpdateOne(_m *MonitorCheckLog) *MonitorCheckLogUpdateOne {
+	mutation := newMonitorCheckLogMutation(c.config, OpUpdateOne, withMonitorCheckLog(_m))
+	return &MonitorCheckLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MonitorCheckLogClient) UpdateOneID(id int) *MonitorCheckLogUpdateOne {
+	mutation := newMonitorCheckLogMutation(c.config, OpUpdateOne, withMonitorCheckLogID(id))
+	return &MonitorCheckLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MonitorCheckLog.
+func (c *MonitorCheckLogClient) Delete() *MonitorCheckLogDelete {
+	mutation := newMonitorCheckLogMutation(c.config, OpDelete)
+	return &MonitorCheckLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MonitorCheckLogClient) DeleteOne(_m *MonitorCheckLog) *MonitorCheckLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MonitorCheckLogClient) DeleteOneID(id int) *MonitorCheckLogDeleteOne {
+	builder := c.Delete().Where(monitorchecklog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MonitorCheckLogDeleteOne{builder}
+}
+
+// Query returns a query builder for MonitorCheckLog.
+func (c *MonitorCheckLogClient) Query() *MonitorCheckLogQuery {
+	return &MonitorCheckLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMonitorCheckLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MonitorCheckLog entity by its id.
+func (c *MonitorCheckLogClient) Get(ctx context.Context, id int) (*MonitorCheckLog, error) {
+	return c.Query().Where(monitorchecklog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MonitorCheckLogClient) GetX(ctx context.Context, id int) *MonitorCheckLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDomain queries the domain edge of a MonitorCheckLog.
+func (c *MonitorCheckLogClient) QueryDomain(_m *MonitorCheckLog) *MonitoredDomainQuery {
+	query := (&MonitoredDomainClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(monitorchecklog.Table, monitorchecklog.FieldID, id),
+			sqlgraph.To(monitoreddomain.Table, monitoreddomain.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, monitorchecklog.DomainTable, monitorchecklog.DomainColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *MonitorCheckLogClient) Hooks() []Hook {
+	return c.hooks.MonitorCheckLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *MonitorCheckLogClient) Interceptors() []Interceptor {
+	return c.inters.MonitorCheckLog
+}
+
+func (c *MonitorCheckLogClient) mutate(ctx context.Context, m *MonitorCheckLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MonitorCheckLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MonitorCheckLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MonitorCheckLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MonitorCheckLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MonitorCheckLog mutation op: %q", m.Op())
+	}
+}
+
 // MonitoredDomainClient is a client for the MonitoredDomain schema.
 type MonitoredDomainClient struct {
 	config
@@ -1709,6 +1866,22 @@ func (c *MonitoredDomainClient) GetX(ctx context.Context, id int) *MonitoredDoma
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCheckLogs queries the check_logs edge of a MonitoredDomain.
+func (c *MonitoredDomainClient) QueryCheckLogs(_m *MonitoredDomain) *MonitorCheckLogQuery {
+	query := (&MonitorCheckLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(monitoreddomain.Table, monitoreddomain.FieldID, id),
+			sqlgraph.To(monitorchecklog.Table, monitorchecklog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, monitoreddomain.CheckLogsTable, monitoreddomain.CheckLogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -2453,12 +2626,12 @@ func (c *TOTPCredentialClient) mutate(ctx context.Context, m *TOTPCredentialMuta
 type (
 	hooks struct {
 		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployCredential,
-		DeployLog, DeployTarget, MonitoredDomain, Notification, PasskeyCredential,
-		RenewalLog, ScanResult, TOTPCredential []ent.Hook
+		DeployLog, DeployTarget, MonitorCheckLog, MonitoredDomain, Notification,
+		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Hook
 	}
 	inters struct {
 		AuthMethod, CA, CertUpload, Certificate, DNSProvider, DeployCredential,
-		DeployLog, DeployTarget, MonitoredDomain, Notification, PasskeyCredential,
-		RenewalLog, ScanResult, TOTPCredential []ent.Interceptor
+		DeployLog, DeployTarget, MonitorCheckLog, MonitoredDomain, Notification,
+		PasskeyCredential, RenewalLog, ScanResult, TOTPCredential []ent.Interceptor
 	}
 )

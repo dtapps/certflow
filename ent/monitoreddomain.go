@@ -63,8 +63,29 @@ type MonitoredDomain struct {
 	// 创建时间
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// 更新时间
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the MonitoredDomainQuery when eager-loading is set.
+	Edges        MonitoredDomainEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// MonitoredDomainEdges holds the relations/edges for other nodes in the graph.
+type MonitoredDomainEdges struct {
+	// 检查历史记录
+	CheckLogs []*MonitorCheckLog `json:"check_logs,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// CheckLogsOrErr returns the CheckLogs value or an error if the edge
+// was not loaded in eager-loading.
+func (e MonitoredDomainEdges) CheckLogsOrErr() ([]*MonitorCheckLog, error) {
+	if e.loadedTypes[0] {
+		return e.CheckLogs, nil
+	}
+	return nil, &NotLoadedError{edge: "check_logs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -254,6 +275,11 @@ func (_m *MonitoredDomain) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *MonitoredDomain) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryCheckLogs queries the "check_logs" edge of the MonitoredDomain entity.
+func (_m *MonitoredDomain) QueryCheckLogs() *MonitorCheckLogQuery {
+	return NewMonitoredDomainClient(_m.config).QueryCheckLogs(_m)
 }
 
 // Update returns a builder for updating this MonitoredDomain.

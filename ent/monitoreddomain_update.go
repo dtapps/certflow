@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"cnb.cool/dtapp/certflow/ent/predicate"
 	"entgo.io/ent/dialect/sql"
@@ -435,9 +436,45 @@ func (_u *MonitoredDomainUpdate) SetUpdatedAt(v time.Time) *MonitoredDomainUpdat
 	return _u
 }
 
+// AddCheckLogIDs adds the "check_logs" edge to the MonitorCheckLog entity by IDs.
+func (_u *MonitoredDomainUpdate) AddCheckLogIDs(ids ...int) *MonitoredDomainUpdate {
+	_u.mutation.AddCheckLogIDs(ids...)
+	return _u
+}
+
+// AddCheckLogs adds the "check_logs" edges to the MonitorCheckLog entity.
+func (_u *MonitoredDomainUpdate) AddCheckLogs(v ...*MonitorCheckLog) *MonitoredDomainUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCheckLogIDs(ids...)
+}
+
 // Mutation returns the MonitoredDomainMutation object of the builder.
 func (_u *MonitoredDomainUpdate) Mutation() *MonitoredDomainMutation {
 	return _u.mutation
+}
+
+// ClearCheckLogs clears all "check_logs" edges to the MonitorCheckLog entity.
+func (_u *MonitoredDomainUpdate) ClearCheckLogs() *MonitoredDomainUpdate {
+	_u.mutation.ClearCheckLogs()
+	return _u
+}
+
+// RemoveCheckLogIDs removes the "check_logs" edge to MonitorCheckLog entities by IDs.
+func (_u *MonitoredDomainUpdate) RemoveCheckLogIDs(ids ...int) *MonitoredDomainUpdate {
+	_u.mutation.RemoveCheckLogIDs(ids...)
+	return _u
+}
+
+// RemoveCheckLogs removes "check_logs" edges to MonitorCheckLog entities.
+func (_u *MonitoredDomainUpdate) RemoveCheckLogs(v ...*MonitorCheckLog) *MonitoredDomainUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCheckLogIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -629,6 +666,51 @@ func (_u *MonitoredDomainUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(monitoreddomain.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CheckLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCheckLogsIDs(); len(nodes) > 0 && !_u.mutation.CheckLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CheckLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -1056,9 +1138,45 @@ func (_u *MonitoredDomainUpdateOne) SetUpdatedAt(v time.Time) *MonitoredDomainUp
 	return _u
 }
 
+// AddCheckLogIDs adds the "check_logs" edge to the MonitorCheckLog entity by IDs.
+func (_u *MonitoredDomainUpdateOne) AddCheckLogIDs(ids ...int) *MonitoredDomainUpdateOne {
+	_u.mutation.AddCheckLogIDs(ids...)
+	return _u
+}
+
+// AddCheckLogs adds the "check_logs" edges to the MonitorCheckLog entity.
+func (_u *MonitoredDomainUpdateOne) AddCheckLogs(v ...*MonitorCheckLog) *MonitoredDomainUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCheckLogIDs(ids...)
+}
+
 // Mutation returns the MonitoredDomainMutation object of the builder.
 func (_u *MonitoredDomainUpdateOne) Mutation() *MonitoredDomainMutation {
 	return _u.mutation
+}
+
+// ClearCheckLogs clears all "check_logs" edges to the MonitorCheckLog entity.
+func (_u *MonitoredDomainUpdateOne) ClearCheckLogs() *MonitoredDomainUpdateOne {
+	_u.mutation.ClearCheckLogs()
+	return _u
+}
+
+// RemoveCheckLogIDs removes the "check_logs" edge to MonitorCheckLog entities by IDs.
+func (_u *MonitoredDomainUpdateOne) RemoveCheckLogIDs(ids ...int) *MonitoredDomainUpdateOne {
+	_u.mutation.RemoveCheckLogIDs(ids...)
+	return _u
+}
+
+// RemoveCheckLogs removes "check_logs" edges to MonitorCheckLog entities.
+func (_u *MonitoredDomainUpdateOne) RemoveCheckLogs(v ...*MonitorCheckLog) *MonitoredDomainUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCheckLogIDs(ids...)
 }
 
 // Where appends a list predicates to the MonitoredDomainUpdate builder.
@@ -1280,6 +1398,51 @@ func (_u *MonitoredDomainUpdateOne) sqlSave(ctx context.Context) (_node *Monitor
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(monitoreddomain.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CheckLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCheckLogsIDs(); len(nodes) > 0 && !_u.mutation.CheckLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CheckLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &MonitoredDomain{config: _u.config}
 	_spec.Assign = _node.assignValues

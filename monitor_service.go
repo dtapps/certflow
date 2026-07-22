@@ -49,6 +49,12 @@ func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, 
 	return s.monitorService.CheckNow(context.Background(), id)
 }
 
+// ListHistory 获取监控域名的检查历史记录（用于趋势图）。
+// id: 监控域名ID；days: 查询最近多少天；返回检查历史列表。
+func (s *MonitorServiceWrapper) ListHistory(id int, days int) ([]*monitor.MonitorCheckLogItem, error) {
+	return s.monitorService.ListHistory(context.Background(), id, days)
+}
+
 // SetUserAgent 设置 User-Agent
 func (s *MonitorServiceWrapper) SetUserAgent(ua string) {
 	logging.Info(i18n.T("log.monitor.set_user_agent", "UA", ua))

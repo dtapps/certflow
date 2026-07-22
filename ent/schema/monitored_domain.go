@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
 
@@ -88,5 +89,13 @@ func (MonitoredDomain) Fields() []ent.Field {
 			Default(time.Now).
 			UpdateDefault(time.Now).
 			Comment("更新时间"),
+	}
+}
+
+// Edges 定义与检查历史记录的关联
+func (MonitoredDomain) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.To("check_logs", MonitorCheckLog.Type).
+			Comment("检查历史记录"),
 	}
 }

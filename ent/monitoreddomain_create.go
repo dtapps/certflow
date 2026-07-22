@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"cnb.cool/dtapp/certflow/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/ent/monitoreddomain"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -328,6 +329,21 @@ func (_c *MonitoredDomainCreate) SetNillableUpdatedAt(v *time.Time) *MonitoredDo
 	return _c
 }
 
+// AddCheckLogIDs adds the "check_logs" edge to the MonitorCheckLog entity by IDs.
+func (_c *MonitoredDomainCreate) AddCheckLogIDs(ids ...int) *MonitoredDomainCreate {
+	_c.mutation.AddCheckLogIDs(ids...)
+	return _c
+}
+
+// AddCheckLogs adds the "check_logs" edges to the MonitorCheckLog entity.
+func (_c *MonitoredDomainCreate) AddCheckLogs(v ...*MonitorCheckLog) *MonitoredDomainCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCheckLogIDs(ids...)
+}
+
 // Mutation returns the MonitoredDomainMutation object of the builder.
 func (_c *MonitoredDomainCreate) Mutation() *MonitoredDomainMutation {
 	return _c.mutation
@@ -580,6 +596,22 @@ func (_c *MonitoredDomainCreate) createSpec() (*MonitoredDomain, *sqlgraph.Creat
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(monitoreddomain.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.CheckLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   monitoreddomain.CheckLogsTable,
+			Columns: []string{monitoreddomain.CheckLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(monitorchecklog.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }
