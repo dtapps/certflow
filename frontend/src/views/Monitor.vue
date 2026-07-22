@@ -401,14 +401,21 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
             </span>
             <div class="flex-1"></div>
             <template v-if="selectedIds.length > 0">
-              <n-button size="small" :disabled="batchBusy" @click="batchEnable(true)">
+              <n-button
+                size="small"
+                type="primary"
+                secondary
+                :disabled="batchBusy"
+                @click="batchEnable(true)"
+              >
                 {{ t('monitor.batchEnable') }}
               </n-button>
-              <n-button size="small" :disabled="batchBusy" @click="batchEnable(false)">
+              <n-button size="small" secondary :disabled="batchBusy" @click="batchEnable(false)">
                 {{ t('monitor.batchDisable') }}
               </n-button>
               <n-button
                 size="small"
+                secondary
                 :loading="batchBusy"
                 :disabled="batchBusy"
                 @click="batchRefresh"
@@ -418,6 +425,7 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
               <n-button
                 size="small"
                 type="error"
+                secondary
                 :disabled="batchBusy"
                 @click="showBatchDeleteModal = true"
               >
