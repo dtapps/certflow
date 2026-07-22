@@ -637,11 +637,7 @@ onMounted(async () => {
                   <div class="flex items-center justify-between mb-1">
                     <span class="text-sm opacity-60">{{ t('deploy.domains') }}</span>
                     <n-space size="small">
-                      <n-button
-                        size="tiny"
-                        :loading="fetchingDomains"
-                        @click="fetchDomains"
-                      >
+                      <n-button size="tiny" :loading="fetchingDomains" @click="fetchDomains">
                         {{ t('deploy.fetchDomains') }}
                       </n-button>
                       <n-button

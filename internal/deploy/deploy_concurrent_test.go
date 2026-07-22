@@ -1,8 +1,12 @@
 package deploy
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
+
+	"cnb.cool/dtapp/certflow/internal/config"
+	"cnb.cool/dtapp/certflow/internal/deploycredential"
 )
 
 // TestConcurrentCachePutGet 并发读写部署上传缓存（uploadCache 由 uploadMu 保护）
@@ -72,16 +76,19 @@ func TestConcurrentPureHelpers(t *testing.T) {
 			if RegionFromConfig(cfg) != "cn-hangzhou" {
 				t.Errorf("RegionFromConfig mismatch")
 			}
-			c := credsFromConfig("aliyun", "deploy_credential", cfg)
-			if c.AccessKeyID != "ak" || c.AccessKeySecret != "sk" {
-				t.Errorf("credsFromConfig mismatch")
+			raw, _ := json.Marshal(cfg)
+			c, err := deploycredential.Parse("aliyun", raw)
+			if err != nil || c.AccessKeyID != "ak" || c.AccessKeySecret != "sk" {
+				t.Errorf("deploycredential.Parse mismatch")
 			}
-			s := stripCreds("aliyun", cfg)
-			if _, ok := s["access_key_id"]; ok {
-				t.Errorf("stripCreds leaked access_key_id")
+			s, _ := config.StripSecrets[deploycredential.AliyunDeployCred](raw)
+			var stripped map[string]string
+			json.Unmarshal(s, &stripped)
+			if _, ok := stripped["access_key_id"]; ok {
+				t.Errorf("StripSecrets leaked access_key_id")
 			}
-			if s["domain"] != "x.com" {
-				t.Errorf("stripCreds dropped domain")
+			if stripped["domain"] != "x.com" {
+				t.Errorf("StripSecrets dropped domain")
 			}
 			if got := parseConfig([]byte(`{"a":"b"}`)); got["a"] != "b" {
 				t.Errorf("parseConfig mismatch")

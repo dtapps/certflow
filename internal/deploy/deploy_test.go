@@ -1,8 +1,13 @@
 package deploy
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	"cnb.cool/dtapp/certflow/internal/config"
+	"cnb.cool/dtapp/certflow/internal/deploycredential"
+	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 )
 
 func TestRegionFromConfig(t *testing.T) {
@@ -85,6 +90,7 @@ func TestCredsFromConfig(t *testing.T) {
 		wantID     string
 		wantSec    string
 		wantRgn    string
+		wantErr    bool
 	}{
 		{
 			provider: "aliyun", credSource: deploy,
@@ -125,69 +131,72 @@ func TestCredsFromConfig(t *testing.T) {
 			wantID: "ak", wantSec: "sk", wantRgn: "",
 		},
 		{
-			// 未知厂商返回空凭证
+			// 未知厂商返回错误
 			provider: "unknown", credSource: deploy,
-			cfg:    map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
-			wantID: "", wantSec: "", wantRgn: "",
+			cfg:     map[string]string{"access_key_id": "ak", "access_key_secret": "sk"},
+			wantErr: true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.provider+"/"+c.credSource, func(t *testing.T) {
-			creds := credsFromConfig(c.provider, c.credSource, c.cfg)
+			raw, _ := json.Marshal(c.cfg)
+			var creds Credentials
+			var err error
+			if c.credSource == deploy {
+				creds, err = deploycredential.Parse(c.provider, raw)
+			} else {
+				creds, err = dnsprovider.ParseCredential(c.provider, raw)
+			}
+			if c.wantErr {
+				if err == nil {
+					t.Errorf("expected error for unknown provider, got nil; creds=%+v", creds)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if creds.AccessKeyID != c.wantID || creds.AccessKeySecret != c.wantSec || creds.Region != c.wantRgn {
-				t.Errorf("credsFromConfig(%q,%q) = %+v, want id=%q sec=%q region=%q",
-					c.provider, c.credSource, creds, c.wantID, c.wantSec, c.wantRgn)
+				t.Errorf("got %+v, want id=%q sec=%q region=%q", creds, c.wantID, c.wantSec, c.wantRgn)
 			}
 		})
 	}
 }
 
 func TestStripCreds(t *testing.T) {
-	cases := []struct {
-		provider string
-		cfg      map[string]string
-		keep     []string // 期望保留的 key
-		drop     []string // 期望被剔除的 key
-	}{
-		{
-			provider: "aliyun",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk", "region_id": "cn", "domain": "x.com", "cert_name": "y"},
-			keep:     []string{"domain", "cert_name"},
-			drop:     []string{"access_key_id", "access_key_secret", "region_id"},
-		},
-		{
-			provider: "huawei",
-			cfg:      map[string]string{"access_key_id": "ak", "secret_access_key": "sk", "region": "cn", "domain": "x.com"},
-			keep:     []string{"domain"},
-			drop:     []string{"access_key_id", "secret_access_key", "region"},
-		},
-		{
-			provider: "tencentcloud",
-			cfg:      map[string]string{"secret_id": "ak", "secret_key": "sk", "region": "ap", "domain": "x.com"},
-			keep:     []string{"domain"},
-			drop:     []string{"secret_id", "secret_key", "region"},
-		},
-		{
-			provider: "baiducloud",
-			cfg:      map[string]string{"access_key_id": "ak", "access_key_secret": "sk", "domain": "x.com"},
-			keep:     []string{"domain"},
-			drop:     []string{"access_key_id", "access_key_secret"},
-		},
+	check := func(t *testing.T, out []byte, keep, drop []string, cfg map[string]string) {
+		var m map[string]string
+		_ = json.Unmarshal(out, &m)
+		for _, k := range keep {
+			if m[k] != cfg[k] {
+				t.Errorf("should keep %q=%q, got %v", k, cfg[k], m)
+			}
+		}
+		for _, k := range drop {
+			if _, ok := m[k]; ok {
+				t.Errorf("should have dropped %q, got %v", k, m)
+			}
+		}
 	}
-	for _, c := range cases {
-		t.Run(c.provider, func(t *testing.T) {
-			got := stripCreds(c.provider, c.cfg)
-			for _, k := range c.keep {
-				if _, ok := got[k]; !ok {
-					t.Errorf("stripCreds(%q) missing expected key %q, got %v", c.provider, k, got)
-				}
-			}
-			for _, k := range c.drop {
-				if _, ok := got[k]; ok {
-					t.Errorf("stripCreds(%q) should have dropped key %q, got %v", c.provider, k, got)
-				}
-			}
-		})
+	aliyun := []byte(`{"access_key_id":"ak","access_key_secret":"sk","region_id":"cn","domain":"x.com","cert_name":"y"}`)
+	out, err := config.StripSecrets[deploycredential.AliyunDeployCred](aliyun)
+	if err == nil {
+		check(t, out, []string{"region_id", "domain", "cert_name"}, []string{"access_key_id", "access_key_secret"}, map[string]string{"region_id": "cn", "domain": "x.com", "cert_name": "y"})
+	}
+	huawei := []byte(`{"access_key_id":"ak","secret_access_key":"sk","region":"cn","domain":"x.com"}`)
+	out, err = config.StripSecrets[deploycredential.HuaweiDeployCred](huawei)
+	if err == nil {
+		check(t, out, []string{"region", "domain"}, []string{"access_key_id", "secret_access_key"}, map[string]string{"region": "cn", "domain": "x.com"})
+	}
+	tencent := []byte(`{"secret_id":"ak","secret_key":"sk","region":"ap","domain":"x.com"}`)
+	out, err = config.StripSecrets[deploycredential.TencentDeployCred](tencent)
+	if err == nil {
+		check(t, out, []string{"region", "domain"}, []string{"secret_id", "secret_key"}, map[string]string{"region": "ap", "domain": "x.com"})
+	}
+	baidu := []byte(`{"access_key_id":"ak","access_key_secret":"sk","domain":"x.com"}`)
+	out, err = config.StripSecrets[deploycredential.BaiduDeployCred](baidu)
+	if err == nil {
+		check(t, out, []string{"domain"}, []string{"access_key_id", "access_key_secret"}, map[string]string{"domain": "x.com"})
 	}
 }
 

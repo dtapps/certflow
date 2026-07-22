@@ -1,11 +1,11 @@
 package certificate
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"github.com/go-acme/lego/v5/challenge"
@@ -43,428 +43,428 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/xinnet"
 )
 
-// createDNSProvider 根据提供商类型和配置创建 lego DNS provider
+// createDNSProvider 根据提供商类型和配置创建 lego DNS provider。
+// 配置按厂商经 dnsprovider.Parse 解析为强类型结构体（泛型反序列化），
+// 再通过类型断言分派到对应的构造器，彻底消除原先散落的 map[string]string 字符串读取。
 func createDNSProvider(provider *ent.DNSProvider) (challenge.Provider, error) {
 	if len(provider.Config) == 0 {
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_config_empty"))
 	}
-
-	var configMap map[string]string
-	if err := json.Unmarshal(provider.Config, &configMap); err != nil {
+	cfg, err := dnsprovider.Parse(provider.ProviderType.String(), provider.Config)
+	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_config_parse_failed", "Error", err))
 	}
-
-	switch provider.ProviderType {
-	case "cloudflare":
-		return createCloudflareProvider(configMap)
-	case "aliyun":
-		return createAliyunProvider(configMap)
-	case "huawei":
-		return createHuaweiProvider(configMap)
-	case "tencentcloud":
-		return createTencentCloudProvider(configMap)
-	case "aws":
-		return createRoute53Provider(configMap)
-	case "googlecloud":
-		return createGoogleCloudProvider(configMap)
-	case "baiducloud":
-		return createBaiduCloudProvider(configMap)
-	case "jdcloud":
-		return createJDCloudProvider(configMap)
-	case "volcengine":
-		return createVolcengineProvider(configMap)
-	case "edgeone":
-		return createEdgeOneProvider(configMap)
-	case "aliesa":
-		return createAliesaProvider(configMap)
-	case "ucloud":
-		return createUCloudProvider(configMap)
-	case "westcn":
-		return createWestCNProvider(configMap)
-	case "com35":
-		return createCom35Provider(configMap)
-	case "rainyun":
-		return createRainYunProvider(configMap)
-	case "todaynic":
-		return createTodayNICProvider(configMap)
-	case "dnsla":
-		return createDNSLAProvider(configMap)
-	case "dns51":
-		return createDNS51Provider(configMap)
-	case "xinnet":
-		return createXinnetProvider(configMap)
-	case "porkbun":
-		return createPorkbunProvider(configMap)
-	case "namecheap":
-		return createNamecheapProvider(configMap)
-	case "godaddy":
-		return createGoDaddyProvider(configMap)
-	case "gandiv5":
-		return createGandiV5Provider(configMap)
-	case "dynadot":
-		return createDynadotProvider(configMap)
-	case "azuredns":
-		return createAzureDNSProvider(configMap)
-	case "digitalocean":
-		return createDigitalOceanProvider(configMap)
-	case "vultr":
-		return createVultrProvider(configMap)
-	case "hetzner":
-		return createHetznerProvider(configMap)
-	case "linode":
-		return createLinodeProvider(configMap)
-	case "ovh":
-		return createOVHProvider(configMap)
-	case "dnsimple":
-		return createDNSimpleProvider(configMap)
-	case "ns1":
-		return createNS1Provider(configMap)
+	switch c := cfg.(type) {
+	case dnsprovider.CloudflareConfig:
+		return createCloudflareProvider(c)
+	case dnsprovider.AliyunConfig:
+		return createAliyunProvider(c)
+	case dnsprovider.HuaweiConfig:
+		return createHuaweiProvider(c)
+	case dnsprovider.TencentConfig:
+		return createTencentCloudProvider(c)
+	case dnsprovider.Route53Config:
+		return createRoute53Provider(c)
+	case dnsprovider.GoogleCloudConfig:
+		return createGoogleCloudProvider(c)
+	case dnsprovider.BaiduConfig:
+		return createBaiduCloudProvider(c)
+	case dnsprovider.JdcloudConfig:
+		return createJDCloudProvider(c)
+	case dnsprovider.VolcengineConfig:
+		return createVolcengineProvider(c)
+	case dnsprovider.EdgeOneConfig:
+		return createEdgeOneProvider(c)
+	case dnsprovider.AliEsaConfig:
+		return createAliesaProvider(c)
+	case dnsprovider.UCloudConfig:
+		return createUCloudProvider(c)
+	case dnsprovider.WestCNConfig:
+		return createWestCNProvider(c)
+	case dnsprovider.Com35Config:
+		return createCom35Provider(c)
+	case dnsprovider.RainYunConfig:
+		return createRainYunProvider(c)
+	case dnsprovider.TodayNICConfig:
+		return createTodayNICProvider(c)
+	case dnsprovider.DNSLAConfig:
+		return createDNSLAProvider(c)
+	case dnsprovider.DNS51Config:
+		return createDNS51Provider(c)
+	case dnsprovider.XinnetConfig:
+		return createXinnetProvider(c)
+	case dnsprovider.PorkbunConfig:
+		return createPorkbunProvider(c)
+	case dnsprovider.NamecheapConfig:
+		return createNamecheapProvider(c)
+	case dnsprovider.GoDaddyConfig:
+		return createGoDaddyProvider(c)
+	case dnsprovider.GandiV5Config:
+		return createGandiV5Provider(c)
+	case dnsprovider.DynadotConfig:
+		return createDynadotProvider(c)
+	case dnsprovider.AzureConfig:
+		return createAzureDNSProvider(c)
+	case dnsprovider.DigitalOceanConfig:
+		return createDigitalOceanProvider(c)
+	case dnsprovider.VultrConfig:
+		return createVultrProvider(c)
+	case dnsprovider.HetznerConfig:
+		return createHetznerProvider(c)
+	case dnsprovider.LinodeConfig:
+		return createLinodeProvider(c)
+	case dnsprovider.OVHConfig:
+		return createOVHProvider(c)
+	case dnsprovider.DNSimpleConfig:
+		return createDNSimpleProvider(c)
+	case dnsprovider.NS1Config:
+		return createNS1Provider(c)
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_unsupported", "Type", provider.ProviderType))
 	}
 }
 
 // createCloudflareProvider 创建 Cloudflare DNS provider，用于 ACME DNS 验证
-func createCloudflareProvider(configMap map[string]string) (challenge.Provider, error) {
+func createCloudflareProvider(c dnsprovider.CloudflareConfig) (challenge.Provider, error) {
 	cfg := cloudflare.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.AuthEmail = configMap["email"]
-	cfg.AuthKey = configMap["api_key"]
-	cfg.AuthToken = configMap["api_token"]
+	cfg.AuthEmail = c.Email
+	cfg.AuthKey = c.APIKey
+	cfg.AuthToken = c.APIToken
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return cloudflare.NewDNSProviderConfig(cfg)
 }
 
 // createAliyunProvider 创建阿里云 DNS provider，用于 ACME DNS 验证
-func createAliyunProvider(configMap map[string]string) (challenge.Provider, error) {
+func createAliyunProvider(c dnsprovider.AliyunConfig) (challenge.Provider, error) {
 	cfg := alidns.NewDefaultConfig()
-	cfg.APIKey = configMap["access_key_id"]
-	cfg.SecretKey = configMap["access_key_secret"]
-	cfg.RegionID = configMap["region_id"]
+	cfg.APIKey = c.AccessKeyID
+	cfg.SecretKey = c.AccessKeySecret
+	cfg.RegionID = c.RegionID
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return alidns.NewDNSProviderConfig(cfg)
 }
 
 // createHuaweiProvider 创建华为云 DNS provider，用于 ACME DNS 验证
-func createHuaweiProvider(configMap map[string]string) (challenge.Provider, error) {
+func createHuaweiProvider(c dnsprovider.HuaweiConfig) (challenge.Provider, error) {
 	cfg := huaweicloud.NewDefaultConfig()
-	cfg.AccessKeyID = configMap["access_key_id"]
-	cfg.SecretAccessKey = configMap["secret_access_key"]
-	cfg.Region = configMap["region"]
+	cfg.AccessKeyID = c.AccessKeyID
+	cfg.SecretAccessKey = c.SecretAccessKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return huaweicloud.NewDNSProviderConfig(cfg)
 }
 
 // createTencentCloudProvider 创建腾讯云 DNS provider，用于 ACME DNS 验证
-func createTencentCloudProvider(configMap map[string]string) (challenge.Provider, error) {
+func createTencentCloudProvider(c dnsprovider.TencentConfig) (challenge.Provider, error) {
 	cfg := tencentcloud.NewDefaultConfig()
-	cfg.SecretID = configMap["secret_id"]
-	cfg.SecretKey = configMap["secret_key"]
-	cfg.Region = configMap["region"]
+	cfg.SecretID = c.SecretID
+	cfg.SecretKey = c.SecretKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return tencentcloud.NewDNSProviderConfig(cfg)
 }
 
 // createRoute53Provider 创建 AWS Route53 DNS provider，用于 ACME DNS 验证
-func createRoute53Provider(configMap map[string]string) (challenge.Provider, error) {
+func createRoute53Provider(c dnsprovider.Route53Config) (challenge.Provider, error) {
 	cfg := route53.NewDefaultConfig()
-	cfg.AccessKeyID = configMap["access_key_id"]
-	cfg.SecretAccessKey = configMap["secret_access_key"]
-	cfg.Region = configMap["region"]
+	cfg.AccessKeyID = c.AccessKeyID
+	cfg.SecretAccessKey = c.SecretAccessKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return route53.NewDNSProviderConfig(cfg)
 }
 
 // createGoogleCloudProvider 创建 Google Cloud DNS provider，用于 ACME DNS 验证
-func createGoogleCloudProvider(configMap map[string]string) (challenge.Provider, error) {
+func createGoogleCloudProvider(c dnsprovider.GoogleCloudConfig) (challenge.Provider, error) {
 	cfg := clouddns.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.ClientID = configMap["client_id"]
-	cfg.Email = configMap["email"]
-	cfg.Password = configMap["password"]
+	cfg.ClientID = c.ClientID
+	cfg.Email = c.Email
+	cfg.Password = c.Password
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return clouddns.NewDNSProviderConfig(cfg)
 }
 
 // createBaiduCloudProvider 创建百度智能云 DNS provider，用于 ACME DNS 验证
-func createBaiduCloudProvider(configMap map[string]string) (challenge.Provider, error) {
+func createBaiduCloudProvider(c dnsprovider.BaiduConfig) (challenge.Provider, error) {
 	cfg := baiducloud.NewDefaultConfig()
-	cfg.AccessKeyID = configMap["access_key_id"]
-	cfg.SecretAccessKey = configMap["secret_access_key"]
+	cfg.AccessKeyID = c.AccessKeyID
+	cfg.SecretAccessKey = c.SecretAccessKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return baiducloud.NewDNSProviderConfig(cfg)
 }
 
 // createJDCloudProvider 创建京东云 DNS provider，用于 ACME DNS 验证
-func createJDCloudProvider(configMap map[string]string) (challenge.Provider, error) {
+func createJDCloudProvider(c dnsprovider.JdcloudConfig) (challenge.Provider, error) {
 	cfg := jdcloud.NewDefaultConfig()
-	cfg.AccessKeyID = configMap["access_key_id"]
-	cfg.AccessKeySecret = configMap["access_key_secret"]
-	cfg.RegionID = configMap["region_id"]
+	cfg.AccessKeyID = c.AccessKeyID
+	cfg.AccessKeySecret = c.AccessKeySecret
+	cfg.RegionID = c.RegionID
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return jdcloud.NewDNSProviderConfig(cfg)
 }
 
 // createVolcengineProvider 创建火山引擎 DNS provider，用于 ACME DNS 验证
-func createVolcengineProvider(configMap map[string]string) (challenge.Provider, error) {
+func createVolcengineProvider(c dnsprovider.VolcengineConfig) (challenge.Provider, error) {
 	cfg := volcengine.NewDefaultConfig()
-	cfg.AccessKey = configMap["access_key"]
-	cfg.SecretKey = configMap["secret_key"]
-	cfg.Region = configMap["region"]
+	cfg.AccessKey = c.AccessKey
+	cfg.SecretKey = c.SecretKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return volcengine.NewDNSProviderConfig(cfg)
 }
 
 // createEdgeOneProvider 创建腾讯云 EdgeOne DNS provider，用于 ACME DNS 验证
-func createEdgeOneProvider(configMap map[string]string) (challenge.Provider, error) {
+func createEdgeOneProvider(c dnsprovider.EdgeOneConfig) (challenge.Provider, error) {
 	cfg := edgeone.NewDefaultConfig()
-	cfg.SecretID = configMap["secret_id"]
-	cfg.SecretKey = configMap["secret_key"]
-	cfg.Region = configMap["region"]
+	cfg.SecretID = c.SecretID
+	cfg.SecretKey = c.SecretKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return edgeone.NewDNSProviderConfig(cfg)
 }
 
 // createAliesaProvider 创建阿里云 ESA(边缘安全加速) DNS provider，用于 ACME DNS 验证
-func createAliesaProvider(configMap map[string]string) (challenge.Provider, error) {
+func createAliesaProvider(c dnsprovider.AliEsaConfig) (challenge.Provider, error) {
 	cfg := aliesa.NewDefaultConfig()
-	cfg.APIKey = configMap["api_key"]
-	cfg.SecretKey = configMap["secret_key"]
-	cfg.RegionID = configMap["region_id"]
+	cfg.APIKey = c.APIKey
+	cfg.SecretKey = c.SecretKey
+	cfg.RegionID = c.RegionID
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return aliesa.NewDNSProviderConfig(cfg)
 }
 
 // createUCloudProvider 创建 UCloud DNS provider，用于 ACME DNS 验证
-func createUCloudProvider(configMap map[string]string) (challenge.Provider, error) {
+func createUCloudProvider(c dnsprovider.UCloudConfig) (challenge.Provider, error) {
 	cfg := ucloud.NewDefaultConfig()
-	cfg.PublicKey = configMap["public_key"]
-	cfg.PrivateKey = configMap["private_key"]
-	cfg.Region = configMap["region"]
+	cfg.PublicKey = c.PublicKey
+	cfg.PrivateKey = c.PrivateKey
+	cfg.Region = c.Region
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return ucloud.NewDNSProviderConfig(cfg)
 }
 
 // createWestCNProvider 创建西部数码 DNS provider，用于 ACME DNS 验证
-func createWestCNProvider(configMap map[string]string) (challenge.Provider, error) {
+func createWestCNProvider(c dnsprovider.WestCNConfig) (challenge.Provider, error) {
 	cfg := westcn.NewDefaultConfig()
-	cfg.Username = configMap["username"]
-	cfg.Password = configMap["password"]
+	cfg.Username = c.Username
+	cfg.Password = c.Password
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return westcn.NewDNSProviderConfig(cfg)
 }
 
 // createCom35Provider 创建 35 互联 DNS provider，用于 ACME DNS 验证
-func createCom35Provider(configMap map[string]string) (challenge.Provider, error) {
+func createCom35Provider(c dnsprovider.Com35Config) (challenge.Provider, error) {
 	cfg := com35.NewDefaultConfig()
-	cfg.Username = configMap["username"]
-	cfg.Password = configMap["password"]
+	cfg.Username = c.Username
+	cfg.Password = c.Password
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return com35.NewDNSProviderConfig(cfg)
 }
 
 // createRainYunProvider 创建雨云 DNS provider，用于 ACME DNS 验证
-func createRainYunProvider(configMap map[string]string) (challenge.Provider, error) {
+func createRainYunProvider(c dnsprovider.RainYunConfig) (challenge.Provider, error) {
 	cfg := rainyun.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
+	cfg.APIKey = c.APIKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return rainyun.NewDNSProviderConfig(cfg)
 }
 
 // createTodayNICProvider 创建 TodayDNS(时代互联) DNS provider，用于 ACME DNS 验证
-func createTodayNICProvider(configMap map[string]string) (challenge.Provider, error) {
+func createTodayNICProvider(c dnsprovider.TodayNICConfig) (challenge.Provider, error) {
 	cfg := todaynic.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.AuthUserID = configMap["auth_user_id"]
-	cfg.APIKey = configMap["api_key"]
+	cfg.AuthUserID = c.AuthUserID
+	cfg.APIKey = c.APIKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return todaynic.NewDNSProviderConfig(cfg)
 }
 
 // createDNSLAProvider 创建 DNSLA provider，用于 ACME DNS 验证
-func createDNSLAProvider(configMap map[string]string) (challenge.Provider, error) {
+func createDNSLAProvider(c dnsprovider.DNSLAConfig) (challenge.Provider, error) {
 	cfg := dnsla.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIID = configMap["api_id"]
-	cfg.APISecret = configMap["api_secret"]
+	cfg.APIID = c.APIID
+	cfg.APISecret = c.APISecret
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return dnsla.NewDNSProviderConfig(cfg)
 }
 
 // createDNS51Provider 创建 51DNS provider，用于 ACME DNS 验证
-func createDNS51Provider(configMap map[string]string) (challenge.Provider, error) {
+func createDNS51Provider(c dnsprovider.DNS51Config) (challenge.Provider, error) {
 	cfg := dns51.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
-	cfg.APISecret = configMap["api_secret"]
+	cfg.APIKey = c.APIKey
+	cfg.APISecret = c.APISecret
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return dns51.NewDNSProviderConfig(cfg)
 }
 
 // createXinnetProvider 创建新网 DNS provider，用于 ACME DNS 验证
-func createXinnetProvider(configMap map[string]string) (challenge.Provider, error) {
+func createXinnetProvider(c dnsprovider.XinnetConfig) (challenge.Provider, error) {
 	cfg := xinnet.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.Secret = configMap["secret"]
-	cfg.AgentID = configMap["agent_id"]
+	cfg.Secret = c.Secret
+	cfg.AgentID = c.AgentID
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return xinnet.NewDNSProviderConfig(cfg)
 }
 
 // createPorkbunProvider 创建 Porkbun DNS provider，用于 ACME DNS 验证
-func createPorkbunProvider(configMap map[string]string) (challenge.Provider, error) {
+func createPorkbunProvider(c dnsprovider.PorkbunConfig) (challenge.Provider, error) {
 	cfg := porkbun.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
-	cfg.SecretAPIKey = configMap["secret_api_key"]
+	cfg.APIKey = c.APIKey
+	cfg.SecretAPIKey = c.SecretAPIKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return porkbun.NewDNSProviderConfig(cfg)
 }
 
 // createNamecheapProvider 创建 Namecheap DNS provider，用于 ACME DNS 验证
-func createNamecheapProvider(configMap map[string]string) (challenge.Provider, error) {
+func createNamecheapProvider(c dnsprovider.NamecheapConfig) (challenge.Provider, error) {
 	cfg := namecheap.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIUser = configMap["api_user"]
-	cfg.APIKey = configMap["api_key"]
-	cfg.ClientIP = configMap["client_ip"]
+	cfg.APIUser = c.APIUser
+	cfg.APIKey = c.APIKey
+	cfg.ClientIP = c.ClientIP
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return namecheap.NewDNSProviderConfig(cfg)
 }
 
 // createGoDaddyProvider 创建 GoDaddy DNS provider，用于 ACME DNS 验证
-func createGoDaddyProvider(configMap map[string]string) (challenge.Provider, error) {
+func createGoDaddyProvider(c dnsprovider.GoDaddyConfig) (challenge.Provider, error) {
 	cfg := godaddy.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
-	cfg.APISecret = configMap["api_secret"]
+	cfg.APIKey = c.APIKey
+	cfg.APISecret = c.APISecret
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return godaddy.NewDNSProviderConfig(cfg)
 }
 
 // createGandiV5Provider 创建 Gandi v5 DNS provider，用于 ACME DNS 验证
-func createGandiV5Provider(configMap map[string]string) (challenge.Provider, error) {
+func createGandiV5Provider(c dnsprovider.GandiV5Config) (challenge.Provider, error) {
 	cfg := gandiv5.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.PersonalAccessToken = configMap["personal_access_token"]
+	cfg.PersonalAccessToken = c.PersonalAccessToken
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return gandiv5.NewDNSProviderConfig(cfg)
 }
 
 // createDynadotProvider 创建 Dynadot DNS provider，用于 ACME DNS 验证
-func createDynadotProvider(configMap map[string]string) (challenge.Provider, error) {
+func createDynadotProvider(c dnsprovider.DynadotConfig) (challenge.Provider, error) {
 	cfg := dynadot.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
-	cfg.APISecret = configMap["api_secret"]
+	cfg.APIKey = c.APIKey
+	cfg.APISecret = c.APISecret
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return dynadot.NewDNSProviderConfig(cfg)
 }
 
 // createAzureDNSProvider 创建 Azure DNS provider，用于 ACME DNS 验证
-func createAzureDNSProvider(configMap map[string]string) (challenge.Provider, error) {
+func createAzureDNSProvider(c dnsprovider.AzureConfig) (challenge.Provider, error) {
 	cfg := azuredns.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.SubscriptionID = configMap["subscription_id"]
-	cfg.ResourceGroup = configMap["resource_group"]
-	cfg.ClientID = configMap["client_id"]
-	cfg.ClientSecret = configMap["client_secret"]
-	cfg.TenantID = configMap["tenant_id"]
+	cfg.SubscriptionID = c.SubscriptionID
+	cfg.ResourceGroup = c.ResourceGroup
+	cfg.ClientID = c.ClientID
+	cfg.ClientSecret = c.ClientSecret
+	cfg.TenantID = c.TenantID
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return azuredns.NewDNSProviderConfig(cfg)
 }
 
 // createDigitalOceanProvider 创建 DigitalOcean DNS provider，用于 ACME DNS 验证
-func createDigitalOceanProvider(configMap map[string]string) (challenge.Provider, error) {
+func createDigitalOceanProvider(c dnsprovider.DigitalOceanConfig) (challenge.Provider, error) {
 	cfg := digitalocean.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.AuthToken = configMap["auth_token"]
+	cfg.AuthToken = c.AuthToken
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return digitalocean.NewDNSProviderConfig(cfg)
 }
 
 // createVultrProvider 创建 Vultr DNS provider，用于 ACME DNS 验证
-func createVultrProvider(configMap map[string]string) (challenge.Provider, error) {
+func createVultrProvider(c dnsprovider.VultrConfig) (challenge.Provider, error) {
 	cfg := vultr.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
+	cfg.APIKey = c.APIKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return vultr.NewDNSProviderConfig(cfg)
 }
 
 // createHetznerProvider 创建 Hetzner DNS provider，用于 ACME DNS 验证
-func createHetznerProvider(configMap map[string]string) (challenge.Provider, error) {
+func createHetznerProvider(c dnsprovider.HetznerConfig) (challenge.Provider, error) {
 	cfg := hetzner.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIToken = configMap["api_token"]
+	cfg.APIToken = c.APIToken
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return hetzner.NewDNSProviderConfig(cfg)
 }
 
 // createLinodeProvider 创建 Linode( Akamai ) DNS provider，用于 ACME DNS 验证
-func createLinodeProvider(configMap map[string]string) (challenge.Provider, error) {
+func createLinodeProvider(c dnsprovider.LinodeConfig) (challenge.Provider, error) {
 	cfg := linode.NewDefaultConfig()
-	cfg.Token = configMap["token"]
+	cfg.Token = c.Token
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return linode.NewDNSProviderConfig(cfg)
 }
 
 // createOVHProvider 创建 OVH DNS provider，用于 ACME DNS 验证
-func createOVHProvider(configMap map[string]string) (challenge.Provider, error) {
+func createOVHProvider(c dnsprovider.OVHConfig) (challenge.Provider, error) {
 	cfg := ovh.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.ApplicationKey = configMap["application_key"]
-	cfg.ApplicationSecret = configMap["application_secret"]
-	cfg.ConsumerKey = configMap["consumer_key"]
+	cfg.ApplicationKey = c.ApplicationKey
+	cfg.ApplicationSecret = c.ApplicationSecret
+	cfg.ConsumerKey = c.ConsumerKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return ovh.NewDNSProviderConfig(cfg)
 }
 
 // createDNSimpleProvider 创建 DNSimple DNS provider，用于 ACME DNS 验证
-func createDNSimpleProvider(configMap map[string]string) (challenge.Provider, error) {
+func createDNSimpleProvider(c dnsprovider.DNSimpleConfig) (challenge.Provider, error) {
 	cfg := dnsimple.NewDefaultConfig()
-	cfg.AccessToken = configMap["access_token"]
+	cfg.AccessToken = c.AccessToken
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return dnsimple.NewDNSProviderConfig(cfg)
 }
 
 // createNS1Provider 创建 NS1 DNS provider，用于 ACME DNS 验证
-func createNS1Provider(configMap map[string]string) (challenge.Provider, error) {
+func createNS1Provider(c dnsprovider.NS1Config) (challenge.Provider, error) {
 	cfg := ns1.NewDefaultConfig()
 	cfg.HTTPClient = httplog.WrapClient(cfg.HTTPClient)
-	cfg.APIKey = configMap["api_key"]
+	cfg.APIKey = c.APIKey
 	cfg.PropagationTimeout = 120 * time.Second
 	cfg.PollingInterval = 2 * time.Second
 	return ns1.NewDNSProviderConfig(cfg)

@@ -14,6 +14,9 @@ import (
 	"cnb.cool/dtapp/certflow/ent/certupload"
 	"cnb.cool/dtapp/certflow/ent/deploylog"
 	"cnb.cool/dtapp/certflow/ent/deploytarget"
+	"cnb.cool/dtapp/certflow/internal/config"
+	"cnb.cool/dtapp/certflow/internal/deploycredential"
+	"cnb.cool/dtapp/certflow/internal/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/notification"
@@ -215,7 +218,10 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 		if err != nil {
 			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
 		}
-		creds = credsFromConfig(in.ProviderType, string(deploytarget.CredentialSourceDeployCredential), parseConfig(cred.Config))
+		creds, err = deploycredential.Parse(in.ProviderType, cred.Config)
+		if err != nil {
+			return nil, err
+		}
 	case deploytarget.CredentialSourceDNSProvider:
 		if in.DNSProviderID == nil || *in.DNSProviderID == 0 {
 			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
@@ -224,7 +230,10 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 		if err != nil {
 			return nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
 		}
-		creds = credsFromConfig(in.ProviderType, string(deploytarget.CredentialSourceDNSProvider), parseConfig(p.Config))
+		creds, err = dnsprovider.ParseCredential(in.ProviderType, p.Config)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
@@ -286,101 +295,36 @@ func (s *DeployService) ListByCert(ctx context.Context, certID int) ([]*ent.Depl
 		All(ctx)
 }
 
-// credsFromConfig 根据厂商标识从配置 map 中提取凭证
-// credKeySet 各厂商在两种凭证来源下 config 中的 AK/SK 字段名。
-// 部署凭证（deploy_credential）沿用项目云厂商约定；DNS 提供商凭证（dns_provider）沿用 lego 各
-// provider 的字段名。二者命名可能不同，例如 baiducloud 的 SK：部署凭证为 access_key_secret，
-// 而 DNS 凭证为 secret_access_key；volcengine 的 AK/SK：部署凭证为 access_key_id/access_key_secret，
-// 而 DNS 凭证为 access_key/secret_key。
-// 部署时按 credential_source 选择对应字段名读取，避免复用 DNS 凭证作为部署凭证时读不到密钥
-// （这正是之前「百度云 DNS 凭证与部署凭证 key 不一致」导致部署失败的根因）。
-var credKeySet = map[string]struct {
-	deployAK, deploySK string
-	dnsAK, dnsSK       string
-}{
-	"aliyun":       {"access_key_id", "access_key_secret", "access_key_id", "access_key_secret"},
-	"huawei":       {"access_key_id", "secret_access_key", "access_key_id", "secret_access_key"},
-	"tencentcloud": {"secret_id", "secret_key", "secret_id", "secret_key"},
-	"baiducloud":   {"access_key_id", "access_key_secret", "access_key_id", "secret_access_key"},
-	"ctyun":        {"access_key_id", "access_key_secret", "access_key_id", "access_key_secret"},
-	"volcengine":   {"access_key_id", "access_key_secret", "access_key", "secret_key"},
-}
-
-// credsFromConfig 根据厂商与凭证来源从配置 map 中提取凭证。
-// credSource 为 deploytarget.CredentialSource 的字符串值（"deploy_credential" / "dns_provider"），
-// 用于决定读取哪一套密钥字段名（见 credKeySet）。
-func credsFromConfig(provider, credSource string, cfg map[string]string) Credentials {
-	ks, ok := credKeySet[provider]
-	if !ok {
-		return Credentials{}
-	}
-	ak, sk := ks.deployAK, ks.deploySK
-	if credSource == string(deploytarget.CredentialSourceDNSProvider) {
-		ak, sk = ks.dnsAK, ks.dnsSK
-	}
-	return Credentials{
-		AccessKeyID:     cfg[ak],
-		AccessKeySecret: cfg[sk],
-		Region:          RegionFromConfig(cfg),
-	}
-}
-
-// credKeys 各厂商凭证在 config 中的字段名（用于自管凭证时剔除），两种来源都列出
-var credKeys = map[string][]string{
-	"aliyun":       {"access_key_id", "access_key_secret", "region_id"},
-	"huawei":       {"access_key_id", "secret_access_key", "region"},
-	"tencentcloud": {"secret_id", "secret_key", "region"},
-	"baiducloud":   {"access_key_id", "access_key_secret", "secret_access_key"},
-	"ctyun":        {"access_key_id", "access_key_secret"},
-	"volcengine":   {"access_key_id", "access_key_secret", "access_key", "secret_key"},
-}
-
-// stripCreds 从 config 中剔除凭证字段，保留服务配置
-func stripCreds(provider string, cfg map[string]string) map[string]string {
-	out := map[string]string{}
-	drop := map[string]bool{}
-	for _, k := range credKeys[provider] {
-		drop[k] = true
-	}
-	for k, v := range cfg {
-		if !drop[k] {
-			out[k] = v
-		}
-	}
-	return out
-}
-
-// loadCredsAndConfig 解析部署目标对应的凭证与服务配置
+// loadCredsAndConfig 解析部署目标对应的凭证与服务配置。
+// 凭证按 credential_source 选择 deploycredential / dnsprovider 包的强类型解析；
+// 服务配置按 DeployTargetConfig 强类型解析后转回 map 供部署器消费。
 func (s *DeployService) loadCredsAndConfig(target *ent.DeployTarget) (Credentials, map[string]string, error) {
 	var creds Credentials
+	var err error
 	switch target.CredentialSource {
 	case deploytarget.CredentialSourceDeployCredential:
 		// 从部署凭证表读取
 		if target.Edges.DeployCredential == nil {
 			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
 		}
-		credCfg := parseConfig(target.Edges.DeployCredential.Config)
-		creds = credsFromConfig(target.ProviderType.String(), target.CredentialSource.String(), credCfg)
-		svc := parseConfig(target.Config)
-		if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
-			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
-		}
-		return creds, svc, nil
+		creds, err = deploycredential.Parse(target.ProviderType.String(), target.Edges.DeployCredential.Config)
 	case deploytarget.CredentialSourceDNSProvider:
 		// 复用 DNS 提供商凭证
 		if target.Edges.DNSProvider == nil {
 			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
 		}
-		dnsCfg := parseConfig(target.Edges.DNSProvider.Config)
-		creds = credsFromConfig(target.ProviderType.String(), target.CredentialSource.String(), dnsCfg)
-		svc := parseConfig(target.Config)
-		if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
-			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
-		}
-		return creds, svc, nil
+		creds, err = dnsprovider.ParseCredential(target.ProviderType.String(), target.Edges.DNSProvider.Config)
 	default:
 		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
+	if err != nil {
+		return creds, nil, err
+	}
+	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	dtc := config.MustParseConfig[DeployTargetConfig](target.Config)
+	return creds, config.AsMap(dtc), nil
 }
 
 // DeployCertificate 将指定证书部署到指定目标（domain 非空时覆盖配置中的 CDN 域名）

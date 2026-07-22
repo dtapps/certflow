@@ -3,14 +3,13 @@ package deploy
 import (
 	"context"
 	"encoding/json"
+
+	"cnb.cool/dtapp/certflow/internal/cloudcred"
 )
 
-// Credentials 云厂商访问凭证
-type Credentials struct {
-	AccessKeyID     string
-	AccessKeySecret string
-	Region          string
-}
+// Credentials 云厂商访问凭证。
+// 别名指向 cloudcred.Credentials，集中到中性包以避免 deploy 与解析包之间的循环依赖。
+type Credentials = cloudcred.Credentials
 
 // CertContent 待部署的证书内容
 type CertContent struct {
