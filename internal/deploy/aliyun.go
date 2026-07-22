@@ -438,10 +438,11 @@ func (d *AliyunDeployer) listAliyunDCDNDomains(ctx context.Context, creds Creden
 // listESASites 列出阿里云 ESA 站点，返回 "站点名||SiteId" 形式，
 // 前端按 "||" 拆分得到展示名与 SiteId（SiteId 即 SetCertificate 绑定所需的 Id）。
 func (d *AliyunDeployer) listESASites(ctx context.Context, creds Credentials, region string) ([]string, error) {
-	// 注意：直接使用原始 region（与 Deploy 一致），不要经 aliyunRegion 兜底成 cn-hangzhou。
-	// ESA 为区域化服务，endpoint 由 SDK 按 region 推导（EndpointMap 仅含 cn-hangzhou /
-	// ap-southeast-1）；传入错误 region 会被对端 reset，故必须让用户显式指定正确 region。
-	client, err := esa.NewClient(aliyunConfig(creds, region))
+	// region 与 Deploy 分支保持一致：空 region 经 aliyunRegion 兜底为 cn-hangzhou（ESA 大陆主站），
+	// 否则 esa.NewClient 会因 "RegionId is empty" 直接失败。ESA 为区域化服务，endpoint 由 SDK 按
+	// RegionId 推导（EndpointMap 仅含 cn-hangzhou / ap-southeast-1）；只有「显式设置了非 ESA 区域」
+	// 才会把错误 region 透传给对端（被 reset），从而提示用户改回正确区域。
+	client, err := esa.NewClient(aliyunConfig(creds, aliyunRegion(region)))
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.aliyun_esa_client_create")
 	}
@@ -489,8 +490,8 @@ func (d *AliyunDeployer) listESARecords(ctx context.Context, creds Credentials, 
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.aliyun_esa_invalid_site_id_param", "SiteID", siteID)
 	}
-	// 同 listESASites，直接使用原始 region，避免兜底成错误 region 导致连接被 reset。
-	client, err := esa.NewClient(aliyunConfig(creds, region))
+	// 同 listESASites：空 region 兜底为 cn-hangzhou，仅「显式设置了非 ESA 区域」才透传错误 region。
+	client, err := esa.NewClient(aliyunConfig(creds, aliyunRegion(region)))
 	if err != nil {
 		return nil, i18n.Wrap(err, "deploy.error.aliyun_esa_client_create")
 	}
