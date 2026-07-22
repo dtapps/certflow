@@ -516,7 +516,7 @@ export interface DeployCredentialListItem {
     "name": string;
 
     /**
-     * 提供商类型（aliyun/tencentcloud/huawei/baiducloud/btpanel/1panel/acepanel）
+     * 提供商类型（见 ent/schema/provider_types.go 的 DeployProviderTypes）
      */
     "provider_type": string;
 

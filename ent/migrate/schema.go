@@ -136,7 +136,7 @@ var (
 	DeployCredentialsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine", "btpanel", "1panel", "acepanel"}},
+		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine", "btpanel", "1panel", "acepanel", "aapanel", "aawaf"}},
 		{Name: "config", Type: field.TypeBytes, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: false},
 		{Name: "comment", Type: field.TypeString, Nullable: true},
@@ -183,7 +183,7 @@ var (
 	DeployTargetsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine", "btpanel", "1panel", "acepanel"}},
+		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine", "btpanel", "1panel", "acepanel", "aapanel", "aawaf"}},
 		{Name: "deploy_service", Type: field.TypeString},
 		{Name: "config", Type: field.TypeBytes, Nullable: true},
 		{Name: "credential_source", Type: field.TypeEnum, Enums: []string{"dns_provider", "deploy_credential"}, Default: "dns_provider"},

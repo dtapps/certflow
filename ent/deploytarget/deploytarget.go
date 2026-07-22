@@ -147,6 +147,8 @@ const (
 	ProviderTypeBtpanel      ProviderType = "btpanel"
 	ProviderType1panel       ProviderType = "1panel"
 	ProviderTypeAcepanel     ProviderType = "acepanel"
+	ProviderTypeAapanel      ProviderType = "aapanel"
+	ProviderTypeAawaf        ProviderType = "aawaf"
 )
 
 func (pt ProviderType) String() string {
@@ -156,7 +158,7 @@ func (pt ProviderType) String() string {
 // ProviderTypeValidator is a validator for the "provider_type" field enum values. It is called by the builders before save.
 func ProviderTypeValidator(pt ProviderType) error {
 	switch pt {
-	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaiducloud, ProviderTypeCtyun, ProviderTypeVolcengine, ProviderTypeBtpanel, ProviderType1panel, ProviderTypeAcepanel:
+	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaiducloud, ProviderTypeCtyun, ProviderTypeVolcengine, ProviderTypeBtpanel, ProviderType1panel, ProviderTypeAcepanel, ProviderTypeAapanel, ProviderTypeAawaf:
 		return nil
 	default:
 		return fmt.Errorf("deploytarget: invalid enum value for provider_type field: %q", pt)

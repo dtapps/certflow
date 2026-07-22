@@ -22,7 +22,7 @@ func NewDeployCredentialServiceWrapper(credentialService *deploycredential.Servi
 type DeployCredentialListItem struct {
 	ID           int               `json:"id"`            // 部署凭证 ID
 	Name         string            `json:"name"`          // 凭证名称
-	ProviderType string            `json:"provider_type"` // 提供商类型（aliyun/tencentcloud/huawei/baiducloud/btpanel/1panel/acepanel）
+	ProviderType string            `json:"provider_type"` // 提供商类型（见 ent/schema/provider_types.go 的 DeployProviderTypes）
 	Config       map[string]string `json:"config"`        // 配置参数（API 密钥等）
 	IsActive     bool              `json:"is_active"`     // 是否启用
 	Comment      string            `json:"comment"`       // 备注

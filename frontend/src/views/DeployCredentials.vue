@@ -39,15 +39,23 @@ const providerConfigSchema: Record<
     { key: 'access_key_secret', labelKey: 'dns.config.access_key_secret', type: 'password' },
   ],
   btpanel: [
-    { key: 'panel_url', labelKey: 'deploy.config.domain', type: 'text' },
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
   ],
   '1panel': [
-    { key: 'panel_url', labelKey: 'deploy.config.domain', type: 'text' },
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
   ],
   acepanel: [
-    { key: 'panel_url', labelKey: 'deploy.config.domain', type: 'text' },
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
+  ],
+  aapanel: [
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
+  ],
+  aawaf: [
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
   ],
 }
@@ -62,6 +70,8 @@ const providerTypes = [
   { value: 'btpanel', labelKey: 'dns.type.btpanel' },
   { value: '1panel', labelKey: 'dns.type.1panel' },
   { value: 'acepanel', labelKey: 'dns.type.acepanel' },
+  { value: 'aapanel', labelKey: 'dns.type.aapanel' },
+  { value: 'aawaf', labelKey: 'dns.type.aawaf' },
 ]
 
 const credentialListRef = ref<InstanceType<typeof CredentialList>>()

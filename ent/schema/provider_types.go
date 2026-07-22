@@ -6,5 +6,7 @@ var DeployProviderTypes = []string{
 	// 云厂商
 	"aliyun", "tencentcloud", "huawei", "baiducloud", "ctyun", "volcengine",
 	// 面板
-	"btpanel", "1panel", "acepanel",
+	"btpanel", "1panel", "acepanel", "aapanel",
+	// 防火墙
+	"aawaf",
 }
