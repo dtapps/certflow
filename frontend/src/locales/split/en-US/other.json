@@ -126,6 +126,7 @@
   "ca.batchDeleteConfirmDesc": "This action cannot be undone. Related data will be removed as well.",
   "ca.batchBuiltinSkip": "Skipped {count} built-in CAs (cannot be deleted)",
   "ca.selectedCount": "{count} selected",
+  "ca.selectAll": "Select All",
   "credential.batchDelete": "Delete",
   "credential.batchEnable": "Enable",
   "credential.batchDisable": "Disable",

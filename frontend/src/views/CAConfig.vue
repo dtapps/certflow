@@ -34,7 +34,6 @@ const { isDark } = storeToRefs(useThemeStore())
 
 // 暗色适配：本项目 Tailwind 的 dark: 变体不生效，改用 isDark 控制卡片配色
 const cardBorder = computed(() => (isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'))
-const barBorder = computed(() => (isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'))
 const iconBg = computed(() => (isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'))
 const selectedCardStyle = {
   borderColor: '#2080f0',
@@ -308,6 +307,34 @@ async function confirmBatchDelete() {
       </n-button>
     </div>
 
+    <!-- 批量操作栏 -->
+    <div v-if="cas.length > 0" class="flex items-center justify-between mb-3 px-1">
+      <div class="flex items-center gap-2">
+        <n-checkbox
+          :checked="isAllSelected"
+          :indeterminate="isIndeterminate"
+          @update:checked="toggleSelectAll"
+        >
+          {{ t('ca.selectAll') }}
+        </n-checkbox>
+        <span v-if="selectedIds.length > 0" class="text-sm opacity-60">{{
+          t('ca.selectedCount', { count: selectedIds.length })
+        }}</span>
+      </div>
+      <div v-if="selectedIds.length > 0" class="flex items-center gap-2">
+        <n-button size="small" type="primary" secondary @click="batchEnable">{{
+          t('ca.batchEnable')
+        }}</n-button>
+        <n-button size="small" secondary @click="batchDisable">{{ t('ca.batchDisable') }}</n-button>
+        <n-button size="small" type="error" secondary @click="batchDelete">{{
+          t('ca.batchDelete')
+        }}</n-button>
+        <n-button size="small" quaternary @click="clearSelection">{{
+          t('common.cancel')
+        }}</n-button>
+      </div>
+    </div>
+
     <n-card size="small">
       <n-spin :show="isLoading">
         <n-empty v-if="!isLoading && cas.length === 0" :description="t('ca.noCA')">
@@ -317,40 +344,6 @@ async function confirmBatchDelete() {
         </n-empty>
 
         <div v-else>
-          <!-- 批量操作栏 -->
-          <div
-            class="flex items-center justify-between px-6 py-2"
-            :style="{ borderBottom: `1px solid ${barBorder}` }"
-          >
-            <div class="flex items-center gap-2">
-              <span @click.stop>
-                <n-checkbox
-                  size="small"
-                  :checked="isAllSelected"
-                  :indeterminate="isIndeterminate"
-                  @update:checked="toggleSelectAll"
-                />
-              </span>
-              <span class="text-sm opacity-60">{{
-                t('ca.selectedCount', { count: selectedIds.length })
-              }}</span>
-            </div>
-            <div v-if="selectedIds.length > 0" class="flex items-center gap-2">
-              <n-button size="small" type="primary" secondary @click="batchEnable">{{
-                t('ca.batchEnable')
-              }}</n-button>
-              <n-button size="small" secondary @click="batchDisable">{{
-                t('ca.batchDisable')
-              }}</n-button>
-              <n-button size="small" type="error" secondary @click="batchDelete">{{
-                t('ca.batchDelete')
-              }}</n-button>
-              <n-button size="small" quaternary @click="clearSelection">{{
-                t('common.cancel')
-              }}</n-button>
-            </div>
-          </div>
-
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
             <n-card
               v-for="ca in cas"

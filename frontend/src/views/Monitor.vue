@@ -396,7 +396,7 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
             >
               {{ t('monitor.selectAll') }}
             </n-checkbox>
-            <span v-if="selectedIds.length > 0" class="text-xs opacity-60">
+            <span v-if="selectedIds.length > 0" class="text-sm opacity-60">
               {{ t('monitor.selectedCount', { count: selectedIds.length }) }}
             </span>
             <div class="flex-1"></div>

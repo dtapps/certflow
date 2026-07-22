@@ -118,6 +118,7 @@
   "ca.saveFailed": "Failed to save CA:",
   "ca.saveSuccess": "CA saved successfully",
   "ca.selectedCount": "{count} selected",
+  "ca.selectAll": "Select All",
   "ca.setAsDefault": "Set as Default",
   "ca.setDefaultFailed": "Failed to set default CA:",
   "ca.setDefaultSuccess": "Set as default CA",
