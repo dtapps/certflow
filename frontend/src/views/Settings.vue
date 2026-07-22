@@ -666,7 +666,9 @@ onMounted(async () => {
             <div class="flex items-center justify-between mb-3">
               <div>
                 <p class="font-medium text-sm">{{ t('settings.network.httpLogRetention') }}</p>
-                <p class="text-xs mt-0.5 opacity-50">{{ t('settings.network.httpLogRetentionDesc') }}</p>
+                <p class="text-xs mt-0.5 opacity-50">
+                  {{ t('settings.network.httpLogRetentionDesc') }}
+                </p>
               </div>
               <n-input-number
                 v-model:value="settings.http_log_retention_days"
