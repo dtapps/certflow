@@ -111,6 +111,11 @@ export interface Settings {
     "monitor_history_days": number;
 
     /**
+     * HTTP 请求日志保留天数（超期自动清理，<=0 表示不清理）
+     */
+    "http_log_retention_days": number;
+
+    /**
      * 数据目录
      */
     "data_dir": string;

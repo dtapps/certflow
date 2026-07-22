@@ -46,6 +46,7 @@ const defaultSettings: SafeSettings = {
   auto_check_expiry: true,
   check_interval: 6,
   monitor_history_days: 90,
+  http_log_retention_days: 30,
   data_dir: '~/.certflow',
   language: 'auto',
   theme: 'auto',
@@ -656,6 +657,23 @@ onMounted(async () => {
                 :placeholder="t('settings.network.passwordPlaceholder')"
                 size="small"
                 show-password-on="click"
+              />
+            </div>
+          </div>
+
+          <!-- HTTP 请求日志保留 -->
+          <div class="pt-3 border-t border-neutral-200 dark:border-neutral-700 mt-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="font-medium text-sm">{{ t('settings.network.httpLogRetention') }}</p>
+                <p class="text-xs mt-0.5 opacity-50">{{ t('settings.network.httpLogRetentionDesc') }}</p>
+              </div>
+              <n-input-number
+                v-model:value="settings.http_log_retention_days"
+                :min="1"
+                :max="3650"
+                size="small"
+                style="width: 110px"
               />
             </div>
           </div>

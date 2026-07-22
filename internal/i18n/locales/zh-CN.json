@@ -426,6 +426,8 @@
   "log.get_cert_record_failed": "获取证书记录失败: cert_id={{.ID}}, err={{.Error}}",
   "log.get_dns_challenge_failed": "获取 DNS 挑战信息失败: {{.Error}}",
   "log.get_expiring_certs_failed": "获取即将过期证书列表失败: {{.Error}}",
+  "log.httplog.cleanup": "清理 HTTP 请求日志: 删除 {{.Count}} 条",
+  "log.httplog.cleanup_failed": "清理 HTTP 请求日志失败: {{.Error}}",
   "log.httplog.enabled": "已启用 HTTP 请求日志（DEBUG 模式，独立日志库 httplog.db）",
   "log.httplog.save_failed": "保存 HTTP 请求日志失败",
   "log.httplog.skip_not_debug": "未启用 HTTP 请求日志（日志级别非 DEBUG）",

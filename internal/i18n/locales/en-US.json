@@ -426,6 +426,8 @@
   "log.get_cert_record_failed": "Failed to get certificate record: cert_id={{.ID}}, err={{.Error}}",
   "log.get_dns_challenge_failed": "Failed to get DNS challenge info: {{.Error}}",
   "log.get_expiring_certs_failed": "Failed to get expiring certificates: {{.Error}}",
+  "log.httplog.cleanup": "Cleaned HTTP request logs: deleted {{.Count}} records",
+  "log.httplog.cleanup_failed": "Failed to clean HTTP request logs: {{.Error}}",
   "log.httplog.enabled": "HTTP request logging enabled (DEBUG mode, separate log DB httplog.db)",
   "log.httplog.save_failed": "Failed to save HTTP request log",
   "log.httplog.skip_not_debug": "HTTP request logging skipped (log level is not DEBUG)",

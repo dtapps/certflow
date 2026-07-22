@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"cnb.cool/dtapp/certflow/ent_log"
+	"cnb.cool/dtapp/certflow/ent_log/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"entgo.io/ent/dialect"
@@ -186,4 +188,25 @@ func Close() error {
 		return err
 	}
 	return nil
+}
+
+// Cleanup 删除早於 retentionDays 天前的 HTTP 请求日志（基于 created_at）。
+// retentionDays <= 0 时表示不清理，直接返回。
+// 返回被删除的记录数。
+func Cleanup(retentionDays int) (int, error) {
+	if retentionDays <= 0 {
+		return 0, nil
+	}
+	mu.RLock()
+	db := client
+	mu.RUnlock()
+	if db == nil {
+		return 0, nil
+	}
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	n, err := db.HttpLog.Delete().Where(httplog.CreatedAtLT(cutoff)).Exec(context.Background())
+	if err != nil {
+		return 0, fmt.Errorf("清理 HTTP 请求日志失败: %w", err)
+	}
+	return n, nil
 }

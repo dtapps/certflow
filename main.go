@@ -94,6 +94,23 @@ func main() {
 		logging.Error(i18n.T("error.httplog_init_failed", "Error", err))
 	} else {
 		defer httplog.Close()
+		// 启动 HTTP 请求日志定期清理（保留天数取设置，默认 30 天）
+		go func() {
+			cleanupHttpLog := func() {
+				days := settingsService.Get().HttpLogRetentionDays
+				if n, err := httplog.Cleanup(days); err != nil {
+					logging.Error(i18n.T("log.httplog_cleanup_failed", "Error", err))
+				} else if n > 0 {
+					logging.Info(i18n.T("log.httplog_cleanup", "Count", n))
+				}
+			}
+			cleanupHttpLog()
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				cleanupHttpLog()
+			}
+		}()
 	}
 
 	// 初始化数据库

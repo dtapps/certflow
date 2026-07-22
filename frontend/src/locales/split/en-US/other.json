@@ -848,6 +848,8 @@
   "settings.network.hostPlaceholder": "Host, e.g. 127.0.0.1",
   "settings.network.httpProxy": "HTTP Proxy",
   "settings.network.httpProxyDesc": "All ACME requests sent through proxy",
+  "settings.network.httpLogRetention": "HTTP Request Log Retention (days)",
+  "settings.network.httpLogRetentionDesc": "HTTP request logs older than this many days are cleaned up automatically (default 30, 0 means never clean up)",
   "settings.network.passwordPlaceholder": "Password (optional)",
   "settings.network.portPlaceholder": "Port",
   "settings.network.title": "Network Settings",

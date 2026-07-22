@@ -295,6 +295,8 @@
   "log.httplog.enabled": "已启用 HTTP 请求日志（DEBUG 模式，独立日志库 httplog.db）",
   "log.httplog.skip_not_debug": "未启用 HTTP 请求日志（日志级别非 DEBUG）",
   "log.httplog.save_failed": "保存 HTTP 请求日志失败",
+  "log.httplog.cleanup": "清理 HTTP 请求日志: 删除 {{.Count}} 条",
+  "log.httplog.cleanup_failed": "清理 HTTP 请求日志失败: {{.Error}}",
   "log.updater_mirror_download": "使用镜像下载: 源={{.Source}} 地址={{.URL}}",
   "log.updater_mirror_failed": "镜像源失败，尝试下一个: 源={{.Source}} 错误={{.Error}}"
 }

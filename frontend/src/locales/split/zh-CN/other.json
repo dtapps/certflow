@@ -848,6 +848,8 @@
   "settings.network.hostPlaceholder": "主机，如: 127.0.0.1",
   "settings.network.httpProxy": "HTTP 代理",
   "settings.network.httpProxyDesc": "所有 ACME 请求通过代理发送",
+  "settings.network.httpLogRetention": "HTTP 请求日志保留天数",
+  "settings.network.httpLogRetentionDesc": "超过该天数的 HTTP 请求日志将自动清理（默认 30 天，0 表示不清理）",
   "settings.network.passwordPlaceholder": "密码（可选）",
   "settings.network.portPlaceholder": "端口",
   "settings.network.title": "网络设置",

@@ -926,6 +926,8 @@
   "settings.network.delete": "删除",
   "settings.network.dnsPlaceholder": "输入 DNS 服务器，逗号分隔，如: 8.8.8.8, 8.8.4.4",
   "settings.network.hostPlaceholder": "主机，如: 127.0.0.1",
+  "settings.network.httpLogRetention": "HTTP 请求日志保留天数",
+  "settings.network.httpLogRetentionDesc": "超过该天数的 HTTP 请求日志将自动清理（默认 30 天，0 表示不清理）",
   "settings.network.httpProxy": "HTTP 代理",
   "settings.network.httpProxyDesc": "所有 ACME 请求通过代理发送",
   "settings.network.passwordPlaceholder": "密码（可选）",
