@@ -94,11 +94,13 @@ watch(theme, async (val) => {
   }
 })
 
-watch(currentLocale, async (val) => {
+// 语言切换：后端只需「已解析」语言（不含 auto），与 Settings.vue autoSave / App.vue 启动同步保持一致
+watch(currentLocale, async () => {
   try {
     const settings = await SettingsService.GetSettings()
-    if (settings.language !== val) {
-      settings.language = val
+    const resolved = i18nStore.getResolvedLocale()
+    if (settings.language !== resolved) {
+      settings.language = resolved
       await SettingsService.SaveSettings(settings)
     }
   } catch (e) {

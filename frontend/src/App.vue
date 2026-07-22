@@ -10,6 +10,8 @@ import TopBar from './components/TopBar.vue'
 import ActionBar from './components/ActionBar.vue'
 import LoginDialog from './components/LoginDialog.vue'
 import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapper'
+import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
+import type { Settings } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useThemeStore } from './stores/theme'
 import { useI18nStore } from './stores/i18n'
 import { useNaiveLocale } from './utils/naive-locale'
@@ -20,7 +22,8 @@ const router = useRouter()
 const isAuthenticated = ref(true)
 const themeStore = useThemeStore()
 const { isDark, naiveTheme, naiveThemeOverrides } = storeToRefs(themeStore)
-const { t } = useI18nStore()
+const i18nStore = useI18nStore()
+const { t } = i18nStore
 // naive-ui 内置组件语言（跟随应用 i18n 切换）
 const { naiveLocale, naiveDateLocale } = useNaiveLocale()
 
@@ -39,6 +42,20 @@ onMounted(async () => {
     isAuthenticated.value = false
   } else {
     isAuthenticated.value = true
+  }
+
+  // 启动后将前端解析语言与主题同步到后端，保证后端 i18n（日志/通知/更新源）
+  // 与界面语言一致，实现 go+前端 全局同步；同时把后端持久化值修正为前端真相源，
+  // 避免下次启动 main.go 用过期值初始化后端语言。
+  try {
+    const current = await SettingsService.GetSettings()
+    await SettingsService.SaveSettings({
+      ...current,
+      language: i18nStore.getResolvedLocale(),
+      theme: themeStore.theme,
+    } as Settings)
+  } catch (e) {
+    console.error(t('settings.saveFailed'), e)
   }
 })
 

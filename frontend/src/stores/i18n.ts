@@ -25,10 +25,17 @@ export const useI18nStore = defineStore('i18n', () => {
   const locale = ref<Locale>((localStorage.getItem('certflow-locale') as Locale) || 'auto')
   const LOCALE_KEY = 'certflow-locale'
 
+  // 解析后的语言（不含 auto）：auto 跟随系统语言
   const resolved = computed<ResolvedLocale>(() => {
     if (locale.value === 'auto') return getSystemLocale()
     return locale.value
   })
+
+  // 读取原始语言（含 auto）：返回用户的选择，用于设置项展示与持久化。
+  const getLocale = (): Locale => locale.value
+
+  // 读取解析后的语言（不含 auto）：用于翻译、cnb/GitHub 源判断、后端同步等。
+  const getResolvedLocale = (): ResolvedLocale => resolved.value
 
   const setLocale = (newLocale: Locale) => {
     locale.value = newLocale
@@ -46,6 +53,9 @@ export const useI18nStore = defineStore('i18n', () => {
 
   return {
     locale,
+    resolved,
+    getLocale,
+    getResolvedLocale,
     t,
     setLocale,
   }

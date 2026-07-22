@@ -79,6 +79,20 @@ const i18nStore = useI18nStore()
 const { locale: currentLocale } = storeToRefs(i18nStore)
 const { t, setLocale } = i18nStore
 
+// 语言选择代理：v-model 写入经 setLocale 落盘（保留 auto 选择），
+// 而持久化的 settings.language 由下方 watch 同步为「已解析」语言供后端使用。
+const languageModel = computed({
+  get: () => i18nStore.locale,
+  set: (val: 'zh-CN' | 'en-US' | 'auto') => setLocale(val),
+})
+
+// 主题选择代理：与 languageModel 对称，v-model 写入经 setTheme 落盘（保留 auto 选择），
+// 后端持久化由 autoSave 接管，不在此处反向写回 store。
+const themeModel = computed({
+  get: () => themeStore.theme,
+  set: (val: 'dark' | 'light' | 'auto') => setTheme(val),
+})
+
 const message = useMessage()
 initMessage(message)
 
@@ -99,7 +113,15 @@ const debounce = <T extends (...args: any[]) => any>(fn: T, ms: number) => {
 // 自动保存（防抖 500ms）
 const autoSave = debounce(async () => {
   try {
-    await SettingsService.SaveSettings(settings.value as Settings)
+    // 后端 i18n 与 cnb/GitHub 源判断需要「已解析」的语言（不含 auto），
+    // 保存时把语言字段替换为解析结果，而 settings 中仍保留用户原始选择。
+    await SettingsService.SaveSettings({
+      ...settings.value,
+      // 后端 i18n 与 cnb/GitHub 源判断需要「已解析」语言（不含 auto），
+      // 更新源判断/日志/通知语言均以此为准；主题也以 store 真相源写入。
+      language: i18nStore.getResolvedLocale(),
+      theme: themeStore.theme,
+    } as Settings)
     originalSettings.value = JSON.stringify(settings.value)
   } catch (e) {
     console.error(t('settings.saveFailed'), e)
@@ -169,13 +191,11 @@ const loadSettings = async () => {
     settings.value = safe
     // 初始化 DNS 总开关状态
     dnsEnabled.value = safe.dns_configs.some((d) => d.enabled)
-    // 同步 settings -> stores
-    if (settings.value.theme) {
-      setTheme(settings.value.theme as 'dark' | 'light' | 'auto')
-    }
-    if (settings.value.language) {
-      setLocale(settings.value.language as 'zh-CN' | 'en-US' | 'auto')
-    }
+    // 关键：表单字段对齐「前端真相源」(store/localStorage)，绝不反向写回 store。
+    // 这样即便后端持久化的 language/theme 与用户选择不一致，也不会覆盖 UI 选择，
+    // 从而避免「进设置页语言/主题就变」的跳变问题。
+    settings.value.theme = themeStore.theme
+    settings.value.language = i18nStore.getLocale()
     originalSettings.value = JSON.stringify(settings.value)
   } catch (e) {
     console.error(t('settings.loadFailed'), e)
@@ -183,22 +203,6 @@ const loadSettings = async () => {
     loading.value = false
   }
 }
-
-// 实时切换主题
-watch(
-  () => settings.value.theme,
-  (val) => {
-    if (val) setTheme(val as 'dark' | 'light' | 'auto')
-  },
-)
-
-// 实时切换语言
-watch(
-  () => settings.value.language,
-  (val) => {
-    if (val) setLocale(val as 'zh-CN' | 'en-US' | 'auto')
-  },
-)
 
 // 实时设置通知权限
 watch(notificationEnabled, async (enabled) => {
@@ -261,8 +265,8 @@ const handleRunMonitorCheck = async () => {
 }
 
 const handleCheckUpdate = async () => {
-  const locale = await SettingsService.GetSettings()
-  const lang = locale.language || 'auto'
+  // 用「已解析」语言（不含 auto）判断走 cnb 还是 GitHub 发布页
+  const lang = i18nStore.getResolvedLocale()
   if (lang === 'zh-CN') {
     await BrowserService.OpenURL('https://cnb.cool/dtapp/certflow/-/releases')
   } else {
@@ -688,7 +692,7 @@ onMounted(async () => {
           <n-form-item :label="t('settings.preferences.language')">
             <div class="flex items-center gap-3">
               <n-select
-                v-model:value="settings.language"
+                v-model:value="languageModel"
                 :options="languageOptions"
                 class="select-width"
               />
@@ -697,11 +701,7 @@ onMounted(async () => {
           </n-form-item>
           <n-form-item :label="t('settings.preferences.theme')">
             <div class="flex items-center gap-3">
-              <n-select
-                v-model:value="settings.theme"
-                :options="themeOptions"
-                class="select-width"
-              />
+              <n-select v-model:value="themeModel" :options="themeOptions" class="select-width" />
               <span class="text-sm opacity-60">{{ t('settings.preferences.theme.desc') }}</span>
             </div>
           </n-form-item>

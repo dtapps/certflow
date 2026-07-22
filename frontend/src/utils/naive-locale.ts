@@ -5,23 +5,13 @@ import { zhCN, dateZhCN, enUS, dateEnUS } from 'naive-ui'
 import type { NLocale, NDateLocale } from 'naive-ui'
 import { useI18nStore } from '../stores/i18n'
 
-// 与 i18n store 保持一致的系统语言探测逻辑
-function getSystemLocale(): 'zh-CN' | 'en-US' {
-  const lang = navigator.language || ''
-  return lang.startsWith('zh') ? 'zh-CN' : 'en-US'
-}
-
+// 直接复用 i18n store 的 resolved（auto 已在 store 内解析），避免重复探测逻辑。
 export function useNaiveLocale() {
   const i18n = useI18nStore()
 
-  const resolved = computed<'zh-CN' | 'en-US'>(() => {
-    if (i18n.locale === 'auto') return getSystemLocale()
-    return i18n.locale
-  })
-
-  const naiveLocale = computed<NLocale>(() => (resolved.value === 'zh-CN' ? zhCN : enUS))
+  const naiveLocale = computed<NLocale>(() => (i18n.resolved === 'zh-CN' ? zhCN : enUS))
   const naiveDateLocale = computed<NDateLocale>(() =>
-    resolved.value === 'zh-CN' ? dateZhCN : dateEnUS,
+    i18n.resolved === 'zh-CN' ? dateZhCN : dateEnUS,
   )
 
   return { naiveLocale, naiveDateLocale }

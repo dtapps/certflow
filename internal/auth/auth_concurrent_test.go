@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"cnb.cool/dtapp/certflow/ent"
-	esql "entgo.io/ent/dialect/sql"
 	_ "cnb.cool/dtapp/certflow/internal/sqlite"
+	esql "entgo.io/ent/dialect/sql"
 )
 
 func newConcurrentTestService(t *testing.T) *AuthService {
