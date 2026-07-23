@@ -19,7 +19,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/google/uuid v1.6.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.207
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.208
 	github.com/mattn/go-sqlite3 v1.14.48
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
