@@ -10,7 +10,7 @@ require (
 	github.com/alibabacloud-go/cdn-20180510/v5 v5.2.2
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.4
 	github.com/alibabacloud-go/dcdn-20180115/v4 v4.1.0
-	github.com/alibabacloud-go/esa-20240910/v3 v3.9.0
+	github.com/alibabacloud-go/esa-20240910/v3 v3.10.0
 	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
 	github.com/alibabacloud-go/tea v1.5.3
 	github.com/baidubce/bce-sdk-go v0.9.272
