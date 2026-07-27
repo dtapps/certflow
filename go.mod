@@ -25,12 +25,12 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.116
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.142
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.143
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.142
 	github.com/volcengine/volc-sdk-golang v1.0.252
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.118
 	go.dtapp.net/library/contrib/http_log v1.0.13
 	golang.org/x/crypto v0.54.0
 	golang.org/x/text v0.40.0
@@ -140,7 +140,7 @@ require (
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/image v0.44.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect

@@ -719,8 +719,9 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.24/go.mod h
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.38/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.105/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.116/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.142 h1:oK2uueo6FtSdhepL64WqJD0NjVl6prDSreUYKuzSp3M=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.142/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.143 h1:yN34ieC53BFRFtkPnh6WtpWwHTimmu5MjBEwtTiIEzE=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.143/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1 h1:zfDYrQ0US6kiMrLrl0QB5r+HZrJoZTbXC/4YQ0lwaes=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1/go.mod h1:vyzaMSWRQF17oo4QZkKppd84MJs97EKp/WyQGE5s/kM=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105 h1:rzbhp0bOfOczVy4UYeIE9Gi1RYg7irE5Ui+Xb2IPQJs=
@@ -740,8 +741,8 @@ github.com/volcengine/volc-sdk-golang v1.0.252 h1:Gtyj+E0k5KV2oQhHs47Op4uMQhR+RY
 github.com/volcengine/volc-sdk-golang v1.0.252/go.mod h1:zHJlaqiMbIB+0mcrsZPTwOb3FB7S/0MCfqlnO8R7hlM=
 github.com/vultr/govultr/v3 v3.32.0 h1:QS9IAeSB3BIhSoP0jIYtmGAvtsYkprjWTZAGPx8keo8=
 github.com/vultr/govultr/v3 v3.32.0/go.mod h1:2zyUw9yADQaGwKnwDesmIOlBNLrm7edsCfWHFJpWKf8=
-github.com/wailsapp/wails/v3 v3.0.0-alpha2.117 h1:udyjqPG3AIgkod5QDR/WblCkpV8R86BFPSrsWxSyt5Y=
-github.com/wailsapp/wails/v3 v3.0.0-alpha2.117/go.mod h1:74WH2FScMsgucZvHHvv7eOefDXCm/CjuIxqhhZgPhKg=
+github.com/wailsapp/wails/v3 v3.0.0-alpha2.118 h1:RFpa3tJFuQyyY8nzhrgswGkZDeYGbEGiO08CbxM7aDM=
+github.com/wailsapp/wails/v3 v3.0.0-alpha2.118/go.mod h1:74WH2FScMsgucZvHHvv7eOefDXCm/CjuIxqhhZgPhKg=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
@@ -790,8 +791,8 @@ go.uber.org/multierr v1.6.0/go.mod h1:cdWPpRnG4AhwMwsgIHip0KRBQjJy5kYEpYjJxpXp9i
 go.uber.org/multierr v1.7.0/go.mod h1:7EAYxJLBy9rStEaz58O2t4Uvip6FSURkq8/ppBp95ak=
 go.uber.org/zap v1.17.0/go.mod h1:MXVU+bhUf/A7Xi2HNOnopQOrmycQ5Ih87HtOu4q5SSo=
 go.uber.org/zap v1.19.1/go.mod h1:j3DNczoxDZroyBnOT1L/Q79cfUMGZxlv/9dzN7SM1rI=
-go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
-go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
+go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20181029021203-45a5f77698d3/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
