@@ -12,13 +12,9 @@ import {
   NDataTable,
   NCollapse,
   NCollapseItem,
-  NDivider,
-  NDescriptions,
-  NDescriptionsItem,
   NPopconfirm,
   NTabs,
   NTabPane,
-  useMessage,
   type DataTableColumns,
 } from 'naive-ui'
 import * as DeployService from '@bindings/cnb.cool/dtapp/certflow/deployservicewrapper'
@@ -42,7 +38,6 @@ const route = useRoute()
 const i18nStore = useI18nStore()
 const { t } = i18nStore
 const { isDark } = storeToRefs(useThemeStore())
-const message = useMessage()
 
 const id = Number(route.params.id)
 
@@ -141,7 +136,7 @@ function regionName(): string {
 }
 function siteName(): string {
   const cf = (target.value?.config || {}) as Record<string, any>
-  const raw = cf.site_name || cf.zone_name || ''
+  const raw = cf.site_name || cf.zone_name || cf.domains || ''
   if (!raw) return ''
   // 面板类 site_name 为 JSON 数组，展示为逗号分隔
   try {
@@ -288,9 +283,6 @@ const certOptions = computed(() => {
 
 function renderCertLabel(c: CertificateListItem) {
   return `${c.domain} (${remainingDays(c.not_after)})`
-}
-function renderCertTag(c: CertificateListItem) {
-  return `${c.domain} · ${remainingDays(c.not_after)}`
 }
 // 判断证书中的某个域名条目（支持通配符 *.example.com）是否覆盖目标域名
 function patternCovers(pattern: string, domain: string): boolean {
@@ -598,52 +590,66 @@ onMounted(async () => {
             <!-- 信息（默认） -->
             <n-tab-pane name="info" :tab="t('deploy.info')">
               <div class="space-y-4">
-                <n-descriptions :column="1" label-placement="left" bordered>
-                  <n-descriptions-item :label="t('deploy.name')">{{
-                    target.name
-                  }}</n-descriptions-item>
-                  <n-descriptions-item :label="t('deploy.provider')">{{
-                    providerLabel(target.provider_type)
-                  }}</n-descriptions-item>
-                  <n-descriptions-item :label="t('deploy.service')">{{
-                    serviceLabel(target.deploy_service, target.provider_type)
-                  }}</n-descriptions-item>
-                  <n-descriptions-item :label="t('deploy.region')">{{
-                    regionName() || '-'
-                  }}</n-descriptions-item>
-                  <n-descriptions-item
-                    :label="
+                <div class="deploy-info">
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.name') }}</span>
+                    <span class="info-value">{{ target.name }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.provider') }}</span>
+                    <span class="info-value">{{ providerLabel(target.provider_type) }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.service') }}</span>
+                    <span class="info-value">{{
+                      serviceLabel(target.deploy_service, target.provider_type)
+                    }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.region') }}</span>
+                    <span class="info-value">{{ regionName() || '-' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{
                       isPanelProvider(target?.provider_type || '')
                         ? t('deploy.sites')
                         : t('deploy.domains')
-                    "
-                    >{{ siteName() || '-' }}</n-descriptions-item
-                  >
-                  <n-descriptions-item :label="t('deploy.credential')">
-                    {{
-                      target.credential_source === 'dns_provider'
-                        ? t('deploy.credFromDns')
-                        : t('deploy.credFromCredential')
-                    }}
-                    <span v-if="credName()" class="opacity-70"> · {{ credName() }}</span>
-                  </n-descriptions-item>
-                  <n-descriptions-item :label="t('deploy.cert')">
-                    {{
-                      ((target as any).cert_ids || []).length
-                        ? ((target as any).cert_ids || []).length + ' ' + t('deploy.certCount')
-                        : t('deploy.none')
-                    }}
-                  </n-descriptions-item>
-                  <n-descriptions-item :label="t('common.createdAt')">{{
-                    target.created_at || '-'
-                  }}</n-descriptions-item>
-                  <n-descriptions-item :label="t('common.updatedAt')">{{
-                    target.updated_at || '-'
-                  }}</n-descriptions-item>
-                  <n-descriptions-item v-if="target.last_error" :label="t('deploy.error')">
-                    <span class="text-red-400 break-all">{{ target.last_error }}</span>
-                  </n-descriptions-item>
-                </n-descriptions>
+                    }}</span>
+                    <span class="info-value">{{ siteName() || '-' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.credential') }}</span>
+                    <span class="info-value">
+                      {{
+                        target.credential_source === 'dns_provider'
+                          ? t('deploy.credFromDns')
+                          : t('deploy.credFromCredential')
+                      }}<span v-if="credName()" class="opacity-70"> · {{ credName() }}</span>
+                    </span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('deploy.cert') }}</span>
+                    <span class="info-value">
+                      {{
+                        ((target as any).cert_ids || []).length
+                          ? ((target as any).cert_ids || []).length + ' ' + t('deploy.certCount')
+                          : t('deploy.none')
+                      }}
+                    </span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('common.createdAt') }}</span>
+                    <span class="info-value">{{ target.created_at || '-' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">{{ t('common.updatedAt') }}</span>
+                    <span class="info-value">{{ target.updated_at || '-' }}</span>
+                  </div>
+                  <div v-if="target.last_error" class="info-row full">
+                    <span class="info-label">{{ t('deploy.error') }}</span>
+                    <span class="info-value text-red-400 break-all">{{ target.last_error }}</span>
+                  </div>
+                </div>
 
                 <div>
                   <div class="flex items-center justify-between mb-1">
@@ -794,6 +800,8 @@ onMounted(async () => {
                 :columns="historyColumns"
                 :data="logs"
                 :row-key="(row: DeployLogListItem) => row.id"
+                :scroll-x="640"
+                size="small"
               />
             </n-tab-pane>
           </n-tabs>
@@ -854,5 +862,55 @@ onMounted(async () => {
 }
 .json-dark .json-null {
   color: #d2a8ff;
+}
+</style>
+
+<style scoped>
+/* 信息 tab 字段网格：宽屏两列、窄屏单列，label 固定宽、value 占满并自动换行 */
+.deploy-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--n-border-color, rgba(128, 128, 128, 0.22));
+  border-radius: 8px;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .deploy-info {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+  border-bottom: 1px solid var(--n-border-color, rgba(128, 128, 128, 0.16));
+  border-right: 1px solid var(--n-border-color, rgba(128, 128, 128, 0.16));
+}
+/* 两列时最后一行去掉底边，避免与外框双重边框 */
+@media (min-width: 768px) {
+  .info-row:nth-last-child(-n + 2):not(.full) {
+    border-bottom: none;
+  }
+}
+.info-row.full {
+  grid-column: 1 / -1;
+  border-right: none;
+  border-bottom: none;
+}
+.info-label {
+  flex: 0 0 96px;
+  font-size: 13px;
+  opacity: 0.62;
+  line-height: 1.5;
+}
+.info-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 </style>
