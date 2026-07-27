@@ -221,10 +221,10 @@ func (s *DeployServiceWrapper) ListTargetsByCert(certID int) ([]DeployTargetList
 	return items, nil
 }
 
-// DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名，为空则用目标配置）
-func (s *DeployServiceWrapper) DeployCertificate(targetID, certID int, domain string) (*DeployOutcomeDTO, error) {
+// DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名；siteID 为面板/防火墙类的站点 ID，云厂商忽略）
+func (s *DeployServiceWrapper) DeployCertificate(targetID, certID int, domain, siteID string) (*DeployOutcomeDTO, error) {
 	ctx := context.Background()
-	outcome, err := s.deployService.DeployCertificate(ctx, targetID, certID, domain)
+	outcome, err := s.deployService.DeployCertificate(ctx, targetID, certID, domain, siteID)
 	if err != nil {
 		return nil, err
 	}

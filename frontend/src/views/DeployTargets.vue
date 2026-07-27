@@ -22,6 +22,7 @@ import { showMessage, translateBackend } from '../utils/message'
 import { regionOf, regionLabel } from '../utils/region'
 import { EventWindowResized, type WindowResizedPayload } from '../utils/events'
 import ProviderIcon from '../components/ProviderIcon.vue'
+import { isPanelProvider, providerLabel, serviceLabel } from '../utils/deploy'
 
 const router = useRouter()
 const i18nStore = useI18nStore()
@@ -31,36 +32,6 @@ const loading = ref(false)
 const targets = ref<DeployTargetListItem[]>([])
 const search = ref('')
 
-const providerOptions = [
-  { label: t('deploy.provider.aliyun'), value: 'aliyun' },
-  { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
-  { label: t('deploy.provider.huawei'), value: 'huawei' },
-  { label: t('deploy.provider.baidu'), value: 'baiducloud' },
-  { label: t('deploy.provider.ctyun'), value: 'ctyun' },
-]
-const serviceOptions = [
-  { label: t('deploy.service.cdn'), value: 'cdn' },
-  { label: t('deploy.service.dcdn'), value: 'dcdn' },
-  { label: t('deploy.service.edgeone'), value: 'edgeone' },
-  { label: t('deploy.service.esa'), value: 'esa' },
-  { label: t('deploy.service.slb'), value: 'slb' },
-  { label: t('deploy.service.waf'), value: 'waf' },
-  { label: t('deploy.service.elb'), value: 'elb' },
-  { label: t('deploy.service.scm'), value: 'scm' },
-  { label: t('deploy.service.ga'), value: 'ga' },
-  { label: t('deploy.service.drcdn'), value: 'drcdn' },
-  { label: t('deploy.service.ecdn'), value: 'ecdn' },
-  { label: t('deploy.service.ctcdn'), value: 'ctcdn' },
-  { label: t('deploy.service.icdn'), value: 'icdn' },
-  { label: t('deploy.service.accessone'), value: 'accessone' },
-]
-
-function providerLabel(v?: string) {
-  return providerOptions.find((o) => o.value === v)?.label || v || ''
-}
-function serviceLabel(v?: string) {
-  return serviceOptions.find((o) => o.value === v)?.label || v || ''
-}
 function regionName(target: DeployTargetListItem): string {
   return regionLabel(target.provider_type, target.deploy_service, regionOf(target.config))
 }
@@ -81,7 +52,19 @@ function statusType(s?: string) {
   return 'default'
 }
 function domainList(target: DeployTargetListItem): string[] {
-  const raw = target.config?.['domains']
+  const cfg = target.config || {}
+  // 面板/防火墙类：网站名称存在 config.site_name（JSON 数组）
+  if (isPanelProvider(target.provider_type)) {
+    const raw = cfg['site_name']
+    if (!raw) return []
+    try {
+      const arr = JSON.parse(raw)
+      return Array.isArray(arr) ? arr : []
+    } catch {
+      return []
+    }
+  }
+  const raw = cfg['domains']
   if (!raw) return []
   try {
     const arr = JSON.parse(raw)
@@ -142,7 +125,7 @@ const allColumns = computed<DataTableColumns<DeployTargetListItem>>(() => [
           h(
             NTag,
             { size: 'small', type: 'info', bordered: false },
-            { default: () => serviceLabel(row.deploy_service) },
+            { default: () => serviceLabel(row.deploy_service, row.provider_type) },
           ),
           h(
             NTag,
@@ -153,7 +136,7 @@ const allColumns = computed<DataTableColumns<DeployTargetListItem>>(() => [
       ),
   },
   {
-    title: t('deploy.domains'),
+    title: t('deploy.domainsOrSites'),
     key: 'domains',
     minWidth: 160,
     render: (row: DeployTargetListItem) => {

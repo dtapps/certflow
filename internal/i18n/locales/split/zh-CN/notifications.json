@@ -26,6 +26,8 @@
   "notification.update_available_subtitle": "版本 {{.version}} 可用，点击查看详情",
   "notification.deploy_success.title": "证书部署成功",
   "notification.deploy_success.body": "域名 {{.Domain}} 已成功部署到 {{.Target}}",
+  "notification.deploy_success_site.body": "站点 {{.Site}} 已成功部署到 {{.Target}}",
   "notification.deploy_failed.title": "证书部署失败",
-  "notification.deploy_failed.body": "域名 {{.Domain}} 部署到 {{.Target}} 失败: {{.Error}}"
+  "notification.deploy_failed.body": "域名 {{.Domain}} 部署到 {{.Target}} 失败: {{.Error}}",
+  "notification.deploy_failed_site.body": "站点 {{.Site}} 部署到 {{.Target}} 失败: {{.Error}}"
 }

@@ -35,6 +35,7 @@ import { useThemeStore } from '../stores/theme'
 import { showMessage, translateBackend } from '../utils/message'
 import { regionOf, regionLabel } from '../utils/region'
 import ProviderIcon from '../components/ProviderIcon.vue'
+import { isPanelProvider, providerLabel, serviceLabel } from '../utils/deploy'
 
 const router = useRouter()
 const route = useRoute()
@@ -130,36 +131,6 @@ const highlightedConfig = computed(() => {
   return syntaxHighlight(rawConfigText.value)
 })
 
-const providerOptions = [
-  { label: t('deploy.provider.aliyun'), value: 'aliyun' },
-  { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
-  { label: t('deploy.provider.huawei'), value: 'huawei' },
-  { label: t('deploy.provider.baidu'), value: 'baiducloud' },
-  { label: t('deploy.provider.ctyun'), value: 'ctyun' },
-]
-const serviceOptions = [
-  { label: t('deploy.service.cdn'), value: 'cdn' },
-  { label: t('deploy.service.dcdn'), value: 'dcdn' },
-  { label: t('deploy.service.edgeone'), value: 'edgeone' },
-  { label: t('deploy.service.esa'), value: 'esa' },
-  { label: t('deploy.service.slb'), value: 'slb' },
-  { label: t('deploy.service.waf'), value: 'waf' },
-  { label: t('deploy.service.elb'), value: 'elb' },
-  { label: t('deploy.service.scm'), value: 'scm' },
-  { label: t('deploy.service.ga'), value: 'ga' },
-  { label: t('deploy.service.drcdn'), value: 'drcdn' },
-  { label: t('deploy.service.ecdn'), value: 'ecdn' },
-  { label: t('deploy.service.ctcdn'), value: 'ctcdn' },
-  { label: t('deploy.service.icdn'), value: 'icdn' },
-  { label: t('deploy.service.accessone'), value: 'accessone' },
-]
-
-function providerLabel(v?: string) {
-  return providerOptions.find((o) => o.value === v)?.label || v || ''
-}
-function serviceLabel(v?: string) {
-  return serviceOptions.find((o) => o.value === v)?.label || v || ''
-}
 function regionName(): string {
   if (!target.value) return ''
   return regionLabel(
@@ -170,7 +141,16 @@ function regionName(): string {
 }
 function siteName(): string {
   const cf = (target.value?.config || {}) as Record<string, any>
-  return cf.site_name || cf.zone_name || ''
+  const raw = cf.site_name || cf.zone_name || ''
+  if (!raw) return ''
+  // 面板类 site_name 为 JSON 数组，展示为逗号分隔
+  try {
+    const arr = JSON.parse(raw)
+    if (Array.isArray(arr)) return arr.join(', ')
+  } catch {
+    // 非 JSON 直接返回
+  }
+  return raw
 }
 function credName(): string {
   if (!target.value) return ''
@@ -198,20 +178,59 @@ function remainingDays(notAfter?: string): string {
 }
 
 // ---- 部署 ----
-// 与 DeployTargets.vue 的 domainList 逻辑保持一致：config.domains 为 JSON 字符串数组，直接 JSON.parse
-const targetDomains = computed<string[]>(() => {
-  const raw = (target.value?.config as Record<string, any> | undefined)?.['domains']
+const selectedDomains = ref<string[]>([])
+const domainOptions = ref<{ label: string; value: string }[]>([])
+// domainMeta 以选项 value 为键，记录每个站点/域名的 name 与 id，
+// 部署时据此分别传「站点名」与「站点 ID」，避免界面出现「名称||ID」这类拼接串。
+const domainMeta = ref<Record<string, { name: string; id: string }>>({})
+
+// 将后端返回的「网站名||站点ID」拆为独立字段
+function parseSiteEntry(s: string): { name: string; id: string } {
+  const idx = s.indexOf('||')
+  if (idx >= 0) return { name: s.slice(0, idx), id: s.slice(idx + 2) }
+  return { name: s, id: '' }
+}
+
+// 解析配置里的 JSON 字符串数组（site_name / site_id / domains）
+function parseConfigArray(raw?: string): string[] {
   if (!raw) return []
   try {
     const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr : []
+    return Array.isArray(arr) ? (arr as string[]) : []
   } catch {
     return []
   }
-})
+}
 
-const selectedDomains = ref<string[]>([])
-const domainOptions = ref<{ label: string; value: string }[]>([])
+// 初始根据已保存配置填充下拉选项（配置里站点名与站点 ID 各自独立存储）
+function buildInitialDomainOptions(): { label: string; value: string }[] {
+  domainMeta.value = {}
+  const cfg = (target.value?.config || {}) as Record<string, any>
+  const isPanel = isPanelProvider(target.value?.provider_type || '')
+  const opts: { label: string; value: string }[] = []
+  if (isPanel) {
+    const names = parseConfigArray(cfg['site_name'])
+    const ids = parseConfigArray(cfg['site_id'])
+    names.forEach((name, i) => {
+      const id = ids[i] || ''
+      const key = id || name
+      domainMeta.value[key] = { name, id }
+      opts.push({ label: name, value: key })
+    })
+  } else {
+    parseConfigArray(cfg['domains']).forEach((d) => {
+      domainMeta.value[d] = { name: d, id: '' }
+      opts.push({ label: d, value: d })
+    })
+  }
+  return opts
+}
+
+// 把当前选中的选项 value 解析为站点名/域名（面板类 value 为站点 ID，需经 domainMeta 取回名称）
+function selectedNames(): string[] {
+  return selectedDomains.value.map((v) => domainMeta.value[v]?.name || v)
+}
+
 const fetchingDomains = ref(false)
 
 // 加速域名全选 / 清空
@@ -231,7 +250,19 @@ const fetchDomains = async () => {
     if (!list || list.length === 0) {
       showMessage(t('deploy.noDomains'), 'warning')
     } else {
-      domainOptions.value = list.map((d) => ({ label: d, value: d }))
+      const isPanel = isPanelProvider(target.value?.provider_type || '')
+      domainMeta.value = {}
+      domainOptions.value = list.map((raw) => {
+        if (isPanel) {
+          // 面板/防火墙类返回「网站名||站点ID」，拆开：展示站点名，value 用站点 ID
+          const { name, id } = parseSiteEntry(raw)
+          const key = id || name
+          domainMeta.value[key] = { name, id }
+          return { label: name, value: key }
+        }
+        domainMeta.value[raw] = { name: raw, id: '' }
+        return { label: raw, value: raw }
+      })
       showMessage(t('deploy.fetchDomains') + ': ' + list.length, 'success')
     }
   } catch (e: any) {
@@ -247,7 +278,7 @@ const fetchDomains = async () => {
 const certOptions = computed(() => {
   const list = certificates.value || []
   // 已选择域名时，只展示能覆盖所选域名的证书（按 domain / san 匹配）
-  const sel = selectedDomains.value
+  const sel = selectedNames()
   const filtered = sel.length ? list.filter((c) => domainMatch(c, sel)) : list
   return filtered.map((c) => ({
     label: renderCertLabel(c),
@@ -300,28 +331,52 @@ async function runDeploy() {
   deploying.value = true
   deployResults.value = []
   const certMap = new Map(certificates.value.map((c) => [c.id, c]))
+  // 名称 -> 选项 value（站点 ID）反查表，用于把证书匹配到的站点名映射回待部署值
+  const nameToValues = new Map<string, string[]>()
+  for (const v of Object.keys(domainMeta.value)) {
+    const n = domainMeta.value[v]?.name || v
+    if (!nameToValues.has(n)) nameToValues.set(n, [])
+    nameToValues.get(n)!.push(v)
+  }
+  const allNames = domainOptions.value.map((o) => domainMeta.value[o.value]?.name || o.value)
   try {
     for (const certId of selectedCertIds.value) {
       const cert = certMap.get(certId)
       if (!cert) continue
       const patterns = [cert.domain, ...(cert.sans || [])].filter(Boolean)
-      const matched = selectedDomains.value.filter((d) => patterns.some((p) => patternCovers(p, d)))
-      const domainsToDeploy =
-        matched.length > 0
-          ? matched
-          : targetDomains.value.filter((d) => patterns.some((p) => patternCovers(p, d)))
-      for (const domain of domainsToDeploy) {
+      const matchedNames = selectedNames().filter((d) => patterns.some((p) => patternCovers(p, d)))
+      const targetNames =
+        matchedNames.length > 0
+          ? matchedNames
+          : allNames.filter((d) => patterns.some((p) => patternCovers(p, d)))
+      // 证书匹配到的是站点名，展平为待部署选项值（站点 ID）并去重
+      const valuesToDeploy = new Set<string>()
+      targetNames.forEach((n) => {
+        const vs = nameToValues.get(n)
+        if (vs && vs.length) vs.forEach((v) => valuesToDeploy.add(v))
+        else valuesToDeploy.add(n)
+      })
+      for (const value of valuesToDeploy) {
         try {
-          const resp = await DeployService.DeployCertificate(target.value.id, certId, domain)
+          // 面板/防火墙类：站点名与站点 ID 分开发给后端，由后端直接落盘，
+          // 不再拼接/解析「名称||ID」。
+          const meta = domainMeta.value[value] || { name: value, id: '' }
+          const resp = await DeployService.DeployCertificate(
+            target.value.id,
+            certId,
+            meta.name,
+            meta.id,
+          )
           deployResults.value.push({
-            domain,
+            domain: meta.name,
             cloud_cert_id: resp?.cloud_cert_id || undefined,
             success: resp?.success ?? true,
             message: resp?.message || t('deploy.deploySuccess'),
           })
         } catch (e: any) {
+          const meta = domainMeta.value[value] || { name: value, id: '' }
           deployResults.value.push({
-            domain,
+            domain: meta.name,
             success: false,
             message: translateBackend(e?.message || String(e)),
           })
@@ -411,9 +466,8 @@ function goDeployTab() {
 onMounted(async () => {
   try {
     await Promise.all([loadTarget(), loadCertificates(), loadLogs()])
-    // 域名已在创建/编辑时的 config 中配置，进入部署 tab 直接作为可选项（默认不预选，由用户点「全选」或勾选）
-    const doms = targetDomains.value
-    domainOptions.value = doms.map((d) => ({ label: d, value: d }))
+    // 域名/站点已在创建/编辑时的 config 中配置，进入部署 tab 直接作为可选项（默认不预选，由用户点「全选」或勾选）
+    domainOptions.value = buildInitialDomainOptions()
     if (route.query.tab === 'deploy') activeTab.value = 'deploy'
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
@@ -517,7 +571,8 @@ onMounted(async () => {
               {{ t('deploy.provider') }} / {{ t('deploy.service') }}
             </div>
             <div class="mt-1">
-              {{ providerLabel(target.provider_type) }} · {{ serviceLabel(target.deploy_service) }}
+              {{ providerLabel(target.provider_type) }} ·
+              {{ serviceLabel(target.deploy_service, target.provider_type) }}
             </div>
           </n-card>
           <n-card :bordered="false" size="small">
@@ -551,14 +606,19 @@ onMounted(async () => {
                     providerLabel(target.provider_type)
                   }}</n-descriptions-item>
                   <n-descriptions-item :label="t('deploy.service')">{{
-                    serviceLabel(target.deploy_service)
+                    serviceLabel(target.deploy_service, target.provider_type)
                   }}</n-descriptions-item>
                   <n-descriptions-item :label="t('deploy.region')">{{
                     regionName() || '-'
                   }}</n-descriptions-item>
-                  <n-descriptions-item :label="t('deploy.domains')">{{
-                    siteName() || '-'
-                  }}</n-descriptions-item>
+                  <n-descriptions-item
+                    :label="
+                      isPanelProvider(target?.provider_type || '')
+                        ? t('deploy.sites')
+                        : t('deploy.domains')
+                    "
+                    >{{ siteName() || '-' }}</n-descriptions-item
+                  >
                   <n-descriptions-item :label="t('deploy.credential')">
                     {{
                       target.credential_source === 'dns_provider'
@@ -635,10 +695,18 @@ onMounted(async () => {
               <div class="space-y-4">
                 <div>
                   <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm opacity-60">{{ t('deploy.domains') }}</span>
+                    <span class="text-sm opacity-60">{{
+                      isPanelProvider(target?.provider_type || '')
+                        ? t('deploy.sites')
+                        : t('deploy.domains')
+                    }}</span>
                     <n-space size="small">
                       <n-button size="tiny" :loading="fetchingDomains" @click="fetchDomains">
-                        {{ t('deploy.fetchDomains') }}
+                        {{
+                          isPanelProvider(target?.provider_type || '')
+                            ? t('deploy.fetchSites')
+                            : t('deploy.fetchDomains')
+                        }}
                       </n-button>
                       <n-button
                         size="tiny"
@@ -660,7 +728,11 @@ onMounted(async () => {
                     v-model:value="selectedDomains"
                     :options="domainOptions"
                     multiple
-                    :placeholder="t('deploy.selectDomains')"
+                    :placeholder="
+                      isPanelProvider(target?.provider_type || '')
+                        ? t('deploy.selectSites')
+                        : t('deploy.selectDomains')
+                    "
                     style="max-width: 640px"
                   />
                 </div>

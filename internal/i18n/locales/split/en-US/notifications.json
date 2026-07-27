@@ -26,6 +26,8 @@
   "notification.update_available_subtitle": "Version {{.version}} is available, click to view",
   "notification.deploy_success.title": "Certificate Deployed",
   "notification.deploy_success.body": "Domain {{.Domain}} deployed to {{.Target}} successfully",
+  "notification.deploy_success_site.body": "Site {{.Site}} deployed to {{.Target}} successfully",
   "notification.deploy_failed.title": "Certificate Deploy Failed",
-  "notification.deploy_failed.body": "Failed to deploy domain {{.Domain}} to {{.Target}}: {{.Error}}"
+  "notification.deploy_failed.body": "Failed to deploy domain {{.Domain}} to {{.Target}}: {{.Error}}",
+  "notification.deploy_failed_site.body": "Failed to deploy site {{.Site}} to {{.Target}}: {{.Error}}"
 }

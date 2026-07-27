@@ -1,13 +1,16 @@
 package httplog
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
+	"unicode/utf16"
 
 	"cnb.cool/dtapp/certflow/ent_log"
 	"cnb.cool/dtapp/certflow/ent_log/httplog"
@@ -17,6 +20,62 @@ import (
 	"entgo.io/ent/dialect"
 	"go.dtapp.net/library/contrib/http_log"
 )
+
+// decodeUnicodeEscapes 检测字节序列中是否包含 \uXXXX 转义序列，如有则解码为正常文本。
+// 支持普通 BMP 字符（如 \u8bc1\u4e66 → 证书）和代理对（如 \uD83D\uDE00 → 😀）。
+// 若不含转义序列则原样返回，避免无谓的替换开销。
+func decodeUnicodeEscapes(b []byte) []byte {
+	if !bytes.Contains(b, []byte(`\u`)) {
+		return b
+	}
+
+	result := make([]byte, 0, len(b))
+	remaining := b
+
+	for len(remaining) > 0 {
+		idx := bytes.Index(remaining, []byte(`\u`))
+		if idx < 0 {
+			result = append(result, remaining...)
+			break
+		}
+
+		// \u 之前的内容直接保留
+		result = append(result, remaining[:idx]...)
+
+		// 检查是否有完整的 \uXXXX（至少 6 字节）
+		if idx+6 > len(remaining) {
+			result = append(result, remaining[idx:]...)
+			break
+		}
+
+		// 解析第一个 \uXXXX
+		code, err := strconv.ParseUint(string(remaining[idx+2:idx+6]), 16, 16)
+		if err != nil {
+			result = append(result, remaining[idx:idx+6]...)
+			remaining = remaining[idx+6:]
+			continue
+		}
+
+		// 高代理 (0xD800-0xDBFF)：检查是否为代理对
+		if code >= 0xD800 && code <= 0xDBFF && idx+12 <= len(remaining) &&
+			bytes.Equal(remaining[idx+6:idx+8], []byte(`\u`)) {
+			code2, err2 := strconv.ParseUint(string(remaining[idx+8:idx+12]), 16, 16)
+			if err2 == nil && code2 >= 0xDC00 && code2 <= 0xDFFF {
+				// 合法的代理对，解码为一个 rune
+				r := utf16.DecodeRune(rune(code), rune(code2))
+				result = append(result, []byte(string(r))...)
+				remaining = remaining[idx+12:]
+				continue
+			}
+		}
+
+		// 普通 \uXXXX
+		result = append(result, []byte(string(rune(code)))...)
+		remaining = remaining[idx+6:]
+	}
+
+	return result
+}
 
 // dbFileName 独立的 HTTP 请求日志数据库文件名（存放在 dataDir/data 下，与主库 certflow.db 分离）
 const dbFileName = "httplog.db"
@@ -154,13 +213,13 @@ func (s *entLogSaver) HandleLog(ctx context.Context, data *http_log.LogData) err
 		builder = builder.SetRequestHeaders(data.RequestHeaders)
 	}
 	if len(data.RequestBody) > 0 {
-		builder = builder.SetRequestBody((data.RequestBody))
+		builder = builder.SetRequestBody(decodeUnicodeEscapes(data.RequestBody))
 	}
 	if data.ResponseHeaders != nil {
 		builder = builder.SetResponseHeaders(data.ResponseHeaders)
 	}
 	if len(data.ResponseBody) > 0 {
-		builder = builder.SetResponseBody(data.ResponseBody)
+		builder = builder.SetResponseBody(decodeUnicodeEscapes(data.ResponseBody))
 	}
 
 	if err := builder.Exec(ctx); err != nil {

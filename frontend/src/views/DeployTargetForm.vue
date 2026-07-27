@@ -31,6 +31,13 @@ import { useI18nStore } from '../stores/i18n'
 import { showMessage } from '../utils/message'
 import { regionOptions, defaultRegionFor } from '../utils/region'
 import { useActionBarStore } from '../stores/actionBar'
+import {
+  servicesByProvider,
+  isPanelProvider,
+  providerLabel as providerLabelFn,
+  serviceLabel as serviceLabelFn,
+} from '../utils/deploy'
+import { deployProviderOptions } from '../utils/deployProviderConfig'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,74 +73,23 @@ const form = reactive({
   site_name: '',
   accelerator_id: '',
   listener_id: '',
+  site_ids: [] as string[], // 面板/防火墙多选站点 ID 列表
+  site_names: [] as string[], // 面板/防火墙多选站点名称列表
   comment: '',
 })
 
-const providerOptions = [
-  { label: t('deploy.provider.aliyun'), value: 'aliyun' },
-  { label: t('deploy.provider.tencentcloud'), value: 'tencentcloud' },
-  { label: t('deploy.provider.huawei'), value: 'huawei' },
-  { label: t('deploy.provider.baidu'), value: 'baiducloud' },
-  { label: t('deploy.provider.ctyun'), value: 'ctyun' },
-  { label: t('deploy.provider.volcengine'), value: 'volcengine' },
-]
-// 部署服务随云厂商变化：不同厂商提供的可部署目标不同，只展示后端已实现的服务，
-// 避免用户选到不属于该厂商、或后端未实现（只会上传不绑定）的服务。
-const servicesByProvider = computed<{ label: string; value: string }[]>(() => {
-  switch (form.provider_type) {
-    case 'aliyun':
-      return [
-        { label: t('deploy.service.cdn'), value: 'cdn' },
-        { label: t('deploy.service.dcdn'), value: 'dcdn' },
-        { label: t('deploy.service.esa'), value: 'esa' },
-        { label: t('deploy.service.ga'), value: 'ga' },
-      ]
-    case 'tencentcloud':
-      return [
-        { label: t('deploy.service.cdn'), value: 'cdn' },
-        { label: t('deploy.service.edgeone'), value: 'edgeone' },
-        { label: t('deploy.service.ecdn'), value: 'ecdn' },
-      ]
-    case 'huawei':
-      return [
-        { label: t('deploy.service.cdn'), value: 'cdn' },
-        { label: t('deploy.service.waf'), value: 'waf' },
-        { label: t('deploy.service.elb'), value: 'elb' },
-      ]
-    case 'baiducloud':
-      return [
-        { label: t('deploy.service.cdn'), value: 'cdn' },
-        { label: t('deploy.service.drcdn'), value: 'drcdn' },
-      ]
-    case 'ctyun':
-      return [
-        { label: t('deploy.service.ctcdn'), value: 'ctcdn' },
-        { label: t('deploy.service.icdn'), value: 'icdn' },
-        { label: t('deploy.service.accessone'), value: 'accessone' },
-      ]
-    case 'volcengine':
-      return [
-        { label: t('deploy.service.cdn'), value: 'cdn' },
-        { label: t('deploy.service.dcdn'), value: 'dcdn' },
-      ]
-    default:
-      return [{ label: t('deploy.service.cdn'), value: 'cdn' }]
-  }
-})
-const serviceOptions = computed(() => servicesByProvider.value)
+// 部署厂商下拉选项（从配置文件导入，含已解析的 label）
+const providerOptions = computed(() => deployProviderOptions(t))
+// 部署服务选项（使用公共方法，面板/防火墙类直接显示 provider 名称）
+const serviceOptions = computed(() => servicesByProvider(form.provider_type))
 
 // 卡片选中态：直接复用 Naive 主题变量，明暗自适应（用 --primary-color，不依赖 Tailwind dark:）
 function cardCls(selected: boolean): string {
   return selected ? 'brandcard brandcard-selected' : 'brandcard'
 }
 
-const providerLabel = computed(
-  () => providerOptions.find((p) => p.value === form.provider_type)?.label || form.provider_type,
-)
-const serviceLabel = computed(
-  () =>
-    serviceOptions.value.find((s) => s.value === form.deploy_service)?.label || form.deploy_service,
-)
+const providerLabel = computed(() => providerLabelFn(form.provider_type))
+const serviceLabel = computed(() => serviceLabelFn(form.deploy_service, form.provider_type))
 const credentialLabel = computed(() => {
   if (form.credential_source === 'dns_provider')
     return dnsOptions.value.find((o) => o.value === form.dns_provider_id)?.label || '-'
@@ -160,6 +116,7 @@ const canNext = computed(() => {
       if (form.credential_source === 'deploy_credential') return !!form.deploy_credential_id
       return false
     case 3:
+      if (isPanelProvider(form.provider_type)) return form.site_ids.length > 0
       if (form.deploy_service === 'edgeone') return !!form.zone_id
       if (form.deploy_service === 'esa') return !!form.site_id && !!form.region
       if (form.deploy_service === 'ga') return !!form.accelerator_id
@@ -242,6 +199,13 @@ function onSiteChange(val: string | null) {
   form.site_name = opt ? opt.label : ''
 }
 
+// onSitesChange 面板/防火墙多选站点时同步：派生 site_ids / site_names（驱动 UI），
+// 保存时 JSON 序列化进 config.site_id / config.site_name（与 domains 格式一致）。
+function onSitesChange(vals: string[]) {
+  form.site_ids = vals
+  form.site_names = vals.map((v) => zoneOptions.value.find((o) => o.value === v)?.label || v)
+}
+
 // 部署厂商类型 → DNS 提供商枚举值的映射。
 // 注意 DNS 提供商的「百度云」枚举值为 baiducloud，而部署目标使用 baidu，二者不同，
 // 直接按 provider_type 相等过滤会导致百度部署目标复用时找不到 DNS 提供商。
@@ -271,7 +235,23 @@ const deployCredentialOptions = computed(() => {
 // 注意：不要放在 watch(form.provider_type) 里，否则编辑页 loadEditTarget 同步回填时
 // watch 的异步后置触发会覆盖刚恢复的 deploy_service / zone_id / site_id。
 function onProviderChange() {
-  const opts = servicesByProvider.value
+  // 面板/防火墙类不能复用 DNS 凭证，强制使用部署凭证并预选站点服务，且无需区域。
+  if (isPanelProvider(form.provider_type)) {
+    form.credential_source = 'deploy_credential'
+    form.deploy_service = 'site'
+    form.region = ''
+    form.zone_id = ''
+    form.zone_name = ''
+    form.site_id = ''
+    form.site_name = ''
+    form.site_ids = []
+    form.site_names = []
+    form.accelerator_id = ''
+    form.listener_id = ''
+    zoneOptions.value = []
+    return
+  }
+  const opts = servicesByProvider(form.provider_type)
   if (!opts.find((o) => o.value === form.deploy_service)) {
     form.deploy_service = opts.length ? opts[0].value : 'cdn'
   }
@@ -279,6 +259,8 @@ function onProviderChange() {
   form.zone_name = ''
   form.site_id = ''
   form.site_name = ''
+  form.site_ids = []
+  form.site_names = []
   form.accelerator_id = ''
   form.listener_id = ''
   zoneOptions.value = []
@@ -362,6 +344,29 @@ async function loadEditTarget() {
     if (form.deploy_service === 'esa' && form.site_id) {
       zoneOptions.value = [{ label: form.site_name || form.site_id, value: form.site_id }]
     }
+    // 面板/防火墙：编辑回显站点（点“获取网站”可刷新为完整列表）。
+    // 多选站点以 JSON 数组存于 site_id / site_name，解析后回填 site_ids / site_names。
+    if (isPanelProvider(form.provider_type) && form.deploy_service === 'site' && form.site_id) {
+      let ids: string[] = []
+      let names: string[] = []
+      try {
+        ids = JSON.parse(form.site_id)
+      } catch {
+        // 兼容旧格式（逗号分隔）
+        ids = form.site_id.split(',').filter(Boolean)
+      }
+      try {
+        names = JSON.parse(form.site_name)
+      } catch {
+        names = form.site_name ? form.site_name.split(',') : []
+      }
+      form.site_ids = ids
+      form.site_names = names
+      zoneOptions.value = ids.map((id, i) => ({
+        label: names[i] || id,
+        value: id,
+      }))
+    }
     form.comment = target.comment || ''
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + (e?.message || String(e)), 'error')
@@ -374,7 +379,7 @@ function buildConfig(): Record<string, string> {
   const cfg: Record<string, string> = {}
   if (form.provider_type === 'aliyun') {
     cfg.region_id = form.region
-  } else {
+  } else if (!isPanelProvider(form.provider_type)) {
     cfg.region = form.region
   }
   if (form.domains.length) cfg.domains = JSON.stringify(form.domains)
@@ -390,6 +395,10 @@ function buildConfig(): Record<string, string> {
   if (form.deploy_service === 'ga') {
     if (form.accelerator_id) cfg.accelerator_id = form.accelerator_id
     if (form.listener_id) cfg.listener_id = form.listener_id
+  }
+  if (isPanelProvider(form.provider_type) && form.site_ids.length) {
+    cfg.site_id = JSON.stringify(form.site_ids)
+    cfg.site_name = JSON.stringify(form.site_names)
   }
   return cfg
 }
@@ -463,6 +472,44 @@ async function fetchZones() {
         return { label: name || id, value: id }
       })
       showMessage(t('deploy.fetchZones') + ': ' + list.length, 'success')
+    }
+  } catch (e: any) {
+    showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
+  } finally {
+    fetchingZones.value = false
+  }
+}
+
+// fetchSites 拉取面板/防火墙网站列表（如宝塔 /data?action=getData&table=sites），
+// 结果形如 "域名||站点ID"，按 "||" 拆分后填充站点下拉，避免用户手填 site_id。
+// 不传站点 ID（site_id）时，后端返回网站列表。
+async function fetchSites() {
+  if (!form.deploy_credential_id) {
+    showMessage(t('deploy.credentialRequired'), 'warning')
+    return
+  }
+  fetchingZones.value = true
+  try {
+    const list = await DeployService.FetchCDNDomains({
+      provider_type: form.provider_type,
+      deploy_service: form.deploy_service,
+      credential_source: form.credential_source,
+      dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
+      deploy_credential_id:
+        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
+      region: form.region,
+      config: {},
+    })
+    if (!list || list.length === 0) {
+      showMessage(t('deploy.noSites'), 'warning')
+    } else {
+      zoneOptions.value = list.map((z) => {
+        const idx = z.indexOf('||')
+        const id = idx >= 0 ? z.slice(idx + 2) : z
+        const name = idx >= 0 ? z.slice(0, idx) : z
+        return { label: name || id, value: id }
+      })
+      showMessage(t('deploy.fetchSites') + ': ' + list.length, 'success')
     }
   } catch (e: any) {
     showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
@@ -588,9 +635,11 @@ onUnmounted(() => {
             <template v-else-if="currentStep === 2">
               <n-form-item :label="t('deploy.credentialSource')">
                 <n-radio-group v-model:value="form.credential_source">
-                  <n-radio-button value="dns_provider">{{
-                    t('deploy.credFromDns')
-                  }}</n-radio-button>
+                  <n-radio-button
+                    value="dns_provider"
+                    :disabled="isPanelProvider(form.provider_type)"
+                    >{{ t('deploy.credFromDns') }}</n-radio-button
+                  >
                   <n-radio-button value="deploy_credential">{{
                     t('deploy.credFromCredential')
                   }}</n-radio-button>
@@ -616,7 +665,7 @@ onUnmounted(() => {
                 />
               </n-form-item>
               <n-form-item
-                v-if="form.provider_type !== 'baiducloud'"
+                v-if="form.provider_type !== 'baiducloud' && !isPanelProvider(form.provider_type)"
                 :label="t('deploy.config.region')"
               >
                 <n-select
@@ -673,6 +722,32 @@ onUnmounted(() => {
                     clearable
                     @update:value="onSiteChange"
                     :placeholder="t('deploy.config.siteIdHint')"
+                  />
+                </div>
+              </n-form-item>
+              <n-form-item
+                v-if="isPanelProvider(form.provider_type) && form.deploy_service === 'site'"
+                :label="t('deploy.config.panelSiteId')"
+              >
+                <div class="w-full">
+                  <n-space :size="8" class="mb-2">
+                    <n-button
+                      size="small"
+                      :loading="fetchingZones"
+                      :disabled="!form.deploy_credential_id"
+                      @click="fetchSites"
+                    >
+                      {{ fetchingZones ? t('deploy.fetchingZones') : t('deploy.fetchSites') }}
+                    </n-button>
+                  </n-space>
+                  <n-select
+                    v-model:value="form.site_ids"
+                    :options="zoneOptions"
+                    multiple
+                    filterable
+                    clearable
+                    @update:value="onSitesChange"
+                    :placeholder="t('deploy.config.panelSiteIdHint')"
                   />
                 </div>
               </n-form-item>
@@ -787,9 +862,15 @@ onUnmounted(() => {
                 <n-descriptions-item v-if="form.zone_id" :label="t('deploy.config.zoneId')">{{
                   form.zone_name || form.zone_id
                 }}</n-descriptions-item>
-                <n-descriptions-item v-if="form.site_id" :label="t('deploy.config.siteId')">{{
-                  form.site_name || form.site_id
-                }}</n-descriptions-item>
+                <n-descriptions-item
+                  v-if="form.site_id"
+                  :label="
+                    isPanelProvider(form.provider_type)
+                      ? t('deploy.config.panelSiteId')
+                      : t('deploy.config.siteId')
+                  "
+                  >{{ form.site_name || form.site_id }}</n-descriptions-item
+                >
                 <n-descriptions-item
                   v-if="form.accelerator_id"
                   :label="t('deploy.config.acceleratorId')"

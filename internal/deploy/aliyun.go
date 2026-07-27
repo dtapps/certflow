@@ -353,6 +353,11 @@ func (d *AliyunDeployer) ListDomains(ctx context.Context, creds Credentials, svc
 	}
 }
 
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *AliyunDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 // listAliyunCDNDomains 列出阿里云 CDN 加速域名
 func (d *AliyunDeployer) listAliyunCDNDomains(ctx context.Context, creds Credentials, region string) ([]string, error) {
 	client, err := cdn.NewClient(aliyunConfig(creds, aliyunRegion(region)))

@@ -227,6 +227,11 @@ func (d *VolcengineDeployer) ListDomains(ctx context.Context, creds Credentials,
 	return d.listVolcCDNDomains(ctx, creds)
 }
 
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *VolcengineDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 // listVolcCDNDomains 列出火山引擎 CDN 加速域名（ListCdnDomains，分页拉取全部）。
 func (d *VolcengineDeployer) listVolcCDNDomains(ctx context.Context, creds Credentials) ([]string, error) {
 	client := newVolcCDNClient(creds)

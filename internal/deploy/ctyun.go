@@ -390,6 +390,11 @@ func (d *CtyunDeployer) DeployCert(ctx context.Context, creds Credentials, certI
 }
 
 // ListDomains 列出天翼云 CDN/全站加速/边缘安全加速平台域名
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *CtyunDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 func (d *CtyunDeployer) ListDomains(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
 	// 获取服务配置
 	svcCfg, err := ctyunServiceByKey(svc)
