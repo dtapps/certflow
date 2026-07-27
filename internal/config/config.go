@@ -33,14 +33,23 @@ func Marshal[T any](v T) ([]byte, error) {
 
 // AsMap 将结构体转回 map[string]string，用于兼容仍按 key 读取的下游消费者。
 // 字段名以结构体的 json tag 为准（omitempty 的空字段会被丢弃）。
+// 非字符串字段（如 []string）会被重新序列化为 JSON 字符串，保证信息不丢失。
 func AsMap[T any](v T) map[string]string {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return map[string]string{}
 	}
-	m := map[string]string{}
-	if err := json.Unmarshal(b, &m); err != nil {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return map[string]string{}
+	}
+	m := map[string]string{}
+	for k, val := range raw {
+		if s, ok := val.(string); ok {
+			m[k] = s
+		} else if bb, err := json.Marshal(val); err == nil {
+			m[k] = string(bb)
+		}
 	}
 	return m
 }
@@ -51,7 +60,6 @@ func secretFieldNames[T any]() map[string]bool {
 	names := map[string]bool{}
 	t := reflect.TypeFor[T]()
 	for f := range t.Fields() {
-		f := f
 		if _, ok := f.Tag.Lookup("secret"); !ok {
 			continue
 		}

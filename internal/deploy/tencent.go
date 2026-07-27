@@ -165,6 +165,11 @@ func (d *TencentDeployer) ListDomains(ctx context.Context, creds Credentials, sv
 	}
 }
 
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *TencentDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 // listEdgeOneAccelDomains 列出指定 EdgeOne 站点下的加速域名（hosts），用于绑定证书。
 // 返回纯域名列表（DomainName），分页拉取直到取完。
 func (d *TencentDeployer) listEdgeOneAccelDomains(ctx context.Context, creds Credentials, region, zoneID string) ([]string, error) {

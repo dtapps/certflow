@@ -38,6 +38,9 @@ type Deployer interface {
 	// zoneID 仅对部分服务有意义：EdgeOne 传入时返回该站点下的加速域名（hosts），
 	// 不传时返回站点列表（供选择 ZoneId）。其余服务忽略该参数。
 	ListDomains(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error)
+	// ListSites 列出面板类服务下的网站（如 AcePanel/堡塔云WAF/宝塔/1Panel 站点），用于前端「获取网站」下拉。
+	// 云厂商默认回退到 ListDomains；面板类部署器各自实现。
+	ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error)
 }
 
 // DeployOutcome 单次部署结果（供前端展示）

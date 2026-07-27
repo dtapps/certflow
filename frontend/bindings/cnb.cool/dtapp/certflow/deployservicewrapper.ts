@@ -36,10 +36,10 @@ export function DeployAllForCert(certID: number): $CancellablePromise<$models.De
 }
 
 /**
- * DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名，为空则用目标配置）
+ * DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名；siteID 为面板/防火墙类的站点 ID，云厂商忽略）
  */
-export function DeployCertificate(targetID: number, certID: number, domain: string): $CancellablePromise<$models.DeployOutcomeDTO | null> {
-    return $Call.ByID(2376935435, targetID, certID, domain);
+export function DeployCertificate(targetID: number, certID: number, domain: string, siteID: string): $CancellablePromise<$models.DeployOutcomeDTO | null> {
+    return $Call.ByID(2376935435, targetID, certID, domain, siteID);
 }
 
 /**

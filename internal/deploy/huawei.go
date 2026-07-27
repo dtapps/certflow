@@ -329,6 +329,11 @@ func (d *HuaweiDeployer) certNameByID(client *scm.ScmClient, certID string, svcC
 }
 
 // ListDomains 列出华为云 CDN 加速域名
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *HuaweiDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 func (d *HuaweiDeployer) ListDomains(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
 	rg := creds.Region
 	client, err := d.newCdnClient(creds)

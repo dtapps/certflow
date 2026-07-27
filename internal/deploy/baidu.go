@@ -238,6 +238,11 @@ func (d *BaiduDeployer) ValidateCert(creds Credentials, certID string) (bool, er
 // 直接使用 SDK 的 client.ListDomains(marker) 分页拉取。百度云 /v2/domain 接口不返回可靠的
 // 域名类型，因此无法在此区分 CDN 与全站加速（DRCDN）——两类域名都返回，由用户在部署目标里
 // 选择服务类型。两种服务的部署路径完全相同（上传证书拿 certId → SetDomainHttps 关联）。
+// ListSites 云厂商默认回退到 ListDomains。
+func (d *BaiduDeployer) ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
+}
+
 func (d *BaiduDeployer) ListDomains(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error) {
 	client, err := d.newClient(creds)
 	if err != nil {

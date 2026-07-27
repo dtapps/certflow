@@ -8,4 +8,5 @@ type Credentials struct {
 	AccessKeyID     string
 	AccessKeySecret string
 	Region          string
+	PanelURL        string // 面板地址（面板/防火墙类部署，panel_url 随凭证存储）
 }

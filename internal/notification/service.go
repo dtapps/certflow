@@ -256,11 +256,31 @@ func (s *NotificationService) SendDeploySuccess(domain, target string) error {
 	})
 }
 
-// SendDeployFailed 发送证书部署失败通知
+// SendDeployFailed 发送证书部署失败通知（云厂商域名类）
 func (s *NotificationService) SendDeployFailed(domain, target, reason string) error {
 	return s.SendNotification(NotificationOption{
 		Title:    i18n.T("notification.deploy_failed.title"),
 		Body:     i18n.T("notification.deploy_failed.body", "Domain", domain, "Target", target, "Error", reason),
+		Category: entnotification.CategoryDeploy.String(),
+		Level:    entnotification.LevelError.String(),
+	})
+}
+
+// SendDeploySuccessSite 发送面板/防火墙站点证书部署成功通知
+func (s *NotificationService) SendDeploySuccessSite(site, target string) error {
+	return s.SendNotification(NotificationOption{
+		Title:    i18n.T("notification.deploy_success.title"),
+		Body:     i18n.T("notification.deploy_success_site.body", "Site", site, "Target", target),
+		Category: entnotification.CategoryDeploy.String(),
+		Level:    entnotification.LevelSuccess.String(),
+	})
+}
+
+// SendDeployFailedSite 发送面板/防火墙站点证书部署失败通知
+func (s *NotificationService) SendDeployFailedSite(site, target, reason string) error {
+	return s.SendNotification(NotificationOption{
+		Title:    i18n.T("notification.deploy_failed.title"),
+		Body:     i18n.T("notification.deploy_failed_site.body", "Site", site, "Target", target, "Error", reason),
 		Category: entnotification.CategoryDeploy.String(),
 		Level:    entnotification.LevelError.String(),
 	})

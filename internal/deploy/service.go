@@ -237,7 +237,7 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
-	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+	if creds.AccessKeyID == "" || (creds.AccessKeySecret == "" && !isPanelProvider(in.ProviderType)) {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
 	region := in.Region
@@ -254,7 +254,7 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 	if zoneID == "" {
 		zoneID = in.Config["site_id"]
 	}
-	return d.ListDomains(ctx, creds, in.DeployService, region, zoneID)
+	return callListSites(ctx, d, creds, in.DeployService, region, zoneID)
 }
 
 // ListCDNDomains 拉取指定部署目标已配置凭证下的 CDN 域名列表
@@ -283,7 +283,20 @@ func (s *DeployService) ListCDNDomains(ctx context.Context, targetID int) ([]str
 	if zoneID == "" {
 		zoneID = cfg["site_id"]
 	}
-	return d.ListDomains(ctx, creds, target.DeployService, region, zoneID)
+	return callListSites(ctx, d, creds, target.DeployService, region, zoneID)
+}
+
+// siteLister 是可选接口：面板类部署器实现 ListSites 以返回网站列表。
+type siteLister interface {
+	ListSites(ctx context.Context, creds Credentials, svc, region, zoneID string) ([]string, error)
+}
+
+// callListSites 优先调用部署器的 ListSites（面板类），否则回退到 ListDomains（云厂商）。
+func callListSites(ctx context.Context, d Deployer, creds Credentials, svc, region, zoneID string) ([]string, error) {
+	if sl, ok := d.(siteLister); ok {
+		return sl.ListSites(ctx, creds, svc, region, zoneID)
+	}
+	return d.ListDomains(ctx, creds, svc, region, zoneID)
 }
 
 // ListByCert 获取关联了某证书的部署目标
@@ -295,40 +308,101 @@ func (s *DeployService) ListByCert(ctx context.Context, certID int) ([]*ent.Depl
 		All(ctx)
 }
 
-// loadCredsAndConfig 解析部署目标对应的凭证与服务配置。
-// 凭证按 credential_source 选择 deploycredential / dnsprovider 包的强类型解析；
-// 服务配置按 DeployTargetConfig 强类型解析后转回 map 供部署器消费。
+// loadCredsAndConfig 按 credential_source + 厂商类型分发到三条独立解析路径（不再写在一起）：
+//   - loadDNSProviderPath：DNS 提供商凭证 + 云/CDN 域名配置（DomainTargetConfig）
+//   - loadDeployCredSitePath：部署凭证 + 面板/防火墙站点配置（SiteTargetConfig）
+//   - loadDeployCredDomainPath：部署凭证 + 云厂商 CDN 域名配置（DomainTargetConfig）
 func (s *DeployService) loadCredsAndConfig(target *ent.DeployTarget) (Credentials, map[string]string, error) {
-	var creds Credentials
-	var err error
 	switch target.CredentialSource {
-	case deploytarget.CredentialSourceDeployCredential:
-		// 从部署凭证表读取
-		if target.Edges.DeployCredential == nil {
-			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
-		}
-		creds, err = deploycredential.Parse(target.ProviderType.String(), target.Edges.DeployCredential.Config)
 	case deploytarget.CredentialSourceDNSProvider:
-		// 复用 DNS 提供商凭证
-		if target.Edges.DNSProvider == nil {
-			return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+		return s.loadDNSProviderPath(target)
+	case deploytarget.CredentialSourceDeployCredential:
+		if isPanelProvider(target.ProviderType.String()) {
+			return s.loadDeployCredSitePath(target)
 		}
-		creds, err = dnsprovider.ParseCredential(target.ProviderType.String(), target.Edges.DNSProvider.Config)
+		return s.loadDeployCredDomainPath(target)
 	default:
-		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
-	if err != nil {
-		return creds, nil, err
-	}
-	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
-		return creds, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
-	}
-	dtc := config.MustParseConfig[DeployTargetConfig](target.Config)
-	return creds, config.AsMap(dtc), nil
 }
 
-// DeployCertificate 将指定证书部署到指定目标（domain 非空时覆盖配置中的 CDN 域名）
-func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID int, domain string) (*DeployOutcome, error) {
+// 路径一：DNS 提供商凭证（复用 DNS 厂商凭证）+ 云/CDN 域名配置。
+func (s *DeployService) loadDNSProviderPath(target *ent.DeployTarget) (Credentials, map[string]string, error) {
+	if target.Edges.DNSProvider == nil {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_dns_provider"))
+	}
+	creds, err := dnsprovider.ParseCredential(target.ProviderType.String(), target.Edges.DNSProvider.Config)
+	if err != nil {
+		return Credentials{}, nil, err
+	}
+	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	dtc := config.MustParseConfig[DomainTargetConfig](target.Config)
+	svc := config.AsMap(dtc)
+	return creds, svc, nil
+}
+
+// 路径二：部署凭证 + 面板/防火墙站点配置（SiteTargetConfig）。
+// 面板/防火墙类仅需 AccessKeyID（如 API Key），无 Secret 亦可。
+func (s *DeployService) loadDeployCredSitePath(target *ent.DeployTarget) (Credentials, map[string]string, error) {
+	if target.Edges.DeployCredential == nil {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
+	}
+	creds, err := deploycredential.Parse(target.ProviderType.String(), target.Edges.DeployCredential.Config)
+	if err != nil {
+		return Credentials{}, nil, err
+	}
+	if creds.AccessKeyID == "" {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	dtc := config.MustParseConfig[SiteTargetConfig](target.Config)
+	svc := config.AsMap(dtc)
+	// 面板/防火墙类：panel_url 随凭证存储，注入到 svc 供部署器消费
+	if creds.PanelURL != "" {
+		svc["panel_url"] = creds.PanelURL
+	}
+	return creds, svc, nil
+}
+
+// 路径三：部署凭证 + 云厂商 CDN 域名配置（DomainTargetConfig）。
+func (s *DeployService) loadDeployCredDomainPath(target *ent.DeployTarget) (Credentials, map[string]string, error) {
+	if target.Edges.DeployCredential == nil {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_no_credential"))
+	}
+	creds, err := deploycredential.Parse(target.ProviderType.String(), target.Edges.DeployCredential.Config)
+	if err != nil {
+		return Credentials{}, nil, err
+	}
+	if creds.AccessKeyID == "" || creds.AccessKeySecret == "" {
+		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	dtc := config.MustParseConfig[DomainTargetConfig](target.Config)
+	svc := config.AsMap(dtc)
+	return creds, svc, nil
+}
+
+// matchSiteID 兜底配对：未显式传入 siteID 时，按站点名从配置的 site_name/site_id 两组
+// 按索引对齐的数组中查出对应的站点 ID。站点名与 ID 在配置里本就是分开存储的两份数组，
+// 这里仅在「前端未单独传 ID」的回退场景下使用，主路径由 DeployCertificate 直接落盘 siteID。
+func matchSiteID(namesRaw, idsRaw, name string) string {
+	if name == "" {
+		return ""
+	}
+	var names, ids []string
+	_ = json.Unmarshal([]byte(namesRaw), &names)
+	_ = json.Unmarshal([]byte(idsRaw), &ids)
+	for i, n := range names {
+		if n == name && i < len(ids) {
+			return ids[i]
+		}
+	}
+	return ""
+}
+
+// DeployCertificate 将指定证书部署到指定目标。
+// domain 为云厂商的 CDN 域名或面板/防火墙类的站点名；siteID 为面板/防火墙类的站点 ID（云厂商忽略）。
+func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID int, domain, siteID string) (*DeployOutcome, error) {
 	target, err := s.db.DeployTarget.Query().
 		Where(deploytarget.ID(targetID)).
 		WithDNSProvider().
@@ -337,7 +411,13 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
 	}
-	logging.Debug(i18n.T("log.deploy.cert_deploy_start", "TargetID", targetID, "CertID", certID, "Domain", domain, "Provider", target.ProviderType.String(), "Service", target.DeployService))
+	// 面板/防火墙类按「站点/网站」部署，云厂商按「域名」部署，日志与通知需区分语义。
+	isSite := isPanelProvider(target.ProviderType.String())
+	if isSite {
+		logging.Debug(i18n.T("log.deploy.cert_deploy_start_site", "TargetID", targetID, "CertID", certID, "Site", domain, "Provider", target.ProviderType.String(), "Service", target.DeployService))
+	} else {
+		logging.Debug(i18n.T("log.deploy.cert_deploy_start", "TargetID", targetID, "CertID", certID, "Domain", domain, "Provider", target.ProviderType.String(), "Service", target.DeployService))
+	}
 	cert, err := s.db.Certificate.Get(ctx, certID)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.cert_not_found"))
@@ -346,16 +426,47 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	if err != nil {
 		return s.recordFailure(ctx, target, cert, domain, err, "")
 	}
-	if domain != "" {
+	// 面板/防火墙类按「站点」部署，云厂商按「域名」部署。
+	// 站点名（site_name）与站点 ID（site_id）在配置里是两份独立数组，部署时各自使用：
+	//   - 前端下拉选项值为「名称||ID」，部署调用会把站点名（domain）与站点 ID（siteID）分开传入；
+	//   - 1Panel 部署器直接用 svc["site_id"] 定位站点；aaPanel/宝塔直接用 svc["site_name"] 做站点名。
+	// 因此此处只做字段落盘，不再拼接/解析「名称||ID」。
+	if isSite {
+		if siteID != "" {
+			svc["site_name"] = domain
+			svc["site_id"] = siteID
+		} else {
+			// 兜底：未传入 siteID（如回退到配置里的站点名）时，按站点名从配置的 site_id 数组配对。
+			if id := matchSiteID(svc["site_name"], svc["site_id"], domain); id != "" {
+				svc["site_name"] = domain
+				svc["site_id"] = id
+			}
+		}
+	} else if domain != "" {
 		svc["domain"] = domain
+	}
+	// 实际部署的资源名称：面板/防火墙类为站点名，云厂商为 CDN 域名。
+	// 未单独选中时，站点类取配置里的 site_name，域名类取证书的域名。
+	deployedName := domain
+	if deployedName == "" {
+		if isSite {
+			deployedName = svc["site_name"]
+		} else {
+			deployedName = cert.Domain
+		}
 	}
 	// 供部署器在绑定阶段计算证书名称使用（与上传阶段保持一致）
 	svc["cert_domain"] = cert.Domain
 	// 记录部署服务类型，供部署器区分 CDN / 全站加速（DRCDN）。
 	svc["deploy_service"] = target.DeployService
+	// 面板/防火墙类无独立证书库（UploadCert 为空操作），将证书内容注入 svc 供 DeployCert 直接写站点。
+	if isPanelProvider(target.ProviderType.String()) {
+		svc["cert_pem"] = cert.CertContent
+		svc["key_pem"] = cert.KeyContent
+	}
 	d := registry[target.ProviderType.String()]
 	if d == nil {
-		return s.recordFailure(ctx, target, cert, domain,
+		return s.recordFailure(ctx, target, cert, deployedName,
 			i18n.NewError("error.deploy_unsupported_provider", "Provider", target.ProviderType.String()), "")
 	}
 
@@ -363,7 +474,7 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 	// 去重映射持久化到数据库（CertUpload），跨进程重启仍然生效，不依赖任何云厂商的原生去重能力。
 	cloudCertID, uploadRaw, uerr := s.ensureUploaded(ctx, d, target.ProviderType.String(), creds, cert, svc)
 	if uerr != nil {
-		return s.recordFailure(ctx, target, cert, domain, uerr, uploadRaw)
+		return s.recordFailure(ctx, target, cert, deployedName, uerr, uploadRaw)
 	}
 
 	res, err := d.DeployCert(ctx, creds, cloudCertID, target.DeployService, svc)
@@ -372,7 +483,7 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 		if res != nil {
 			rawResp = res.RawResponse
 		}
-		return s.recordFailure(ctx, target, cert, domain, err, rawResp)
+		return s.recordFailure(ctx, target, cert, deployedName, err, rawResp)
 	}
 	// 部署成功
 	_, _ = s.db.DeployTarget.UpdateOneID(targetID).
@@ -380,11 +491,19 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 		SetLastDeployedAt(time.Now()).
 		SetLastError("").
 		Save(ctx)
-	_ = s.recordLog(ctx, target, cert, domain, target.ProviderType.String(), target.DeployService, true, res.Message, res.CloudCertID, res.RawResponse)
+	_ = s.recordLog(ctx, target, cert, deployedName, target.ProviderType.String(), target.DeployService, true, res.Message, res.CloudCertID, res.RawResponse)
 	if s.notifService != nil {
-		_ = s.notifService.SendDeploySuccess(cert.Domain, target.Name)
+		if isSite {
+			_ = s.notifService.SendDeploySuccessSite(deployedName, target.Name)
+		} else {
+			_ = s.notifService.SendDeploySuccess(deployedName, target.Name)
+		}
 	}
-	logging.Info(i18n.T("log.deploy_success", "Domain", cert.Domain, "Target", target.Name))
+	if isSite {
+		logging.Info(i18n.T("log.deploy_success_site", "Site", deployedName, "Target", target.Name))
+	} else {
+		logging.Info(i18n.T("log.deploy_success", "Domain", deployedName, "Target", target.Name))
+	}
 	return &DeployOutcome{TargetID: targetID, TargetName: target.Name, CloudCertID: res.CloudCertID, Success: true, Message: res.Message, RawResponse: res.RawResponse}, nil
 }
 
@@ -500,7 +619,7 @@ func (s *DeployService) recordLog(ctx context.Context, target *ent.DeployTarget,
 		SetResponse(rawResponse).
 		SetCloudCertID(cloudCertID).
 		Save(ctx); err != nil {
-		logging.Error(i18n.T("log.deploy.history_write_failed", "Err", err.Error()))
+		logging.Error("%s", i18n.T("log.deploy.history_write_failed", "Err", err.Error()))
 		return err
 	}
 	return nil
@@ -517,10 +636,19 @@ func (s *DeployService) recordFailure(ctx context.Context, target *ent.DeployTar
 		SetLastError(msg).
 		Save(ctx)
 	_ = s.recordLog(ctx, target, cert, domain, target.ProviderType.String(), target.DeployService, false, msg, "", rawResponse)
-	if s.notifService != nil {
-		_ = s.notifService.SendDeployFailed(cert.Domain, target.Name, msg)
+	// 通知按站点/域名区分语义；资源名为空时回退到证书域名。
+	notifyName := domain
+	if notifyName == "" {
+		notifyName = cert.Domain
 	}
-	logging.Error(i18n.T("log.deploy_failed", "Target", target.Name, "Error", msg))
+	if s.notifService != nil {
+		if isPanelProvider(target.ProviderType.String()) {
+			_ = s.notifService.SendDeployFailedSite(notifyName, target.Name, msg)
+		} else {
+			_ = s.notifService.SendDeployFailed(notifyName, target.Name, msg)
+		}
+	}
+	logging.Error("%s", i18n.T("log.deploy_failed", "Target", target.Name, "Error", msg))
 	return &DeployOutcome{TargetID: target.ID, TargetName: target.Name, Success: false, Message: msg}, deployErr
 }
 
@@ -532,7 +660,8 @@ func (s *DeployService) ListDeployLogs(ctx context.Context, targetID int) ([]*en
 		All(ctx)
 }
 
-// DeployAllForCert 将该证书部署到所有关联且启用的目标
+// DeployAllForCert 将该证书部署到所有关联且启用的目标。
+// 面板/防火墙类目标按配置里的每个站点循环部署（各自带 site_id），云厂商目标按配置域名部署。
 func (s *DeployService) DeployAllForCert(ctx context.Context, certID int) ([]*DeployOutcome, error) {
 	targets, err := s.ListByCert(ctx, certID)
 	if err != nil {
@@ -543,10 +672,45 @@ func (s *DeployService) DeployAllForCert(ctx context.Context, certID int) ([]*De
 		if !t.IsActive {
 			continue
 		}
-		outcome, _ := s.DeployCertificate(ctx, t.ID, certID, "")
-		if outcome != nil {
-			outcomes = append(outcomes, outcome)
+		if isPanelProvider(t.ProviderType.String()) {
+			cfg := parseConfig(t.Config)
+			names := parseConfigStringSlice(cfg["site_name"])
+			ids := parseConfigStringSlice(cfg["site_id"])
+			if len(names) == 0 {
+				outcome, _ := s.DeployCertificate(ctx, t.ID, certID, "", "")
+				if outcome != nil {
+					outcomes = append(outcomes, outcome)
+				}
+				continue
+			}
+			for i, name := range names {
+				id := ""
+				if i < len(ids) {
+					id = ids[i]
+				}
+				outcome, _ := s.DeployCertificate(ctx, t.ID, certID, name, id)
+				if outcome != nil {
+					outcomes = append(outcomes, outcome)
+				}
+			}
+		} else {
+			outcome, _ := s.DeployCertificate(ctx, t.ID, certID, "", "")
+			if outcome != nil {
+				outcomes = append(outcomes, outcome)
+			}
 		}
 	}
 	return outcomes, nil
+}
+
+// parseConfigStringSlice 解析 JSON 数组字符串为字符串切片（容错非数组/空值）。
+func parseConfigStringSlice(s string) []string {
+	if s == "" {
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal([]byte(s), &arr); err == nil {
+		return arr
+	}
+	return nil
 }
