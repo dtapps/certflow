@@ -79,7 +79,7 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 		url    string
 	}
 	var candidates []candidate
-	if u := m.buildURL(cnbDownloadTpl, tag, stripUpdaterPrefix(file)); u != "" {
+	if u := m.buildURL(cnbDownloadTpl, tag, file); u != "" {
 		candidates = append(candidates, candidate{"cnb", u})
 	}
 	if u := m.buildURL(daoCloudDownloadTpl, tag, file); u != "" {
@@ -109,13 +109,6 @@ func (m *mirrorProvider) buildURL(tpl, tag, file string) string {
 	u := strings.ReplaceAll(tpl, "{tag}", tag)
 	u = strings.ReplaceAll(u, "{file}", file)
 	return u
-}
-
-// stripUpdaterPrefix 去掉 Wails updater 给升级文件加的 updater- 前缀。
-// CNB 镜像仓库的升级文件使用原始文件名（无前缀），而 GitHub/daocloud 保留前缀，
-// 故拼 CNB 下载地址时需去掉该前缀，否则命中 404。
-func stripUpdaterPrefix(name string) string {
-	return strings.TrimPrefix(name, "updater-")
 }
 
 // downloadFrom 从指定 URL 流式下载到 dst，并做基础防护。
