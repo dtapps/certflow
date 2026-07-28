@@ -55,6 +55,8 @@ export type {
     CreateDNSProviderRequest,
     CreateDeployCredentialRequest,
     CreateDeployTargetRequest,
+    CurrentCertDTO,
+    CurrentCertsResultDTO,
     DNSProviderListItem,
     DeployCredentialListItem,
     DeployLogListItem,

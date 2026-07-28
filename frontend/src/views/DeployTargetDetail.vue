@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from 'vue'
+import { ref, onMounted, computed, h, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   NButton,
@@ -24,6 +24,7 @@ import type {
   DeployTargetListItem,
   DeployLogListItem,
   CertificateListItem,
+  CurrentCertDTO,
 } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { storeToRefs } from 'pinia'
 import { useI18nStore } from '../stores/i18n'
@@ -59,6 +60,11 @@ const copyToClipboard = async (text: string, field: string) => {
 }
 
 const activeTab = ref<string>('info')
+
+// 进入部署 tab 时实时拉取云端/面板当前生效证书（B 方案：本地 + 云端并排）
+watch(activeTab, (tab) => {
+  if (tab === 'deploy') loadCurrentCerts()
+})
 
 // ---- JSON 高亮（信息 tab 原始配置）----
 function escapeHtml(str: string): string {
@@ -164,16 +170,29 @@ function statusType(s?: string) {
   if (s === 'failed') return 'error'
   return 'default'
 }
+// parseNotAfter 将证书到期时间解析为毫秒时间戳。
+// 兼容 RFC3339（"2026-09-29T07:28:29Z"）与 Go time.DateTime（"2026-09-29 07:28:29"，按 UTC 处理）。
+function parseNotAfter(s?: string): number | null {
+  if (!s) return null
+  const direct = new Date(s).getTime()
+  if (!isNaN(direct)) return direct
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/)
+  if (m) {
+    const t = new Date(m[1] + 'T' + m[2] + 'Z').getTime()
+    if (!isNaN(t)) return t
+  }
+  return null
+}
 function remainingDays(notAfter?: string): string {
-  if (!notAfter) return '-'
-  const diff = new Date(notAfter).getTime() - Date.now()
+  const ts = parseNotAfter(notAfter)
+  if (ts == null) return '-'
+  const diff = ts - Date.now()
   const days = Math.floor(diff / 86400000)
   if (days < 0) return t('deploy.expired')
   return days + ' ' + t('deploy.days')
 }
 
 // ---- 部署 ----
-const selectedDomains = ref<string[]>([])
 const domainOptions = ref<{ label: string; value: string }[]>([])
 // domainMeta 以选项 value 为键，记录每个站点/域名的 name 与 id，
 // 部署时据此分别传「站点名」与「站点 ID」，避免界面出现「名称||ID」这类拼接串。
@@ -221,22 +240,9 @@ function buildInitialDomainOptions(): { label: string; value: string }[] {
   return opts
 }
 
-// 把当前选中的选项 value 解析为站点名/域名（面板类 value 为站点 ID，需经 domainMeta 取回名称）
-function selectedNames(): string[] {
-  return selectedDomains.value.map((v) => domainMeta.value[v]?.name || v)
-}
-
 const fetchingDomains = ref(false)
 
-// 加速域名全选 / 清空
-const selectAllDomains = () => {
-  selectedDomains.value = domainOptions.value.map((o) => o.value)
-}
-const clearDomains = () => {
-  selectedDomains.value = []
-}
-
-// 获取域名：调用云接口拉取该部署目标已配置凭证下的真实可部署域名，刷新下拉选项
+// 获取域名：调用云接口拉取该部署目标已配置凭证下的真实可部署域名，刷新列表
 const fetchDomains = async () => {
   if (!target.value) return
   fetchingDomains.value = true
@@ -270,17 +276,6 @@ const fetchDomains = async () => {
   }
 }
 
-const certOptions = computed(() => {
-  const list = certificates.value || []
-  // 已选择域名时，只展示能覆盖所选域名的证书（按 domain / san 匹配）
-  const sel = selectedNames()
-  const filtered = sel.length ? list.filter((c) => domainMatch(c, sel)) : list
-  return filtered.map((c) => ({
-    label: renderCertLabel(c),
-    value: c.id,
-  }))
-})
-
 function renderCertLabel(c: CertificateListItem) {
   return `${c.domain} (${remainingDays(c.not_after)})`
 }
@@ -304,87 +299,151 @@ function domainMatch(c: CertificateListItem, domains: string[]): boolean {
   return domains.some((d) => patterns.some((p) => patternCovers(p, d)))
 }
 
-const selectedCertIds = ref<number[]>([])
+// 部署列表：每行一个站点/域名，行内显示匹配的本地证书，支持批量/单个部署
+interface DeployRow {
+  key: string
+  name: string
+  siteID: string
+  matched: CertificateListItem[]
+  certOptions: { label: string; value: number }[]
+  selectedCertId: number | null
+}
+const selectedRowKeys = ref<string[]>([])
+const rowCertSelection = ref<Record<string, number>>({})
+const rowDeploying = ref<Record<string, boolean>>({})
+const deployRows = computed<DeployRow[]>(() => {
+  const linkedCertIds: number[] = (target.value as any)?.cert_ids || []
+  return domainOptions.value.map((opt) => {
+    const key = opt.value
+    const meta = domainMeta.value[key] || { name: opt.label, id: '' }
+    const name = meta.name || opt.label
+    const matched = (certificates.value || []).filter((c) => domainMatch(c, [name]))
+    const certOptions = matched.map((c) => ({ label: renderCertLabel(c), value: c.id }))
+    // 默认优先选「目标已关联且覆盖该域名的证书」，否则取第一个匹配证书
+    const preferred = matched.find((c) => linkedCertIds.includes(c.id))
+    const selectedCertId = rowCertSelection.value[key] ?? preferred?.id ?? matched[0]?.id ?? null
+    return { key, name, siteID: meta.id, matched, certOptions, selectedCertId }
+  })
+})
+
+// 列表行全选 / 清空 / 切换
+const selectAllRows = () => {
+  selectedRowKeys.value = deployRows.value.map((r) => r.key)
+}
+const clearRows = () => {
+  selectedRowKeys.value = []
+}
+const toggleRow = (key: string, checked: boolean) => {
+  if (checked) {
+    if (!selectedRowKeys.value.includes(key))
+      selectedRowKeys.value = [...selectedRowKeys.value, key]
+  } else {
+    selectedRowKeys.value = selectedRowKeys.value.filter((k) => k !== key)
+  }
+}
+const onRowCertChange = (key: string, v: number) => {
+  rowCertSelection.value = { ...rowCertSelection.value, [key]: v }
+}
+
 const deploying = ref(false)
 const deployResults = ref<
   { domain: string; cloud_cert_id?: string; success: boolean; message: string }[]
 >([])
 
-async function runDeploy() {
+// 部署单个站点/域名（用行内选定的证书）
+async function deployRow(row: DeployRow) {
   if (!target.value) return
-  if (selectedDomains.value.length === 0) {
-    showMessage(t('deploy.selectDomains'), 'warning')
-    return
-  }
-  if (selectedCertIds.value.length === 0) {
+  const certId = row.selectedCertId
+  if (!certId) {
     showMessage(t('deploy.selectCertHint'), 'warning')
     return
   }
-  deploying.value = true
-  deployResults.value = []
-  const certMap = new Map(certificates.value.map((c) => [c.id, c]))
-  // 名称 -> 选项 value（站点 ID）反查表，用于把证书匹配到的站点名映射回待部署值
-  const nameToValues = new Map<string, string[]>()
-  for (const v of Object.keys(domainMeta.value)) {
-    const n = domainMeta.value[v]?.name || v
-    if (!nameToValues.has(n)) nameToValues.set(n, [])
-    nameToValues.get(n)!.push(v)
-  }
-  const allNames = domainOptions.value.map((o) => domainMeta.value[o.value]?.name || o.value)
+  rowDeploying.value = { ...rowDeploying.value, [row.key]: true }
   try {
-    for (const certId of selectedCertIds.value) {
-      const cert = certMap.get(certId)
-      if (!cert) continue
-      const patterns = [cert.domain, ...(cert.sans || [])].filter(Boolean)
-      const matchedNames = selectedNames().filter((d) => patterns.some((p) => patternCovers(p, d)))
-      const targetNames =
-        matchedNames.length > 0
-          ? matchedNames
-          : allNames.filter((d) => patterns.some((p) => patternCovers(p, d)))
-      // 证书匹配到的是站点名，展平为待部署选项值（站点 ID）并去重
-      const valuesToDeploy = new Set<string>()
-      targetNames.forEach((n) => {
-        const vs = nameToValues.get(n)
-        if (vs && vs.length) vs.forEach((v) => valuesToDeploy.add(v))
-        else valuesToDeploy.add(n)
-      })
-      for (const value of valuesToDeploy) {
-        try {
-          // 面板/防火墙类：站点名与站点 ID 分开发给后端，由后端直接落盘，
-          // 不再拼接/解析「名称||ID」。
-          const meta = domainMeta.value[value] || { name: value, id: '' }
-          const resp = await DeployService.DeployCertificate(
-            target.value.id,
-            certId,
-            meta.name,
-            meta.id,
-          )
-          deployResults.value.push({
-            domain: meta.name,
-            cloud_cert_id: resp?.cloud_cert_id || undefined,
-            success: resp?.success ?? true,
-            message: resp?.message || t('deploy.deploySuccess'),
-          })
-        } catch (e: any) {
-          const meta = domainMeta.value[value] || { name: value, id: '' }
-          deployResults.value.push({
-            domain: meta.name,
-            success: false,
-            message: translateBackend(e?.message || String(e)),
-          })
-        }
-      }
-    }
+    const resp = await DeployService.DeployCertificate(
+      target.value.id,
+      certId,
+      row.name,
+      row.siteID,
+    )
+    deployResults.value.push({
+      domain: row.name,
+      cloud_cert_id: resp?.cloud_cert_id || undefined,
+      success: resp?.success ?? true,
+      message: resp?.message || t('deploy.deploySuccess'),
+    })
+  } catch (e: any) {
+    deployResults.value.push({
+      domain: row.name,
+      success: false,
+      message: translateBackend(e?.message || String(e)),
+    })
+  } finally {
+    rowDeploying.value = { ...rowDeploying.value, [row.key]: false }
     await loadTarget()
     await loadLogs()
-  } catch (e: any) {
-    showMessage(
-      t('deploy.operationFailed') + ': ' + translateBackend(e?.message || String(e)),
-      'error',
-    )
+    await loadCurrentCerts()
+  }
+}
+
+// 批量部署选中的行
+async function deploySelected() {
+  if (selectedRowKeys.value.length === 0) {
+    showMessage(t('deploy.selectDomains'), 'warning')
+    return
+  }
+  deploying.value = true
+  try {
+    for (const key of selectedRowKeys.value) {
+      const row = deployRows.value.find((r) => r.key === key)
+      if (row) await deployRow(row)
+    }
   } finally {
     deploying.value = false
   }
+}
+
+// —— 实时查询云端/面板当前生效证书（B 方案：本地 + 云端并排对比，预留 C 对比）——
+const currentCerts = ref<Record<string, CurrentCertDTO>>({})
+const fetchingCurrentCerts = ref(false)
+
+async function loadCurrentCerts() {
+  if (!target.value) return
+  fetchingCurrentCerts.value = true
+  try {
+    const resp = await DeployService.GetCurrentCerts(target.value.id)
+    const m: Record<string, CurrentCertDTO> = {}
+    if (resp?.results) {
+      for (const [k, v] of Object.entries(resp.results)) {
+        if (v) m[k] = v
+      }
+    }
+    currentCerts.value = m
+  } catch (e: any) {
+    showMessage(translateBackend(e?.message || String(e)), 'error')
+  } finally {
+    fetchingCurrentCerts.value = false
+  }
+}
+
+// 本地已选证书的到期时间（用于与云端当前证书对比）
+function localCertNotAfter(row: DeployRow): string {
+  const c = (certificates.value || []).find((x) => x.id === row.selectedCertId)
+  return c?.not_after || ''
+}
+
+// 对比状态：same=本地与云端到期一致（已基本是最新）；diff=不一致（待更新）；none=无法对比。
+// 按天粒度比较：部分面板（如 aaPanel）只返回到期日期，忽略时分秒避免误判。
+function compareStatus(row: DeployRow): 'same' | 'diff' | 'none' {
+  const cloud = currentCerts.value[row.key]
+  if (!cloud || !cloud.supported || cloud.error || !cloud.not_after) return 'none'
+  const local = localCertNotAfter(row)
+  if (!local) return 'none'
+  const lt = parseNotAfter(local)
+  const ct = parseNotAfter(cloud.not_after)
+  if (lt == null || ct == null) return 'none'
+  const dayOf = (ts: number) => Math.floor(ts / 86400000) // UTC 天序号
+  return dayOf(lt) === dayOf(ct) ? 'same' : 'diff'
 }
 
 const historyColumns: DataTableColumns<DeployLogListItem> = [
@@ -420,10 +479,6 @@ const historyColumns: DataTableColumns<DeployLogListItem> = [
 async function loadTarget() {
   const t2 = await DeployService.GetDeployTarget(id)
   target.value = t2
-  const certIds = (target.value as any).cert_ids as number[] | undefined
-  if (certIds?.length) {
-    selectedCertIds.value = [...certIds]
-  }
 }
 async function loadLogs() {
   logs.value = (await DeployService.ListDeployLogs(id)) || []
@@ -460,7 +515,10 @@ onMounted(async () => {
     await Promise.all([loadTarget(), loadCertificates(), loadLogs()])
     // 域名/站点已在创建/编辑时的 config 中配置，进入部署 tab 直接作为可选项（默认不预选，由用户点「全选」或勾选）
     domainOptions.value = buildInitialDomainOptions()
-    if (route.query.tab === 'deploy') activeTab.value = 'deploy'
+    if (route.query.tab === 'deploy') {
+      activeTab.value = 'deploy'
+      await loadCurrentCerts()
+    }
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
   } finally {
@@ -699,67 +757,138 @@ onMounted(async () => {
             <!-- 部署 -->
             <n-tab-pane name="deploy" :tab="t('deploy.deploy')">
               <div class="space-y-4">
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm opacity-60">{{
-                      isPanelProvider(target?.provider_type || '')
-                        ? t('deploy.sites')
-                        : t('deploy.domains')
-                    }}</span>
-                    <n-space size="small">
-                      <n-button size="tiny" :loading="fetchingDomains" @click="fetchDomains">
-                        {{
-                          isPanelProvider(target?.provider_type || '')
-                            ? t('deploy.fetchSites')
-                            : t('deploy.fetchDomains')
-                        }}
-                      </n-button>
-                      <n-button
-                        size="tiny"
-                        :disabled="domainOptions.length === 0"
-                        @click="selectAllDomains"
-                      >
-                        {{ t('deploy.selectAll') }}
-                      </n-button>
-                      <n-button
-                        size="tiny"
-                        :disabled="selectedDomains.length === 0"
-                        @click="clearDomains"
-                      >
-                        {{ t('deploy.clearSelection') }}
-                      </n-button>
-                    </n-space>
-                  </div>
-                  <n-select
-                    v-model:value="selectedDomains"
-                    :options="domainOptions"
-                    multiple
-                    :placeholder="
-                      isPanelProvider(target?.provider_type || '')
-                        ? t('deploy.selectSites')
-                        : t('deploy.selectDomains')
-                    "
-                    style="max-width: 640px"
-                  />
-                </div>
-
-                <div>
-                  <div class="text-sm opacity-60 mb-1">{{ t('deploy.cert') }}</div>
-                  <n-select
-                    v-model:value="selectedCertIds"
-                    :options="certOptions"
-                    multiple
-                    :placeholder="t('deploy.selectCertHint')"
-                    style="max-width: 640px"
-                  />
-                </div>
-
-                <n-space>
-                  <n-button type="primary" :loading="deploying" @click="runDeploy">
-                    {{ t('deploy.deploy') }}
+                <!-- 工具栏 -->
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <n-space size="small">
+                    <n-button size="small" :loading="fetchingDomains" @click="fetchDomains">
+                      {{
+                        isPanelProvider(target?.provider_type || '')
+                          ? t('deploy.fetchSites')
+                          : t('deploy.fetchDomains')
+                      }}
+                    </n-button>
+                    <n-button
+                      size="small"
+                      :disabled="deployRows.length === 0"
+                      @click="selectAllRows"
+                    >
+                      {{ t('deploy.selectAll') }}
+                    </n-button>
+                    <n-button
+                      size="small"
+                      :disabled="selectedRowKeys.length === 0"
+                      @click="clearRows"
+                    >
+                      {{ t('deploy.clearSelection') }}
+                    </n-button>
+                    <n-button
+                      size="small"
+                      :loading="fetchingCurrentCerts"
+                      @click="loadCurrentCerts"
+                    >
+                      {{ t('deploy.fetchCurrentCert') }}
+                    </n-button>
+                  </n-space>
+                  <n-button
+                    type="primary"
+                    size="small"
+                    :loading="deploying"
+                    :disabled="selectedRowKeys.length === 0"
+                    @click="deploySelected"
+                  >
+                    {{ t('deploy.deploySelected') }} ({{ selectedRowKeys.length }})
                   </n-button>
-                </n-space>
+                </div>
 
+                <!-- 站点/域名列表 -->
+                <div v-if="deployRows.length" class="deploy-rows">
+                  <div v-for="row in deployRows" :key="row.key" class="deploy-row">
+                    <n-checkbox
+                      :checked="selectedRowKeys.includes(row.key)"
+                      @update:checked="(v: boolean) => toggleRow(row.key, v)"
+                    />
+                    <div class="row-name" :title="row.name">{{ row.name }}</div>
+                    <div class="row-cert">
+                      <n-select
+                        v-if="row.certOptions.length"
+                        :value="row.selectedCertId ?? null"
+                        :options="row.certOptions"
+                        size="small"
+                        :placeholder="t('deploy.selectCertHint')"
+                        style="min-width: 220px; max-width: 360px"
+                        @update:value="(v: number | null) => onRowCertChange(row.key, v as number)"
+                      />
+                      <span v-else class="row-cert-empty">{{ t('deploy.noCertMatched') }}</span>
+                    </div>
+                    <div class="row-actions">
+                      <n-button
+                        size="small"
+                        :loading="!!rowDeploying[row.key]"
+                        :disabled="!row.selectedCertId"
+                        @click="deployRow(row)"
+                      >
+                        {{ t('deploy.deploy') }}
+                      </n-button>
+                    </div>
+                    <!-- 云端当前生效证书（与本地并排展示，预留 C 对比） -->
+                    <div class="row-cloud">
+                      <template v-if="currentCerts[row.key]">
+                        <template v-if="!currentCerts[row.key].supported">
+                          <span class="cloud-badge cloud-muted">{{
+                            t('deploy.cloudCertUnsupported')
+                          }}</span>
+                        </template>
+                        <template v-else-if="currentCerts[row.key].error">
+                          <span class="cloud-badge cloud-error">{{
+                            translateBackend(currentCerts[row.key].error)
+                          }}</span>
+                        </template>
+                        <template v-else>
+                          <span class="cloud-label">{{ t('deploy.currentCloudCert') }}</span>
+                          <span class="cloud-cn" :title="currentCerts[row.key].common_name">{{
+                            currentCerts[row.key].common_name || '-'
+                          }}</span>
+                          <n-tag
+                            v-if="(currentCerts[row.key].sans || []).length"
+                            size="tiny"
+                            :bordered="false"
+                            type="info"
+                            :title="(currentCerts[row.key].sans || []).join(', ')"
+                          >
+                            {{ (currentCerts[row.key].sans || []).slice(0, 2).join(', ') }}
+                            <template v-if="(currentCerts[row.key].sans || []).length > 2">
+                              +{{ (currentCerts[row.key].sans || []).length - 2 }}</template
+                            >
+                          </n-tag>
+                          <span class="cloud-after" :title="currentCerts[row.key].not_after">
+                            {{ currentCerts[row.key].not_after }}
+                            <template v-if="remainingDays(currentCerts[row.key].not_after) !== '-'">
+                              ({{ remainingDays(currentCerts[row.key].not_after) }})
+                            </template>
+                          </span>
+                          <n-tag
+                            v-if="compareStatus(row) !== 'none'"
+                            size="tiny"
+                            :bordered="false"
+                            :type="compareStatus(row) === 'same' ? 'success' : 'warning'"
+                          >
+                            {{
+                              compareStatus(row) === 'same'
+                                ? t('deploy.sameAsLocal')
+                                : t('deploy.needUpdate')
+                            }}
+                          </n-tag>
+                        </template>
+                      </template>
+                      <span v-else-if="fetchingCurrentCerts" class="cloud-badge cloud-muted">{{
+                        t('common.loading')
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+                <n-empty v-else :description="t('deploy.noDomains')" />
+
+                <!-- 部署结果 -->
                 <div v-if="deployResults.length > 0">
                   <n-collapse :default-expanded-names="deployResults.map((_, i) => i)">
                     <n-collapse-item v-for="(r, i) in deployResults" :key="i" :name="i">
@@ -912,5 +1041,81 @@ onMounted(async () => {
   line-height: 1.5;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+/* 部署 tab：站点/域名列表 */
+.deploy-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.deploy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--n-border-color, rgba(128, 128, 128, 0.2));
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.deploy-row .row-name {
+  font-weight: 500;
+  min-width: 140px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deploy-row .row-cert {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.deploy-row .row-cert-empty {
+  opacity: 0.5;
+  font-size: 13px;
+}
+.deploy-row .row-actions {
+  flex-shrink: 0;
+}
+/* 云端当前生效证书（与本地并排，预留 C 对比） */
+.deploy-row .row-cloud {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--n-border-color, rgba(128, 128, 128, 0.18));
+  font-size: 12px;
+}
+.deploy-row .row-cloud .cloud-label {
+  opacity: 0.6;
+}
+.deploy-row .row-cloud .cloud-cn {
+  font-weight: 600;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deploy-row .row-cloud .cloud-after {
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.cloud-muted {
+  opacity: 0.55;
+  background: rgba(128, 128, 128, 0.12);
+}
+.cloud-error {
+  color: #d03050;
+  background: rgba(208, 48, 80, 0.12);
 }
 </style>

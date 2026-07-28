@@ -13,6 +13,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"github.com/alibabacloud-go/tea/tea"
 	"github.com/volcengine/volc-sdk-golang/base"
 	"github.com/volcengine/volc-sdk-golang/service/cdn"
 )
@@ -320,4 +321,55 @@ type volcDCDNListResp struct {
 		} `json:"DomainConfigs"`
 		Total int `json:"Total"`
 	} `json:"Result"`
+}
+
+// GetCurrentCert 查询火山引擎资源当前生效的 SSL 证书。
+//   - CDN：DescribeCdnConfig 按域名拉取配置，HTTPS.CertInfo.Certificate.Certificate 为当前生效证书（PEM）；
+//     HTTPS 未开启（Switch=false）或 CertInfo 为空表示未配置证书。
+//   - DCDN：火山 SDK 未提供 DCDN 证书查询的静态类型（仅 base.Client 直调 OpenAPI），
+//     且证书中心共用 CDN 的 ListCdnCertInfo（不含 CommonName/SAN 字段），无法稳定对齐 CurrentCert，
+//     暂返回不支持；后续可基于 DCDN OpenAPI DescribeCertConfig + 证书中心反查扩展。
+func (d *VolcengineDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.volcengine_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	switch svc {
+	case "cdn":
+		client := newVolcCDNClient(creds)
+		resp, err := client.DescribeCdnConfig(&cdn.DescribeCdnConfigRequest{
+			Domain: domain,
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if msg := volcErrText(resp.ResponseMetadata); msg != "" {
+			return nil, fmt.Errorf("%s: %s", i18n.T("deploy.error.current_cert_query"), msg)
+		}
+		// HTTPS 配置缺失或 HTTPS 未开启 → 无生效证书。
+		if resp.Result.DomainConfig.HTTPS == nil ||
+			(resp.Result.DomainConfig.HTTPS.Switch != nil && !*resp.Result.DomainConfig.HTTPS.Switch) {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		certInfo := resp.Result.DomainConfig.HTTPS.CertInfo
+		if certInfo == nil || certInfo.Certificate == nil ||
+			strings.TrimSpace(tea.StringValue(certInfo.Certificate.Certificate)) == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(tea.StringValue(certInfo.Certificate.Certificate))
+
+	case "dcdn":
+		// TODO: DCDN 暂未实现。可扩展路径：
+		//  1) newVolcDCDNClient(creds).Json("DescribeCertConfig", url.Values{}, body) 按域名查证书配置（拿 CertId / SSLProtocol 开关）；
+		//  2) 复用 CDN 证书中心 ListCdnCertInfo(CertId) 反查证书元数据；
+		//  3) 由元数据构造 CurrentCert（注意 ListCertInfo 无独立 CommonName/SAN 字段，SAN 在 DnsName 中）。
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+
+	default:
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+	}
 }

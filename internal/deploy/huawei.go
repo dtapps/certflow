@@ -375,3 +375,68 @@ func toUpper(c byte) byte {
 	}
 	return c
 }
+
+// GetCurrentCert 查询华为云资源当前生效的 SSL 证书。
+//   - CDN：ShowCertificatesHttpsInfo 按域名查 HTTPS 配置，证书内容直接返回在 HttpsDetail.Certificate（PEM），
+//     可直接 parseCertPEM 解析；HttpsStatus=0 表示未启用 HTTPS（未绑定证书）。
+//   - WAF / ELB：当前 SDK 无「按域名查询当前生效证书」的简易接口，暂返回未支持。
+func (d *HuaweiDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.huawei_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	switch svc {
+	case "cdn":
+		cdnClient, err := d.newCdnClient(creds)
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		resp, err := cdnClient.ShowCertificatesHttpsInfo(&cdnmodel.ShowCertificatesHttpsInfoRequest{
+			DomainName: &domain,
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		// Https 列表为空（或不含该域名项）表示域名未配置 HTTPS 证书。
+		if resp.Https == nil || len(*resp.Https) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		var info cdnmodel.HttpsDetail
+		for _, h := range *resp.Https {
+			if h.DomainName != nil && *h.DomainName == domain {
+				info = h
+				break
+			}
+		}
+		if info.DomainName == nil {
+			// 列表中无精确匹配域名项（理论上不会发生），取首个有效项兜底。
+			for _, h := range *resp.Https {
+				info = h
+				break
+			}
+		}
+		if info.DomainName == nil {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		// HttpsStatus: 0=不启用；1=启用并协议跟随回源；2=启用并 HTTP 回源。为 0 即未绑定生效证书。
+		if info.HttpsStatus != nil && *info.HttpsStatus == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		pem := ""
+		if info.Certificate != nil {
+			pem = strings.TrimSpace(*info.Certificate)
+		}
+		if pem == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(pem)
+
+	default:
+		// WAF / ELB 等暂不支持按域名查询当前生效证书。
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+	}
+}

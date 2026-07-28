@@ -31,7 +31,9 @@ type aawafSite struct {
 	Server   struct {
 		ListenSSLPort []string `json:"listen_ssl_port"`
 		SSL           struct {
-			IsSSL int `json:"is_ssl"`
+			IsSSL     int    `json:"is_ssl"`
+			FullChain string `json:"full_chain"`
+			KeyPEM    string `json:"private_key"`
 		} `json:"ssl"`
 	} `json:"server"`
 }
@@ -219,4 +221,48 @@ func (d AAWafDeployer) DeployCert(ctx context.Context, creds Credentials, _ stri
 		CloudCertID: siteID,
 		Message:     i18n.T("deploy.panel_ssl_set"),
 	}, nil
+}
+
+// GetCurrentCert 查询堡塔云 WAF 站点当前生效证书。
+// get_site_list 返回的 server.ssl 中已包含 full_chain（完整证书链）与 private_key，
+// 直接解析 full_chain 的第一张（叶子）证书即可得到当前生效证书信息，无需额外接口。
+func (d AAWafDeployer) GetCurrentCert(ctx context.Context, creds Credentials, _ string, svc map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.aawaf_get_current_cert",
+		"SiteID", svc["site_id"]))
+	siteID := svc["site_id"]
+	if siteID == "" {
+		if name := svc["site_name"]; name != "" {
+			if parts := strings.SplitN(name, "||", 2); len(parts) == 2 {
+				siteID = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	if siteID == "" {
+		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_cert_deploy"), "站点 ID 缺失")
+	}
+	if creds.PanelURL == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_url"))
+	}
+	client := newPanelClient(creds.PanelURL, creds.AccessKeyID, creds.AccessKeySecret, nil, aawafAuth)
+	body, err := client.doJSONRequest(ctx, "/api/wafmastersite/get_site_list", aawafGetSiteListRequest{
+		SiteID:   siteID,
+		P:        1,
+		PSize:    10,
+		SiteName: "",
+	})
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	site, err := parseAAWafSite(body, siteID)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if site.Server.SSL.IsSSL == 0 {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	fullChain := strings.TrimSpace(site.Server.SSL.FullChain)
+	if fullChain == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_no_pem")
+	}
+	return parseCertPEM(fullChain)
 }

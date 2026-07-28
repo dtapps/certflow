@@ -56,6 +56,19 @@ type onePanelSearchResponse struct {
 	} `json:"data"`
 }
 
+// onePanelSSLInfo GET /https 响应中 data.SSL 对象（站点当前生效证书详情）。
+type onePanelSSLInfo struct {
+	ID           int    `json:"id"`           // 证书库 ID
+	PEM          string `json:"pem"`          // 完整证书链 PEM（叶子 + 中间 + 根）
+	PrivateKey   string `json:"privateKey"`   // 私钥 PEM
+	Domains      string `json:"domains"`      // 覆盖域名，逗号分隔
+	Type         string `json:"type"`         // 证书类型，如 YE2
+	Provider     string `json:"provider"`     // 来源：manual / 机构
+	Organization string `json:"organization"` // 签发机构，如 Let's Encrypt
+	ExpireDate   string `json:"expireDate"`   // 到期时间 RFC3339
+	StartDate    string `json:"startDate"`    // 生效时间 RFC3339
+}
+
 // onePanelHTTPSConfig GET /api/v2/websites/{id}/https 返回的配置。
 type onePanelHTTPSConfig struct {
 	Enable                bool     `json:"enable"`
@@ -67,6 +80,9 @@ type onePanelHTTPSConfig struct {
 	HttpsPorts            []int    `json:"httpsPorts"`
 	HttpsPort             string   `json:"httpsPort"`
 	Http3                 bool     `json:"http3"`
+	// 查询当前生效证书用：GET /https 的 data.SSL.pem 为站点当前生效证书（完整链 PEM）。
+	// 注意证书不在顶层 certificate 字段，而是在嵌套的 SSL 对象里。
+	SSL onePanelSSLInfo `json:"SSL"`
 }
 
 // onePanelHTTPSConfigResponse GET /api/v2/websites/{id}/https 响应。
@@ -267,6 +283,44 @@ func (d OnePanelDeployer) DeployCert(ctx context.Context, creds Credentials, _ s
 		CloudCertID: strconv.Itoa(siteID),
 		Message:     i18n.T("deploy.panel_ssl_set"),
 	}, nil
+}
+
+// GetCurrentCert 查询 1Panel 站点当前生效证书（实时拉取站点 HTTPS 配置并解析证书 PEM）。
+// GET /api/v2/websites/{id}/https 的 Data 含 certificate 字段（PEM），直接解析即可。
+func (d OnePanelDeployer) GetCurrentCert(ctx context.Context, creds Credentials, _ string, svc map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.onepanel_get_current_cert",
+		"SiteID", svc["site_id"]))
+	siteIDStr := svc["site_id"]
+	if siteIDStr == "" {
+		if name := svc["site_name"]; name != "" {
+			if parts := strings.SplitN(name, "||", 2); len(parts) == 2 {
+				siteIDStr = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	if siteIDStr == "" {
+		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_cert_deploy"), "站点 ID 缺失")
+	}
+	if creds.PanelURL == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_url"))
+	}
+	client := newPanelClient(creds.PanelURL, creds.AccessKeyID, "", nil, onePanelAuth)
+	body, err := client.doGetRequest(ctx, fmt.Sprintf("/api/v2/websites/%s/https", siteIDStr), url.Values{})
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	var resp onePanelHTTPSConfigResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if resp.Code != 200 {
+		return nil, fmt.Errorf("%s: %s", i18n.T("deploy.error.current_cert_query"), resp.Message)
+	}
+	// 证书链位于 data.SSL.pem（嵌套对象），SSL 未配置时该字段为空。
+	if strings.TrimSpace(resp.Data.SSL.PEM) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	return parseCertPEM(resp.Data.SSL.PEM)
 }
 
 // verifyKeyCertMatch 复现面板/服务端的私钥-证书匹配校验：用 tls.X509KeyPair

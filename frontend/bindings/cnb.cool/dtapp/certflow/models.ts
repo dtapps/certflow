@@ -457,6 +457,27 @@ export interface CreateDeployTargetRequest {
 }
 
 /**
+ * CurrentCertDTO 云端/面板当前生效证书信息（前端展示用）。
+ */
+export interface CurrentCertDTO {
+    "common_name": string;
+    "sans": string[] | null;
+    "issuer": string;
+    "not_before": string;
+    "not_after": string;
+    "serial_number": string;
+    "supported": boolean;
+    "error"?: string;
+}
+
+/**
+ * CurrentCertsResultDTO GetCurrentCerts 返回（按资源 key 索引）。
+ */
+export interface CurrentCertsResultDTO {
+    "results": { [_ in string]?: CurrentCertDTO | null } | null;
+}
+
+/**
  * DNSProviderListItem DNS 提供商列表项（前端展示用）
  */
 export interface DNSProviderListItem {

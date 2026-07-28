@@ -8,10 +8,13 @@ type DomainTargetConfig struct {
 	RegionID      string `json:"region_id,omitempty"`
 	CertName      string `json:"cert_name,omitempty"`
 	Domain        string `json:"domain,omitempty"`
+	Domains       string `json:"domains,omitempty"` // 关联域名列表（JSON 数组字符串），与前端 deployRows 来源一致
 	CertDomain    string `json:"cert_domain,omitempty"`
 	ZoneID        string `json:"zone_id,omitempty"`
 	ZoneName      string `json:"zone_name,omitempty"`
 	AcceleratorID string `json:"accelerator_id,omitempty"`
 	ListenerID    string `json:"listener_id,omitempty"`
+	SiteID        string `json:"site_id,omitempty"`   // ESA 站点 ID（阿里云 ESA）
+	SiteName      string `json:"site_name,omitempty"` // ESA 站点名称
 	DeployService string `json:"deploy_service,omitempty"`
 }

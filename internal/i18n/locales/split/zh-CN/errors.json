@@ -222,5 +222,16 @@
   "error.deploy_target_not_found": "部署目标不存在",
   "error.open_httplog_db_failed": "打开 HTTP 请求日志数据库失败: {{.Error}}",
   "error.create_httplog_schema_failed": "创建 HTTP 请求日志表失败: {{.Error}}",
-  "error.httplog_init_failed": "初始化 HTTP 请求日志失败: {{.Error}}"
+  "error.httplog_init_failed": "初始化 HTTP 请求日志失败: {{.Error}}",
+  "deploy.error.current_cert_empty": "证书内容为空，无法解析当前生效证书",
+  "deploy.error.current_cert_no_pem": "未找到有效的证书内容（CERTIFICATE 块）",
+  "deploy.error.current_cert_parse": "解析当前生效证书失败",
+  "deploy.error.current_cert_no_site": "未配置站点（site_name/site_id）",
+  "deploy.error.current_cert_domain_empty": "未配置域名（domain）",
+  "deploy.error.current_cert_query": "查询当前生效证书失败",
+  "deploy.error.current_cert_not_configured": "该资源未配置 SSL 证书",
+  "deploy.error.current_cert_cloud_not_supported": "该云厂商当前生效证书实时查询待接入（需在真实凭证下接入对应 SDK 的 describe 调用）",
+  "deploy.error.tencent_ssl_no_zone": "未配置 EdgeOne 站点 ID（zone_id）",
+  "deploy.error.ctyun_query_cert": "查询天翼云证书失败",
+  "deploy.error.aliyun_ga_listener_id_required": "未配置监听器 ID（listener_id）"
 }

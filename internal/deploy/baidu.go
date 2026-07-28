@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/baidubce/bce-sdk-go/services/cdn"
 	"github.com/baidubce/bce-sdk-go/services/cdn/api"
@@ -270,4 +271,76 @@ func (d *BaiduDeployer) ListDomains(ctx context.Context, creds Credentials, svc,
 	}
 	logging.Debug(i18n.T("log.deploy.baidu_list_success", "Service", svc, "Count", len(domains)))
 	return domains, nil
+}
+
+// GetCurrentCert 查询百度云域名当前生效的 SSL 证书（CDN 与 DRCDN 通用）。
+// 链路为：先通过 CDN 的 GetDomainHttps 拿到域名绑定的 certId，
+// 再经 SSL 证书服务 GetCertDetail 取元数据（含 SAN），据此构造 CurrentCert。
+// 注意：百度云证书服务不回吐完整证书 PEM（仅上传时提供），故无法 parseCertPEM，
+// 只能基于元数据构造；Issuer / SerialNumber 百度云未提供，留空。
+func (d *BaiduDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.baidu_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	client, err := d.newClient(creds)
+	if err != nil {
+		return nil, err
+	}
+	// 1) 取域名 HTTPS 配置，定位已绑定的 certId。
+	httpsCfg, err := client.GetDomainHttps(domain)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if httpsCfg == nil || strings.TrimSpace(httpsCfg.CertId) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	certID := httpsCfg.CertId
+
+	// 2) 经 SSL 证书服务取证书详情（含 SAN / 起止时间）。
+	cc, err := d.newCertClient(creds)
+	if err != nil {
+		return nil, err
+	}
+	// 单资源第二次云 API 调用，需再取一个限速令牌，避免实际 QPS 翻倍触发频率限制。
+	currentCertRateWait()
+	detail, err := cc.GetCertDetail(certID)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if detail == nil {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+
+	cc2 := &CurrentCert{
+		CommonName:   detail.CertCommonName,
+		SANs:         splitCommaList(detail.CertDNSNames),
+		Issuer:       "", // 百度云证书服务不返回 Issuer，留空
+		NotBefore:    parseBaiduCertDate(detail.CertStartTime),
+		NotAfter:     parseBaiduCertDate(detail.CertStopTime),
+		SerialNumber: "", // 百度云证书服务不返回 SerialNumber，留空
+	}
+	logging.Debug(i18n.T("log.deploy.baidu_get_current_cert_result",
+		"Domain", domain, "CertID", certID, "CN", cc2.CommonName, "NotAfter", cc2.NotAfter))
+	return cc2, nil
+}
+
+// parseBaiduCertDate 将百度云证书时间（CertStartTime / CertStopTime）转为 RFC3339。
+// 百度云未固定文档格式，优先 RFC3339，回退到 "2006-01-02 15:04:05"；解析失败原样返回。
+func parseBaiduCertDate(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.Format(time.RFC3339)
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t.UTC().Format(time.RFC3339)
+	}
+	return s
 }

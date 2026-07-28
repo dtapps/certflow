@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 )
 
 // AAPanelDeployer 宝塔国际版（aaPanel）部署器。
@@ -24,9 +25,21 @@ func init() { RegisterDeployer(AAPanelDeployer{panelDeployerBase{provider: Provi
 
 // aaPanelSiteItem 站点列表条目（get_list，只解析用到的字段）。
 type aaPanelSiteItem struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	PS   string `json:"ps"`
+	ID   int            `json:"id"`
+	Name string         `json:"name"`
+	PS   string         `json:"ps"`
+	SSL  aaPanelSiteSSL `json:"ssl"`
+}
+
+// aaPanelSiteSSL get_list 返回的站点 ssl 字段（当前生效证书概要，非完整 PEM）。
+type aaPanelSiteSSL struct {
+	Issuer    string   `json:"issuer"`
+	IssuerO   string   `json:"issuer_O"`
+	NotAfter  string   `json:"notAfter"`
+	NotBefore string   `json:"notBefore"`
+	DNS       []string `json:"dns"`
+	Subject   string   `json:"subject"`
+	Endtime   int      `json:"endtime"`
 }
 
 // aaPanelSiteListResponse /v2/mod/proxy/com/get_list 响应。
@@ -178,4 +191,77 @@ func (d AAPanelDeployer) DeployCert(ctx context.Context, creds Credentials, _ st
 		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_cert_deploy"), msg)
 	}
 	return &DeployResult{CloudCertID: certHash, Message: i18n.T("deploy.panel_ssl_set"), RawResponse: string(depBody)}, nil
+}
+
+// GetCurrentCert 查询 aaPanel 站点当前生效证书。
+// aaPanel 站点列表 /v2/mod/proxy/com/get_list 的每条站点 ssl 字段已含当前生效证书概要
+// （issuer/notAfter/notBefore/dns/subject），无需额外解析 PEM，直接组装 CurrentCert。
+func (d AAPanelDeployer) GetCurrentCert(ctx context.Context, creds Credentials, _ string, svc map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.aapanel_get_current_cert",
+		"SiteID", svc["site_id"],
+		"SiteName", svc["site_name"]))
+	panelURL := creds.PanelURL
+	if panelURL == "" {
+		if v, ok := svc["panel_url"]; ok && v != "" {
+			panelURL = v
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_url"))
+		}
+	}
+	siteID := svc["site_id"]
+	siteName := svc["site_name"]
+	if siteID == "" && siteName == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_site"))
+	}
+	client := newPanelClient(panelURL, creds.AccessKeyID, "", nil, aaPanelAuth)
+	form := url.Values{}
+	form.Set("p", "1")
+	form.Set("limit", "100")
+	body, err := client.doV2Request(ctx, "/v2/mod/proxy/com/get_list", nil, form)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	var resp aaPanelSiteListResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	// 定位目标站点：优先按 site_id 精确匹配，否则按站点名匹配
+	var target *aaPanelSiteItem
+	for i := range resp.Message.Data.Data {
+		s := &resp.Message.Data.Data[i]
+		if siteID != "" {
+			if strconv.Itoa(s.ID) == siteID {
+				target = s
+				break
+			}
+			continue
+		}
+		name := s.Name
+		if name == "" {
+			name = s.PS
+		}
+		if name == siteName {
+			target = s
+			break
+		}
+	}
+	if target == nil {
+		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_no_site"), siteName)
+	}
+	// ssl 字段缺失或 issuer/notAfter 均为空，视为未配置 SSL 证书
+	if target.SSL.Issuer == "" && target.SSL.NotAfter == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	issuer := target.SSL.IssuerO
+	if issuer == "" {
+		issuer = target.SSL.Issuer
+	}
+	return &CurrentCert{
+		CommonName:   target.SSL.Subject,
+		SANs:         target.SSL.DNS,
+		Issuer:       issuer,
+		NotBefore:    target.SSL.NotBefore,
+		NotAfter:     target.SSL.NotAfter,
+		SerialNumber: "",
+	}, nil
 }

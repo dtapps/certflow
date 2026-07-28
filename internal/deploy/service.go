@@ -6,8 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"strings"
 	"sync"
 	"time"
+
+	"reflect"
 
 	"cnb.cool/dtapp/certflow/ent"
 	"cnb.cool/dtapp/certflow/ent/certificate"
@@ -20,8 +24,28 @@ import (
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/notification"
-	"reflect"
 )
+
+// GetCurrentCerts 查询当前生效证书的限流参数。
+const (
+	// currentCertMaxConcurrency 并发上限：同时最多这么多个查询请求在途。
+	currentCertMaxConcurrency = 5
+	// currentCertMaxQPS 发起速率上限（次/秒）：避免并发槽位复用过快导致
+	// 每秒请求数超过云厂商 API 频率上限（如腾讯云 20 QPS）。
+	currentCertMaxQPS = 5
+)
+
+// currentCertRateTicker 全局限速器：所有当前生效证书查询的云 API 调用共享，
+// 避免多个部署目标同时刷新时限速各自独立而叠加超限。
+var currentCertRateTicker = time.NewTicker(time.Second / currentCertMaxQPS)
+
+// currentCertRateWait 在发起一次云 API 调用前取一个令牌（阻塞至有配额）。
+// 注意：限速按「API 调用次数」计，单个资源查询若需多次云 API 调用
+// （如腾讯云 EdgeOne、阿里云 GA、百度云均为 2 次），每次调用前都必须取令牌，
+// 否则实际 QPS 会翻倍并触发云厂商频率限制。
+func currentCertRateWait() {
+	<-currentCertRateTicker.C
+}
 
 // respDump 将各厂商 SDK 响应安全序列化为单行字符串，便于在调用失败时随错误日志一并打印以便排查。
 // 云厂商在业务错误（HTTP 200 + 错误码）时通常仍返回已解析的响应（含错误信封），打印它可暴露云端错误码/消息；
@@ -703,8 +727,133 @@ func (s *DeployService) DeployAllForCert(ctx context.Context, certID int) ([]*De
 	return outcomes, nil
 }
 
+// currentCertGetter 已在 types.go 定义；以下为资源列表构造与批量查询。
+
+// deployResource 单个可查询当前证书的资源（站点或域名）。
+type deployResource struct {
+	key       string // 与前端 deployRows 的行 key 对齐（面板：id||name；云：domain）
+	name      string
+	siteID    string
+	svcConfig map[string]string
+}
+
+// buildCurrentCertResources 根据目标配置构造「需要查询当前证书」的资源列表，
+// 每个资源的 svcConfig 与 DeployCertificate 部署时一致（面板带 site_name/site_id，云带 domain）。
+// 资源 key 必须与前端 deployRows 行 key 完全一致，否则无法回显到对应行。
+func (s *DeployService) buildCurrentCertResources(target *ent.DeployTarget, svc map[string]string) []deployResource {
+	if isPanelProvider(target.ProviderType.String()) {
+		names := parseConfigStringSlice(svc["site_name"])
+		ids := parseConfigStringSlice(svc["site_id"])
+		var res []deployResource
+		for i, name := range names {
+			id := ""
+			if i < len(ids) {
+				id = ids[i]
+			}
+			key := id
+			if key == "" {
+				key = name
+			}
+			rc := cloneStringMap(svc)
+			rc["site_name"] = name
+			rc["site_id"] = id
+			res = append(res, deployResource{key: key, name: name, siteID: id, svcConfig: rc})
+		}
+		return res
+	}
+	domains := parseConfigStringSlice(svc["domains"])
+	if len(domains) == 0 {
+		domains = parseConfigStringSlice(svc["domain"])
+	}
+	var res []deployResource
+	for _, d := range domains {
+		rc := cloneStringMap(svc)
+		rc["domain"] = d
+		res = append(res, deployResource{key: d, name: d, svcConfig: rc})
+	}
+	return res
+}
+
+func cloneStringMap(m map[string]string) map[string]string {
+	cp := make(map[string]string, len(m))
+	maps.Copy(cp, m)
+	return cp
+}
+
+// GetCurrentCerts 批量查询某部署目标下所有资源当前生效证书。
+// 返回以资源 key 索引的结果；未实现 currentCertGetter 的部署器，资源标记 Supported=false。
+func (s *DeployService) GetCurrentCerts(ctx context.Context, targetID int) (map[string]*CurrentCertResult, error) {
+	target, err := s.db.DeployTarget.Query().
+		Where(deploytarget.ID(targetID)).
+		WithDNSProvider().
+		WithDeployCredential().
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
+	}
+	creds, svc, err := s.loadCredsAndConfig(target)
+	if err != nil {
+		return nil, err
+	}
+	d := registry[target.ProviderType.String()]
+	if d == nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_unsupported_provider", "Provider", target.ProviderType.String()))
+	}
+	getter, ok := d.(currentCertGetter)
+	resources := s.buildCurrentCertResources(target, svc)
+	if batcher, ok := getter.(currentCertBatch); ok {
+		batcher.BeforeCurrentCerts(ctx)
+	}
+	logging.Debug(i18n.T("log.deploy.get_current_certs_entry",
+		"Provider", target.ProviderType.String(),
+		"DeployService", target.DeployService,
+		"Count", len(resources),
+		"GetterOK", ok))
+	results := make(map[string]*CurrentCertResult, len(resources))
+	if !ok {
+		for _, r := range resources {
+			results[r.key] = &CurrentCertResult{Supported: false}
+		}
+		return results, nil
+	}
+	// 并发查询各资源的当前生效证书：按索引写入结果切片（避免 map 并发写竞争）。
+	// 双重限流（参数见包级 const）：信号量限制并发度 + 全局限速器限制发起速率。
+	sem := make(chan struct{}, currentCertMaxConcurrency)
+	resSlice := make([]*CurrentCertResult, len(resources))
+	var wg sync.WaitGroup
+	for i := range resources {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			currentCertRateWait()
+			r := resources[i]
+			logging.Debug(i18n.T("log.deploy.get_current_certs_query",
+				"Key", r.key,
+				"Svc", target.DeployService))
+			cc, cerr := getter.GetCurrentCert(ctx, creds, target.DeployService, r.svcConfig)
+			res := &CurrentCertResult{Supported: true, CurrentCert: cc}
+			if cerr != nil {
+				res.Error = i18n.TranslateError(cerr)
+			}
+			resSlice[i] = res
+			logging.Debug(i18n.T("log.deploy.get_current_certs_result",
+				"Key", r.key,
+				"Supported", res.Supported,
+				"Err", res.Error))
+		}(i)
+	}
+	wg.Wait()
+	for i, r := range resources {
+		results[r.key] = resSlice[i]
+	}
+	return results, nil
+}
+
 // parseConfigStringSlice 解析 JSON 数组字符串为字符串切片（容错非数组/空值）。
 func parseConfigStringSlice(s string) []string {
+	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil
 	}
@@ -712,5 +861,17 @@ func parseConfigStringSlice(s string) []string {
 	if err := json.Unmarshal([]byte(s), &arr); err == nil {
 		return arr
 	}
-	return nil
+	// 兼容非 JSON 形式：单值或逗号分隔（如 domain 单数场景）
+	parts := strings.Split(s, ",")
+	var out []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }

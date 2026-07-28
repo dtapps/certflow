@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 )
 
 // BTPanelDeployer 宝塔面板部署器。
@@ -134,4 +136,64 @@ func (d BTPanelDeployer) DeployCert(ctx context.Context, creds Credentials, _ st
 		lastRaw = string(body)
 	}
 	return &DeployResult{CloudCertID: "", Message: i18n.T("deploy.panel_ssl_set"), RawResponse: lastRaw}, nil
+}
+
+// btPanelCertData GetSSL 响应中的 cert_data 摘要（仅声明用到的字段）。
+type btPanelCertData struct {
+	IssuerO  string   `json:"issuer_O"`
+	Issuer   string   `json:"issuer"`
+	NotAfter string   `json:"notAfter"`
+	Subject  string   `json:"subject"`
+	DNS      []string `json:"dns"`
+}
+
+// btPanelGetSSLResponse POST /site?action=GetSSL 响应（返回站点当前生效证书）。
+type btPanelGetSSLResponse struct {
+	Status   bool            `json:"status"`
+	CSR      string          `json:"csr"`  // 完整证书链 PEM（含叶子+中间+根）
+	Cert     string          `json:"cert"` // 兜底字段
+	CertData btPanelCertData `json:"cert_data"`
+}
+
+// GetCurrentCert 查询宝塔面板站点当前生效证书。
+// 调用 POST /site?action=GetSSL（siteName=站点名）获取当前生效证书链（csr 字段为完整 PEM），
+// 解析其叶子证书组装 CurrentCert，统一输出 RFC3339，与本地证书对比逻辑对齐。
+func (d BTPanelDeployer) GetCurrentCert(ctx context.Context, creds Credentials, _ string, svc map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.btpanel_get_current_cert",
+		"SiteName", svc["site_name"]))
+	panelURL := creds.PanelURL
+	if panelURL == "" {
+		if v, ok := svc["panel_url"]; ok && v != "" {
+			panelURL = v
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_url"))
+		}
+	}
+	siteName := svc["site_name"]
+	if siteName == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_site"))
+	}
+	// svc["site_name"] 可能形如 "name||id"（来自站点列表），仅取站点名部分作为 GetSSL 入参。
+	if parts := strings.SplitN(siteName, "||", 2); len(parts) == 2 {
+		siteName = strings.TrimSpace(parts[0])
+	}
+	client := newPanelClient(panelURL, creds.AccessKeyID, "", nil, btPanelAuth)
+	form := url.Values{}
+	form.Set("siteName", siteName)
+	body, err := client.doRequest(ctx, "/site?action=GetSSL", form)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	var resp btPanelGetSSLResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	pem := strings.TrimSpace(resp.CSR)
+	if pem == "" {
+		pem = strings.TrimSpace(resp.Cert)
+	}
+	if pem == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	return parseCertPEM(pem)
 }

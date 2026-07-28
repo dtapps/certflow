@@ -14,8 +14,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/google/uuid"
@@ -30,10 +32,11 @@ func (d *CtyunDeployer) Provider() string { return "ctyun" }
 
 // ctyunServiceConfig 天翼云服务配置
 type ctyunServiceConfig struct {
-	BaseURL    string // API 基础 URL
-	CertPath   string // 证书创建路径
-	DomainPath string // 域名配置路径
-	ListPath   string // 域名列表路径
+	BaseURL       string // API 基础 URL
+	CertPath      string // 证书创建路径
+	DomainPath    string // 域名配置路径
+	ListPath      string // 域名列表路径
+	QueryCertPath string // 查询域名证书详情路径（为空表示该服务暂不支持按域名查证书）
 }
 
 // ctyunServiceProductCode 各部署服务对应的产品编码，用于按产品过滤域名列表。
@@ -53,16 +56,18 @@ var ctyunServiceProductCode = map[string]string{
 // ctyunServices 天翼云服务配置表
 var ctyunServices = map[string]ctyunServiceConfig{
 	"ctcdn": {
-		BaseURL:    "https://ctcdn-global.ctapi.ctyun.cn",
-		CertPath:   "/v1/cert/creat-cert",          // 创建证书 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=10893&data=161&isNormal=1&vid=154
-		DomainPath: "/v1/domain/update-domain",     // 修改域名配置 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=11308&data=161&isNormal=1&vid=154
-		ListPath:   "/v1/domain/query-domain-list", // 查询域名列表 GET 域名列表在 returnObj.result[] https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=11307&data=161&isNormal=1&vid=154
+		BaseURL:       "https://ctcdn-global.ctapi.ctyun.cn",
+		CertPath:      "/v1/cert/creat-cert",               // 创建证书 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=10893&data=161&isNormal=1&vid=154
+		DomainPath:    "/v1/domain/update-domain",          // 修改域名配置 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=11308&data=161&isNormal=1&vid=154
+		ListPath:      "/v1/domain/query-domain-list",      // 查询域名列表 GET 域名列表在 returnObj.result[] https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=11307&data=161&isNormal=1&vid=154
+		QueryCertPath: "/v1/domain/query-domain-cert-info", // 查询指定加速域名证书详情 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=108&api=10906&data=161&isNormal=1&vid=154
 	},
 	"icdn": {
-		BaseURL:    "https://icdn-global.ctapi.ctyun.cn",
-		CertPath:   "/v1/cert/creat-cert",          // 创建证书 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10835&data=173&isNormal=1&vid=166
-		DomainPath: "/v1/domain/update-domain",     // 增量修改域名配置 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10853&data=173&isNormal=1&vid=166
-		ListPath:   "/v1/domain/query-domain-list", // 查询域名列表 GET 域名列表在 returnObj.result[] https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10852&data=173&isNormal=1&vid=166
+		BaseURL:       "https://icdn-global.ctapi.ctyun.cn",
+		CertPath:      "/v1/cert/creat-cert",               // 创建证书 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10835&data=173&isNormal=1&vid=166
+		DomainPath:    "/v1/domain/update-domain",          // 增量修改域名配置 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10853&data=173&isNormal=1&vid=166
+		ListPath:      "/v1/domain/query-domain-list",      // 查询域名列表 GET 域名列表在 returnObj.result[] https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10852&data=173&isNormal=1&vid=166
+		QueryCertPath: "/v1/domain/query-domain-cert-info", // 查询指定加速域名证书详情 POST https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=112&api=10847&data=173&isNormal=1&vid=166
 	},
 	"accessone": {
 		BaseURL:    "https://accessone-global.ctapi.ctyun.cn",
@@ -187,6 +192,45 @@ type ctyunDomainItem struct {
 	ProductCode string `json:"product_code"` // 产品编码（006=全站加速 008=CDN加速 020=边缘安全与加速）
 }
 
+// ctyunDomainCertReturn 查询域名证书详情（/domain/query-domain-cert-info）的返回（位于 EOP 信封 returnObj 内）。
+// 天翼云官方文档确认（2026-07-28）：返回为扁平结构，证书公钥在 certs 字段（PEM），
+// 过期等时间为 Unix 秒级时间戳。
+type ctyunDomainCertReturn struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Cn      string `json:"cn"`      // 证书通用名称
+	Name    string `json:"name"`    // 证书备注名称
+	Certs   string `json:"certs"`   // 证书公钥信息（PEM，交由 parseCertPEM 解析）
+	Key     string `json:"key"`     // 证书私钥信息
+	Created int64  `json:"created"` // 创建时间（Unix 秒）
+	Expires int64  `json:"expires"` // 过期时间（Unix 秒）
+	Issue   int64  `json:"issue"`   // 颁发时间（Unix 秒）
+	Issuer  string `json:"issuer"`  // 颁发机构
+}
+
+// ctyunExtractCertPEM 从域名证书查询响应中取出证书 PEM。
+// 优先取官方字段 certs；为空时再扫描原始响应体里的 PEM 块兜底（避免极端情况下字段名偏差）。
+func ctyunExtractCertPEM(r ctyunDomainCertReturn, raw []byte) string {
+	if p := strings.TrimSpace(r.Certs); p != "" {
+		return p
+	}
+	return extractFirstPEM(raw)
+}
+
+// extractFirstPEM 从任意文本中提取第一个 -----BEGIN CERTIFICATE----- 块（含结束标记）。
+func extractFirstPEM(b []byte) string {
+	s := string(b)
+	start := strings.Index(s, "-----BEGIN CERTIFICATE-----")
+	if start < 0 {
+		return ""
+	}
+	end := strings.Index(s[start:], "-----END CERTIFICATE-----")
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(s[start : start+end+len("-----END CERTIFICATE-----")])
+}
+
 // ctyunSign 天翼云 EOP 网关签名（依据官方「网关EOP签名说明」）：
 //  1. 待签名串 = 已排序待签Header(各以\n结尾) + "\n" + 规范query + "\n" + hex(sha256(body))
 //     当 query 为空时，串形如 "ctyun-eop-request-id:...\neop-date:...\n\n\n<hash>"
@@ -241,6 +285,30 @@ func hmacSHA256(data, key []byte) []byte {
 	return h.Sum(nil)
 }
 
+// ctyunHTTPClient 天翼云调用统一的全局 HTTP 客户端：包裹 httplog（仅 DEBUG 落请求日志），
+// 并带 30s 超时。与 baidu/aliyun/面板等部署器保持一致，不使用裸 http.Client。
+// 采用懒初始化（sync.Once）——包级 var 在 import 时早于 httplog.Init()，若那时包裹会因尚未
+// 进入 DEBUG 而返回未包裹日志的 transport，导致请求无日志。首次真实请求时（DEBUG 已开启）
+// 才创建，确保能正确包裹。
+var (
+	ctyunHTTPClientOnce sync.Once
+	ctyunHTTPClientVar  *http.Client
+)
+
+func ctyunHTTPClient() *http.Client {
+	ctyunHTTPClientOnce.Do(func() {
+		// 用独立的基础 transport（非 http.DefaultTransport），避免与 httplog.Init 对全局
+		// DefaultTransport 的包裹叠加造成重复记录。天翼云为正规公有云 API，不做 TLS 跳过验证。
+		ctyunHTTPClientVar = httplog.WrapClient(&http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+			Timeout: 30 * time.Second,
+		})
+	})
+	return ctyunHTTPClientVar
+}
+
 // ctyunRequestAPI 发送天翼云 API 请求，并把 returnObj 解析为具体类型 T。
 // query 为 URL 查询参数（GET 接口用），body 为请求体（POST 接口用）。
 func ctyunRequestAPI[T any](baseURL, method, urlPath string, query url.Values, body []byte, creds Credentials) (*ctyunResponse[T], error) {
@@ -260,7 +328,10 @@ func ctyunRequestAPI[T any](baseURL, method, urlPath string, query url.Values, b
 	req.Header.Set("Eop-Authorization", authorization)
 	req.Header.Set("Eop-date", date)
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	// 用全局日志 HTTP 客户端（仅 DEBUG 落请求日志），与 baidu/aliyun/面板等部署器保持一致，
+	// 不使用裸 http.Client。采用懒初始化：首次真实请求时（httplog.Init 已执行、DEBUG 已开启）
+	// 才包裹，避免 import 期过早包裹导致请求无日志。
+	client := ctyunHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -438,4 +509,68 @@ func (d *CtyunDeployer) ListDomains(ctx context.Context, creds Credentials, svc,
 	logging.Debug(i18n.T("log.deploy.ctyun_list_filter", "Svc", svc, "Product", wantProduct, "Total", len(resp.ReturnObj.Result), "Matched", len(domains)))
 
 	return domains, nil
+}
+
+// GetCurrentCert 查询天翼云某域名当前生效证书。
+//   - ctcdn / icdn：POST QueryCertPath（/v1/domain/query-domain-cert-info，按加速域名）查询当前生效证书，
+//     响应扁平结构取 certs 字段 PEM（官方文档确认）。
+//   - accessone：官方无查询证书详情的接口（仅有按备注名反查绑定域名的接口，无证书内容/到期时间），
+//     视为不支持云端查询。
+func (d *CtyunDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.ctyun_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	svcCfg, err := ctyunServiceByKey(svc)
+	if err != nil {
+		return nil, err
+	}
+
+	switch svc {
+	case "ctcdn", "icdn":
+		// 按加速域名查询当前生效证书详情。
+		// product_code（官方文档确认必填）：ctcdn=CDN加速(008)，icdn=全站加速(006)；
+		// 允许 svcConfig["product_code"] 覆盖（如静态/下载/点播加速取 001/003/004）。
+		productCode := "008"
+		if svc == "icdn" {
+			productCode = "006"
+		}
+		if v := strings.TrimSpace(svcConfig["product_code"]); v != "" {
+			productCode = v
+		}
+		body, mErr := json.Marshal(map[string]string{"product_code": productCode, "domain": domain})
+		if mErr != nil {
+			return nil, i18n.Wrap(mErr, "deploy.error.ctyun_query_cert")
+		}
+		if svcCfg.QueryCertPath == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+		}
+		resp, err := ctyunRequestAPI[ctyunDomainCertReturn](svcCfg.BaseURL, "POST", svcCfg.QueryCertPath, nil, body, creds)
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.ctyun_query_cert")
+		}
+		if !resp.OK() {
+			logging.Debug(i18n.T("log.deploy.ctyun_list_raw", "Svc", svc, "Body", string(resp.Body)))
+			return nil, fmt.Errorf("%s: %s", i18n.T("deploy.error.ctyun_query_cert"), resp.errText())
+		}
+		pem := ctyunExtractCertPEM(resp.ReturnObj, resp.Body)
+		if pem == "" {
+			// 未取到证书内容：可能该域名未配置证书，或返回结构需按真实凭证调整（已在 DEBUG 落原始体）。
+			logging.Debug(i18n.T("log.deploy.ctyun_list_raw", "Svc", svc, "Body", string(resp.Body)))
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(pem)
+
+	default:
+		// accessone（边缘安全加速）官方仅提供「按证书备注名反查绑定域名」
+		// （GET /ctapi/v1/accessone/cert/list_domain_by_cert，仅返回域名列表，
+		// https://eop.ctyun.cn/ebp/ctapioutDocument/queryCtApiByCapacityId/13176），
+		// 不返回证书内容或到期时间等元数据，无法构造 CurrentCert，故视为不支持云端查询。
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+	}
 }

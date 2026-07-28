@@ -222,5 +222,16 @@
   "error.deploy_target_not_found": "Deploy target not found",
   "error.open_httplog_db_failed": "Failed to open HTTP request log database: {{.Error}}",
   "error.create_httplog_schema_failed": "Failed to create HTTP request log table: {{.Error}}",
-  "error.httplog_init_failed": "Failed to initialize HTTP request logging: {{.Error}}"
+  "error.httplog_init_failed": "Failed to initialize HTTP request logging: {{.Error}}",
+  "deploy.error.current_cert_empty": "Certificate content is empty, cannot parse the current active certificate",
+  "deploy.error.current_cert_no_pem": "No valid certificate content found (CERTIFICATE block)",
+  "deploy.error.current_cert_parse": "Failed to parse the current active certificate",
+  "deploy.error.current_cert_no_site": "No site configured (site_name/site_id)",
+  "deploy.error.current_cert_domain_empty": "No domain configured (domain)",
+  "deploy.error.current_cert_query": "Failed to query the current active certificate",
+  "deploy.error.current_cert_not_configured": "This resource has no SSL certificate configured",
+  "deploy.error.current_cert_cloud_not_supported": "Real-time query of the current active certificate for this cloud provider is pending (requires the corresponding SDK describe call verified under real credentials)",
+  "deploy.error.tencent_ssl_no_zone": "No EdgeOne ZoneId configured (zone_id)",
+  "deploy.error.ctyun_query_cert": "Failed to query the CTYUN certificate",
+  "deploy.error.aliyun_ga_listener_id_required": "No listener ID configured (listener_id)"
 }

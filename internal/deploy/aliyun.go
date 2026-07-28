@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
@@ -25,7 +27,13 @@ import (
 
 // AliyunDeployer 阿里云部署器：上传证书到 CAS，再部署到 CDN / ESA。
 // 统一使用阿里云官方 SDK（alibabacloud-go 系列），业务错误由 SDK 直接以 error 返回。
-type AliyunDeployer struct{}
+type AliyunDeployer struct {
+	// esaCertsCache 在一次 GetCurrentCerts 批量内缓存各站点的 ListCertificates 结果，
+	// 避免同一 site_id 对应多个域名（或并发查询）时重复拉取；每次批量前由 BeforeCurrentCerts 清空。
+	// key 为 "credKey@siteID"。
+	esaCertsCacheMu sync.Mutex
+	esaCertsCache   map[string][]*esa.ListCertificatesResponseBodyResult
+}
 
 func init() { RegisterDeployer(&AliyunDeployer{}) }
 
@@ -539,4 +547,345 @@ func (d *AliyunDeployer) listESARecords(ctx context.Context, creds Credentials, 
 	}
 	logging.Debug(i18n.T("log.deploy.aliyun_list_esa_domain_success", "Region", region, "SiteID", siteID, "Count", len(domains)))
 	return domains, nil
+}
+
+// GetCurrentCert 查询阿里云资源当前生效的 SSL 证书。
+//   - CDN：DescribeDomainCertificateInfo，证书链（含叶子）在 ServerCertificate 字段，
+//     ServerCertificateStatus=off 表示 HTTPS 未开启。
+//   - DCDN：DescribeDcdnDomainCertificateInfo，证书公钥在 SSLPub 字段，SSLProtocol=off 表示未开启。
+//   - ESA：ListCertificates 按站点查询，按域名匹配覆盖该域名的当前生效证书（仅返回元数据）。
+func (d *AliyunDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.aliyun_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	switch svc {
+	case "cdn":
+		client, err := cdn.NewClient(aliyunConfig(creds, aliyunRegion(creds.Region)))
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		resp, err := client.DescribeDomainCertificateInfo(&cdn.DescribeDomainCertificateInfoRequest{
+			DomainName: new(domain),
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if resp.Body == nil || resp.Body.CertInfos == nil || len(resp.Body.CertInfos.CertInfo) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		info := resp.Body.CertInfos.CertInfo[0]
+		// ServerCertificateStatus: on/off，off 表示 HTTPS 未开启，无生效证书。
+		if tea.StringValue(info.ServerCertificateStatus) == "off" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		pem := strings.TrimSpace(tea.StringValue(info.ServerCertificate))
+		if pem == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(pem)
+
+	case "dcdn":
+		client, err := dcdn.NewClient(aliyunConfig(creds, aliyunRegion(creds.Region)))
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		resp, err := client.DescribeDcdnDomainCertificateInfo(&dcdn.DescribeDcdnDomainCertificateInfoRequest{
+			DomainName: new(domain),
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if resp.Body == nil || resp.Body.CertInfos == nil || len(resp.Body.CertInfos.CertInfo) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		info := resp.Body.CertInfos.CertInfo[0]
+		// SSLProtocol: on/off，off 表示未开启 HTTPS，无生效证书。
+		if tea.StringValue(info.SSLProtocol) == "off" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		pem := strings.TrimSpace(tea.StringValue(info.SSLPub))
+		if pem == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(pem)
+
+	case "esa":
+		// ESA 证书按站点（site_id）维度管理，ListCertificates 仅返回证书元数据（不含 PEM），
+		// 故基于元数据直接构造 CurrentCert，并按域名匹配站点下当前覆盖该域名的证书。
+		siteIDStr := svcConfig["site_id"]
+		if siteIDStr == "" {
+			return nil, i18n.NewError("deploy.error.site_id_required")
+		}
+		siteID, err := strconv.ParseInt(siteIDStr, 10, 64)
+		if err != nil {
+			return nil, i18n.NewError("deploy.error.site_id_required")
+		}
+		client, err := esa.NewClient(aliyunConfig(creds, aliyunRegion(creds.Region)))
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		logging.Debug(i18n.T("log.deploy.aliyun_esa_get_current_cert",
+			"Svc", svc, "Domain", domain, "SiteID", siteIDStr))
+		certs, err := d.esaCertsForSite(client, siteID, creds.AccessKeyID+"@"+creds.Region)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", i18n.T("deploy.error.current_cert_query_failed"), err)
+		}
+		info := matchESACertByDomain(certs, domain)
+		if info == nil {
+			logging.Debug(i18n.T("log.deploy.aliyun_esa_get_current_cert_none",
+				"SiteID", siteIDStr, "Domain", domain))
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		cc := &CurrentCert{
+			CommonName:   tea.StringValue(info.CommonName),
+			SANs:         splitCommaList(tea.StringValue(info.SAN)),
+			Issuer:       tea.StringValue(info.Issuer),
+			NotBefore:    parseESACertDate(tea.StringValue(info.NotBefore)),
+			NotAfter:     parseESACertDate(tea.StringValue(info.NotAfter)),
+			SerialNumber: tea.StringValue(info.SerialNumber),
+		}
+		logging.Debug(i18n.T("log.deploy.aliyun_esa_get_current_cert_result",
+			"Domain", domain, "CN", cc.CommonName, "NotAfter", cc.NotAfter))
+		return cc, nil
+
+	case "ga":
+		// 全球加速 GA：证书绑定在 HTTPS 监听器上，DescribeListener 仅在 Certificates 中返回
+		// 证书 ID（Id），不含公钥/PEM。故先按 listener_id 取监听器的证书 ID，再用 CAS 的
+		// GetUserCertificateDetail 反查证书内容（PEM），最后复用 parseCertPEM 构造 CurrentCert。
+		// 注：GA 为「监听器/实例」维度而非域名维度，监听器 ID 来自部署目标配置。
+		listenerID := svcConfig["listener_id"]
+		if strings.TrimSpace(listenerID) == "" {
+			return nil, i18n.NewError("deploy.error.aliyun_ga_listener_id_required")
+		}
+		gaClient, err := ga.NewClient(aliyunConfig(creds, "cn-hangzhou"))
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		gaResp, err := gaClient.DescribeListener(&ga.DescribeListenerRequest{
+			ListenerId: new(listenerID),
+			RegionId:   new("cn-hangzhou"),
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if gaResp.Body == nil {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		if tea.StringValue(gaResp.Body.Protocol) != "https" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		certs := gaResp.Body.Certificates
+		if len(certs) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		var certIDStr string
+		for _, c := range certs {
+			if c == nil || tea.StringValue(c.Id) == "" {
+				continue
+			}
+			if tea.StringValue(c.Type) != "Default" {
+				certIDStr = tea.StringValue(c.Id)
+				break
+			}
+			if certIDStr == "" {
+				certIDStr = tea.StringValue(c.Id)
+			}
+		}
+		if certIDStr == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		certIDInt, perr := strconv.ParseInt(certIDStr, 10, 64)
+		if perr != nil {
+			return nil, i18n.Wrap(perr, "deploy.error.current_cert_query")
+		}
+		casClient, err := cas.NewClient(aliyunConfig(creds, "cn-hangzhou"))
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		// 单资源第二次云 API 调用，需再取一个限速令牌，避免实际 QPS 翻倍触发频率限制。
+		currentCertRateWait()
+		casResp, err := casClient.GetUserCertificateDetail(&cas.GetUserCertificateDetailRequest{
+			CertId:     new(certIDInt),
+			CertFilter: new(false),
+		})
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if casResp.Body == nil {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		pem := strings.TrimSpace(tea.StringValue(casResp.Body.Cert))
+		if pem == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		return parseCertPEM(pem)
+
+	default:
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+	}
+}
+
+// BeforeCurrentCerts 实现 currentCertBatch：批量查询前清空 ESA 证书缓存，保证刷新能拿到最新数据。
+func (a *AliyunDeployer) BeforeCurrentCerts(ctx context.Context) {
+	a.esaCertsCacheMu.Lock()
+	defer a.esaCertsCacheMu.Unlock()
+	a.esaCertsCache = nil
+}
+
+// esaCertsForSite 返回指定站点的全部证书；同一次批量内相同 site_id+凭证只真正拉取一次 ListCertificates。
+// 并发安全：以 "credKey@siteID" 为键缓存，不同站点互不覆盖。
+func (a *AliyunDeployer) esaCertsForSite(client *esa.Client, siteID int64, credKey string) ([]*esa.ListCertificatesResponseBodyResult, error) {
+	cacheKey := credKey + "@" + strconv.FormatInt(siteID, 10)
+	a.esaCertsCacheMu.Lock()
+	if a.esaCertsCache == nil {
+		a.esaCertsCache = make(map[string][]*esa.ListCertificatesResponseBodyResult)
+	}
+	if c, ok := a.esaCertsCache[cacheKey]; ok {
+		a.esaCertsCacheMu.Unlock()
+		return c, nil
+	}
+	a.esaCertsCacheMu.Unlock()
+
+	certs, err := listAllESACerts(client, siteID)
+	if err != nil {
+		return nil, err
+	}
+	a.esaCertsCacheMu.Lock()
+	a.esaCertsCache[cacheKey] = certs
+	a.esaCertsCacheMu.Unlock()
+	return certs, nil
+}
+
+// listAllESACerts 分页拉取 ESA 站点下的全部证书（ListCertificates 仅返回元数据，不含 PEM）。
+func listAllESACerts(client *esa.Client, siteID int64) ([]*esa.ListCertificatesResponseBodyResult, error) {
+	var all []*esa.ListCertificatesResponseBodyResult
+	page := int64(1)
+	pageSize := int64(50)
+	for {
+		req := &esa.ListCertificatesRequest{}
+		req.SetSiteId(siteID)
+		req.SetPageNumber(page)
+		req.SetPageSize(pageSize)
+		resp, err := client.ListCertificates(req)
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil || resp.Body == nil {
+			break
+		}
+		all = append(all, resp.Body.Result...)
+		if tea.Int64Value(resp.Body.TotalCount) <= int64(len(all)) || len(resp.Body.Result) == 0 {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+// matchESACertByDomain 从站点证书列表中挑出覆盖目标域名的当前生效证书。
+// 优先匹配 CommonName/SAN（支持通配符），在命中项里偏向未过期（Status 非 Expired）且 NotAfter 最新者。
+func matchESACertByDomain(certs []*esa.ListCertificatesResponseBodyResult, domain string) *esa.ListCertificatesResponseBodyResult {
+	domain = strings.ToLower(strings.TrimSpace(domain))
+	var active, expired []*esa.ListCertificatesResponseBodyResult
+	for _, c := range certs {
+		if c == nil {
+			continue
+		}
+		if !certCoversDomain(c, domain) {
+			continue
+		}
+		if strings.EqualFold(tea.StringValue(c.Status), "Expired") {
+			expired = append(expired, c)
+		} else {
+			active = append(active, c)
+		}
+	}
+	if len(active) > 0 {
+		return latestByNotAfter(active)
+	}
+	if len(expired) > 0 {
+		return latestByNotAfter(expired)
+	}
+	return nil
+}
+
+// certCoversDomain 判断证书是否覆盖给定域名（CN 或任一 SAN，支持 *.example.com 通配）。
+func certCoversDomain(c *esa.ListCertificatesResponseBodyResult, domain string) bool {
+	if hostMatchesPattern(domain, tea.StringValue(c.CommonName)) {
+		return true
+	}
+	for _, s := range splitCommaList(tea.StringValue(c.SAN)) {
+		if hostMatchesPattern(domain, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// hostMatchesPattern 域名与证书名称匹配，支持通配符 *.example.com。
+func hostMatchesPattern(domain, pattern string) bool {
+	domain = strings.ToLower(strings.TrimSpace(domain))
+	pattern = strings.ToLower(strings.TrimSpace(pattern))
+	if domain == "" || pattern == "" {
+		return false
+	}
+	if domain == pattern {
+		return true
+	}
+	if strings.HasPrefix(pattern, "*.") {
+		base := pattern[1:] // ".example.com"
+		return domain == pattern[2:] || strings.HasSuffix("."+domain, base)
+	}
+	return false
+}
+
+// latestByNotAfter 取 NotAfter 最新的证书。
+func latestByNotAfter(certs []*esa.ListCertificatesResponseBodyResult) *esa.ListCertificatesResponseBodyResult {
+	var best *esa.ListCertificatesResponseBodyResult
+	var bestT time.Time
+	for _, c := range certs {
+		t, err := time.Parse("2006-01-02 15:04:05", tea.StringValue(c.NotAfter))
+		if err != nil {
+			t = time.Time{}
+		}
+		if best == nil || t.After(bestT) {
+			best = c
+			bestT = t
+		}
+	}
+	return best
+}
+
+// splitCommaList 按逗号拆分证书 SAN 字符串。
+func splitCommaList(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	var out []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// parseESACertDate 将 ESA 证书日期（YYYY-MM-DD HH:MM:SS，UTC）转为 RFC3339；解析失败原样返回。
+func parseESACertDate(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t.UTC().Format(time.RFC3339)
+	}
+	return s
 }

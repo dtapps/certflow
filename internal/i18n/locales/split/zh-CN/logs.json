@@ -302,5 +302,22 @@
   "log.httplog.cleanup": "清理 HTTP 请求日志: 删除 {{.Count}} 条",
   "log.httplog.cleanup_failed": "清理 HTTP 请求日志失败: {{.Error}}",
   "log.updater_mirror_download": "使用镜像下载: 源={{.Source}} 地址={{.URL}}",
-  "log.updater_mirror_failed": "镜像源失败，尝试下一个: 源={{.Source}} 错误={{.Error}}"
+  "log.updater_mirror_failed": "镜像源失败，尝试下一个: 源={{.Source}} 错误={{.Error}}",
+  "log.deploy.get_current_certs_entry": "查询当前生效证书 入口 provider={{.Provider}} deployService={{.DeployService}} 资源数={{.Count}} getterOK={{.GetterOK}}",
+  "log.deploy.get_current_certs_query": "查询当前生效证书 开始 key={{.Key}} svc={{.Svc}}",
+  "log.deploy.get_current_certs_result": "查询当前生效证书 结果 key={{.Key}} supported={{.Supported}} err={{.Err}}",
+  "log.deploy.onepanel_get_current_cert": "1Panel 查询当前生效证书 site_id={{.SiteID}}",
+  "log.deploy.aapanel_get_current_cert": "aaPanel 查询当前生效证书 site_id={{.SiteID}} site_name={{.SiteName}}",
+  "log.deploy.aawaf_get_current_cert": "堡塔云WAF 查询当前生效证书 site_id={{.SiteID}}",
+  "log.deploy.acepanel_get_current_cert": "AcePanel 查询当前生效证书 site_id={{.SiteID}}",
+  "log.deploy.btpanel_get_current_cert": "宝塔面板 查询当前生效证书 site_name={{.SiteName}}",
+  "log.deploy.aliyun_get_current_cert": "阿里云 查询当前生效证书 svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.aliyun_esa_get_current_cert": "阿里云 ESA 查询当前生效证书 svc={{.Svc}} domain={{.Domain}} siteID={{.SiteID}}",
+  "log.deploy.aliyun_esa_get_current_cert_none": "阿里云 ESA 站点 siteID={{.SiteID}} 未找到覆盖域名 {{.Domain}} 的证书",
+  "log.deploy.aliyun_esa_get_current_cert_result": "阿里云 ESA 当前生效证书 domain={{.Domain}} CN={{.CN}} 到期={{.NotAfter}}",
+  "log.deploy.ctyun_get_current_cert": "天翼云 查询当前生效证书（暂未实现） svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.baidu_get_current_cert": "百度云 查询当前生效证书（暂未实现） svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.huawei_get_current_cert": "华为云 查询当前生效证书（暂未实现） svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.tencent_get_current_cert": "腾讯云 查询当前生效证书 svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.volcengine_get_current_cert": "火山引擎 查询当前生效证书（暂未实现） svc={{.Svc}} domain={{.Domain}}"
 }

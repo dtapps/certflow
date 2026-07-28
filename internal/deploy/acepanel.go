@@ -263,6 +263,72 @@ func (d AcePanelDeployer) DeployCert(ctx context.Context, creds Credentials, _ s
 	}, nil
 }
 
+// acePanelSiteDetail 站点详情（GET /api/website/{id}）中当前生效证书相关字段。
+// 仅声明用到的字段：ssl 标识是否开启 HTTPS，ssl_cert 为完整证书链 PEM（含叶子+中间+根）。
+type acePanelSiteDetail struct {
+	SSL     bool   `json:"ssl"`
+	SSLCert string `json:"ssl_cert"`
+}
+
+// acePanelSiteDetailResponse GET /api/website/{id} 响应。
+type acePanelSiteDetailResponse struct {
+	Msg  string             `json:"msg"`
+	Data acePanelSiteDetail `json:"data"`
+}
+
+// GetCurrentCert 查询 AcePanel 站点当前生效证书。
+// AcePanel 站点详情接口（GET /api/website/{id}）的 data 直接返回 ssl_cert（完整证书链 PEM），
+// 解析其叶子证书组装 CurrentCert，统一输出 RFC3339，与本地证书对比逻辑对齐。
+func (d AcePanelDeployer) GetCurrentCert(ctx context.Context, creds Credentials, _ string, svc map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.acepanel_get_current_cert",
+		"SiteID", svc["site_id"]))
+	siteIDStr := svc["site_id"]
+	if siteIDStr == "" {
+		if name := svc["site_name"]; name != "" {
+			if parts := strings.SplitN(name, "||", 2); len(parts) == 2 {
+				siteIDStr = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	if siteIDStr == "" {
+		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_cert_deploy"), "站点 ID 缺失")
+	}
+	if creds.PanelURL == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_no_url"))
+	}
+	siteID, err := strconv.Atoi(strings.TrimSpace(siteIDStr))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", i18n.T("error.deploy_panel_cert_deploy"), "站点 id 解析失败: "+siteIDStr)
+	}
+
+	// 提取安全入口路径（如 /u5GJ9L），AcePanel API 必须带此路径才能正确路由
+	pathPrefix := ""
+	if u, err := url.Parse(creds.PanelURL); err == nil && u.Path != "" && u.Path != "/" {
+		pathPrefix = strings.TrimRight(u.Path, "/")
+	}
+	client := newPanelClientWithPath(creds.PanelURL, pathPrefix, creds.AccessKeyID, creds.AccessKeySecret, nil, acePanelAuth)
+
+	body, err := client.doGetRequest(ctx, fmt.Sprintf("/api/website/%d", siteID), nil)
+	if err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	var resp acePanelSiteDetailResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if resp.Msg != "" && resp.Msg != "success" {
+		return nil, fmt.Errorf("%s: %s", i18n.T("deploy.error.current_cert_query"), resp.Msg)
+	}
+	// ssl=false 表示该站点未开启 HTTPS（未配置证书）
+	if !resp.Data.SSL {
+		return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	if resp.Data.SSLCert == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_empty")
+	}
+	return parseCertPEM(resp.Data.SSLCert)
+}
+
 // findExistingAcePanelCert 在 AcePanel 证书库（GET /api/cert/cert?page=N&limit=100）中
 // 查找与 certPEM 为同一张证书的条目，命中则返回其 id。
 // 匹配策略（确定性优先，宁可漏配不可错配）：

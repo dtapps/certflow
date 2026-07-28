@@ -3,6 +3,7 @@ package deploy
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -342,4 +343,192 @@ func (d *TencentDeployer) listEdgeOneZones(ctx context.Context, creds Credential
 	}
 	logging.Debug(i18n.T("log.deploy.tencent_list_edgeone_zone_success", "Region", region, "Count", len(zones)))
 	return zones, nil
+}
+
+// tcStr 安全解引用 *string，nil 返回空串（腾讯云 common 包低版本未导出 StringValue）。
+func tcStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// tencentCertPEMByID 经腾讯云 SSL 证书服务按证书 ID 反查证书公钥 PEM。
+// DescribeDomainsConfig / DescribeHostsSetting 等配置查询接口出于安全不回传证书内容，
+// 只返回 CertId 元数据，需经此函数二次查询取得 PEM。
+func tencentCertPEMByID(ctx context.Context, creds Credentials, certID string) (string, error) {
+	sslClient, err := ssl.NewClient(tencentCredential(creds), creds.Region, profile.NewClientProfile())
+	if err != nil {
+		return "", i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	detailReq := ssl.NewDescribeCertificateDetailRequest()
+	detailReq.CertificateId = new(certID)
+	// 单资源第二次云 API 调用，需再取一个限速令牌，避免实际 QPS 翻倍触发频率限制。
+	currentCertRateWait()
+	detailResp, err := sslClient.DescribeCertificateDetailWithContext(ctx, detailReq)
+	if err != nil {
+		return "", i18n.Wrap(err, "deploy.error.current_cert_query")
+	}
+	if detailResp.Response == nil {
+		return "", i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	pem := strings.TrimSpace(tcStr(detailResp.Response.CertificatePublicKey))
+	if pem == "" {
+		return "", i18n.NewError("deploy.error.current_cert_not_configured")
+	}
+	return pem, nil
+}
+
+// GetCurrentCert 查询腾讯云资源当前生效的 SSL 证书。
+//   - CDN / ECDN：DescribeDomainsConfig 取域名 HTTPS 配置得 CertId（接口不回传证书内容），再 ssl.DescribeCertificateDetail 取公钥 PEM 解析；
+//   - EdgeOne：DescribeHostsSetting 按 ZoneId+域名取 Https.CertInfo（仅含 CertId 元数据），再 ssl.DescribeCertificateDetail 取公钥 PEM 解析。
+func (d *TencentDeployer) GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error) {
+	logging.Debug(i18n.T("log.deploy.tencent_get_current_cert",
+		"Svc", svc,
+		"Domain", svcConfig["domain"]))
+	domain := svcConfig["domain"]
+	if strings.TrimSpace(domain) == "" {
+		return nil, i18n.NewError("deploy.error.current_cert_domain_empty")
+	}
+
+	switch svc {
+	case "cdn":
+		client, err := cdn.NewClient(tencentCredential(creds), creds.Region, profile.NewClientProfile())
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		req := cdn.NewDescribeDomainsConfigRequest()
+		req.Filters = []*cdn.DomainFilter{
+			{
+				Name:  new("domain"),
+				Value: common.StringPtrs([]string{domain}),
+				Fuzzy: new(false),
+			},
+		}
+		resp, err := client.DescribeDomainsConfigWithContext(ctx, req)
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if resp.Response == nil || len(resp.Response.Domains) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		var dd *cdn.DetailDomain
+		for _, d := range resp.Response.Domains {
+			if d != nil && d.Domain != nil && *d.Domain == domain {
+				dd = d
+				break
+			}
+		}
+		if dd == nil || dd.Https == nil || dd.Https.CertInfo == nil {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		// DescribeDomainsConfig 不回传证书内容（Certificate 为空），仅返回 CertId，
+		// 需经 SSL 证书服务反查 PEM。
+		pem := strings.TrimSpace(tcStr(dd.Https.CertInfo.Certificate))
+		if pem == "" {
+			certID := tcStr(dd.Https.CertInfo.CertId)
+			if certID == "" {
+				return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+			}
+			var perr error
+			pem, perr = tencentCertPEMByID(ctx, creds, certID)
+			if perr != nil {
+				return nil, perr
+			}
+		}
+		return parseCertPEM(pem)
+
+	case "ecdn":
+		client, err := ecdn.NewClient(tencentCredential(creds), creds.Region, profile.NewClientProfile())
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		req := ecdn.NewDescribeDomainsConfigRequest()
+		req.Filters = []*ecdn.DomainFilter{
+			{
+				Name:  new("domain"),
+				Value: common.StringPtrs([]string{domain}),
+				Fuzzy: new(false),
+			},
+		}
+		resp, err := client.DescribeDomainsConfigWithContext(ctx, req)
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if resp.Response == nil || len(resp.Response.Domains) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		var di *ecdn.DomainDetailInfo
+		for _, d := range resp.Response.Domains {
+			if d != nil && d.Domain != nil && *d.Domain == domain {
+				di = d
+				break
+			}
+		}
+		if di == nil || di.Https == nil || di.Https.CertInfo == nil {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		// 同 CDN：配置查询接口不回传证书内容，PEM 为空时按 CertId 反查。
+		pem := strings.TrimSpace(tcStr(di.Https.CertInfo.Certificate))
+		if pem == "" {
+			certID := tcStr(di.Https.CertInfo.CertId)
+			if certID == "" {
+				return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+			}
+			var perr error
+			pem, perr = tencentCertPEMByID(ctx, creds, certID)
+			if perr != nil {
+				return nil, perr
+			}
+		}
+		return parseCertPEM(pem)
+
+	case "edgeone":
+		// EdgeOne 以站点（ZoneId）+ 加速域名（host）维度管理证书，需配置中提供 zone_id。
+		zoneID := svcConfig["zone_id"]
+		if strings.TrimSpace(zoneID) == "" {
+			return nil, i18n.NewError("deploy.error.tencent_ssl_no_zone")
+		}
+		client, err := teo.NewClient(tencentCredential(creds), creds.Region, profile.NewClientProfile())
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		req := teo.NewDescribeHostsSettingRequest()
+		req.ZoneId = new(zoneID)
+		req.Filters = []*teo.Filter{
+			{
+				Name:   new("host"),
+				Values: common.StringPtrs([]string{domain}),
+			},
+		}
+		resp, err := client.DescribeHostsSettingWithContext(ctx, req)
+		if err != nil {
+			return nil, i18n.Wrap(err, "deploy.error.current_cert_query")
+		}
+		if resp.Response == nil || len(resp.Response.DetailHosts) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		var host *teo.DetailHost
+		for _, h := range resp.Response.DetailHosts {
+			if h != nil && h.Host != nil && *h.Host == domain {
+				host = h
+				break
+			}
+		}
+		if host == nil || host.Https == nil || len(host.Https.CertInfo) == 0 {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		certID := tcStr(host.Https.CertInfo[0].CertId)
+		if certID == "" {
+			return nil, i18n.NewError("deploy.error.current_cert_not_configured")
+		}
+		pem, perr := tencentCertPEMByID(ctx, creds, certID)
+		if perr != nil {
+			return nil, perr
+		}
+		return parseCertPEM(pem)
+
+	default:
+		return nil, i18n.NewError("deploy.error.current_cert_cloud_not_supported")
+	}
 }

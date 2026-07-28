@@ -70,3 +70,34 @@ func certName(domain string, cfg map[string]string) string {
 	}
 	return domain
 }
+
+// CurrentCert 云端/面板当前生效证书的关键信息（解析自证书 PEM）。
+// 由 currentCertGetter.GetCurrentCert 返回，供前端在部署页「本地 + 云端并排」展示。
+type CurrentCert struct {
+	CommonName   string   `json:"common_name"`
+	SANs         []string `json:"sans"`
+	Issuer       string   `json:"issuer"`
+	NotBefore    string   `json:"not_before"`
+	NotAfter     string   `json:"not_after"`
+	SerialNumber string   `json:"serial_number"`
+}
+
+// currentCertGetter 可选接口：部署器实现后可实时查询某站点/域名当前生效证书。
+// 面板类按站点名+站点 ID 定位，云厂商按域名定位（资源标识来自 svcConfig）。
+// 未实现的部署器在 DeployService.GetCurrentCerts 中标记为不支持，前端展示「暂不支持」。
+type currentCertGetter interface {
+	GetCurrentCert(ctx context.Context, creds Credentials, svc string, svcConfig map[string]string) (*CurrentCert, error)
+}
+
+// currentCertBatch 可选接口：部署器可在一次批量查询（GetCurrentCerts）前重置内部缓存，
+// 使得同一资源组（如同一 ESA 站点对应多个域名）只真正拉取一次接口，同时保证刷新能拿到最新数据。
+type currentCertBatch interface {
+	BeforeCurrentCerts(ctx context.Context)
+}
+
+// CurrentCertResult 单个资源（站点/域名）当前证书的查询结果。
+type CurrentCertResult struct {
+	*CurrentCert
+	Supported bool   `json:"supported"`       // 部署器是否实现 currentCertGetter
+	Error     string `json:"error,omitempty"` // 查询失败原因（Supported=true 时仍可能报错）
+}

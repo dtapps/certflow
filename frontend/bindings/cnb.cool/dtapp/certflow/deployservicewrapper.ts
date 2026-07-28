@@ -50,6 +50,13 @@ export function FetchCDNDomains(input: $models.FetchCDNDomainsRequest): $Cancell
 }
 
 /**
+ * GetCurrentCerts 查询部署目标下所有资源当前生效证书（本地+云端对比用）。
+ */
+export function GetCurrentCerts(targetID: number): $CancellablePromise<$models.CurrentCertsResultDTO | null> {
+    return $Call.ByID(328192825, targetID);
+}
+
+/**
  * GetDeployTarget 获取单个部署目标
  */
 export function GetDeployTarget(id: number): $CancellablePromise<$models.DeployTargetListItem | null> {

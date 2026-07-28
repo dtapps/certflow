@@ -302,5 +302,22 @@
   "log.httplog.cleanup": "Cleaned HTTP request logs: deleted {{.Count}} records",
   "log.httplog.cleanup_failed": "Failed to clean HTTP request logs: {{.Error}}",
   "log.updater_mirror_download": "Downloading via mirror: source={{.Source}} url={{.URL}}",
-  "log.updater_mirror_failed": "Mirror source failed, trying next: source={{.Source}} error={{.Error}}"
+  "log.updater_mirror_failed": "Mirror source failed, trying next: source={{.Source}} error={{.Error}}",
+  "log.deploy.get_current_certs_entry": "Query current effective cert entry provider={{.Provider}} deployService={{.DeployService}} count={{.Count}} getterOK={{.GetterOK}}",
+  "log.deploy.get_current_certs_query": "Query current effective cert start key={{.Key}} svc={{.Svc}}",
+  "log.deploy.get_current_certs_result": "Query current effective cert result key={{.Key}} supported={{.Supported}} err={{.Err}}",
+  "log.deploy.onepanel_get_current_cert": "1Panel query current effective cert site_id={{.SiteID}}",
+  "log.deploy.aapanel_get_current_cert": "aaPanel query current effective cert site_id={{.SiteID}} site_name={{.SiteName}}",
+  "log.deploy.aawaf_get_current_cert": "BaoTa CloudWAF query current effective cert site_id={{.SiteID}}",
+  "log.deploy.acepanel_get_current_cert": "AcePanel query current effective cert site_id={{.SiteID}}",
+  "log.deploy.btpanel_get_current_cert": "BaoTa Panel query current effective cert site_name={{.SiteName}}",
+  "log.deploy.aliyun_get_current_cert": "Aliyun query current effective cert svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.aliyun_esa_get_current_cert": "Aliyun ESA query current effective cert svc={{.Svc}} domain={{.Domain}} siteID={{.SiteID}}",
+  "log.deploy.aliyun_esa_get_current_cert_none": "Aliyun ESA site siteID={{.SiteID}} has no cert covering domain {{.Domain}}",
+  "log.deploy.aliyun_esa_get_current_cert_result": "Aliyun ESA current effective cert domain={{.Domain}} CN={{.CN}} expires={{.NotAfter}}",
+  "log.deploy.ctyun_get_current_cert": "CTYun query current effective cert (not implemented) svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.baidu_get_current_cert": "Baidu query current effective cert (not implemented) svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.huawei_get_current_cert": "Huawei query current effective cert (not implemented) svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.tencent_get_current_cert": "Tencent query current effective cert svc={{.Svc}} domain={{.Domain}}",
+  "log.deploy.volcengine_get_current_cert": "Volcengine query current effective cert (not implemented) svc={{.Svc}} domain={{.Domain}}"
 }

@@ -346,3 +346,42 @@ func (s *DeployServiceWrapper) ServiceShutdown() error {
 func (s *DeployServiceWrapper) ServiceName() string {
 	return "DeployService"
 }
+
+// CurrentCertDTO 云端/面板当前生效证书信息（前端展示用）。
+type CurrentCertDTO struct {
+	CommonName   string   `json:"common_name"`
+	SANs         []string `json:"sans"`
+	Issuer       string   `json:"issuer"`
+	NotBefore    string   `json:"not_before"`
+	NotAfter     string   `json:"not_after"`
+	SerialNumber string   `json:"serial_number"`
+	Supported    bool     `json:"supported"`
+	Error        string   `json:"error,omitempty"`
+}
+
+// CurrentCertsResultDTO GetCurrentCerts 返回（按资源 key 索引）。
+type CurrentCertsResultDTO struct {
+	Results map[string]*CurrentCertDTO `json:"results"`
+}
+
+// GetCurrentCerts 查询部署目标下所有资源当前生效证书（本地+云端对比用）。
+func (s *DeployServiceWrapper) GetCurrentCerts(targetID int) (*CurrentCertsResultDTO, error) {
+	m, err := s.deployService.GetCurrentCerts(context.Background(), targetID)
+	if err != nil {
+		return nil, err
+	}
+	results := make(map[string]*CurrentCertDTO, len(m))
+	for k, v := range m {
+		dto := &CurrentCertDTO{Supported: v.Supported, Error: v.Error}
+		if v.CurrentCert != nil {
+			dto.CommonName = v.CommonName
+			dto.SANs = v.SANs
+			dto.Issuer = v.Issuer
+			dto.NotBefore = v.NotBefore
+			dto.NotAfter = v.NotAfter
+			dto.SerialNumber = v.SerialNumber
+		}
+		results[k] = dto
+	}
+	return &CurrentCertsResultDTO{Results: results}, nil
+}
