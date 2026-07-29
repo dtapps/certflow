@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  typescript: npm:typescript-native-bridge@latest
+  typescript: npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
 
 importers:
 

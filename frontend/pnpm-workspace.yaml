@@ -5,6 +5,5 @@ minimumReleaseAgeExclude:
 # 保留经典 typescript API 表面，vue-tsc / typescript-eslint 无需改版本即可获得加速。
 # 版本须写死（预发布版 caret 无法匹配）。macOS arm64 官方支持。
 overrides:
-  # 浮动到 latest：make update-deps (pnpm update) 会自动拉最新 TNB / tsgo 引擎版本
-  # typescript: npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
-  typescript: npm:typescript-native-bridge@latest
+  # TNB 用 TS7 引擎（tsgo）；版本写死以避免与 CI frozen-lockfile 冲突，升级时手动 bump 版本号
+  typescript: npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
