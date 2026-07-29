@@ -58,13 +58,6 @@ export function SetActive(id: number, active: boolean): $CancellablePromise<moni
 }
 
 /**
- * SetUserAgent 设置 User-Agent
- */
-export function SetUserAgent(ua: string): $CancellablePromise<void> {
-    return $Call.ByID(107075600, ua);
-}
-
-/**
  * Update 更新监控域名
  */
 export function Update(id: number, input: monitor$0.UpdateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {

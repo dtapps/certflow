@@ -36,6 +36,15 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
 }
 
 /**
+ * SetUserAgent 设置全局 User-Agent（前端启动时传入 WebView 的 navigator.userAgent）。
+ * 写入 internal/useragent 全局状态，所有经全局 transport（httplog 包裹）发出的
+ * HTTP 请求在未显式设置 UA 时自动带上；monitor 检查请求也从该全局状态读取。
+ */
+export function SetUserAgent(ua: string): $CancellablePromise<void> {
+    return $Call.ByID(3680343009, ua);
+}
+
+/**
  * ShowMessage 显示原生对话框（前端调用）
  */
 export function ShowMessage(title: string, message: string, msgType: string): $CancellablePromise<void> {

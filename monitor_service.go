@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 
-	"cnb.cool/dtapp/certflow/internal/i18n"
-	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -53,12 +51,6 @@ func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, 
 // id: 监控域名ID；days: 查询最近多少天；返回检查历史列表。
 func (s *MonitorServiceWrapper) ListHistory(id int, days int) ([]*monitor.MonitorCheckLogItem, error) {
 	return s.monitorService.ListHistory(context.Background(), id, days)
-}
-
-// SetUserAgent 设置 User-Agent
-func (s *MonitorServiceWrapper) SetUserAgent(ua string) {
-	logging.Info(i18n.T("log.monitor.set_user_agent", "UA", ua))
-	s.monitorService.SetUserAgent(ua)
 }
 
 // ServiceStartup 实现 Wails 服务接口

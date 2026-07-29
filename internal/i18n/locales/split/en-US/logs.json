@@ -97,7 +97,7 @@
   "log.deploy.reuse_upload_record": "Deploy cert reuse DB upload record certID={{.CertID}} key={{.Key}}",
   "log.deploy.persist_upload_map_failed": "Deploy cert persist upload map failed (does not affect this deploy): {{.Err}}",
   "log.deploy.history_write_failed": "Write deploy history failed: {{.Err}}",
-  "log.monitor.set_user_agent": "Set User-Agent: {{.UA}}",
+  "log.system.set_user_agent": "Set User-Agent: {{.UA}}",
   "log.scanner_start": "Starting scan for domain: {{.Domain}}",
   "log.scanner_req_failed": "Failed to create scan request: {{.Error}}",
   "log.scanner_connect_failed": "Scan connection failed for {{.Domain}}: {{.Error}}",

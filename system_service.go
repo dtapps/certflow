@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
+	"cnb.cool/dtapp/certflow/internal/useragent"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -38,6 +41,14 @@ func (s *SystemServiceWrapper) IsDarkMode() bool {
 // GetVersion 获取应用版本号
 func (s *SystemServiceWrapper) GetVersion() string {
 	return currentVersion
+}
+
+// SetUserAgent 设置全局 User-Agent（前端启动时传入 WebView 的 navigator.userAgent）。
+// 写入 internal/useragent 全局状态，所有经全局 transport（httplog 包裹）发出的
+// HTTP 请求在未显式设置 UA 时自动带上；monitor 检查请求也从该全局状态读取。
+func (s *SystemServiceWrapper) SetUserAgent(ua string) {
+	logging.Info(i18n.T("log.system.set_user_agent", "UA", ua))
+	useragent.Set(ua)
 }
 
 // SetWindowAppearance 设置主窗口外观（标题栏主题）
