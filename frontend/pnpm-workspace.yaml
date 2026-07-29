@@ -1,2 +1,10 @@
 minimumReleaseAgeExclude:
   - '@vitejs/plugin-vue@6.0.8'
+
+# 用 typescript-native-bridge (TNB) 把 typescript 替换为 TS7 (tsgo) Go 引擎，
+# 保留经典 typescript API 表面，vue-tsc / typescript-eslint 无需改版本即可获得加速。
+# 版本须写死（预发布版 caret 无法匹配）。macOS arm64 官方支持。
+overrides:
+  # 浮动到 latest：make update-deps (pnpm update) 会自动拉最新 TNB / tsgo 引擎版本
+  # typescript: npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
+  typescript: npm:typescript-native-bridge@latest
