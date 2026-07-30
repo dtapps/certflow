@@ -39,6 +39,10 @@ func Parse(providerType string, raw []byte) (cloudcred.Credentials, error) {
 		return parseCred[AcePanelDeployCred](raw)
 	case "aawaf":
 		return parseCred[AAWafDeployCred](raw)
+	case "openrestymanager":
+		return parseCred[OpenRestyManagerDeployCred](raw)
+	case "safeline":
+		return parseCred[SafelineDeployCred](raw)
 	// domain（CDN/云厂商）
 	case "aliyun":
 		return parseCred[AliyunDeployCred](raw)

@@ -1,7 +1,16 @@
 import { useI18nStore } from '../stores/i18n'
 
 // 面板/防火墙类部署目标
-const panelProviders = ['btpanel', 'aapanel', '1panel', 'acepanel', 'aawaf']
+const panelProviders = [
+  'btpanel',
+  'aapanel',
+  '1panel',
+  'acepanel',
+  'aawaf',
+  'openrestymanager',
+  'uuwaf',
+  'safeline',
+]
 export const isPanelProvider = (p: string) => panelProviders.includes(p)
 
 // 部署服务选项（按厂商）
@@ -48,6 +57,9 @@ export function servicesByProvider(providerType: string): { label: string; value
     case '1panel':
     case 'acepanel':
     case 'aawaf':
+    case 'openrestymanager':
+    case 'uuwaf':
+    case 'safeline':
       return [{ label: t('deploy.service.site'), value: 'site' }]
     default:
       return [{ label: t('deploy.service.cdn'), value: 'cdn' }]
@@ -96,6 +108,9 @@ export function providerLabel(providerType?: string): string {
     { label: t('deploy.provider.1panel'), value: '1panel' },
     { label: t('deploy.provider.acepanel'), value: 'acepanel' },
     { label: t('deploy.provider.aawaf'), value: 'aawaf' },
+    { label: t('deploy.provider.openrestymanager'), value: 'openrestymanager' },
+    { label: t('deploy.provider.uuwaf'), value: 'uuwaf' },
+    { label: t('deploy.provider.safeline'), value: 'safeline' },
   ]
   return providerOptions.find((o) => o.value === providerType)?.label || providerType || ''
 }

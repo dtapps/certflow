@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"io"
 	"math/big"
 	"net/http"
@@ -31,6 +32,7 @@ func genKeyCert(t *testing.T) (keyPEM, certPEM string) {
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject:      pkix.Name{CommonName: "test"},
+		DNSNames:     []string{"example.com"},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().Add(time.Hour),
 	}
@@ -576,16 +578,441 @@ func TestBaseUploadCert(t *testing.T) {
 	}
 }
 
-// TestBaseDeployCert 校验未实现 DeployCert 的面板返回「尚未实现」错误。
-// 注意：btpanel / aapanel / 1panel 已实现 DeployCert，此处用仍未实现的 aawaf 走 panelDeployerBase 默认实现。
+// TestBaseDeployCert 校验 panelDeployerBase 默认 DeployCert 返回「尚未实现」错误。
+// 各具体面板（btpanel / aapanel / 1panel / aawaf / openrestymanager）均已自行实现 DeployCert，
+// 故此处直接校验基类默认实现，避免随具体部署器实现变动而失效。
 func TestBaseDeployCert(t *testing.T) {
-	d := AAWafDeployer{panelDeployerBase{provider: ProviderAAWaf}}
+	d := panelDeployerBase{provider: ProviderAAWaf}
 	_, err := d.DeployCert(context.Background(), Credentials{PanelURL: "http://localhost"}, "cert-id", "site", nil)
 	if err == nil {
-		t.Fatal("aawaf 未实现 DeployCert，应返回错误")
+		t.Fatal("基类 DeployCert 应返回「尚未实现」错误")
 	}
 	if !strings.Contains(err.Error(), "尚未实现") {
 		t.Errorf("错误信息应包含「尚未实现」，实际: %v", err)
+	}
+}
+
+// TestOpenRestyManagerListSites 校验列站点解析，并兼容 id 键的 "id" / "ID" 两种大小写。
+func TestOpenRestyManagerListSites(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/admin/sites", func(w http.ResponseWriter, r *http.Request) {
+		if !validORMAuth(t, r, "jwt-key") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"sites":[{"id":1,"name":"example.com","domains":"example.com","cert_id":0,"listeners":"0.0.0.0:80,0.0.0.0:443"},{"ID":2,"name":"site2"}],"cert_options":[],"upstream_options":[]}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := OpenRestyManagerDeployer{panelDeployerBase{provider: ProviderOpenRestyManager}}
+	sites, err := d.ListSites(context.Background(), Credentials{PanelURL: srv.URL, AccessKeySecret: "jwt-key"}, "", "", "")
+	if err != nil {
+		t.Fatalf("ListSites 错误: %v", err)
+	}
+	if len(sites) != 2 {
+		t.Fatalf("期望 2 个站点，实际 %d: %v", len(sites), sites)
+	}
+	if sites[0] != "example.com||1" {
+		t.Errorf("站点0 应为 example.com||1，实际 %s", sites[0])
+	}
+	if sites[1] != "site2||2" {
+		t.Errorf("站点1 应为 site2||2，实际 %s", sites[1])
+	}
+}
+
+// TestOpenRestyManagerDeployCert 使用 mock 服务器验证完整流程：
+// 拉取站点 → 上传证书（type=1）→ 按名查证书 id → 写回站点 cert_id → PUT 站点。
+func TestOpenRestyManagerDeployCert(t *testing.T) {
+	var postedName string
+	var putCertID float64
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/admin/sites", func(w http.ResponseWriter, r *http.Request) {
+		if !validORMAuth(t, r, "jwt-key") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			_, _ = w.Write([]byte(`{"sites":[{"id":1,"name":"example.com","domains":"example.com","cert_id":0,"listeners":"0.0.0.0:80,0.0.0.0:443"}]}`))
+		case http.MethodPut:
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			putCertID, _ = body["cert_id"].(float64)
+			_, _ = w.Write([]byte("OK"))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/v1/admin/certs", func(w http.ResponseWriter, r *http.Request) {
+		if !validORMAuth(t, r, "jwt-key") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodPost:
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			postedName, _ = body["name"].(string)
+			if body["type"] != float64(1) {
+				t.Errorf("上传证书 type 应为 1，实际 %v", body["type"])
+			}
+			_, _ = w.Write([]byte("OK"))
+		case http.MethodGet:
+			// 实测 OpenResty Manager 证书列表接口返回裸数组 [...]（非 {"certs":[...]}）
+			_, _ = w.Write([]byte(`[{"id":9,"name":"` + postedName + `","crt":"CERT","key":"KEY"}]`))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	keyPEM, certPEM := genKeyCert(t)
+	d := OpenRestyManagerDeployer{panelDeployerBase{provider: ProviderOpenRestyManager}}
+	svc := map[string]string{
+		"site_id":  "1",
+		"cert_pem": certPEM,
+		"key_pem":  keyPEM,
+	}
+	res, err := d.DeployCert(context.Background(), Credentials{PanelURL: srv.URL, AccessKeySecret: "jwt-key"}, "", "", svc)
+	if err != nil {
+		t.Fatalf("DeployCert 错误: %v", err)
+	}
+	if res.CloudCertID != "1" {
+		t.Errorf("CloudCertID 应为 1，实际 %s", res.CloudCertID)
+	}
+	if postedName == "" {
+		t.Error("应上传证书且带 name")
+	}
+	if int(putCertID) != 9 {
+		t.Errorf("PUT 站点 cert_id 应为 9，实际 %v", putCertID)
+	}
+}
+
+// TestOpenRestyManagerDeployCertDedup 校验证书内容去重：当面板已存在内容相同的证书时，
+// 直接复用其 id，不再上传新证书（避免每次部署都新建证书、产生孤儿证书）。
+func TestOpenRestyManagerDeployCertDedup(t *testing.T) {
+	var posted bool
+	var putCertID float64
+	keyPEM, certPEM := genKeyCert(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/admin/sites", func(w http.ResponseWriter, r *http.Request) {
+		if !validORMAuth(t, r, "jwt-key") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			_, _ = w.Write([]byte(`{"sites":[{"id":1,"name":"example.com","domains":"example.com","cert_id":0,"listeners":"0.0.0.0:80,0.0.0.0:443"}]}`))
+		case http.MethodPut:
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			putCertID, _ = body["cert_id"].(float64)
+			_, _ = w.Write([]byte("OK"))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/v1/admin/certs", func(w http.ResponseWriter, r *http.Request) {
+		if !validORMAuth(t, r, "jwt-key") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodPost:
+			posted = true
+			_, _ = w.Write([]byte("OK"))
+		case http.MethodGet:
+			// 列表已存在内容相同的证书（crt 为真实待部署证书 PEM），应按内容复用
+			_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":9,"name":"existing","crt":%q,"key":"KEY"}]`, certPEM)))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := OpenRestyManagerDeployer{panelDeployerBase{provider: ProviderOpenRestyManager}}
+	svc := map[string]string{
+		"site_id":  "1",
+		"cert_pem": certPEM,
+		"key_pem":  keyPEM,
+	}
+	if _, err := d.DeployCert(context.Background(), Credentials{PanelURL: srv.URL, AccessKeySecret: "jwt-key"}, "", "", svc); err != nil {
+		t.Fatalf("DeployCert 错误: %v", err)
+	}
+	if posted {
+		t.Error("已存在内容相同的证书时不应再上传新证书")
+	}
+	if int(putCertID) != 9 {
+		t.Errorf("PUT 站点 cert_id 应复用已有证书 9，实际 %v", putCertID)
+	}
+}
+
+// validSafelineAuth 校验请求携带的 X-SLCE-API-TOKEN 头（雷池 OpenAPI 鉴权令牌）。
+func validSafelineAuth(t *testing.T, r *http.Request, key string) bool {
+	t.Helper()
+	if r.Header.Get("X-SLCE-API-TOKEN") != key {
+		t.Errorf("缺少 X-SLCE-API-TOKEN 头或值错误, 实际: %q", r.Header.Get("X-SLCE-API-TOKEN"))
+		return false
+	}
+	return true
+}
+
+// TestSafelineListSites 校验列站点解析，兼容 data 包装层与 id 键大小写。
+func TestSafelineListSites(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/open/site", func(w http.ResponseWriter, r *http.Request) {
+		if !validSafelineAuth(t, r, "sl-token") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"data":[{"id":1,"name":"example.com","server_names":["example.com"],"cert_id":0},{"ID":2,"server_names":["site2.com"]}]}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := SafelineDeployer{panelDeployerBase{provider: ProviderSafeline}}
+	sites, err := d.ListSites(context.Background(), Credentials{PanelURL: srv.URL, AccessKeyID: "sl-token"}, "", "", "")
+	if err != nil {
+		t.Fatalf("ListSites 错误: %v", err)
+	}
+	if len(sites) != 2 {
+		t.Fatalf("期望 2 个站点，实际 %d: %v", len(sites), sites)
+	}
+	if sites[0] != "example.com||1" {
+		t.Errorf("站点0 应为 example.com||1，实际 %s", sites[0])
+	}
+	if sites[1] != "site2.com||2" {
+		t.Errorf("站点1 应为 site2.com||2，实际 %s", sites[1])
+	}
+}
+
+// TestSafelineListSitesEnvelope 复现真实雷池响应信封：
+// {"data":{"data":[...],"total":N,"syncing":false},"err":null,"msg":""}（data 双重嵌套）。
+func TestSafelineListSitesEnvelope(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/open/site", func(w http.ResponseWriter, r *http.Request) {
+		if !validSafelineAuth(t, r, "sl-token") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"data":{"data":[{"id":1,"server_names":["asw-sd.dtapp.net"],"cert_id":0}],"total":1,"syncing":false},"err":null,"msg":""}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := SafelineDeployer{panelDeployerBase{provider: ProviderSafeline}}
+	sites, err := d.ListSites(context.Background(), Credentials{PanelURL: srv.URL, AccessKeyID: "sl-token"}, "", "", "")
+	if err != nil {
+		t.Fatalf("ListSites 错误: %v", err)
+	}
+	if len(sites) != 1 {
+		t.Fatalf("期望 1 个站点，实际 %d: %v", len(sites), sites)
+	}
+	if sites[0] != "asw-sd.dtapp.net||1" {
+		t.Errorf("站点应为 asw-sd.dtapp.net||1，实际 %s", sites[0])
+	}
+}
+
+// TestSafelineDeployCert 使用 mock 服务器验证部署流程：
+// 拉取站点详情(含 cert_id=9) → 取当前证书内容比对 → 不一致则 POST /api/open/cert 带 id 就地更新；
+// 随后每次部署都执行站点绑定 PUT /api/open/site（id 在请求体，社区版正确的绑定接口）；
+// 再次部署同一证书时当前内容已一致，应跳过更新（不再 POST），但绑定 PUT 仍会执行。
+// 证书详情 mock 用 json 安全嵌入含换行的 PEM。
+func TestSafelineDeployCert(t *testing.T) {
+	keyPEM, certPEM := genKeyCert(t)
+
+	var postedType float64
+	var postedHasCRT, postedHasKey, postedHasID bool
+	var putCount int
+	var putCertID uint
+	var postCount int
+	var certUpdated bool
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/open/site", func(w http.ResponseWriter, r *http.Request) {
+		// 绑定接口：PUT /api/open/site（id 在请求体，须回写完整站点对象）。
+		if !validSafelineAuth(t, r, "sl-token") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			putCount++
+			var body slSite
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			putCertID = body.CertID.Uint()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":null,"err":null,"msg":""}`))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/open/site/", func(w http.ResponseWriter, r *http.Request) {
+		if !validSafelineAuth(t, r, "sl-token") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Path == "/api/open/site/1" {
+				_, _ = w.Write([]byte(`{"data":{"id":1,"name":"example.com","server_names":["example.com"],"cert_id":9,"ports":["443"],"upstreams":[]}}`))
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	certHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !validSafelineAuth(t, r, "sl-token") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Path == "/api/open/cert" {
+				// 证书列表 GET /api/open/cert（仅 slCreateCert 兜底路径用到）
+				_, _ = w.Write([]byte(`{"data":{"nodes":[],"total":0},"err":null,"msg":""}`))
+			} else {
+				// 证书详情 GET /api/open/cert/9：更新前返回过期内容（触发更新），
+				// 更新后返回与待部署一致的内容（触发跳过）。
+				crt := "STALE_CERT_PEM"
+				if certUpdated {
+					crt = certPEM
+				}
+				resp, _ := json.Marshal(map[string]any{
+					"data": map[string]any{
+						"id":     9,
+						"type":   2,
+						"manual": map[string]any{"crt": crt, "key": "STALE_KEY"},
+					},
+					"err": nil, "msg": "",
+				})
+				_, _ = w.Write(resp)
+			}
+		case http.MethodPost:
+			postCount++
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			postedType, _ = body["type"].(float64)
+			_, postedHasID = body["id"]
+			manual, _ := body["manual"].(map[string]any)
+			postedHasCRT = manual["crt"] != nil && manual["crt"] != ""
+			postedHasKey = manual["key"] != nil && manual["key"] != ""
+			certUpdated = true
+			_, _ = w.Write([]byte(`{"data":null,"err":null,"msg":""}`))
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}
+	mux.HandleFunc("/api/open/cert", certHandler)
+	mux.HandleFunc("/api/open/cert/", certHandler)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := SafelineDeployer{panelDeployerBase{provider: ProviderSafeline}}
+	svc := map[string]string{
+		"site_id":     "1",
+		"cert_pem":    certPEM,
+		"key_pem":     keyPEM,
+		"cert_domain": "example.com",
+	}
+	res, err := d.DeployCert(context.Background(), Credentials{PanelURL: srv.URL, AccessKeyID: "sl-token"}, "", "", svc)
+	if err != nil {
+		t.Fatalf("DeployCert 错误: %v", err)
+	}
+	if res.CloudCertID != "9" {
+		t.Errorf("CloudCertID 应为站点绑定证书 id 9，实际 %s", res.CloudCertID)
+	}
+	if postedType != 2 {
+		t.Errorf("更新证书 type 应为 2，实际 %v", postedType)
+	}
+	if !postedHasCRT || !postedHasKey {
+		t.Error("更新证书应携带 manual.crt 与 manual.key")
+	}
+	if !postedHasID {
+		t.Error("就地更新证书应携带 id 字段（POST /api/open/cert 带 id）")
+	}
+	if putCount != 1 {
+		t.Errorf("首次部署应执行 1 次站点绑定 PUT，实际 %d 次", putCount)
+	}
+	if putCertID != 9 {
+		t.Errorf("绑定 PUT 的 cert_id 应为 9，实际 %d", putCertID)
+	}
+	if postCount != 1 {
+		t.Errorf("首次部署应就地更新 1 次，实际 %d 次", postCount)
+	}
+
+	// 再次部署同一证书：当前证书内容已一致，应跳过更新（不再 POST），但绑定 PUT 仍会执行。
+	if _, err := d.DeployCert(context.Background(), Credentials{PanelURL: srv.URL, AccessKeyID: "sl-token"}, "", "", svc); err != nil {
+		t.Fatalf("二次 DeployCert 错误: %v", err)
+	}
+	if postCount != 1 {
+		t.Errorf("证书内容未变时应跳过更新，实际 POST %d 次", postCount)
+	}
+	if putCount != 2 {
+		t.Errorf("二次部署仍应执行站点绑定 PUT，累计 %d 次，期望 2", putCount)
+	}
+}
+
+// TestSafelineGetCurrentCert 验证 GetCurrentCert 优先使用证书详情接口
+// （GET /api/open/cert/{id}）的 manual.crt 解析真实证书，得到准确的 SAN/到期时间/签发者。
+// mock 采用实测真实结构：{"data":{"id":0,"type":2,"acme":{...},"manual":{"key":"","crt":"..."}},"err":null,"msg":""}。
+func TestSafelineGetCurrentCert(t *testing.T) {
+	_, certPEM := genKeyCert(t)
+	localCert, err := parseCertPEM(certPEM)
+	if err != nil {
+		t.Fatalf("解析测试证书失败: %v", err)
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-SLCE-API-TOKEN") != "sl-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.URL.Path {
+		case "/api/open/site/1":
+			// 站点详情：cert_id=2
+			_, _ = w.Write([]byte(`{"data":{"id":1,"server_names":["example.com"],"cert_id":2},"err":null,"msg":""}`))
+		case "/api/open/cert/2":
+			// 证书详情（实测结构）：manual.crt 为真实 PEM，type=2，data.id 恒为 0。
+			body, _ := json.Marshal(map[string]any{
+				"data": map[string]any{
+					"id":   0,
+					"type": 2,
+					"acme": map[string]any{"domains": localCert.SANs, "email": ""},
+					"manual": map[string]any{
+						"key": "",
+						"crt": certPEM,
+					},
+				},
+				"err": nil,
+				"msg": "",
+			})
+			_, _ = w.Write(body)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	d := SafelineDeployer{panelDeployerBase{provider: ProviderSafeline}}
+	svc := map[string]string{"site_id": "1"}
+	cur, err := d.GetCurrentCert(context.Background(), Credentials{PanelURL: srv.URL, AccessKeyID: "sl-token"}, "", svc)
+	if err != nil {
+		t.Fatalf("GetCurrentCert 错误: %v", err)
+	}
+	if cur.CommonName != localCert.CommonName {
+		t.Errorf("CommonName 应为 %s，实际 %s", localCert.CommonName, cur.CommonName)
+	}
+	if cur.NotAfter != localCert.NotAfter {
+		t.Errorf("NotAfter 应为 %s，实际 %s", localCert.NotAfter, cur.NotAfter)
+	}
+	if len(cur.SANs) != len(localCert.SANs) {
+		t.Errorf("SANs 长度应为 %d，实际 %d", len(localCert.SANs), len(cur.SANs))
 	}
 }
 
@@ -797,4 +1224,26 @@ func TestAAWafListSites(t *testing.T) {
 	if gotHeaders.Get("waf_request_token") == "" {
 		t.Errorf("缺少 waf_request_token 请求头")
 	}
+}
+
+// validORMAuth 校验请求携带的 Authorization: Bearer <JWT> 是否由给定 jwt 密钥 HS256 签发且未过期。
+func validORMAuth(t *testing.T, r *http.Request, key string) bool {
+	t.Helper()
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Bearer ") {
+		t.Errorf("缺少 Authorization: Bearer 头, 实际: %q", auth)
+		return false
+	}
+	tokenStr := strings.TrimPrefix(auth, "Bearer ")
+	parsed, err := jwt.ParseWithClaims(tokenStr, &ormJWTClaims{}, func(tk *jwt.Token) (any, error) {
+		if _, ok := tk.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("非预期签名算法: %v", tk.Header["alg"])
+		}
+		return []byte(key), nil
+	})
+	if err != nil || !parsed.Valid {
+		t.Errorf("JWT 校验失败: %v", err)
+		return false
+	}
+	return true
 }

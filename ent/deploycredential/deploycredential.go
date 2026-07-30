@@ -82,17 +82,20 @@ type ProviderType string
 
 // ProviderType values.
 const (
-	ProviderTypeAliyun       ProviderType = "aliyun"
-	ProviderTypeTencentcloud ProviderType = "tencentcloud"
-	ProviderTypeHuawei       ProviderType = "huawei"
-	ProviderTypeBaiducloud   ProviderType = "baiducloud"
-	ProviderTypeCtyun        ProviderType = "ctyun"
-	ProviderTypeVolcengine   ProviderType = "volcengine"
-	ProviderTypeBtpanel      ProviderType = "btpanel"
-	ProviderType1panel       ProviderType = "1panel"
-	ProviderTypeAcepanel     ProviderType = "acepanel"
-	ProviderTypeAapanel      ProviderType = "aapanel"
-	ProviderTypeAawaf        ProviderType = "aawaf"
+	ProviderTypeAliyun           ProviderType = "aliyun"
+	ProviderTypeTencentcloud     ProviderType = "tencentcloud"
+	ProviderTypeHuawei           ProviderType = "huawei"
+	ProviderTypeBaiducloud       ProviderType = "baiducloud"
+	ProviderTypeCtyun            ProviderType = "ctyun"
+	ProviderTypeVolcengine       ProviderType = "volcengine"
+	ProviderTypeBtpanel          ProviderType = "btpanel"
+	ProviderType1panel           ProviderType = "1panel"
+	ProviderTypeAcepanel         ProviderType = "acepanel"
+	ProviderTypeAapanel          ProviderType = "aapanel"
+	ProviderTypeOpenrestymanager ProviderType = "openrestymanager"
+	ProviderTypeUuwaf            ProviderType = "uuwaf"
+	ProviderTypeAawaf            ProviderType = "aawaf"
+	ProviderTypeSafeline         ProviderType = "safeline"
 )
 
 func (pt ProviderType) String() string {
@@ -102,7 +105,7 @@ func (pt ProviderType) String() string {
 // ProviderTypeValidator is a validator for the "provider_type" field enum values. It is called by the builders before save.
 func ProviderTypeValidator(pt ProviderType) error {
 	switch pt {
-	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaiducloud, ProviderTypeCtyun, ProviderTypeVolcengine, ProviderTypeBtpanel, ProviderType1panel, ProviderTypeAcepanel, ProviderTypeAapanel, ProviderTypeAawaf:
+	case ProviderTypeAliyun, ProviderTypeTencentcloud, ProviderTypeHuawei, ProviderTypeBaiducloud, ProviderTypeCtyun, ProviderTypeVolcengine, ProviderTypeBtpanel, ProviderType1panel, ProviderTypeAcepanel, ProviderTypeAapanel, ProviderTypeOpenrestymanager, ProviderTypeUuwaf, ProviderTypeAawaf, ProviderTypeSafeline:
 		return nil
 	default:
 		return fmt.Errorf("deploycredential: invalid enum value for provider_type field: %q", pt)

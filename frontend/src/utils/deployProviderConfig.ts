@@ -14,6 +14,9 @@ export const deployProviderTypes: ProviderTypeOption[] = [
   { value: 'acepanel', labelKey: 'dns.type.acepanel' },
   { value: 'aapanel', labelKey: 'dns.type.aapanel' },
   { value: 'aawaf', labelKey: 'dns.type.aawaf' },
+  { value: 'openrestymanager', labelKey: 'dns.type.openrestymanager' },
+  { value: 'uuwaf', labelKey: 'dns.type.uuwaf' },
+  { value: 'safeline', labelKey: 'dns.type.safeline' },
 ]
 
 // 部署目标表单用：provider 下拉选项（含已解析的 label）
@@ -69,6 +72,18 @@ export const deployProviderConfigSchema: Record<string, ConfigField[]> = {
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
   ],
   aawaf: [
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
+  ],
+  openrestymanager: [
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
+    { key: 'jwt_secret', labelKey: 'deploy.config.jwtSecret', type: 'password' },
+  ],
+  uuwaf: [
+    { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
+    { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
+  ],
+  safeline: [
     { key: 'panel_url', labelKey: 'deploy.config.panelUrl', type: 'text' },
     { key: 'api_key', labelKey: 'dns.config.api_key', type: 'password' },
   ],

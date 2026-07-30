@@ -261,7 +261,13 @@ func (s *DeployService) FetchCDNDomains(ctx context.Context, in FetchDomainsInpu
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
-	if creds.AccessKeyID == "" || (creds.AccessKeySecret == "" && !isPanelProvider(in.ProviderType)) {
+	// 非面板厂商要求 AccessKeyID 与 AccessKeySecret 齐全；
+	// 面板/防火墙类仅需其一（各面板字段不同：多数用 API Key→AccessKeyID，
+	// OpenResty Manager 用 JWT 密钥→AccessKeySecret）。
+	if creds.AccessKeyID == "" && creds.AccessKeySecret == "" {
+		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
+	}
+	if !isPanelProvider(in.ProviderType) && creds.AccessKeySecret == "" {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
 	region := in.Region
@@ -377,7 +383,8 @@ func (s *DeployService) loadDeployCredSitePath(target *ent.DeployTarget) (Creden
 	if err != nil {
 		return Credentials{}, nil, err
 	}
-	if creds.AccessKeyID == "" {
+	// 面板/防火墙类仅需其一：多数用 API Key（AccessKeyID），OpenResty Manager 用 JWT 密钥（AccessKeySecret）。
+	if creds.AccessKeyID == "" && creds.AccessKeySecret == "" {
 		return Credentials{}, nil, fmt.Errorf("%s", i18n.T("error.deploy_credential_missing"))
 	}
 	dtc := config.MustParseConfig[SiteTargetConfig](target.Config)

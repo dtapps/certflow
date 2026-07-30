@@ -20,21 +20,24 @@ import (
 
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 )
 
 // 面板厂商标识（与 ent/schema/provider_types.go 的 DeployProviderTypes 保持一致）
 const (
-	ProviderBTPanel  = "btpanel"
-	ProviderAAPanel  = "aapanel"
-	ProviderOnePanel = "1panel"
-	ProviderAcePanel = "acepanel"
-	ProviderAAWaf    = "aawaf"
+	ProviderBTPanel          = "btpanel"
+	ProviderAAPanel          = "aapanel"
+	ProviderOnePanel         = "1panel"
+	ProviderAcePanel         = "acepanel"
+	ProviderAAWaf            = "aawaf"
+	ProviderOpenRestyManager = "openrestymanager"
+	ProviderSafeline         = "safeline"
 )
 
 // isPanelProvider 判断厂商标识是否为面板/防火墙类（凭证仅用 API Key，无 Secret）。
 func isPanelProvider(p string) bool {
 	switch p {
-	case ProviderBTPanel, ProviderAAPanel, ProviderOnePanel, ProviderAcePanel, ProviderAAWaf:
+	case ProviderBTPanel, ProviderAAPanel, ProviderOnePanel, ProviderAcePanel, ProviderAAWaf, ProviderOpenRestyManager, ProviderSafeline:
 		return true
 	}
 	return false
@@ -77,7 +80,9 @@ func (c *PanelClient) doV2Request(ctx context.Context, path string, query url.Va
 	}
 	req.Header = h
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	start := time.Now()
 	resp, err := c.HTTP.Do(req)
+	logPanelRequest(http.MethodPost, reqURL, resp, time.Since(start), err)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_request", "Err", err.Error()))
 	}
@@ -206,6 +211,20 @@ type panelDeployerBase struct {
 	provider string
 }
 
+// logPanelRequest 记录一次面板 HTTP 请求的概要（方法/URL/状态码/耗时），
+// 以 INFO 级别打印到主日志（不依赖 DEBUG），便于直接确认部署/列站点等操作确实为面板发了请求。
+func logPanelRequest(method, url string, resp *http.Response, elapsed time.Duration, err error) {
+	ms := float64(elapsed.Microseconds()) / 1000
+	if err != nil {
+		logging.Error("面板请求 %s %s 失败: %v (%.0fms)", method, url, err, ms)
+		return
+	}
+	if resp == nil {
+		return
+	}
+	logging.Info("面板请求 %s %s → %d (%.0fms)", method, url, resp.StatusCode, ms)
+}
+
 // doRequest 发送面板 API 请求：调用注入的 authFn 生成鉴权请求头与表单参数，返回原始响应体。
 // path 为接口路径（如 /data）；form 为业务表单参数，鉴权参数（request_time 等）由 authFn 自动并入。
 func (c *PanelClient) doRequest(ctx context.Context, path string, form url.Values) ([]byte, error) {
@@ -226,7 +245,9 @@ func (c *PanelClient) doRequest(ctx context.Context, path string, form url.Value
 	}
 	req.Header = h
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	start := time.Now()
 	resp, err := c.HTTP.Do(req)
+	logPanelRequest(http.MethodPost, c.BaseURL+fullPath, resp, time.Since(start), err)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_request", "Err", err.Error()))
 	}
@@ -259,7 +280,9 @@ func (c *PanelClient) doJSONRequest(ctx context.Context, path string, payload an
 	}
 	req.Header = h
 	req.Header.Set("Content-Type", "application/json")
+	start := time.Now()
 	resp, err := c.HTTP.Do(req)
+	logPanelRequest(http.MethodPost, c.BaseURL+fullPath, resp, time.Since(start), err)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_request", "Err", err.Error()))
 	}
@@ -275,8 +298,8 @@ func (c *PanelClient) doJSONRequest(ctx context.Context, path string, payload an
 }
 
 // doPutJSONRequest 发送 JSON 请求体的 PUT 请求（AcePanel 等接口要求完整对象 PUT 替换）。
-// payload 序列化为 JSON 作为请求体；鉴权请求头由 authFn 基于 PUT 方法与请求体哈希生成。
-func (c *PanelClient) doPutJSONRequest(ctx context.Context, path string, payload map[string]any) ([]byte, error) {
+// payload 可为 map 或任意结构体（序列化为 JSON 作为请求体）；鉴权请求头由 authFn 基于 PUT 方法与请求体哈希生成。
+func (c *PanelClient) doPutJSONRequest(ctx context.Context, path string, payload any) ([]byte, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_list_parse", "Err", err.Error()))
@@ -292,7 +315,9 @@ func (c *PanelClient) doPutJSONRequest(ctx context.Context, path string, payload
 	}
 	req.Header = h
 	req.Header.Set("Content-Type", "application/json")
+	start := time.Now()
 	resp, err := c.HTTP.Do(req)
+	logPanelRequest(http.MethodPut, c.BaseURL+fullPath, resp, time.Since(start), err)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_request", "Err", err.Error()))
 	}
@@ -325,7 +350,9 @@ func (c *PanelClient) doGetRequest(ctx context.Context, path string, query url.V
 		return nil, err
 	}
 	req.Header = h
+	start := time.Now()
 	resp, err := c.HTTP.Do(req)
+	logPanelRequest(http.MethodGet, u.String(), resp, time.Since(start), err)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_panel_request", "Err", err.Error()))
 	}

@@ -44,6 +44,9 @@ const brandColors: Record<string, string> = {
   '1panel': '#2D8CF0',
   acepanel: '#3B82F6',
   aliesa: '#FF6A00',
+  openrestymanager: '#0FA968',
+  uuwaf: '#7C3AED',
+  safeline: '#E11D48',
 }
 
 const palette = [
