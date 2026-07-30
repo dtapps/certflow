@@ -30,6 +30,7 @@ import type {
 } from '@bindings/cnb.cool/dtapp/certflow/internal/settings/models'
 import { useThemeStore } from '../stores/theme'
 import { useI18nStore } from '../stores/i18n'
+import { LOCALE_ZH_CN, LOCALE_EN_US, LOCALE_AUTO, type Locale } from '../locales/locale'
 import { initMessage, showMessage } from '../utils/message'
 
 // 内部使用的类型：确保数组不为 null
@@ -83,7 +84,7 @@ const { t, setLocale } = i18nStore
 // 而持久化的 settings.language 由下方 watch 同步为「已解析」语言供后端使用。
 const languageModel = computed({
   get: () => i18nStore.locale,
-  set: (val: 'zh-CN' | 'en-US' | 'auto') => setLocale(val),
+  set: (val: Locale) => setLocale(val),
 })
 
 // 主题选择代理：与 languageModel 对称，v-model 写入经 setTheme 落盘（保留 auto 选择），
@@ -371,9 +372,9 @@ const logLevelOptions = [
 ]
 
 const languageOptions = [
-  { label: t('lang.auto'), value: 'auto' },
-  { label: t('lang.zh'), value: 'zh-CN' },
-  { label: t('lang.en'), value: 'en-US' },
+  { label: t('lang.auto'), value: LOCALE_AUTO },
+  { label: t('lang.zh'), value: LOCALE_ZH_CN },
+  { label: t('lang.en'), value: LOCALE_EN_US },
 ]
 
 const themeOptions = [

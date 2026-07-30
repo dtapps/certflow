@@ -127,15 +127,15 @@ func TWithLocale(loc string, key string, templateData ...any) string {
 
 // ResolveLocale 将前端语言环境转换为后端语言环境
 func ResolveLocale(loc string) string {
-	if loc == "en-US" {
-		return "en-US"
+	if loc == string(EN_US) {
+		return string(EN_US)
 	}
-	return "zh-CN"
+	return string(ZH_CN)
 }
 
 // SupportedLocales 返回所有支持的语言环境代码
 func SupportedLocales() []string {
-	return []string{"zh-CN", "en-US"}
+	return []string{string(ZH_CN), string(EN_US)}
 }
 
 // GetCurrentLocale 返回当前语言环境字符串

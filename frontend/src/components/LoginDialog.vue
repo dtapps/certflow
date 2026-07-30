@@ -7,6 +7,7 @@ import * as AuthService from '@bindings/cnb.cool/dtapp/certflow/authservicewrapp
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import { useThemeStore } from '../stores/theme'
 import { useI18nStore } from '../stores/i18n'
+import { LOCALE_ZH_CN, LOCALE_EN_US, LOCALE_AUTO, type Locale } from '../locales/locale'
 
 const emit = defineEmits<{
   verified: []
@@ -290,7 +291,7 @@ function toggleTheme() {
 }
 
 function toggleLocale() {
-  const locales: ('zh-CN' | 'en-US' | 'auto')[] = ['zh-CN', 'en-US', 'auto']
+  const locales: Locale[] = [LOCALE_ZH_CN, LOCALE_EN_US, LOCALE_AUTO]
   const idx = locales.indexOf(locale.value)
   setLocale(locales[(idx + 1) % locales.length])
 }

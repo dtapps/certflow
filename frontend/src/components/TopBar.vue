@@ -6,6 +6,7 @@ import { NInput, NPopover, NBadge, NIcon, NButton, NTag, NDropdown } from 'naive
 import type { DropdownOption } from 'naive-ui'
 import { useNotificationsStore } from '../stores/notifications'
 import { useI18nStore } from '../stores/i18n'
+import { LOCALE_ZH_CN, LOCALE_EN_US, LOCALE_AUTO, type Locale } from '../locales/locale'
 import { useThemeStore } from '../stores/theme'
 import { formatRelativeTime } from '../utils/format'
 import * as CertificateService from '@bindings/cnb.cool/dtapp/certflow/certificateservicewrapper'
@@ -230,9 +231,9 @@ const themeOptions = computed<DropdownOption[]>(() => [
 
 // 语言下拉选项
 const localeOptions = computed<DropdownOption[]>(() => [
-  { label: t('lang.zh'), key: 'zh-CN' },
-  { label: t('lang.en'), key: 'en-US' },
-  { label: t('lang.auto'), key: 'auto' },
+  { label: t('lang.zh'), key: LOCALE_ZH_CN },
+  { label: t('lang.en'), key: LOCALE_EN_US },
+  { label: t('lang.auto'), key: LOCALE_AUTO },
 ])
 
 function handleThemeSelect(key: string) {
@@ -240,7 +241,7 @@ function handleThemeSelect(key: string) {
 }
 
 function handleLocaleSelect(key: string) {
-  setLocale(key as 'zh-CN' | 'en-US' | 'auto')
+  setLocale(key as Locale)
 }
 </script>
 
