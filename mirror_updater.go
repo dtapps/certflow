@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
@@ -43,11 +42,14 @@ type mirrorProvider struct {
 	// SHA256SUMS 改为走镜像（见 Check），避免中文网络下 GitHub 不可达
 	// 导致整个 Check 失败、连「发现新版本」都做不到。
 	checkProvider *github.Provider
-	client *http.Client
+	client        *http.Client
 }
 
 // newMirrorProvider 基于 github.Config 创建镜像 Provider。
-func newMirrorProvider(cfg github.Config) (*mirrorProvider, error) {
+// client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
+// 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
+func newMirrorProvider(cfg github.Config, client *http.Client) (*mirrorProvider, error) {
+	cfg.HTTPClient = client
 	gh, err := github.New(cfg)
 	if err != nil {
 		return nil, err
@@ -62,7 +64,7 @@ func newMirrorProvider(cfg github.Config) (*mirrorProvider, error) {
 	return &mirrorProvider{
 		Provider:      gh,
 		checkProvider: ghNoChecksum,
-		client:        &http.Client{Timeout: 30 * time.Second},
+		client:        client,
 	}, nil
 }
 

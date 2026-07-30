@@ -968,7 +968,7 @@
   "settings.network.httpLogRetention": "HTTP Request Log Retention (days)",
   "settings.network.httpLogRetentionDesc": "HTTP request logs older than this many days are cleaned up automatically (default 30, 0 means never clean up)",
   "settings.network.httpProxy": "HTTP Proxy",
-  "settings.network.httpProxyDesc": "All ACME requests sent through proxy",
+  "settings.network.httpProxyDesc": "Requests for certificate (ACME), CA, domain scanning, monitoring and update checks are sent through the proxy",
   "settings.network.passwordPlaceholder": "Password (optional)",
   "settings.network.portPlaceholder": "Port",
   "settings.network.title": "Network Settings",

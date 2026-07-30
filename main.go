@@ -25,6 +25,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/monitor"
+	"cnb.cool/dtapp/certflow/internal/network"
 	"cnb.cool/dtapp/certflow/internal/notification"
 	"cnb.cool/dtapp/certflow/internal/scanner"
 	"cnb.cool/dtapp/certflow/internal/scheduler"
@@ -221,6 +222,9 @@ func main() {
 
 	// 配置自更新功能
 	// https://v3.wails.io/guides/updater/
+	// 更新器复用全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS），
+	// 而非自建裸 client，避免丢失全局注入与可观测性。
+	updaterClient := network.BuildHTTPClient(settingsService.Get())
 	gh, err := newMirrorProvider(github.Config{
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
@@ -268,7 +272,7 @@ func main() {
 			logging.Debug(i18n.T("log.updater_matcher_none"))
 			return -1
 		},
-	})
+	}, updaterClient)
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
 	} else {
