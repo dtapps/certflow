@@ -18,23 +18,24 @@ require (
 	github.com/go-acme/lego/v5 v5.3.1
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-webauthn/webauthn v0.17.4
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.208
-	github.com/mattn/go-sqlite3 v1.14.48
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.209
+	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.116
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.145
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.148
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.105
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.145
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.147
 	github.com/volcengine/volc-sdk-golang v1.0.252
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.119
 	go.dtapp.net/library/contrib/http_log v1.0.13
 	golang.org/x/crypto v0.54.0
 	golang.org/x/text v0.40.0
-	modernc.org/sqlite v1.54.0
+	modernc.org/sqlite v1.55.0
 )
 
 require (
@@ -57,20 +58,20 @@ require (
 	github.com/aliyun/credentials-go v1.4.12 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.43.1 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.32.32 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.31 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.33 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.43.2 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.32.33 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.32 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.33 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.33 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.33 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.14 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.32 // indirect
-	github.com/aws/aws-sdk-go-v2/service/route53 v1.65.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.5.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.33.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.45.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.33 // indirect
+	github.com/aws/aws-sdk-go-v2/service/route53 v1.65.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.5.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.33.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.45.2 // indirect
 	github.com/aws/smithy-go v1.27.5 // indirect
 	github.com/basgys/goxml2json v1.1.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
@@ -96,7 +97,6 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
