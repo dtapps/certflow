@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,6 +39,10 @@ const (
 // mirrorProvider 包装 github.Provider，仅重写下載地址。
 type mirrorProvider struct {
 	*github.Provider
+	// checkProvider 用于版本检测，但关闭原生 GitHub 校验文件抓取：
+	// SHA256SUMS 改为走镜像（见 Check），避免中文网络下 GitHub 不可达
+	// 导致整个 Check 失败、连「发现新版本」都做不到。
+	checkProvider *github.Provider
 	client *http.Client
 }
 
@@ -46,18 +52,47 @@ func newMirrorProvider(cfg github.Config) (*mirrorProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 版本检测用的 Provider 关闭校验文件抓取（SHA256SUMS 改为走镜像）。
+	noChecksumCfg := cfg
+	noChecksumCfg.ChecksumAsset = ""
+	ghNoChecksum, err := github.New(noChecksumCfg)
+	if err != nil {
+		return nil, err
+	}
 	return &mirrorProvider{
-		Provider: gh,
-		client:   &http.Client{Timeout: 30 * time.Second},
+		Provider:      gh,
+		checkProvider: ghNoChecksum,
+		client:        &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 
 // Name 实现 updater.Provider。
 func (m *mirrorProvider) Name() string { return "github-mirror" }
 
-// Check 委托给 github provider，版本检测仍以 GitHub 为准。
+// Check 版本检测仍以 GitHub 为准，但校验文件（SHA256SUMS）改为走镜像。
+//   - 英文用户：直接使用官方 GitHub（含 SHA256SUMS 校验，原始行为）。
+//   - 中文用户：用 checkProvider 检测版本（不抓校验），再从 CNB → daocloud
+//     → 官方 GitHub 顺序拉 SHA256SUMS 并填充 Verification。
 func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
-	return m.Provider.Check(ctx, req)
+	if i18n.GetLocale() == string(i18n.EN_US) {
+		// 英文：官方 GitHub 原始行为，含 SHA256SUMS 校验。
+		return m.Provider.Check(ctx, req)
+	}
+
+	rel, err := m.checkProvider.Check(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	// 中文：从镜像拉 SHA256SUMS，失败则降级（下载本身仍走镜像，仅跳过校验）。
+	if digest, ok := m.fetchChecksumViaMirror(ctx, rel, "SHA256SUMS"); ok {
+		rel.Verification = &updater.Verification{
+			DigestAlgo: "sha256",
+			Digest:     digest,
+		}
+	} else {
+		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
+	}
+	return rel, nil
 }
 
 // Download 实现 updater.Provider：中文走镜像，英文走官方。
@@ -66,7 +101,7 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 		return fmt.Errorf("github-mirror: release missing metadata")
 	}
 	// 英文用户：直接使用官方 GitHub 下载（原始行为）。
-	if i18n.GetLocale() == "en-US" {
+	if i18n.GetLocale() == string(i18n.EN_US) {
 		return m.Provider.Download(ctx, rel, dst, onProgress)
 	}
 
@@ -91,9 +126,9 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 
 	for _, c := range candidates {
 		resetDst(dst)
-		logging.Debug(i18n.T("log.updater_mirror_download", "Source", c.source, "URL", c.url))
+		logging.Debug("%s", i18n.T("log.updater_mirror_download", "Source", c.source, "URL", c.url))
 		if err := m.downloadFrom(ctx, c.url, rel, dst, onProgress); err != nil {
-			logging.Warn(i18n.T("log.updater_mirror_failed", "Source", c.source, "Error", err))
+			logging.Warn("%s", i18n.T("log.updater_mirror_failed", "Source", c.source, "Error", err))
 			continue
 		}
 		return nil
@@ -169,4 +204,81 @@ func resetDst(dst io.Writer) {
 		_, _ = st.Seek(0, io.SeekStart)
 		_ = st.Truncate(0)
 	}
+}
+
+// fetchChecksumViaMirror 从 CNB → daocloud → 官方 GitHub 顺序拉取校验侧车文件
+// （如 SHA256SUMS），解析出目标资产（rel.Artifact.Filename）的 sha256 摘要。
+// 任一级成功解析即返回；全部失败返回 (nil, false)。
+func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, bool) {
+	tag, _ := rel.Metadata["github.release.tag"].(string)
+	target := rel.Artifact.Filename
+
+	var urls []string
+	if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
+		urls = append(urls, u)
+	}
+	if u := m.buildURL(daoCloudDownloadTpl, tag, sidecar); u != "" {
+		urls = append(urls, u)
+	}
+	// 最终回退：用官方 GitHub 资产 URL 的目录替换为校验文件名。
+	if ghURL, _ := rel.Metadata["github.asset.url"].(string); ghURL != "" {
+		if idx := strings.LastIndex(ghURL, "/"); idx >= 0 {
+			urls = append(urls, ghURL[:idx+1]+sidecar)
+		}
+	}
+
+	for _, u := range urls {
+		logging.Debug("%s", i18n.T("log.updater_checksum_download", "URL", u))
+		body, err := m.fetchText(ctx, u)
+		if err != nil {
+			logging.Warn("%s", i18n.T("log.updater_checksum_source_failed", "URL", u, "Error", err))
+			continue
+		}
+		if digest, ok := parseChecksumLine(string(body), target); ok {
+			return digest, true
+		}
+		logging.Warn("%s", i18n.T("log.updater_checksum_parse_failed", "URL", u, "Target", target))
+	}
+	return nil, false
+}
+
+// fetchText 从指定 URL 拉取文本内容（用于校验侧车文件）。
+func (m *mirrorProvider) fetchText(ctx context.Context, urlStr string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+}
+
+// parseChecksumLine 从 sha256sum 风格的清单中提取 target 的摘要。
+// 每行格式为 "<hex-digest>  <filename>"，文件名按 base name 比较，
+// 容忍 sha256sum --binary 在文件名前加的 "*" 标记。
+func parseChecksumLine(body, target string) ([]byte, bool) {
+	for line := range strings.SplitSeq(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		name := strings.TrimPrefix(fields[len(fields)-1], "*")
+		if filepath.Base(name) == target || name == target {
+			if digest, err := hex.DecodeString(fields[0]); err == nil {
+				return digest, true
+			}
+		}
+	}
+	return nil, false
 }
