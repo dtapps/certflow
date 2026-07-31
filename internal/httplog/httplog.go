@@ -137,7 +137,7 @@ func setupTransport() {
 		base = &http.Transport{}
 	}
 
-	var rt http.RoundTripper = base
+	var rt = base
 	if logging.Global() != nil && logging.Global().GetLevel() == logging.DEBUG {
 		// 仅使用 LogHandler 接口（不传回调）；库内部 OnLog 优先、Handler 其次，二选一避免重复落库。
 		rt = http_log.NewLoggingRoundTripper(rt, &entLogSaver{}, nil)

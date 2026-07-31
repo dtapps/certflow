@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	//nolint:gosec // 面板鉴权（1panel/aapanel/aawaf/btpanel）强制使用 md5，属外部 API 协议要求，无法替换为安全算法
 	"crypto/md5"
 	"crypto/sha256"
 	"crypto/tls"
@@ -45,6 +46,7 @@ func isPanelProvider(p string) bool {
 
 // md5Hex 返回小写的 md5 hex 字符串。
 func md5Hex(s string) string {
+	//nolint:gosec // 同上，面板鉴权协议要求
 	sum := md5.Sum([]byte(s))
 	return hex.EncodeToString(sum[:])
 }
@@ -148,6 +150,7 @@ func panelHTTPClient() *http.Client {
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				// 面板/防火墙常用自签名证书，跳过 TLS 证书验证
+				//nolint:gosec // 面板/防火墙常位于隧道后并使用自签名证书，跳过验证属预期行为
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 				// 面板地址常位于隧道/反代入口（如 frp 类 CGNAT 入口）之后，
 				// 这类入口在「复用 keep-alive 连接处理 PUT 等非 GET 方法」时

@@ -413,6 +413,7 @@ func slCertContentSame(ctx context.Context, client *PanelClient, certID uint, ce
 	have, err := parseCertPEM(detail.Manual.CRT)
 	if err != nil {
 		// 现有证书 PEM 异常，保守更新。
+		//nolint:nilerr // 故意忽略解析错误：现有证书无法解析时按「不一致」处理以触发更新，更安全
 		return false, nil
 	}
 	return want.SerialNumber == have.SerialNumber, nil

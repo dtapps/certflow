@@ -725,7 +725,7 @@ func TestOpenRestyManagerDeployCertDedup(t *testing.T) {
 			_, _ = w.Write([]byte("OK"))
 		case http.MethodGet:
 			// 列表已存在内容相同的证书（crt 为真实待部署证书 PEM），应按内容复用
-			_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":9,"name":"existing","crt":%q,"key":"KEY"}]`, certPEM)))
+			_, _ = fmt.Fprintf(w, `[{"id":9,"name":"existing","crt":%q,"key":"KEY"}]`, certPEM)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}

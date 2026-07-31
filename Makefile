@@ -65,7 +65,7 @@ format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分�
 
 # ==================== 检查 / 测试 ====================
 
-check: lint-go lint-frontend test-go fuzz-go ## 检查和测试（全部）
+check: lint-frontend lint-go test-go fuzz-go vuln-go ## 检查和测试（全部）
 
 lint-go: ## Go 代码检查
 	golangci-lint run ./... $(FILTER) || exit 1
@@ -81,6 +81,9 @@ test-go: ## Go 后端测试
 
 fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s）
 	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/... $(FILTER) || exit 1
+
+vuln-go: ## Go 依赖漏洞检查
+	govulncheck ./...
 
 # ==================== 构建打包 ====================
 
@@ -99,15 +102,57 @@ clean: ## 清理构建产物
 	rm -rf frontend/dist frontend/bindings
 	rm -f certflow bin/*
 
+tool-deps: ## 工具依赖
+	@echo "==> 安装必要的工具依赖..."
+
+	wails3 version || true
+	go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+	-wails3 version
+	@echo "==> wails3 工具安装或更新完成"
+
+	sqlc version || true
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	-sqlc version
+	@echo "==> sqlc 工具安装或更新完成"
+
+	go install entgo.io/ent/cmd/ent@latest
+	go install entgo.io/ent/cmd/entc@latest
+	@echo "==> ent 工具安装或更新完成"
+
+	golangci-lint version || true
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+	-golangci-lint version
+	@echo "==> golangci-lint 工具安装或更新完成"
+
+	govulncheck version || true
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	-govulncheck version
+	@echo "==> govulncheck 工具安装或更新完成"
+
 deps: ## 安装所有依赖
+	@echo "==> 安装所有依赖..."
+
+	go version
 	go mod download
-	cd frontend && pnpm install
+	@echo "==> Go 安装所有依赖完成"
+
+	pnpm --version
+	pnpm --dir ./frontend install
+	@echo "==> pnpm 安装所有依赖完成"
 
 # 	cd frontend && pnpm update --latest
 update-deps: ## 更新所有依赖
+	@echo "==> 更新所有依赖..."
+
+	go version
 	go get -u ./...
 	go mod tidy
-	cd frontend && pnpm update
+	@echo "==> Go 更新所有依赖完成"
+
+	pnpm --version
+	pnpm --dir ./frontend update
+	pnpm --dir ./frontend self-update
+	@echo "==> pnpm 更新所有依赖完成"
 
 setup: deps bindings ent ## 完整项目初始化
 	@echo "项目初始化完成！运行 'make dev' 启动开发模式"
