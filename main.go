@@ -46,6 +46,7 @@ var currentVersion = "dev"
 var buildTime = ""
 var gitCommit = ""
 var githubToken = ""
+var cnbToken = ""
 
 func init() {
 	application.RegisterEvent[events.TimePayload](events.EventTime)
@@ -272,7 +273,7 @@ func main() {
 			logging.Debug(i18n.T("log.updater_matcher_none"))
 			return -1
 		},
-	}, updaterClient)
+	}, updaterClient, buildTime, cnbToken)
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
 	} else {

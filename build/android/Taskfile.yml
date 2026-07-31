@@ -48,7 +48,7 @@ tasks:
         vars:
           ARCH: '{{.ARCH | default .HOST_ARCH}}'
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
     env:
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
 
@@ -106,7 +106,7 @@ tasks:
         go build -buildmode=c-shared -overlay build/android/overlay.json {{.BUILD_FLAGS}} \
           -o build/android/app/src/main/jniLibs/$JNI_DIR/libwails.so
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
 
   compile:go:all-archs:
     summary: Compile Go code for all Android architectures (fat APK)
