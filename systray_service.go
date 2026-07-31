@@ -70,6 +70,11 @@ func (s *SysTrayService) Init() {
 			// 显示窗口
 			s.ShowWindow()
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logging.Error("%s: %v", i18n.T("log.updater_check_panic"), r)
+					}
+				}()
 				if err := s.app.Updater.CheckAndInstall(context.Background()); err != nil {
 					logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
 				} else {

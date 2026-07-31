@@ -39,7 +39,10 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-// 当前版本号（构建时通过 -ldflags 覆盖）
+//go:embed updater_window.html
+var updaterWindowHTML string
+
+// 当前版本号（构建时通过 -ldflags 覆盖）不带 v
 var currentVersion = "dev"
 
 // 构建信息（构建时通过 -ldflags 覆盖）
@@ -88,6 +91,15 @@ func main() {
 	if err := logging.InitGlobalLogger(logDir, settings.Log.Level, settings.Log.MaxMB, settings.Log.MaxBackups); err != nil {
 		log.Fatalf(i18n.T("error.create_log_dir_failed")+": %v", err)
 	}
+	// 全局兜底：捕获主流程及任何 goroutine 中未 recover 的 panic，
+	// 先写 ERROR 日志（再 defer Close 会落盘）再退出，避免进程静默消失、无任何痕迹。
+	// 必须在 InitGlobalLogger 之后、defer Close 之前注册，以确保 LIFO 时最后关闭日志。
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Error("%s: %v", i18n.T("log.global_panic"), r)
+			log.Printf("FATAL panic (recovered, see log): %v", r)
+		}
+	}()
 	defer logging.Global().Close()
 	logging.Info(i18n.T("log.app_starting", "Version", currentVersion, "BuildTime", buildTime))
 
@@ -281,6 +293,8 @@ func main() {
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
 			Window: &updater.BuiltinWindow{
+				// 使用定制模板：版本号副标题不拼 "v" 前缀（nightly 显示 nightly 而非 vnightly）。
+				HTML: updaterWindowHTML,
 				Options: updater.WindowOptions{
 					Title: i18n.T("updater.title"),
 				},
@@ -346,6 +360,13 @@ func main() {
 	appSubmenu.Add(i18n.T("menu.checkUpdate")).
 		OnClick(func(ctx *application.Context) {
 			go func() {
+				// 兜底：避免 Wails Updater 原生层（macOS Sparkle 等）崩溃
+				// 通过未 recover 的 panic 拖死整个主进程（表现为点击后进程静默消失）。
+				defer func() {
+					if r := recover(); r != nil {
+						logging.Error("%s: %v", i18n.T("log.updater_check_panic"), r)
+					}
+				}()
 				if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
 					logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
 				} else {
@@ -456,6 +477,12 @@ func main() {
 // checkUpdateOnStart 启动后异步检查更新，有更新时发通知
 func checkUpdateOnStart(app *application.App) {
 	go func() {
+		// 兜底：同点击检查更新，避免 Updater 原生层 panic 拖死主进程。
+		defer func() {
+			if r := recover(); r != nil {
+				logging.Error("%s: %v", i18n.T("log.updater_check_panic"), r)
+			}
+		}()
 		// 生成 1 到 3 分钟之间的随机持续时间
 		minDuration := 1 * time.Minute
 		maxDuration := 3 * time.Minute

@@ -82,11 +82,8 @@ type mirrorProvider struct {
 // client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
 // 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
 // installedBuildTime 为本机构建时间字符串（ldflags 注入），用于 nightly 更新时避免回退到更旧构建。
-// newMirrorProvider 基于 github.Config 创建镜像 Provider。
-// client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
-// 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
-// installedBuildTime 为本机构建时间字符串（ldflags 注入），用于 nightly 更新时避免回退到更旧构建。
 // cnbToken 为 CNB 只读 Token（ldflags 注入），预留给检测层走 CNB 鉴权 API（CNB 匿名 API 返回 401）。
+// currentVersion 为本机当前版本（ldflags 注入，不带 v），用于拼接 nightly 展示版本号避免 "vnightly"。
 func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTime string, cnbToken string) (*mirrorProvider, error) {
 	cfg.HTTPClient = client
 	gh, err := github.New(cfg)
@@ -191,14 +188,19 @@ func (m *mirrorProvider) checkNightly(ctx context.Context, req updater.CheckRequ
 		if rel != nil {
 			return rel, nil
 		}
-		// 首选源无可用 nightly（404 / 草稿 / 比本机更旧）：给备选源一次确认机会
-		// （两端发布可能不同步）。
-	} else if !errors.Is(err, errSourceUnavailable) && !isNetworkError(err) {
+		// 首选源无可用 nightly（404 / 草稿 / 比本机更旧）：降级为 DEBUG 提示，
+		// 并给备选源一次确认机会（两端发布可能不同步）。此场景属正常「无更新」，
+		// 不应告警，避免与真正「源不可用/网络错误」回退混淆。
+		logging.Debug("%s", i18n.T("log.updater_nightly_skip_primary",
+			"Primary", primaryName, "Secondary", secondaryName))
+		return secondary(ctx, req)
+	}
+	if !errors.Is(err, errSourceUnavailable) && !isNetworkError(err) {
 		// 致命错误（响应解码失败等），不回退，直接上报。
 		return nil, err
 	}
 
-	// 回退备选源：首选源不可用、网络不可达、或无 nightly 时尝试另一源。
+	// 首选源不可用或网络不可达，回退备选源（告警级）。
 	logging.Warn("%s", i18n.T("log.updater_nightly_fallback",
 		"Primary", primaryName, "Secondary", secondaryName))
 	return secondary(ctx, req)
@@ -309,7 +311,8 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 	}
 	// 避免把比本机更旧的 nightly 当成更新推送。
 	if t := m.parseInstalled(); !t.IsZero() && publishedAt.Before(t) {
-		logging.Debug("%s", i18n.T("log.updater_nightly_skipped", "PublishedAt", publishedAt))
+		// 同时打印两端时间（均带时区），便于核对「为何跳过」（本地/UTC 不再混淆）。
+		logging.Debug("%s", i18n.T("log.updater_nightly_skipped", "PublishedAt", publishedAt.Format(time.RFC3339), "BuildTime", t.Format(time.RFC3339)))
 		return nil, nil
 	}
 
@@ -320,6 +323,8 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 	picked := assets[idx]
 
 	out := &updater.Release{
+		// nightly 预发布版本号就是裸 "nightly"（窗口会自动拼 v 显示为 vnightly），
+		// 不掺杂本机版本号，保持 nightly 语义独立。
 		Version:     tag,
 		Channel:     "prerelease",
 		Name:        name,
@@ -588,21 +593,37 @@ func resetDst(dst io.Writer) {
 // （如 SHA256SUMS），解析出目标资产（rel.Artifact.Filename）的 sha256 摘要。
 // 任一级成功解析即返回；全部失败返回 (nil, false)。
 func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, bool) {
+	// 兜底：rel / Metadata 任一缺失都不应 panic（否则会拖垮主进程）。
+	if rel == nil || rel.Metadata == nil {
+		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
+		return nil, false
+	}
 	tag, _ := rel.Metadata["github.release.tag"].(string)
 	target := rel.Artifact.Filename
 
 	var urls []string
-	if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
-		urls = append(urls, u)
+	if tag != "" {
+		if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
+			urls = append(urls, u)
+		}
+		if u := m.buildURL(daoCloudDownloadTpl, tag, sidecar); u != "" {
+			urls = append(urls, u)
+		}
 	}
-	if u := m.buildURL(daoCloudDownloadTpl, tag, sidecar); u != "" {
-		urls = append(urls, u)
-	}
-	// 最终回退：用官方 GitHub 资产 URL 的目录替换为校验文件名。
+	// 回退 A：用官方 GitHub 资产 URL 的目录替换为校验文件名。
 	if ghURL, _ := rel.Metadata["github.asset.url"].(string); ghURL != "" {
 		if idx := strings.LastIndex(ghURL, "/"); idx >= 0 {
 			urls = append(urls, ghURL[:idx+1]+sidecar)
 		}
+	}
+	// 回退 B：用仓库路径直接拼 GitHub 标准下载地址（不依赖 Metadata 中的资产 URL 字段）。
+	if tag != "" && m.repo != "" {
+		urls = append(urls, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.repo, tag, sidecar))
+	}
+	if len(urls) == 0 {
+		// 既无 tag 也无资产 URL，无法拼出任何镜像地址，明确记录原因而非静默失败。
+		logging.Warn("%s", i18n.T("log.updater_checksum_no_url", "Tag", tag))
+		return nil, false
 	}
 
 	for _, u := range urls {
