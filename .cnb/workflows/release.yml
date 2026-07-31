@@ -1,5 +1,5 @@
 "**":
-  # 自定义按钮可触发的事件：web_trigger_*
+  # 发布 Release（从 GitHub 下载 release 构建产物并发布到 CNB）
   web_trigger_release:
     - runner:
         tags: cnb:arch:amd64
@@ -78,18 +78,19 @@
             echo "下载完成："
             ls -lh "${DOWNLOAD_DIR}/"
 
-        # 生成发布内容（直接复用 GitHub Release 正文，下载链接替换为 CNB）
+        # 生成发布内容（直接复用 GitHub Release 正文，仓库内所有 GitHub 链接替换为 CNB）
         - name: 生成发布内容
           script: |
-            TAG="${INTERIOR_VERSION}"
-            GH_DL_PREFIX="https://github.com/dtapps/certflow/releases/download/${TAG}"
-            CNB_DL_PREFIX="https://cnb.cool/dtapp/certflow/-/releases/download/${TAG}"
-
             # 复用 GitHub Release 的完整正文（含其原有下载表格），
-            # 仅把下载链接前缀由 GitHub 替换为 CNB，避免单独生成表格导致与 GitHub 不同步
+            # 把所有指向该仓库的 GitHub 链接（下载/标签/仓库页）统一替换为 CNB，
+            # 避免单独生成表格导致与 GitHub 不同步。CNB 仓库路径为 dtapp/certflow
+            # 且带 /-/ 前缀，故替换仓库根而非仅下载前缀，避免漏掉如
+            # 「如需稳定版本，请使用 正式发布」这类指向 releases 发布页的链接。
+            GH_BASE="https://github.com/dtapps/certflow"
+            CNB_BASE="https://cnb.cool/dtapp/certflow/-"
             RELEASE_INFO=$(cat release_info.json)
             echo "$RELEASE_INFO" | jq -r '.body // ""' \
-              | sed "s#${GH_DL_PREFIX}#${CNB_DL_PREFIX}#g" \
+              | sed "s#${GH_BASE}#${CNB_BASE}#g" \
               > release_body.md
 
             cat release_body.md
