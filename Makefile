@@ -140,7 +140,7 @@ deps: ## 安装所有依赖
 	pnpm --dir ./frontend install
 	@echo "==> pnpm 安装所有依赖完成"
 
-# 	cd frontend && pnpm update --latest
+# 	pnpm --dir ./frontend update --latest
 update-deps: ## 更新所有依赖
 	@echo "==> 更新所有依赖..."
 

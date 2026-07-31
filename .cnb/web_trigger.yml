@@ -13,3 +13,17 @@ branch:
             description: 请输入版本号（例如 1.0.0）
             required: true
             type: input
+      - name: 发布 Nightly
+        description: 从 GitHub 下载 nightly 构建产物并发布到 CNB（预发布）
+        event: web_trigger_nightly
+        permissions:
+          roles:
+            - owner
+            - master
+            - developer
+        inputs:
+          overlying:
+            description: 叠加模式（true=更新已有 Release，false=删除后重建；首次发布请选 false）
+            required: false
+            type: boolean
+            default: true
