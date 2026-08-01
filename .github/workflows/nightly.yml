@@ -47,11 +47,14 @@ jobs:
         id: version
         shell: bash
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$PREV_TAG" ]; then
+          # 取最近的「稳定版」tag 作为 base（排除 nightly 自身，否则 git describe
+          # 会抓到 nightly 这个 tag → BASE_VERSION=nightly → 版本号变成 nightly-nightly）。
+          # 与下方 release job 的 PREV_STABLE_TAG 逻辑保持一致。
+          PREV_STABLE_TAG=$(git tag --sort=-v:refname | grep -v nightly | head -1)
+          if [ -z "$PREV_STABLE_TAG" ]; then
             BASE_VERSION="0.1.0"
           else
-            BASE_VERSION="${PREV_TAG#v}"
+            BASE_VERSION="${PREV_STABLE_TAG#v}"
           fi
           VERSION="${BASE_VERSION}-nightly"
           BUILD_TIME=$(bash scripts/get-build-time.sh)
