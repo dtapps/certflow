@@ -62,17 +62,19 @@ type mirrorProvider struct {
 	assetMatcher github.AssetMatcher
 	// nightlyTag 为固定预发布标签（默认 nightly）。
 	nightlyTag string
-	// installedBuildTime 为本机构建时间（ldflags 注入），用于避免把比本机
-	// 更旧的 nightly 也当成更新推送；为空时跳过该保护。
+	// installedBuildTime 为本机已安装二进制的构建时间（ldflags 注入）。
+	// nightly 时间对比直接用它对比「远端 SHA256SUMS 的 build_time」：
+	// 远端 build_time 不晚于本机 installedBuildTime 即视为已是最新（跳过）。
+	// 为空时（本地 dev 构建 / 未注入 ldflags）无法比对，nightly 检测直接跳过，避免循环更新。
 	installedBuildTime string
 }
 
 // newMirrorProvider 基于 github.Config 创建镜像 Provider。
 // client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
 // 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
-// installedBuildTime 为本机构建时间字符串（ldflags 注入），用于 nightly 更新时避免回退到更旧构建。
+// installedBuildTime 为本机已安装二进制的构建时间（ldflags 注入），nightly 时间对比用它对比
+// 远端 SHA256SUMS 的 build_time，为空时 nightly 检测直接跳过（无法比对，避免循环更新）。
 // cnbToken 为 CNB 只读 Token（ldflags 注入），预留给检测层走 CNB 鉴权 API（CNB 匿名 API 返回 401）。
-// currentVersion 为本机当前版本（ldflags 注入，不带 v），用于拼接 nightly 展示版本号避免 "vnightly"。
 func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTime string, cnbToken string) (*mirrorProvider, error) {
 	cfg.HTTPClient = client
 	gh, err := github.New(cfg)
@@ -139,7 +141,7 @@ func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*
 		return nil, err
 	}
 	// 中文：仅从 CNB 拉 SHA256SUMS（不回退 GitHub），失败则降级（下载本身仍走 CNB，仅跳过校验）。
-	if digest, ok := m.fetchChecksumViaMirror(ctx, rel, "SHA256SUMS"); ok {
+	if digest, _, ok := m.fetchChecksumViaMirror(ctx, rel, "SHA256SUMS"); ok {
 		rel.Verification = &updater.Verification{
 			DigestAlgo: "sha256",
 			Digest:     digest,
@@ -278,12 +280,6 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 	if draft {
 		return nil, nil
 	}
-	// 避免把比本机更旧的 nightly 当成更新推送。
-	if t := m.parseInstalled(); !t.IsZero() && publishedAt.Before(t) {
-		// 同时打印两端时间（均带时区），便于核对「为何跳过」（本地/UTC 不再混淆）。
-		logging.Debug("%s", i18n.T("log.updater_nightly_skipped", "PublishedAt", publishedAt.Format(time.RFC3339), "BuildTime", t.Format(time.RFC3339)))
-		return nil, nil
-	}
 
 	idx := m.assetMatcher(req, assets)
 	if idx < 0 || idx >= len(assets) {
@@ -324,16 +320,34 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 			out.Verification = &updater.Verification{DigestAlgo: "sha256", Digest: digest}
 		}
 	}
-	if out.Verification == nil {
-		if digest, ok := m.fetchChecksumViaMirror(ctx, out, "SHA256SUMS"); ok {
-			out.Verification = &updater.Verification{
-				DigestAlgo: "sha256",
-				Digest:     digest,
-			}
-		} else {
-			logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
-		}
+	// 从 SHA256SUMS 注释行读取 build_time：发布时写入的、带校验保障的时间基准，
+	// 作为 nightly 时间对比的权威时间（与 releases API 的 published_at 无关）。
+	// 旧版 SHA256SUMS 无 build_time 行 → bt 为零值 → 该 nightly 直接跳过（不回退更不可靠的来源）。
+	_, bt, ok := m.fetchChecksumViaMirror(ctx, out, "SHA256SUMS")
+	if !ok && out.Verification == nil {
+		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
 	}
+	if bt.IsZero() {
+		// 旧格式 / 解析失败：无法获得可靠 build_time，nightly 不提示更新，避免误判或循环。
+		logging.Debug("%s", i18n.T("log.updater_nightly_no_build_time"))
+		return nil, nil
+	}
+
+	// 本机已安装二进制的构建时间（ldflags 注入）。为空（dev 构建 / 未注入）则无法比对，
+	// 直接跳过，避免「每次都当新版本」的循环更新。
+	localBuildTime := m.parseInstalled()
+	if localBuildTime.IsZero() {
+		logging.Debug("%s", i18n.T("log.updater_nightly_no_local_build_time"))
+		return nil, nil
+	}
+	// 远端 nightly 的 build_time 不晚于本机已装 build_time → 已是最新，跳过。
+	if !bt.After(localBuildTime) {
+		logging.Debug("%s", i18n.T("log.updater_nightly_skipped", "PublishedAt", bt.Format(time.RFC3339), "BuildTime", localBuildTime.Format(time.RFC3339)))
+		return nil, nil
+	}
+
+	// 以 SHA256SUMS 的 build_time 作为发布时间（前端展示 / 日志统一语义）。
+	out.PublishedAt = bt
 	return out, nil
 }
 
@@ -538,12 +552,14 @@ func resetDst(dst io.Writer) {
 //   - 中文：仅 CNB（不回退 GitHub）；
 //   - 非中文：仅官方 GitHub（资产 URL 目录替换 / 标准仓库地址）。
 //
-// 解析出目标资产（rel.Artifact.Filename）的 sha256 摘要，成功即返回；失败返回 (nil, false)。
-func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, bool) {
+// 解析出目标资产（rel.Artifact.Filename）的 sha256 摘要，并同时读取 SHA256SUMS 注释行中
+// 发布的 build_time（发布时由 CI 写入，作为 nightly 时间对比的权威基准）。
+// 返回 (摘要, build_time, 是否成功)；build_time 解析失败时为 time.Time{}（调用方忽略）。
+func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, time.Time, bool) {
 	// 兜底：rel / Metadata 任一缺失都不应 panic（否则会拖垮主进程）。
 	if rel == nil || rel.Metadata == nil {
 		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
-		return nil, false
+		return nil, time.Time{}, false
 	}
 	tag, _ := rel.Metadata["github.release.tag"].(string)
 	target := rel.Artifact.Filename
@@ -570,7 +586,7 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 	if len(urls) == 0 {
 		// 既无 tag 也无资产 URL，无法拼出任何镜像地址，明确记录原因而非静默失败。
 		logging.Warn("%s", i18n.T("log.updater_checksum_no_url", "Tag", tag))
-		return nil, false
+		return nil, time.Time{}, false
 	}
 
 	for _, u := range urls {
@@ -580,12 +596,17 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 			logging.Warn("%s", i18n.T("log.updater_checksum_source_failed", "URL", u, "Error", err))
 			continue
 		}
-		if digest, ok := parseChecksumLine(string(body), target); ok {
-			return digest, true
+		digest, ok := parseChecksumLine(string(body), target)
+		if !ok {
+			logging.Warn("%s", i18n.T("log.updater_checksum_parse_failed", "URL", u, "Target", target))
+			continue
 		}
-		logging.Warn("%s", i18n.T("log.updater_checksum_parse_failed", "URL", u, "Target", target))
+		// 同时从 SHA256SUMS 的注释行读取发布时写入的 build_time，
+		// 作为 nightly 时间对比的权威基准（带校验、可靠，不依赖 releases API）。
+		bt := parseChecksumBuildTime(string(body))
+		return digest, bt, true
 	}
-	return nil, false
+	return nil, time.Time{}, false
 }
 
 // fetchText 从指定 URL 拉取文本内容（用于校验侧车文件）。
@@ -627,4 +648,33 @@ func parseChecksumLine(body, target string) ([]byte, bool) {
 		}
 	}
 	return nil, false
+}
+
+// parseChecksumBuildTime 从 sha256sum 风格的清单注释行中读取发布时写入的 build_time。
+// CI 生成 SHA256SUMS 时需追加一行：# build_time=2006-01-02T15:04:05Z（UTC，RFC3339）。
+// 该时间作为 nightly 版本时间对比的权威基准（带校验保障，不依赖 releases API 的 published_at）。
+// 未找到或解析失败返回 time.Time{}。
+func parseChecksumBuildTime(body string) time.Time {
+	for line := range strings.SplitSeq(body, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "#") {
+			continue
+		}
+		kv := strings.TrimSpace(strings.TrimPrefix(line, "#"))
+		// 容忍 "# build_time=xxx" 或 "#build_time=xxx"（= 前后可有空格）。
+		if !strings.HasPrefix(kv, "build_time") {
+			continue
+		}
+		rest := strings.TrimPrefix(kv, "build_time")
+		rest = strings.TrimPrefix(rest, "=")
+		rest = strings.TrimSpace(rest)
+		if t, err := time.Parse(time.RFC3339, rest); err == nil {
+			return t
+		}
+		// 容忍带空格/换行的其它写法，再试一次去引号。
+		if t, err := time.Parse(time.RFC3339, strings.Trim(rest, `"`)); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
 }

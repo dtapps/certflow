@@ -24,7 +24,8 @@ tasks:
       - task: '{{if and (eq OS "linux") (eq .HAS_CC "true") (eq .TARGET_ARCH ARCH)}}build:native{{else}}build:docker{{end}}'
         vars:
           ARCH: '{{.ARCH}}'
-          DEV: '{{.DEV}}'
+          # PRODUCTION=true 时强制 DEV=false（对齐 wailsapp/wails#4422，CI 仅传 PRODUCTION）
+          DEV: '{{if eq .PRODUCTION "true"}}false{{else}}{{.DEV}}{{end}}'
           OUTPUT: '{{.OUTPUT}}'
           EXTRA_TAGS: '{{.EXTRA_TAGS}}'
           OBFUSCATED: '{{.OBFUSCATED}}'

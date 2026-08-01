@@ -605,6 +605,8 @@
   "log.updater_nightly_cnb_unreachable": "CNB nightly check unreachable ({{.Error}}), treated as no update",
   "log.updater_nightly_failed": "Failed to fetch nightly prerelease: {{.Error}}",
   "log.updater_nightly_no_asset": "nightly release {{.Tag}} has no asset for {{.Platform}}/{{.Arch}}",
+  "log.updater_nightly_no_build_time": "SHA256SUMS has no build_time (old format), nightly update skipped",
+  "log.updater_nightly_no_local_build_time": "local build_time not injected (dev build), nightly update skipped",
   "log.updater_nightly_skipped": "nightly prerelease published at {{.PublishedAt}} is older than local build ({{.BuildTime}}), skipped",
   "log.updater_ready": "Update ready, preparing to restart",
   "log.updater_release_missing_metadata": "release missing metadata",

@@ -312,6 +312,8 @@
   "log.updater_nightly_cnb_unreachable": "CNB 检测 nightly 不可达（{{.Error}}），视为无更新",
   "log.updater_nightly_cnb_unauthorized": "CNB 鉴权失败（token 无效或无权限），HTTP 401",
   "log.updater_nightly_skipped": "nightly 预发布发布时间（{{.PublishedAt}}）早于本机构建（{{.BuildTime}}），跳过",
+  "log.updater_nightly_no_build_time": "SHA256SUMS 不含 build_time（旧格式），nightly 不提示更新",
+  "log.updater_nightly_no_local_build_time": "本机未注入 build_time（dev 构建），nightly 不提示更新",
   "log.updater_download_all_failed": "所有下载源均失败",
   "log.updater_download_size_mismatch": "下载大小不符：期望 {{.Expected}}，实际 {{.Actual}}",
   "log.updater_github_api_error": "GitHub API 返回 {{.Status}}：{{.Body}}",

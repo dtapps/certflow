@@ -62,7 +62,27 @@ permissions:
   contents: write
 
 jobs:
+  # 统一生成构建参数（BUILD_TIME / GIT_COMMIT），确保「所有平台注入的 build_time」
+  # 与「SHA256SUMS 写入的 build_time」是同一时刻的同一个值，供客户端 nightly 时间对比对齐。
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      build_time: ${{ steps.gen.outputs.build_time }}
+      git_commit: ${{ steps.gen.outputs.git_commit }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+      - name: 生成构建参数
+        id: gen
+        shell: bash
+        run: |
+          echo "build_time=$(bash scripts/get-build-time.sh)" >> $GITHUB_OUTPUT
+          echo "git_commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -112,22 +132,24 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
 
-      # 生成构建参数（BUILD_TIME 和 GIT_COMMIT 供后续步骤统一使用）
-      - name: 生成构建参数
+      # 构建参数（BUILD_TIME / GIT_COMMIT）已由 prepare job 统一生成，这里直接引用，
+      # 保证所有平台注入的 build_time 与 SHA256SUMS 写入的 build_time 完全一致。
+      - name: 打印构建参数
         if: ${{ matrix.enabled }}
-        id: build
         shell: bash
         run: |
-          echo "build_time=$(bash scripts/get-build-time.sh)" >> $GITHUB_OUTPUT
-          echo "git_commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "BUILD_TIME=${{ needs.prepare.outputs.build_time }}"
+          echo "VERSION=${{ inputs.version }}"
+          echo "GIT_COMMIT=${{ needs.prepare.outputs.git_commit }}"
+          echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
       - name: 打印构建参数
         if: ${{ matrix.enabled }}
         shell: bash
         run: |
-          echo "BUILD_TIME=${{ steps.build.outputs.build_time }}"
+          echo "BUILD_TIME=${{ needs.prepare.outputs.build_time }}"
           echo "VERSION=${{ inputs.version }}"
-          echo "GIT_COMMIT=${{ steps.build.outputs.git_commit }}"
+          echo "GIT_COMMIT=${{ needs.prepare.outputs.git_commit }}"
           echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
       - name: 打印系统信息
@@ -286,7 +308,7 @@ jobs:
           if [ -n "$EXTRA_TAGS" ]; then
             EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
           fi
-          wails3 task build BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
+          wails3 task build BUILD_TIME=${{ needs.prepare.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       - name: 打包
         if: ${{ matrix.enabled }}
@@ -296,7 +318,7 @@ jobs:
           if [ -n "$EXTRA_TAGS" ]; then
             EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
           fi
-          wails3 task package BUILD_TIME=${{ steps.build.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
+          wails3 task package BUILD_TIME=${{ needs.prepare.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
       - name: macOS 签名与公证
@@ -437,7 +459,7 @@ jobs:
 
   # 所有平台构建完成后，发布 GitHub Release
   release:
-    needs: build
+    needs: [build, prepare]
     runs-on: ubuntu-latest
 
     env:
@@ -464,11 +486,16 @@ jobs:
         shell: bash
         run: |
           cd release
+          # 先排除旧的 SHA256SUMS 自身，避免自包含
+          rm -f SHA256SUMS
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum * > SHA256SUMS
           else
             shasum -a 256 * > SHA256SUMS
           fi
+          # 写入构建时间（与注入二进制的 BUILD_TIME 完全一致，UTC, RFC3339），
+          # 供客户端对比「远端 SHA256SUMS 的 build_time」与「本机已装二进制 build_time」。
+          echo "# build_time=${{ needs.prepare.outputs.build_time }}" >> SHA256SUMS
           echo "SHA256SUMS："
           cat SHA256SUMS
 

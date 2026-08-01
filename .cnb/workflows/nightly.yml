@@ -94,15 +94,20 @@
 
             cat release_body.md
 
-        # 删除已存在的 nightly Release（按 tag 查询，存在则删），避免旧附件堆积、
-        # nightly 固定排序（始终删除后重建）。CNB_TOKEN / CNB_API_ENDPOINT 由流水线自动注入。
-        - name: 删除已存在的 nightly Release
+        # 删除已存在的 nightly（Release + Tag），再重建，避免旧附件堆积、
+        # nightly 固定排序。两步均调用 CNB Open API，CNB_TOKEN 需 repo-release:rw 权限，
+        # CNB_API_ENDPOINT 由流水线自动注入。注意：DeleteTag 不会自动删 Release，
+        # DeleteRelease 也不会自动删 Tag，所以两个对象必须分别删除。
+        - name: 删除已存在的 nightly Release 与 Tag
           shell: true
           script: |
             set -e
             API="${CNB_API_ENDPOINT%/}"
             REPO="dtapp/certflow"
             TAG="nightly"
+
+            # ---- 第 1 步：删除 Release（发行版） ----
+            # 查询：GET /-/releases/tags/{tag}  → 200 存在 / 404 不存在
             echo "查询是否已存在 nightly release ..."
             HTTP=$(curl -s -o /tmp/nr.json -w "%{http_code}" \
               -H "Authorization: Bearer $CNB_TOKEN" \
@@ -111,12 +116,38 @@
             if [ "$HTTP" = "200" ]; then
               ID=$(jq -r '.id // .release_id // empty' /tmp/nr.json)
               echo "nightly release 已存在 (id=$ID)，删除后重新发布"
-              curl -s -X DELETE -H "Authorization: Bearer $CNB_TOKEN" "$API/$REPO/-/releases/$ID"
-              echo "已删除旧 nightly release"
+              # 删除：DELETE /-/releases/{id}  → 成功返回 204/200
+              DEL=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+                -H "Authorization: Bearer $CNB_TOKEN" \
+                -H "Accept: application/vnd.cnb.api+json" \
+                "$API/$REPO/-/releases/$ID")
+              if [ "$DEL" = "204" ] || [ "$DEL" = "200" ]; then
+                echo "已删除旧 nightly release"
+              else
+                echo "删除 nightly release 失败 HTTP=$DEL"; exit 1
+              fi
             elif [ "$HTTP" = "404" ]; then
               echo "nightly release 不存在，直接发布"
             else
               echo "查询 nightly release 失败 HTTP=$HTTP"; cat /tmp/nr.json; exit 1
+            fi
+
+            # ---- 第 2 步：删除 Git Tag（标签） ----
+            # 删除：DELETE /-/tags/{repo}/{tag}  → 204 成功 / 404 不存在
+            # 该接口仅删 tag，不删关联 Release，故需在第 1 步之外单独删除。
+            echo "删除同名 nightly tag ..."
+            TAG_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X DELETE \
+              -H "Authorization: Bearer $CNB_TOKEN" \
+              -H "Accept: application/vnd.cnb.api+json" \
+              "$API/$REPO/-/tags/$TAG")
+            if [ "$TAG_HTTP" = "204" ] || [ "$TAG_HTTP" = "200" ]; then
+              echo "已删除旧 nightly tag"
+            elif [ "$TAG_HTTP" = "404" ]; then
+              echo "nightly tag 不存在，跳过"
+            else
+              # 删 tag 失败不阻断发布（后续 git:release 会在已有 tag 上重建）
+              echo "删除 nightly tag 失败 HTTP=$TAG_HTTP（继续发布）"
             fi
 
         # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
