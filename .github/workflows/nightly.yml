@@ -246,7 +246,11 @@ jobs:
           fi
 
           # Linux: 升级专用文件（updater- 前缀，不在下载表格显示）
-          if [ -f "certflow" ]; then
+          # 用 $PLATFORM 守卫，避免 macOS/Windows 上残留的裸二进制 certflow 被误判为
+          # Linux 产物（每个 matrix job 只构建一个平台）。macOS 升级文件必须是 .app 归档
+          # （见上方 223 行分支），绝不能把裸二进制打成 tar.gz 当升级包，否则自更新会
+          # 用裸二进制替换 .app 目录，导致「无法打开应用程序」。
+          if [ "$PLATFORM" = "linux" ] && [ -f "certflow" ]; then
             tar -czf "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.tar.gz" certflow
             mv "updater-CertFlow-${VERSION}-${PLATFORM}-${ARCH}.tar.gz" renamed/
           fi

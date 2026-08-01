@@ -4,12 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,31 +20,23 @@ import (
 // 中文用户的镜像策略（检测/下载/校验三层一致，按语言选择首选源）：
 //   - 英文用户：版本检测、下载、校验均优先官方 GitHub（github provider 原始行为）。
 //   - 中文用户：版本检测优先 CNB 鉴权 API（需 cnbToken），下载按
-//     CNB → daocloud 代理 → 官方 GitHub 顺序回退，校验 SHA256SUMS 同样走镜像；
+//     CNB → 官方 GitHub 顺序回退，校验 SHA256SUMS 同样走镜像；
 //     任一级失败（HTTP 非 2xx 或文件大小不符）自动降级下一级。
 // 即检测层与下载层采用同一套「按语言选首选源 + 失败回退」策略，而非固定 GitHub 优先。
 //
 // 注：CNB 不是标准 GitHub API 兼容镜像，其 release 资源下载路径与 GitHub 仓库
 // 不同（CNB 仓库为 dtapp/certflow，GitHub 为 dtapps/certflow），故两个模板均写死
-// 仓库路径；即便地址暂不正确，也会自动回退到 daocloud/官方。
+// 仓库路径；即便地址暂不正确，也会自动回退到官方。
 
 const (
 	// cnbDownloadTpl：CNB 镜像的 release 资源下载地址模板（写死仓库 dtapp/certflow）。
 	// 占位符：{tag} {file}
 	cnbDownloadTpl = "https://cnb.cool/dtapp/certflow/-/releases/download/{tag}/{file}"
 
-	// daoCloudDownloadTpl：daocloud 的 GitHub 文件代理，路径与 GitHub 一致（dtapps/certflow）。
-	// 占位符：{tag} {file}
-	daoCloudDownloadTpl = "https://files.m.daocloud.io/github.com/dtapps/certflow/releases/download/{tag}/{file}"
-
 	// cnbAPIBase：CNB OpenAPI 基地址（鉴权后按 tag 拉 release 元数据）。
 	// 匿名访问返回 401，必须带 cnbToken（Authorization: Bearer）。仓库固定 dtapp/certflow。
 	cnbAPIBase = "https://api.cnb.cool"
 )
-
-// errSourceUnavailable 表示某检测源当前不可用（如未配置 cnbToken、CNB 鉴权失败），
-// 编排器据此回退到备选检测源，而非直接报错。
-var errSourceUnavailable = errors.New("source unavailable")
 
 // mirrorProvider 包装 github.Provider，仅重写下載地址。
 type mirrorProvider struct {
@@ -125,7 +114,7 @@ func (m *mirrorProvider) Name() string { return "github-mirror" }
 
 // Check 版本检测按语言选择首选源，与下载/校验镜像策略一致：
 //   - 英文用户：直接使用官方 GitHub（含 SHA256SUMS 校验，原始行为）。
-//   - 中文用户：用 checkProvider 检测版本（不抓校验），再从 CNB → daocloud
+//   - 中文用户：用 checkProvider 检测版本（不抓校验），再从 CNB
 //     → 官方 GitHub 顺序拉 SHA256SUMS 并填充 Verification。
 //
 // nightly 预发布检测见 checkNightly（同样按语言选首选源）。
@@ -149,7 +138,7 @@ func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	// 中文：从镜像拉 SHA256SUMS，失败则降级（下载本身仍走镜像，仅跳过校验）。
+	// 中文：仅从 CNB 拉 SHA256SUMS（不回退 GitHub），失败则降级（下载本身仍走 CNB，仅跳过校验）。
 	if digest, ok := m.fetchChecksumViaMirror(ctx, rel, "SHA256SUMS"); ok {
 		rel.Verification = &updater.Verification{
 			DigestAlgo: "sha256",
@@ -161,49 +150,24 @@ func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*
 	return rel, nil
 }
 
-// checkNightly 检测 nightly 预发布更新。检测源选择与下载/校验镜像策略一致：
-// 按界面语言选择首选源，首选源不可用（未配置 token / 鉴权失败）或网络不可达时
-// 回退备选源；两端都未发布 nightly 时回退稳定版。
-//   - 英文用户：官方 GitHub 优先，失败回退 CNB（需 cnbToken）；
-//   - 中文用户：CNB 镜像优先（需 cnbToken），失败回退官方 GitHub。
+// checkNightly 检测 nightly 预发布更新。检测源按界面语言**单一固定**，不混用、
+// 不跨源回退（避免「用了 CNB 又用 GitHub」）：
+//   - 英文用户：仅官方 GitHub；
+//   - 中文用户：仅 CNB（需 cnbToken，匿名 401 / 网络不可达即视为「无更新」）。
 //
 // 仅在 Prerelease=true 时由 Check 调用。
 //   - 返回 (rel, nil)：成功找到可用 nightly；
-//   - 返回 (nil, nil)：无可用 nightly（两端都未发布 / 草稿 / 比本机更旧 / 均不可用），
+//   - 返回 (nil, nil)：无可用 nightly（该源未发布 / 草稿 / 比本机更旧 / 源不可用），
 //     调用方据此回退稳定版；
-//   - 返回 (nil, err)：两端均意外失败（如响应解码失败，非网络/非源不可用错误）。
+//   - 返回 (nil, err)：响应解码等致命错误（非源不可用、非网络错误）。
 func (m *mirrorProvider) checkNightly(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
 	enUS := i18n.GetLocale() == string(i18n.EN_US)
 
-	// 按语言决定首选/备选检测源（与下载/校验镜像策略一致）。
-	primary, secondary := m.checkNightlyGitHub, m.checkNightlyCNB
-	primaryName, secondaryName := "GitHub", "CNB"
-	if !enUS {
-		primary, secondary = m.checkNightlyCNB, m.checkNightlyGitHub
-		primaryName, secondaryName = "CNB", "GitHub"
+	// 按语言选单一检测源，不做跨源回退。
+	if enUS {
+		return m.checkNightlyGitHub(ctx, req)
 	}
-
-	rel, err := primary(ctx, req)
-	if err == nil {
-		if rel != nil {
-			return rel, nil
-		}
-		// 首选源无可用 nightly（404 / 草稿 / 比本机更旧）：降级为 DEBUG 提示，
-		// 并给备选源一次确认机会（两端发布可能不同步）。此场景属正常「无更新」，
-		// 不应告警，避免与真正「源不可用/网络错误」回退混淆。
-		logging.Debug("%s", i18n.T("log.updater_nightly_skip_primary",
-			"Primary", primaryName, "Secondary", secondaryName))
-		return secondary(ctx, req)
-	}
-	if !errors.Is(err, errSourceUnavailable) && !isNetworkError(err) {
-		// 致命错误（响应解码失败等），不回退，直接上报。
-		return nil, err
-	}
-
-	// 首选源不可用或网络不可达，回退备选源（告警级）。
-	logging.Warn("%s", i18n.T("log.updater_nightly_fallback",
-		"Primary", primaryName, "Secondary", secondaryName))
-	return secondary(ctx, req)
+	return m.checkNightlyCNB(ctx, req)
 }
 
 // checkNightlyGitHub 直接按 nightlyTag 拉取 GitHub 预发布 Release，跳过 github
@@ -255,8 +219,10 @@ func (m *mirrorProvider) checkNightlyGitHub(ctx context.Context, req updater.Che
 func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
 	tag := m.nightlyTag
 	if m.cnbToken == "" {
-		// 未配置 cnbToken 时 CNB 检测不可用，交由编排器回退 GitHub。
-		return nil, fmt.Errorf("%w: %s", errSourceUnavailable, i18n.T("log.updater_nightly_cnb_no_token"))
+		// 未配置 cnbToken：中文用户检测层仅用 CNB，无 token 即视为「无更新」，
+		// 不再回退 GitHub（按需求单一源、不混用）。
+		logging.Debug("%s", i18n.T("log.updater_nightly_cnb_no_token"))
+		return nil, nil
 	}
 	u := cnbAPIBase + "/dtapp/certflow/-/releases/tags/" + tag
 
@@ -269,7 +235,9 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 
 	resp, err := m.client.Do(httpReq)
 	if err != nil {
-		return nil, err
+		// CNB 网络不可达：视为「无更新」（不回退 GitHub），仅告警便于排查。
+		logging.Warn("%s", i18n.T("log.updater_nightly_cnb_unreachable", "Error", err))
+		return nil, nil
 	}
 	defer resp.Body.Close()
 
@@ -277,11 +245,12 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 	case http.StatusOK:
 		// 继续解析
 	case http.StatusNotFound:
-		// CNB 上尚无 nightly（可能 GitHub 也还没发布），回退稳定版。
+		// CNB 上尚无 nightly，回退稳定版。
 		return nil, nil
 	case http.StatusUnauthorized:
-		// token 无效或无权限，回退备选源。
-		return nil, fmt.Errorf("%w: %s", errSourceUnavailable, i18n.T("log.updater_nightly_cnb_unauthorized"))
+		// token 无效或无权限：告警后视为「无更新」，不回退 GitHub。
+		logging.Warn("%s", i18n.T("log.updater_nightly_cnb_unauthorized"))
+		return nil, nil
 	default:
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, fmt.Errorf("%s", i18n.T("log.updater_cnb_api_error", "Status", resp.StatusCode, "Body", string(body)))
@@ -345,7 +314,7 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 		},
 	}
 	// 校验摘要：优先使用选中资产自带的 sha256 摘要（CNB 提供）；
-	// 否则从镜像拉 SHA256SUMS 侧车文件（CNB→daocloud→GitHub），全失败则降级跳过校验。
+	// 否则从镜像拉 SHA256SUMS 侧车文件（CNB→GitHub），全失败则降级跳过校验。
 	var inlineHash string
 	if idx >= 0 && idx < len(assetHashes) {
 		inlineHash = assetHashes[idx]
@@ -403,24 +372,6 @@ func asReleaseAssetsCNB(assets []cnbReleaseAsset) []github.ReleaseAsset {
 		}
 	}
 	return out
-}
-
-// isNetworkError 判断错误是否源于网络不可达（断网 / DNS / 超时 / 连接拒绝 /
-// 上下文取消或超时），用于决定 nightly 检测是否回退到 CNB。
-func isNetworkError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if _, ok := errors.AsType[*url.Error](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[net.Error](err); ok {
-		return true
-	}
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return true
-	}
-	return false
 }
 
 // parseInstalled 解析本机构建时间（ldflags 注入的 ISO 8601 字符串）。
@@ -490,8 +441,8 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 
 	tag, _ := rel.Metadata["github.release.tag"].(string)
 	file := rel.Artifact.Filename
-	ghURL, _ := rel.Metadata["github.asset.url"].(string)
 
+	// 中文：仅从 CNB 下载（不回退 GitHub）。CNB 不可用即下载失败。
 	type candidate struct {
 		source string
 		url    string
@@ -499,12 +450,6 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 	var candidates []candidate
 	if u := m.buildURL(cnbDownloadTpl, tag, file); u != "" {
 		candidates = append(candidates, candidate{"cnb", u})
-	}
-	if u := m.buildURL(daoCloudDownloadTpl, tag, file); u != "" {
-		candidates = append(candidates, candidate{"daocloud", u})
-	}
-	if ghURL != "" {
-		candidates = append(candidates, candidate{"github", ghURL})
 	}
 
 	for _, c := range candidates {
@@ -589,9 +534,11 @@ func resetDst(dst io.Writer) {
 	}
 }
 
-// fetchChecksumViaMirror 从 CNB → daocloud → 官方 GitHub 顺序拉取校验侧车文件
-// （如 SHA256SUMS），解析出目标资产（rel.Artifact.Filename）的 sha256 摘要。
-// 任一级成功解析即返回；全部失败返回 (nil, false)。
+// fetchChecksumViaMirror 按语言单一源拉取校验侧车文件（如 SHA256SUMS）：
+//   - 中文：仅 CNB（不回退 GitHub）；
+//   - 非中文：仅官方 GitHub（资产 URL 目录替换 / 标准仓库地址）。
+//
+// 解析出目标资产（rel.Artifact.Filename）的 sha256 摘要，成功即返回；失败返回 (nil, false)。
 func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, bool) {
 	// 兜底：rel / Metadata 任一缺失都不应 panic（否则会拖垮主进程）。
 	if rel == nil || rel.Metadata == nil {
@@ -602,23 +549,23 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 	target := rel.Artifact.Filename
 
 	var urls []string
-	if tag != "" {
-		if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
-			urls = append(urls, u)
+	if i18n.GetLocale() == string(i18n.EN_US) {
+		// 非中文：仅官方 GitHub（资产 URL 目录替换 / 标准仓库地址）。
+		if ghURL, _ := rel.Metadata["github.asset.url"].(string); ghURL != "" {
+			if idx := strings.LastIndex(ghURL, "/"); idx >= 0 {
+				urls = append(urls, ghURL[:idx+1]+sidecar)
+			}
 		}
-		if u := m.buildURL(daoCloudDownloadTpl, tag, sidecar); u != "" {
-			urls = append(urls, u)
+		if tag != "" && m.repo != "" {
+			urls = append(urls, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.repo, tag, sidecar))
 		}
-	}
-	// 回退 A：用官方 GitHub 资产 URL 的目录替换为校验文件名。
-	if ghURL, _ := rel.Metadata["github.asset.url"].(string); ghURL != "" {
-		if idx := strings.LastIndex(ghURL, "/"); idx >= 0 {
-			urls = append(urls, ghURL[:idx+1]+sidecar)
+	} else {
+		// 中文：仅 CNB（不回退 GitHub）。
+		if tag != "" {
+			if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
+				urls = append(urls, u)
+			}
 		}
-	}
-	// 回退 B：用仓库路径直接拼 GitHub 标准下载地址（不依赖 Metadata 中的资产 URL 字段）。
-	if tag != "" && m.repo != "" {
-		urls = append(urls, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.repo, tag, sidecar))
 	}
 	if len(urls) == 0 {
 		// 既无 tag 也无资产 URL，无法拼出任何镜像地址，明确记录原因而非静默失败。

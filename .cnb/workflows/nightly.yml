@@ -12,11 +12,8 @@
             version="nightly"
             echo "Nightly 标签: $version"
             echo "##[set-output interior_version=$version]"
-            # 叠加模式：true=更新已有 Release，false=删除后重建（首次发布需 false）
-            echo "##[set-output overlying=${overlying}]"
           exports:
             interior_version: INTERIOR_VERSION
-            overlying: OVERLYING
 
         - name: 从 GitHub Release 下载构建产物
           script: |
@@ -97,6 +94,31 @@
 
             cat release_body.md
 
+        # 删除已存在的 nightly Release（按 tag 查询，存在则删），避免旧附件堆积、
+        # nightly 固定排序（始终删除后重建）。CNB_TOKEN / CNB_API_ENDPOINT 由流水线自动注入。
+        - name: 删除已存在的 nightly Release
+          shell: true
+          script: |
+            set -e
+            API="${CNB_API_ENDPOINT%/}"
+            REPO="dtapp/certflow"
+            TAG="nightly"
+            echo "查询是否已存在 nightly release ..."
+            HTTP=$(curl -s -o /tmp/nr.json -w "%{http_code}" \
+              -H "Authorization: Bearer $CNB_TOKEN" \
+              -H "Accept: application/vnd.cnb.api+json" \
+              "$API/$REPO/-/releases/tags/$TAG")
+            if [ "$HTTP" = "200" ]; then
+              ID=$(jq -r '.id // .release_id // empty' /tmp/nr.json)
+              echo "nightly release 已存在 (id=$ID)，删除后重新发布"
+              curl -s -X DELETE -H "Authorization: Bearer $CNB_TOKEN" "$API/$REPO/-/releases/$ID"
+              echo "已删除旧 nightly release"
+            elif [ "$HTTP" = "404" ]; then
+              echo "nightly release 不存在，直接发布"
+            else
+              echo "查询 nightly release 失败 HTTP=$HTTP"; cat /tmp/nr.json; exit 1
+            fi
+
         # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
         - name: 创建 Release
           type: git:release
@@ -105,7 +127,7 @@
             title: "Nightly Build"
             descriptionFromFile: release_body.md
             preRelease: true
-            overlying: ${OVERLYING}
+            overlying: false
 
         # https://docs.cnb.cool/zh/plugin/public/cnbcool/attachments.html
         - name: 上传 Release 附件
