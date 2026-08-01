@@ -112,6 +112,17 @@ jobs:
           echo "内核版本: $(uname -r)"
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
 
+      # 缓存 apt 已下载的 .deb 包，避免每次 apt-get install 重新从源拉取
+      # libgtk-4-dev / libwebkitgtk-6.0-dev 等大依赖（ubuntu runner 有效）。
+      - name: 缓存 apt 包
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            apt-${{ runner.os }}-
+
       - name: 安装系统依赖
         if: runner.os == 'Linux'
         run: |
@@ -124,30 +135,75 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      # 缓存 Go module 下载（GOMODCACHE），让 go mod download / wails3 go install
+      # 命中已下载的模块，避免重复从 proxy 拉取。
+      - name: 缓存 Go module 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOMODCACHE }}
+          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-mod-
+
+      # 缓存 Go 编译缓存（~/.cache/go-build），避免每次全量重编。
+      # GOCACHE 跨平台路径不同，用 go env 动态取。
+      - name: 缓存 Go build 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-
+
       - name: 下载 Go 依赖
         run: go mod download
+
+      # 缓存 wails3 CLI 二进制（go install 每次从源码编译很慢）。
+      # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
+      - name: 缓存 wails3 二进制
+        id: cache-wails3
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOBIN }}/wails3${{ runner.os == 'Windows' && '.exe' || '' }}
+          key: wails3-${{ runner.os }}-${{ hashFiles('go.mod') }}
+
+      - name: 安装 Wails3
+        if: steps.cache-wails3.outputs.cache-hit != 'true'
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: 安装 pnpm
         uses: pnpm/action-setup@v6
         with:
           package_json_file: 'frontend/package.json'
-          cache: true
-          cache_dependency_path: 'frontend/pnpm-lock.yaml'
 
+      # 用 setup-node 的 cache 直接缓存 frontend/node_modules（按 lockfile hash），
+      # 比 pnpm/action-setup 的 cache:true（仅缓存 pnpm store）更快，pnpm install 命中后秒过。
       - name: 安装 Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: 'frontend/.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: 安装前端依赖
         run: pnpm install
         working-directory: frontend
 
-      - name: 安装 Wails3
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-
       - name: 检查构建环境
         run: wails3 doctor
+
+      # 缓存 Chocolatey 已装包（nsis 每次从网络下载很慢）。
+      # 命中后下方 choco install 会自动 detect 已安装并跳过下载；写 PATH 的步骤仍需执行。
+      - name: 缓存 Chocolatey 包
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\ProgramData\chocolatey\lib
+            C:\ProgramData\chocolatey\bin
+          key: choco-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            choco-${{ runner.os }}-
 
       - name: 安装 NSIS
         if: runner.os == 'Windows'
