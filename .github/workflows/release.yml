@@ -123,6 +123,11 @@ jobs:
       SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
       SIGN_THUMBPRINT: ${{ secrets.WINDOWS_SIGN_THUMBPRINT }}
       TIMESTAMP_SERVER: ${{ secrets.WINDOWS_TIMESTAMP_SERVER }}
+      # macOS 签名/公证所需证书（同样在 workflow 级定义，才能在步骤 if 中通过 env context 判断；
+      # 若定义在步骤级 env，则 if 求值时该 env 尚未设置，会永远为空导致签名步骤永远跳过）。
+      APPLE_DEVELOPER_ID_CERTIFICATE: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE }}
+      APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+      APPLE_NOTARIZER_KEYCHAIN_PROFILE: ${{ secrets.APPLE_NOTARIZER_KEYCHAIN_PROFILE }}
 
     steps:
       # 检出代码（必须在版本号生成之前）
@@ -190,18 +195,22 @@ jobs:
         if: ${{ matrix.enabled }}
         uses: actions/cache@v4
         with:
-          path: ${{ env.GOMODCACHE }}
+          # 注意：setup-go 不会注入 GOMODCACHE / GOCACHE 环境变量（仅注入 GOPATH 等），
+          # 故 path 必须用确定表达式（HOME + 默认 GOPATH/pkg/mod），不能写 ${{ env.GOMODCACHE }}，
+          # 否则 env 为空导致 actions/cache 报 "Input required and not supplied: path"。
+          path: ${{ format('{0}/go/pkg/mod', env.HOME) }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-mod-
 
-      # 缓存 Go 编译缓存（~/.cache/go-build），避免每次全量重编。
-      # GOCACHE 跨平台路径不同，用 go env 动态取（setup-go 已注入 env）。
+      # 缓存 Go 编译缓存（~/.cache/go-build 等），避免每次全量重编。
+      # GOCACHE 跨平台路径不同：Windows %LocalAppData%/go-build，macOS ~/Library/Caches/go-build，
+      # Linux ~/.cache/go-build；同样不能用 ${{ env.GOCACHE }}（setup-go 未注入）。
       - name: 缓存 Go build 缓存
         if: ${{ matrix.enabled }}
         uses: actions/cache@v4
         with:
-          path: ${{ env.GOCACHE }}
+          path: ${{ runner.os == 'Windows' && format('{0}\\AppData\\Local\\go-build', env.HOME) || runner.os == 'macOS' && format('{0}/Library/Caches/go-build', env.HOME) || format('{0}/.cache/go-build', env.HOME) }}
           key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-build-
@@ -233,17 +242,43 @@ jobs:
 
       # 缓存 wails3 CLI 二进制（go install 每次从源码编译很慢）。
       # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
+      # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
+      # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
       - name: 缓存 wails3 二进制
         id: cache-wails3
         if: ${{ matrix.enabled }}
         uses: actions/cache@v4
         with:
-          path: ${{ env.GOBIN }}/wails3${{ runner.os == 'Windows' && '.exe' || '' }}
+          path: ${{ env.GO_BIN_DIR }}/wails3${{ runner.os == 'Windows' && '.exe' || '' }}
           key: wails3-${{ runner.os }}-${{ hashFiles('go.mod') }}
+
+      # 统一计算 Go 工具链目录并写入 $GITHUB_ENV，供后续所有步骤用 ${{ env.GO_PATH_DIR }}/${{ env.GO_BIN_DIR }} 引用。
+      # 必须在步骤级 shell 里算（workflow 级 env 不允许用 runner/env context），避免重复写长表达式。
+      - name: 设置 Go 工具链目录
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            printf '%s\n' 'GO_PATH_DIR=C:\Users\runneradmin\go' >> "$GITHUB_ENV"
+            printf '%s\n' 'GO_BIN_DIR=C:\Users\runneradmin\go\bin' >> "$GITHUB_ENV"
+          else
+            printf '%s\n' "GO_PATH_DIR=$HOME/go" >> "$GITHUB_ENV"
+            printf '%s\n' "GO_BIN_DIR=$HOME/go/bin" >> "$GITHUB_ENV"
+          fi
 
       - name: 安装 Wails3
         if: ${{ matrix.enabled && steps.cache-wails3.outputs.cache-hit != 'true' }}
+        env:
+          # 必须同时钉 GOPATH 和 GOBIN：CI 容器里 setup-go 把 GOPATH 默认设为只读的 /go，
+          # 仅设 GOBIN 无法覆盖，go install 仍会去写 /go 导致 "mkdir /go: read-only file system"。
+          # 二者统一指向 $HOME/go（可写），与上方 wails3 缓存 path 保持一致。
+          GOPATH: ${{ env.GO_PATH_DIR }}
+          GOBIN: ${{ env.GO_BIN_DIR }}
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      # 把 GOBIN（$HOME/go/bin）加入 PATH，否则后续 wails3 doctor / wails3 task build 会 command not found。
+      # setup-go 只把它的 GOPATH(/go/bin) 加进 PATH，与我们安装目录不一致，必须显式追加。
+      - name: 将 GOBIN 加入 PATH
+        run: echo "${{ env.GO_BIN_DIR }}" >> $GITHUB_PATH
 
       - name: 检查构建环境
         if: ${{ matrix.enabled }}
@@ -361,6 +396,10 @@ jobs:
       - name: 构建
         if: ${{ matrix.enabled }}
         shell: bash
+        # wails3 task build 内部会调用 go 编译，必须覆盖 setup-go 注入的只读 GOPATH(/go)，否则写 /go 失败。
+        env:
+          GOPATH: ${{ env.GO_PATH_DIR }}
+          GOBIN: ${{ env.GO_BIN_DIR }}
         run: |
           EXTRA_ARGS=""
           if [ -n "$EXTRA_TAGS" ]; then
@@ -371,6 +410,10 @@ jobs:
       - name: 打包
         if: ${{ matrix.enabled }}
         shell: bash
+        # wails3 task package 内部同样调用 go，需可写 GOPATH（覆盖 setup-go 的只读 /go）。
+        env:
+          GOPATH: ${{ env.GO_PATH_DIR }}
+          GOBIN: ${{ env.GO_BIN_DIR }}
         run: |
           EXTRA_ARGS=""
           if [ -n "$EXTRA_TAGS" ]; then
@@ -380,11 +423,8 @@ jobs:
 
       # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
       - name: macOS 签名与公证
+        # 判断用 workflow 级 env（已在 workflow env 中由 secret 赋值），步骤级 env 在 if 求值时尚不存在。
         if: ${{ matrix.enabled && runner.os == 'macOS' && env.APPLE_DEVELOPER_ID_CERTIFICATE != '' }}
-        env:
-          APPLE_DEVELOPER_ID_CERTIFICATE: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE }}
-          APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
-          APPLE_NOTARIZER_KEYCHAIN_PROFILE: ${{ secrets.APPLE_NOTARIZER_KEYCHAIN_PROFILE }}
         shell: bash
         run: |
           wails3 task darwin:sign:notarize
