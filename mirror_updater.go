@@ -17,19 +17,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
-// 中文用户的镜像策略（检测/下载/校验三层一致，按语言选择首选源）：
-//   - 英文用户：版本检测、下载、校验均优先官方 GitHub（github provider 原始行为）。
-//   - 中文用户：版本检测优先 CNB 鉴权 API（需 cnbToken），下载按
-//     CNB → 官方 GitHub 顺序回退，校验 SHA256SUMS 同样走镜像；
-//     任一级失败（HTTP 非 2xx 或文件大小不符）自动降级下一级。
-// 即检测层与下载层采用同一套「按语言选首选源 + 失败回退」策略，而非固定 GitHub 优先。
-//
-// 注：CNB 不是标准 GitHub API 兼容镜像，其 release 资源下载路径与 GitHub 仓库
-// 不同（CNB 仓库为 dtapp/certflow，GitHub 为 dtapps/certflow），故两个模板均写死
-// 仓库路径；即便地址暂不正确，也会自动回退到官方。
+// 更新源策略（检测/下载/校验按语言选源，CNB 与 GitHub 为两个平行源）：
+//   - 英文用户：版本检测、下载、校验均走官方 GitHub（github provider 原始行为）。
+//   - 中文用户：版本检测、下载、校验均走 CNB（需 cnbToken 鉴权）。
+// CNB 与 GitHub 各自独立，不存在镜像/回退关系，各语言固定走对应源。
 
 const (
-	// cnbDownloadTpl：CNB 镜像的 release 资源下载地址模板（写死仓库 dtapp/certflow）。
+	// cnbDownloadTpl：CNB 的 release 资源下载地址模板（仓库 dtapp/certflow）。
 	// 占位符：{tag} {file}
 	cnbDownloadTpl = "https://cnb.cool/dtapp/certflow/-/releases/download/{tag}/{file}"
 
@@ -38,12 +32,10 @@ const (
 	cnbAPIBase = "https://api.cnb.cool"
 )
 
-// mirrorProvider 包装 github.Provider，仅重写下載地址。
+// mirrorProvider 包装 github.Provider，仅重写下载地址。
 type mirrorProvider struct {
 	*github.Provider
-	// checkProvider 用于版本检测，但关闭原生 GitHub 校验文件抓取：
-	// SHA256SUMS 改为走镜像（见 Check），避免中文网络下 GitHub 不可达
-	// 导致整个 Check 失败、连「发现新版本」都做不到。
+	// checkProvider 用于版本检测：中文走 CNB，SHA256SUMS 也由 Check 从 CNB 拉取。
 	checkProvider *github.Provider
 	client        *http.Client
 
@@ -69,7 +61,7 @@ type mirrorProvider struct {
 	installedBuildTime string
 }
 
-// newMirrorProvider 基于 github.Config 创建镜像 Provider。
+// newMirrorProvider 基于 github.Config 创建按语言选源的 Provider。
 // client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
 // 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
 // installedBuildTime 为本机已安装二进制的构建时间（ldflags 注入），nightly 时间对比用它对比
@@ -81,7 +73,7 @@ func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTim
 	if err != nil {
 		return nil, err
 	}
-	// 版本检测用的 Provider 关闭校验文件抓取（SHA256SUMS 改为走镜像）。
+	// 版本检测用的 Provider 关闭原生 GitHub 校验文件抓取（中文的 SHA256SUMS 由 Check 从 CNB 拉取）。
 	noChecksumCfg := cfg
 	noChecksumCfg.ChecksumAsset = ""
 	ghNoChecksum, err := github.New(noChecksumCfg)
@@ -114,12 +106,11 @@ func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTim
 // Name 实现 updater.Provider。
 func (m *mirrorProvider) Name() string { return "github-mirror" }
 
-// Check 版本检测按语言选择首选源，与下载/校验镜像策略一致：
+// Check 版本检测按语言选择源，与下载/校验策略一致：
 //   - 英文用户：直接使用官方 GitHub（含 SHA256SUMS 校验，原始行为）。
-//   - 中文用户：用 checkProvider 检测版本（不抓校验），再从 CNB
-//     → 官方 GitHub 顺序拉 SHA256SUMS 并填充 Verification。
+//   - 中文用户：用 checkProvider 检测版本（不抓校验），再从 CNB 拉 SHA256SUMS 并填充 Verification。
 //
-// nightly 预发布检测见 checkNightly（同样按语言选首选源）。
+// nightly 预发布检测见 checkNightly（同样按语言选源）。
 func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
 	if m.prerelease {
 		// 优先提供 nightly 预发布；失败或无 nightly 时回退稳定版逻辑。
@@ -140,14 +131,14 @@ func (m *mirrorProvider) Check(ctx context.Context, req updater.CheckRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	// 中文：仅从 CNB 拉 SHA256SUMS（不回退 GitHub），失败则降级（下载本身仍走 CNB，仅跳过校验）。
+	// 中文：从 CNB 拉 SHA256SUMS。
 	if digest, _, ok := m.fetchChecksumViaMirror(ctx, rel, "SHA256SUMS"); ok {
 		rel.Verification = &updater.Verification{
 			DigestAlgo: "sha256",
 			Digest:     digest,
 		}
 	} else {
-		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
+		logging.Warn("%s", i18n.T("log.updater_checksum_fetch_failed"))
 	}
 	return rel, nil
 }
@@ -221,8 +212,7 @@ func (m *mirrorProvider) checkNightlyGitHub(ctx context.Context, req updater.Che
 func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
 	tag := m.nightlyTag
 	if m.cnbToken == "" {
-		// 未配置 cnbToken：中文用户检测层仅用 CNB，无 token 即视为「无更新」，
-		// 不再回退 GitHub（按需求单一源、不混用）。
+		// 未配置 cnbToken：中文用户检测层仅用 CNB，无 token 即视为「无更新」。
 		logging.Debug("%s", i18n.T("log.updater_nightly_cnb_no_token"))
 		return nil, nil
 	}
@@ -237,7 +227,7 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 
 	resp, err := m.client.Do(httpReq)
 	if err != nil {
-		// CNB 网络不可达：视为「无更新」（不回退 GitHub），仅告警便于排查。
+		// CNB 网络不可达：视为「无更新」，仅告警便于排查。
 		logging.Warn("%s", i18n.T("log.updater_nightly_cnb_unreachable", "Error", err))
 		return nil, nil
 	}
@@ -247,10 +237,10 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 	case http.StatusOK:
 		// 继续解析
 	case http.StatusNotFound:
-		// CNB 上尚无 nightly，回退稳定版。
+		// CNB 上尚无 nightly，视为无 nightly 更新。
 		return nil, nil
 	case http.StatusUnauthorized:
-		// token 无效或无权限：告警后视为「无更新」，不回退 GitHub。
+		// token 无效或无权限：告警后视为「无更新」。
 		logging.Warn("%s", i18n.T("log.updater_nightly_cnb_unauthorized"))
 		return nil, nil
 	default:
@@ -310,7 +300,7 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 		},
 	}
 	// 校验摘要：优先使用选中资产自带的 sha256 摘要（CNB 提供）；
-	// 否则从镜像拉 SHA256SUMS 侧车文件（CNB→GitHub），全失败则降级跳过校验。
+	// 否则从 CNB 拉 SHA256SUMS 侧车文件，全失败则降级跳过校验。
 	var inlineHash string
 	if idx >= 0 && idx < len(assetHashes) {
 		inlineHash = assetHashes[idx]
@@ -322,10 +312,10 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 	}
 	// 从 SHA256SUMS 注释行读取 build_time：发布时写入的、带校验保障的时间基准，
 	// 作为 nightly 时间对比的权威时间（与 releases API 的 published_at 无关）。
-	// 旧版 SHA256SUMS 无 build_time 行 → bt 为零值 → 该 nightly 直接跳过（不回退更不可靠的来源）。
+	// 旧版 SHA256SUMS 无 build_time 行 → bt 为零值 → 该 nightly 直接跳过。
 	_, bt, ok := m.fetchChecksumViaMirror(ctx, out, "SHA256SUMS")
 	if !ok && out.Verification == nil {
-		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
+		logging.Warn("%s", i18n.T("log.updater_checksum_fetch_failed"))
 	}
 	if bt.IsZero() {
 		// 旧格式 / 解析失败：无法获得可靠 build_time，nightly 不提示更新，避免误判或循环。
@@ -443,7 +433,7 @@ func ftypeOfLocal(name string) string {
 	return ""
 }
 
-// Download 实现 updater.Provider：中文走镜像，英文走官方。
+// Download 实现 updater.Provider：中文走 CNB，英文走 GitHub。
 func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst io.Writer, onProgress func(written, total int64)) error {
 	if rel == nil || rel.Metadata == nil {
 		return fmt.Errorf("%s", i18n.T("log.updater_release_missing_metadata"))
@@ -456,7 +446,7 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 	tag, _ := rel.Metadata["github.release.tag"].(string)
 	file := rel.Artifact.Filename
 
-	// 中文：仅从 CNB 下载（不回退 GitHub）。CNB 不可用即下载失败。
+	// 中文：走 CNB 下载。
 	type candidate struct {
 		source string
 		url    string
@@ -468,14 +458,15 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 
 	for _, c := range candidates {
 		resetDst(dst)
-		logging.Debug("%s", i18n.T("log.updater_mirror_download", "Source", c.source, "URL", c.url))
+		logging.Debug("%s", i18n.T("log.updater_source_download", "Source", c.source, "URL", c.url))
 		if err := m.downloadFrom(ctx, c.url, rel, dst, onProgress); err != nil {
-			logging.Warn("%s", i18n.T("log.updater_mirror_failed", "Source", c.source, "Error", err))
+			logging.Warn("%s", i18n.T("log.updater_source_failed", "Source", c.source, "Error", err))
 			continue
 		}
 		return nil
 	}
-	return fmt.Errorf("github-mirror: %s", i18n.T("log.updater_download_all_failed"))
+	// 所有下载源均失败。
+	return fmt.Errorf("%s", i18n.T("log.updater_download_all_failed"))
 }
 
 // buildURL 将模板中的占位符替换为实际值。
@@ -549,19 +540,25 @@ func resetDst(dst io.Writer) {
 }
 
 // fetchChecksumViaMirror 按语言单一源拉取校验侧车文件（如 SHA256SUMS）：
-//   - 中文：仅 CNB（不回退 GitHub）；
+//   - 中文：仅 CNB；
 //   - 非中文：仅官方 GitHub（资产 URL 目录替换 / 标准仓库地址）。
 //
 // 解析出目标资产（rel.Artifact.Filename）的 sha256 摘要，并同时读取 SHA256SUMS 注释行中
 // 发布的 build_time（发布时由 CI 写入，作为 nightly 时间对比的权威基准）。
 // 返回 (摘要, build_time, 是否成功)；build_time 解析失败时为 time.Time{}（调用方忽略）。
 func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *updater.Release, sidecar string) ([]byte, time.Time, bool) {
-	// 兜底：rel / Metadata 任一缺失都不应 panic（否则会拖垮主进程）。
-	if rel == nil || rel.Metadata == nil {
-		logging.Warn("%s", i18n.T("log.updater_checksum_mirror_failed"))
+	// 兜底：rel 缺失不应 panic（否则会拖垮主进程）。
+	// 注意：不能因 rel.Metadata == nil 直接失败——github Provider 返回的 Release 不一定填 Metadata
+	// （nightly 路径的 out 是手工构造的，所以正常；稳定版 checkProvider.Check 的 rel.Metadata 可能为 nil）。
+	// 这里统一用 Metadata["github.release.tag"]，取不到时再回退 rel.Version（稳定版 tag 即发布版本号）。
+	if rel == nil {
+		logging.Warn("%s", i18n.T("log.updater_checksum_fetch_failed"))
 		return nil, time.Time{}, false
 	}
 	tag, _ := rel.Metadata["github.release.tag"].(string)
+	if tag == "" {
+		tag = rel.Version
+	}
 	target := rel.Artifact.Filename
 
 	var urls []string
@@ -576,7 +573,7 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 			urls = append(urls, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.repo, tag, sidecar))
 		}
 	} else {
-		// 中文：仅 CNB（不回退 GitHub）。
+		// 中文：仅 CNB。
 		if tag != "" {
 			if u := m.buildURL(cnbDownloadTpl, tag, sidecar); u != "" {
 				urls = append(urls, u)
@@ -584,7 +581,7 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 		}
 	}
 	if len(urls) == 0 {
-		// 既无 tag 也无资产 URL，无法拼出任何镜像地址，明确记录原因而非静默失败。
+		// 既无 tag 也无资产 URL，无法拼出任何 CNB 地址，明确记录原因而非静默失败。
 		logging.Warn("%s", i18n.T("log.updater_checksum_no_url", "Tag", tag))
 		return nil, time.Time{}, false
 	}
