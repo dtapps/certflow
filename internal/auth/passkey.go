@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/authmethod"
-	"cnb.cool/dtapp/certflow/ent/passkeycredential"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/authmethod"
+	"cnb.cool/dtapp/certflow/internal/ent/passkeycredential"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/go-webauthn/webauthn/protocol"

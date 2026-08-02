@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/internal/ent"
 	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 	esql "entgo.io/ent/dialect/sql"
 )

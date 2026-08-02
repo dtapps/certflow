@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent"
+	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/deploy"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

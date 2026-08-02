@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/deploycredential"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
 )
 
 // Service 部署凭证服务

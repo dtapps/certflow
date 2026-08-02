@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/authmethod"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/authmethod"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"golang.org/x/crypto/bcrypt"

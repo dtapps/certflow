@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/renewallog"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/renewallog"
 	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"

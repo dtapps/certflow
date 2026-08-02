@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"cnb.cool/dtapp/certflow/ent"
-	entnotification "cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	entnotification "cnb.cool/dtapp/certflow/internal/ent/notification"
 	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"

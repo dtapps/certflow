@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 )

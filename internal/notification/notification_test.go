@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/notification"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/notification"
 	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 	esql "entgo.io/ent/dialect/sql"
 )

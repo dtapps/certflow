@@ -82,26 +82,26 @@ certflow/
 │   ├── window_service.go      # Window service
 │   ├── systray_service.go     # System tray service
 │   └── autostart_service.go   # Auto-start at login service
-├── ent/                       # Ent ORM generated code
-│   ├── schema/                # Database model definitions
-│   │   ├── ca.go              # CA entity
-│   │   ├── certificate.go     # Certificate entity
-│   │   ├── cert_upload.go     # Uploaded certificate entity
-│   │   ├── dns_provider.go    # DNS provider entity
-│   │   ├── deploy_target.go   # Deploy target entity (provider/service/region config)
-│   │   ├── deploy_credential.go # Deploy credential entity
-│   │   ├── deploy_log.go      # Deploy log entity
-│   │   ├── provider_types.go  # Provider/service type enum definitions
-│   │   ├── monitored_domain.go # Monitored domain entity
-│   │   ├── notification.go    # Notification entity
-│   │   ├── renewal_log.go     # Renewal log entity
-│   │   ├── auth_method.go     # Auth method entity
-│   │   ├── totp_credential.go # TOTP credential entity (2FA)
-│   │   ├── passkey_credential.go # Passkey credential entity (WebAuthn)
-│   │   └── scan_result.go     # Scan result entity
-│   └── ...
-├── ent_log/                   # Standalone Ent package (HTTP request logs, single HttpLog table)
 ├── internal/                  # Internal implementations
+│   ├── ent/                   # Ent ORM generated code (moved from root ent/)
+│   │   ├── schema/            # Database model definitions
+│   │   │   ├── ca.go          # CA entity
+│   │   │   ├── certificate.go # Certificate entity
+│   │   │   ├── cert_upload.go # Uploaded certificate entity
+│   │   │   ├── dns_provider.go # DNS provider entity
+│   │   │   ├── deploy_target.go # Deploy target entity (provider/service/region config)
+│   │   │   ├── deploy_credential.go # Deploy credential entity
+│   │   │   ├── deploy_log.go  # Deploy log entity
+│   │   │   ├── provider_types.go # Provider/service type enum definitions
+│   │   │   ├── monitored_domain.go # Monitored domain entity
+│   │   │   ├── notification.go # Notification entity
+│   │   │   ├── renewal_log.go # Renewal log entity
+│   │   │   ├── auth_method.go # Auth method entity
+│   │   │   ├── totp_credential.go # TOTP credential entity (2FA)
+│   │   │   ├── passkey_credential.go # Passkey credential entity (WebAuthn)
+│   │   │   └── scan_result.go # Scan result entity
+│   │   └── ...
+│   ├── httplog/               # HTTP request logging (sqlc-generated, separate DB)
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
 │   ├── ca/                    # CA management
 │   ├── certificate/           # Certificate issuance/renewal/revocation/upload
@@ -110,7 +110,6 @@ certflow/
 │   ├── deploycredential/      # Deployment credential management
 │   ├── dnsprovider/           # DNS provider management
 │   ├── events/                # Frontend-backend event definitions
-│   ├── httplog/               # HTTP request logging (wraps transport under DEBUG, separate DB)
 │   ├── i18n/                  # Internationalization (embedded locale files)
 │   ├── logging/               # Logging system (rotation/compression)
 │   ├── monitor/               # Domain monitoring
@@ -189,6 +188,7 @@ make check             # Lint and test (lint-go + lint-frontend + test-go)
 make test              # Go backend tests
 make bindings          # Generate Wails TypeScript bindings
 make ent               # Generate Ent ORM code
+make sqlc              # Generate sqlc code (internal/httplog)
 make format            # Format all code (Go + Vue/TS)
 make format-go         # Format Go code
 make format-frontend   # Format frontend code (Prettier)
@@ -245,7 +245,7 @@ After packaging, CI signs the artifacts for each platform. **Steps run only when
 
 ## Database
 
-SQLite is used as an embedded database, managed via Ent ORM. Entity models are defined in `ent/schema/`:
+SQLite is used as an embedded database, managed via Ent ORM. Entity models are defined in `internal/ent/schema/`:
 
 - **CA** — Certificate authority configuration
 - **Certificate** — SSL certificate information
@@ -259,7 +259,7 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 - **RenewalLog** — Certificate renewal logs
 - **ScanResult** — Certificate scan results
 
-> HTTP request logs use a standalone Ent package `ent_log/` (single `HttpLog` table) stored in a separate database `dataDir/data/httplog.db`, enabled only at DEBUG level.
+> HTTP request logs use a standalone sqlc-implemented `internal/httplog/` (single `http_log` table) stored in a separate database `dataDir/data/httplog.db`, enabled only at DEBUG level.
 
 ---
 
@@ -285,11 +285,12 @@ Supported providers and services:
 
 ## HTTP Request Logging
 
-`internal/httplog/` records outbound HTTP traffic to a separate SQLite database (`ent_log` package, single `HttpLog` table) under the DEBUG log level:
+`internal/httplog/` records outbound HTTP traffic to a separate SQLite database (sqlc-implemented, single `http_log` table) under the DEBUG log level:
 
 - Provides `WrapTransport(base)` / `WrapClient(client)` helpers — wraps under DEBUG, passes through otherwise.
 - Already injected into `internal/network.BuildHTTPClient` and cloud SDK clients, covering scanner / monitor / certificate issuance (lego) / certificate deployment outbound requests.
-- Generate `ent_log` code: `go run -tags entc ./ent_log/entc_generate.go`.
+- Storage: `schema.sql` (DDL) + `query.sql` (INSERT/DELETE) + `sqlc.yaml` (sqlc config), generated into `internal/httplog/db/` via `make sqlc` (`cd internal/httplog && sqlc generate`).
+- Connection model: a long-lived `*sql.DB` is append-only (INSERT only); `Cleanup` (periodic deletion of old logs) opens a temporary independent connection from the saved DSN, runs DELETE, then closes it.
 
 ---
 
@@ -361,8 +362,9 @@ Refresh the page after setting to see the effect.
 
 ## Notes
 
-1. **Ent code generation**: After modifying `ent/schema/`, run `make ent` to regenerate ORM code
-2. **Binding generation**: After modifying Go services, run `make bindings` to regenerate frontend bindings
+1. **Ent code generation**: After modifying `internal/ent/schema/`, run `make ent` to regenerate ORM code
+2. **HTTP log code generation**: After modifying `schema.sql` / `query.sql` under `internal/httplog/`, run `make sqlc` to regenerate
+3. **Binding generation**: After modifying Go services, run `make bindings` to regenerate frontend bindings
 3. **Version injection**: `wails3 task build` does not accept a bare `-ldflags` flag; pass `VERSION=` etc. as Task variables, and each platform Taskfile assembles `-ldflags "-X main.currentVersion=..."`
 4. **Linux cross-compilation**: Cannot cross-compile Linux from macOS (requires CGO + webkit2gtk), use GitHub Actions instead
 5. **Naive UI is auto-imported**: Use `<n-xxx>` components directly in templates, no global registration needed

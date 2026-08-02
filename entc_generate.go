@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	err := entc.Generate("./ent/schema", &gen.Config{
+	err := entc.Generate("./internal/ent/schema", &gen.Config{
 		Features: []gen.Feature{
 			gen.FeatureUpsert,
 		},

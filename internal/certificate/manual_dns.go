@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent/schema"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/network"

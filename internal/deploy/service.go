@@ -13,11 +13,11 @@ import (
 
 	"reflect"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/certificate"
-	"cnb.cool/dtapp/certflow/ent/certupload"
-	"cnb.cool/dtapp/certflow/ent/deploylog"
-	"cnb.cool/dtapp/certflow/ent/deploytarget"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/certificate"
+	"cnb.cool/dtapp/certflow/internal/ent/certupload"
+	"cnb.cool/dtapp/certflow/internal/ent/deploylog"
+	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/config"
 	"cnb.cool/dtapp/certflow/internal/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"

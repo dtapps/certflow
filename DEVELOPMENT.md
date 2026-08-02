@@ -82,26 +82,26 @@ certflow/
 │   ├── window_service.go      # 窗口服务
 │   ├── systray_service.go     # 系统托盘服务
 │   └── autostart_service.go   # 开机自启动服务
-├── ent/                       # Ent ORM 生成的代码
-│   ├── schema/                # 数据库模型定义
-│   │   ├── ca.go              # CA 实体
-│   │   ├── certificate.go     # 证书实体
-│   │   ├── cert_upload.go     # 上传证书实体
-│   │   ├── dns_provider.go    # DNS 提供商实体
-│   │   ├── deploy_target.go   # 部署目标实体（云厂商/服务/区域配置）
-│   │   ├── deploy_credential.go # 部署凭证实体
-│   │   ├── deploy_log.go      # 部署日志实体
-│   │   ├── provider_types.go  # 厂商/服务类型枚举定义
-│   │   ├── monitored_domain.go # 监控域名实体
-│   │   ├── notification.go    # 通知实体
-│   │   ├── renewal_log.go     # 续期日志实体
-│   │   ├── auth_method.go     # 认证方式实体
-│   │   ├── totp_credential.go # TOTP 凭据实体（2FA）
-│   │   ├── passkey_credential.go # Passkey 凭据实体（WebAuthn）
-│   │   └── scan_result.go     # 扫描结果实体
-│   └── ...
-├── ent_log/                   # 独立 Ent 包（HTTP 请求日志，单表 HttpLog）
 ├── internal/                  # 内部实现
+│   ├── ent/                   # Ent ORM 生成的代码（原根目录 ent/ 已移入）
+│   │   ├── schema/            # 数据库模型定义
+│   │   │   ├── ca.go          # CA 实体
+│   │   │   ├── certificate.go # 证书实体
+│   │   │   ├── cert_upload.go # 上传证书实体
+│   │   │   ├── dns_provider.go # DNS 提供商实体
+│   │   │   ├── deploy_target.go # 部署目标实体（云厂商/服务/区域配置）
+│   │   │   ├── deploy_credential.go # 部署凭证实体
+│   │   │   ├── deploy_log.go  # 部署日志实体
+│   │   │   ├── provider_types.go # 厂商/服务类型枚举定义
+│   │   │   ├── monitored_domain.go # 监控域名实体
+│   │   │   ├── notification.go # 通知实体
+│   │   │   ├── renewal_log.go # 续期日志实体
+│   │   │   ├── auth_method.go # 认证方式实体
+│   │   │   ├── totp_credential.go # TOTP 凭据实体（2FA）
+│   │   │   ├── passkey_credential.go # Passkey 凭据实体（WebAuthn）
+│   │   │   └── scan_result.go # 扫描结果实体
+│   │   └── ...
+│   ├── httplog/               # HTTP 请求日志（sqlc 生成，落独立库）
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
 │   ├── ca/                    # CA 管理
 │   ├── certificate/           # 证书申请/续期/撤销/上传
@@ -110,7 +110,6 @@ certflow/
 │   ├── deploycredential/      # 部署凭证管理
 │   ├── dnsprovider/           # DNS 提供商管理
 │   ├── events/                # 前后端事件定义
-│   ├── httplog/               # HTTP 请求日志（DEBUG 下包裹 transport，落独立库）
 │   ├── i18n/                  # 国际化（嵌入式语言文件）
 │   ├── logging/               # 日志系统（轮转/压缩）
 │   ├── monitor/               # 域名监控
@@ -189,6 +188,7 @@ make check             # 代码检查与测试（lint-go + lint-frontend + test-
 make test              # Go 后端测试
 make bindings          # 生成 Wails TypeScript 绑定
 make ent               # 生成 Ent ORM 代码
+make sqlc              # 生成 sqlc 代码（internal/httplog）
 make format            # 格式化所有代码（Go + Vue/TS）
 make format-go         # 格式化 Go 代码
 make format-frontend   # 格式化前端代码（Prettier）
@@ -246,7 +246,7 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 ## 数据库
 
-使用 SQLite 作为嵌入式数据库，通过 Ent ORM 进行数据管理。实体模型定义在 `ent/schema/` 目录下：
+使用 SQLite 作为嵌入式数据库，通过 Ent ORM 进行数据管理。实体模型定义在 `internal/ent/schema/` 目录下：
 
 - **CA** — 证书颁发机构配置
 - **Certificate** — SSL 证书信息
@@ -260,7 +260,7 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 - **RenewalLog** — 证书续期日志
 - **ScanResult** — 证书扫描结果
 
-> HTTP 请求日志使用独立的 Ent 包 `ent_log/`（单表 `HttpLog`），落在独立数据库 `dataDir/data/httplog.db`，仅 DEBUG 级别启用。
+> HTTP 请求日志使用独立的 sqlc 实现的 `internal/httplog/`（单表 `http_log`），落在独立数据库 `dataDir/data/httplog.db`，仅 DEBUG 级别启用。
 
 ---
 
@@ -286,11 +286,12 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 ## HTTP 请求日志
 
-`internal/httplog/` 在 DEBUG 日志级别下，把出站 HTTP 流量记录到独立的 SQLite 库（`ent_log` 包，单表 `HttpLog`）：
+`internal/httplog/` 在 DEBUG 日志级别下，把出站 HTTP 流量记录到独立的 SQLite 库（sqlc 实现，单表 `http_log`）：
 
 - 提供 `WrapTransport(base)` / `WrapClient(client)` 助手，DEBUG 下包裹、否则透传。
 - 已注入 `internal/network.BuildHTTPClient` 与各云 SDK 客户端，覆盖 scanner / monitor / 证书申请（lego）/ 证书部署等出站请求。
-- 生成 `ent_log` 代码：`go run -tags entc ./ent_log/entc_generate.go`。
+- 存储实现：`schema.sql`（建表）+ `query.sql`（INSERT/DELETE）+ `sqlc.yaml`（sqlc 配置），经 `make sqlc`（即 `cd internal/httplog && sqlc generate`）生成 `internal/httplog/db/` 包。
+- 连接模型：常驻 `*sql.DB` 仅 append-only（只 INSERT）；`Cleanup` 定时删除旧日志时用保存的 DSN 临时开独立连接执行 DELETE 后关闭。
 
 ---
 
@@ -362,8 +363,9 @@ localStorage.removeItem('debug-platform')
 
 ## 注意事项
 
-1. **Ent 代码生成**：修改 `ent/schema/` 后需要运行 `make ent` 重新生成 ORM 代码
-2. **绑定生成**：修改 Go 服务后需要运行 `make bindings` 重新生成前端绑定代码
+1. **Ent 代码生成**：修改 `internal/ent/schema/` 后需要运行 `make ent` 重新生成 ORM 代码
+2. **HTTP 日志代码生成**：修改 `internal/httplog/` 下 `schema.sql` / `query.sql` 后需要运行 `make sqlc` 重新生成
+3. **绑定生成**：修改 Go 服务后需要运行 `make bindings` 重新生成前端绑定代码
 3. **版本号注入方式**：`wails3 task build` 不接受裸 `-ldflags` 参数，需通过 `VERSION=` 等 Task 变量传入，由各平台 Taskfile 自动拼接成 `-ldflags "-X main.currentVersion=..."`
 4. **Linux 交叉编译**：从 macOS 无法交叉编译 Linux（需要 CGO + webkit2gtk），使用 GitHub Actions 构建
 5. **Naive UI 按需引入**：直接在模板中使用 `<n-xxx>` 组件，无需全局注册

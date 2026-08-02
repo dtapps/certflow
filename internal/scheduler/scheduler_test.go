@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"cnb.cool/dtapp/certflow/ent"
-	"cnb.cool/dtapp/certflow/ent/certificate"
+	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/certificate"
 	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 	esql "entgo.io/ent/dialect/sql"
 )
