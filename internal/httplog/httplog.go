@@ -3,22 +3,24 @@ package httplog
 import (
 	"bytes"
 	"context"
+	"database/sql"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf16"
 
-	"cnb.cool/dtapp/certflow/ent_log"
-	"cnb.cool/dtapp/certflow/ent_log/httplog"
+	"cnb.cool/dtapp/certflow/internal/httplog/db"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/sqlite"
 	"cnb.cool/dtapp/certflow/internal/useragent"
-	"entgo.io/ent/dialect"
 	"go.dtapp.net/library/contrib/http_log"
 )
 
@@ -81,10 +83,26 @@ func decodeUnicodeEscapes(b []byte) []byte {
 // dbFileName 独立的 HTTP 请求日志数据库文件名（存放在 dataDir/data 下，与主库 certflow.db 分离）
 const dbFileName = "httplog.db"
 
+// schemaSQL 为建表 DDL，直接嵌入 schema.sql（单一事实源，与 sqlc 类型推导共用同一文件）。
+// 该库仅 http_log 一张表，仅 CREATE TABLE / INSERT / 定时 DELETE，
+// 常驻连接为 append-only（只 INSERT），删除由 Cleanup 临时连接执行。
+//
+//go:embed schema.sql
+var schemaSQL string
+
+// migrationSQL 为迁移脚本，嵌入 migration.sql（历史库兼容：追加新列/索引）。
+// 与 schema.sql 分离，遵循「建表归建表、迁移归迁移」的单一职责。
+//
+//go:embed migration.sql
+var migrationSQL string
+
 var (
-	client *ent_log.Client
-	mu     sync.RWMutex
-	once   sync.Once
+	// conn 常驻连接，仅用于 append-only 写入（INSERT），不执行任何 DELETE。
+	conn *sql.DB
+	// connDSN 保存已打开连接的 DSN，供 Cleanup 临时打开独立连接删除使用。
+	connDSN string
+	mu      sync.RWMutex
+	once    sync.Once
 )
 
 // Init 初始化 HTTP 请求日志：打开独立的日志库，并在日志级别为 DEBUG 时
@@ -110,21 +128,48 @@ func initClient(dataDir string) error {
 	}
 	dsn := sqlite.BuildDSN(filepath.Join(dbDir, dbFileName))
 
-	c, err := ent_log.Open(dialect.SQLite, dsn)
+	c, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.open_httplog_db_failed", "Error", err))
 	}
 
 	ctx := context.Background()
-	// ent_log 包仅包含 HttpLog 一张表，这里只会创建 http_log 表，不影响主库。
-	if err := c.Schema.Create(ctx); err != nil {
+	if _, err := c.ExecContext(ctx, schemaSQL); err != nil {
+		c.Close()
+		return fmt.Errorf("%s", i18n.T("error.create_httplog_schema_failed", "Error", err))
+	}
+
+	// 应用迁移脚本（历史库兼容）：逐条执行 migration.sql，忽略幂等错误。
+	if err := Migrate(c); err != nil {
 		c.Close()
 		return fmt.Errorf("%s", i18n.T("error.create_httplog_schema_failed", "Error", err))
 	}
 
 	mu.Lock()
-	client = c
+	conn = c
+	connDSN = dsn
 	mu.Unlock()
+	return nil
+}
+
+// Migrate 执行 migration.sql 中的迁移语句（按 ';' 拆分，每条独立执行）。
+// SQLite 不支持 ADD COLUMN IF NOT EXISTS，对已存在列的 ALTER 会报
+// "duplicate column" 错误；此处忽略该错误以保证幂等——
+// 二次启动 / 已迁移过的库直接跳过，不会报错。其它错误仍上报。
+func Migrate(db *sql.DB) error {
+	statements := strings.SplitSeq(migrationSQL, ";")
+	for stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		if _, err := db.Exec(stmt); err != nil {
+			// 忽略列已存在的错误（兼容旧数据库）
+			if !strings.Contains(err.Error(), "duplicate column") {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -190,6 +235,7 @@ func WrapClient(client *http.Client) *http.Client {
 
 // entLogSaver 实现 http_log.LogHandler 接口，将 HTTP 请求日志写入独立的日志数据库。
 // 库的 emit 已在独立 goroutine 中调用本方法，故这里直接同步写入即可。
+// 写入仅通过常驻 append-only 连接（conn）执行 INSERT，绝不在此处删除。
 type entLogSaver struct{}
 
 func (s *entLogSaver) HandleLog(ctx context.Context, data *http_log.LogData) error {
@@ -197,72 +243,106 @@ func (s *entLogSaver) HandleLog(ctx context.Context, data *http_log.LogData) err
 		return nil
 	}
 	mu.RLock()
-	db := client
+	c := conn
 	mu.RUnlock()
-	if db == nil || data == nil {
+	if c == nil || data == nil {
 		return nil
 	}
 
-	builder := db.HttpLog.Create().
-		SetHostname(data.Hostname).
-		SetMethod(data.Method).
-		SetURL(data.URL).
-		SetStatusCode(data.StatusCode).
-		SetElapseTime(data.ElapseTime).
-		SetProcessElapseTime(data.ProcessElapseTime).
-		SetIsError(data.IsError).
-		SetGoVersion(data.GoVersion).
-		SetPluginVersion(data.PluginVersion)
-
-	// 请求/响应体仅在非空时写入，避免向日志库写入无意义的 NULL。
-	if data.RequestHeaders != nil {
-		builder = builder.SetRequestHeaders(data.RequestHeaders)
+	params := db.InsertHttpLogParams{
+		Hostname:          nullableStr(data.Hostname),
+		Method:            nullableStr(data.Method),
+		Url:               nullableStr(data.URL),
+		StatusCode:        nullableInt64(int64(data.StatusCode)),
+		ElapseTime:        nullableInt64(data.ElapseTime),
+		ProcessElapseTime: nullableInt64(data.ProcessElapseTime),
+		IsError:           data.IsError,
+		CreatedAt:         sql.NullTime{Time: time.Now(), Valid: true},
+		GoVersion:         nullableStr(data.GoVersion),
+		PluginVersion:     nullableStr(data.PluginVersion),
 	}
-	if len(data.RequestBody) > 0 {
-		builder = builder.SetRequestBody(decodeUnicodeEscapes(data.RequestBody))
+
+	// 请求/响应头序列化为 JSON 文本（对应 ent 的 TypeJSON map[string][]string）。
+	if data.RequestHeaders != nil {
+		if b, err := json.Marshal(data.RequestHeaders); err == nil {
+			params.RequestHeaders = sql.NullString{String: string(b), Valid: true}
+		}
 	}
 	if data.ResponseHeaders != nil {
-		builder = builder.SetResponseHeaders(data.ResponseHeaders)
+		if b, err := json.Marshal(data.ResponseHeaders); err == nil {
+			params.ResponseHeaders = sql.NullString{String: string(b), Valid: true}
+		}
+	}
+	// 请求/响应体仅在非空时写入，避免向日志库写入无意义的 NULL。
+	// []byte 字段以 nil 表达 NULL，非空时赋解码后的切片。
+	if len(data.RequestBody) > 0 {
+		params.RequestBody = decodeUnicodeEscapes(data.RequestBody)
 	}
 	if len(data.ResponseBody) > 0 {
-		builder = builder.SetResponseBody(decodeUnicodeEscapes(data.ResponseBody))
+		params.ResponseBody = decodeUnicodeEscapes(data.ResponseBody)
 	}
 
-	if err := builder.Exec(ctx); err != nil {
+	if err := db.New(c).InsertHttpLog(ctx, params); err != nil {
 		logging.Error("%s: %v", i18n.T("log.httplog.save_failed"), err)
 	}
 	return nil
 }
 
-// Close 关闭日志数据库。
+// nullableStr 将 Go 字符串转为 *string（空字符串视为 NULL）。
+func nullableStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// nullableInt64 将 int64 转为 *int64（零值视为 NULL）。
+func nullableInt64(v int64) *int64 {
+	if v == 0 {
+		return nil
+	}
+	return &v
+}
+
+// Close 关闭常驻日志数据库连接。
 func Close() error {
 	mu.Lock()
 	defer mu.Unlock()
-	if client != nil {
-		err := client.Close()
-		client = nil
+	if conn != nil {
+		err := conn.Close()
+		conn = nil
 		return err
 	}
 	return nil
 }
 
-// Cleanup 删除早於 retentionDays 天前的 HTTP 请求日志（基于 created_at）。
+// Cleanup 删除早于 retentionDays 天前的 HTTP 请求日志（基于 created_at）。
 // retentionDays <= 0 时表示不清理，直接返回。
+// 删除为定时任务，使用临时建立的独立连接执行，不影响常驻 append-only 连接。
 // 返回被删除的记录数。
 func Cleanup(retentionDays int) (int, error) {
 	if retentionDays <= 0 {
 		return 0, nil
 	}
+
 	mu.RLock()
-	db := client
+	dsn := connDSN
 	mu.RUnlock()
-	if db == nil {
+	if dsn == "" {
 		return 0, nil
 	}
+
+	// 临时连接：单独打开同一 httplog.db 文件执行 DELETE，用完即关。
+	tmp, err := sql.Open("sqlite3", dsn)
+	if err != nil {
+		return 0, fmt.Errorf("打开临时清理连接失败: %w", err)
+	}
+	defer tmp.Close()
+
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
-	n, err := db.HttpLog.Delete().Where(httplog.CreatedAtLT(cutoff)).Exec(context.Background())
+	n, err := db.New(tmp).DeleteOldHttpLog(context.Background(), sql.NullTime{Time: cutoff, Valid: true})
 	if err != nil {
 		return 0, fmt.Errorf("清理 HTTP 请求日志失败: %w", err)
 	}
-	return n, nil
+	return int(n), nil
 }

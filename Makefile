@@ -1,4 +1,4 @@
-.PHONY: help bindings ent i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend
+.PHONY: help bindings ent sqlc i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend
 
 # 过滤 macOS 链接器噪声（ld: warning / was built for newer / ignoring duplicate libraries），
 # 让真正的编译/测试/检查错误清晰可见。用法：<命令> $(FILTER) || exit 1
@@ -21,6 +21,9 @@ bindings: ## 生成 Wails TypeScript 绑定
 
 ent: ## 生成 Ent ORM 代码
 	go run -tags entc ./entc_generate.go
+
+sqlc: ## 生成 sqlc 代码（internal/httplog）
+	cd internal/httplog && sqlc generate
 
 i18n: i18n-go i18n-frontend ## 合并所有 i18n 拆分文件到主文件
 
@@ -154,7 +157,7 @@ update-deps: ## 更新所有依赖
 	pnpm --dir ./frontend self-update
 	@echo "==> pnpm 更新所有依赖完成"
 
-setup: deps bindings ent ## 完整项目初始化
+setup: deps bindings ent sqlc ## 完整项目初始化
 	@echo "项目初始化完成！运行 'make dev' 启动开发模式"
 
 # ==================== 推送 ====================
