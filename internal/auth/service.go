@@ -198,7 +198,7 @@ func (s *AuthService) SetActiveMethod(method string) error {
 	ctx := context.Background()
 
 	// 验证方法是否有效
-	if method != authmethod.MethodPassword.String() && method != authmethod.MethodTotp.String() && method != authmethod.MethodPasskey.String() && method != authmethod.MethodBiometric.String() {
+	if method != authmethod.MethodPassword.String() && method != authmethod.MethodTotp.String() && method != authmethod.MethodPasskey.String() {
 		return fmt.Errorf("%s", i18n.T("error.auth_method_invalid", "Method", method))
 	}
 
@@ -259,8 +259,6 @@ func (s *AuthService) Authenticate(method, credential string) (bool, error) {
 		return s.VerifyTOTP(credential), nil
 	case "passkey":
 		return s.FinishPasskeyLogin(credential)
-	case "biometric":
-		return s.authenticateBiometric(credential), nil
 	default:
 		return false, fmt.Errorf("%s", i18n.T("error.auth_method_invalid", "Method", method))
 	}

@@ -2,6 +2,7 @@
 # 手动触发，输入版本号后自动构建六个平台并发布 GitHub Release
 # https://github.com/actions/runner-images
 # https://github.com/actions/checkout
+# https://github.com/actions/cache
 # https://github.com/actions/setup-go
 # https://github.com/actions/setup-node
 # https://github.com/pnpm/action-setup
@@ -22,41 +23,11 @@ on:
         required: false
         type: string
         default: ''
-      mac_arm64:
-        description: 'macOS Apple Silicon'
-        type: boolean
-        default: true
-      mac_amd64:
-        description: 'macOS Intel'
-        type: boolean
-        default: true
-      linux_amd64:
-        description: 'Linux x64'
-        type: boolean
-        default: true
-      linux_arm64:
-        description: 'Linux ARM64'
-        type: boolean
-        default: true
-      windows_amd64:
-        description: 'Windows x64'
-        type: boolean
-        default: true
-      windows_arm64:
-        description: 'Windows ARM64'
-        type: boolean
-        default: true
-      biometric:
-        description: '启用生物识别认证（Touch ID / Windows Hello）'
-        type: boolean
-        default: false
-      sqlite_driver:
-        description: 'SQLite 驱动：modernc（纯 Go，默认）/ mattn（CGO，性能更佳需 C 编译器）'
-        type: choice
-        options:
-          - modernc
-          - mattn
-        default: modernc
+      nsis_version:
+        description: 'NSIS 版本号（例如 3.12，留空用默认）'
+        required: false
+        type: string
+        default: '3.12'
 
 permissions:
   contents: write
@@ -90,27 +61,21 @@ jobs:
           - os: macos-26
             goos: darwin
             goarch: arm64
-            enabled: ${{ inputs.mac_arm64 }}
           - os: macos-26-intel
             goos: darwin
             goarch: amd64
-            enabled: ${{ inputs.mac_amd64 }}
           - os: ubuntu-26.04
             goos: linux
             goarch: amd64
-            enabled: ${{ inputs.linux_amd64 }}
           - os: ubuntu-26.04-arm
             goos: linux
             goarch: arm64
-            enabled: ${{ inputs.linux_arm64 }}
           - os: windows-2025
             goos: windows
             goarch: amd64
-            enabled: ${{ inputs.windows_amd64 }}
           - os: windows-11-arm
             goos: windows
             goarch: arm64
-            enabled: ${{ inputs.windows_arm64 }}
 
     runs-on: ${{ matrix.os }}
 
@@ -132,7 +97,6 @@ jobs:
     steps:
       # 检出代码（必须在版本号生成之前）
       - name: 检出代码
-        if: ${{ matrix.enabled }}
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit || github.sha }}
@@ -140,7 +104,6 @@ jobs:
       # 构建参数（BUILD_TIME / GIT_COMMIT）已由 prepare job 统一生成，这里直接引用，
       # 保证所有平台注入的 build_time 与 SHA256SUMS 写入的 build_time 完全一致。
       - name: 打印构建参数
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
           echo "BUILD_TIME=${{ needs.prepare.outputs.build_time }}"
@@ -149,7 +112,6 @@ jobs:
           echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
       - name: 打印构建参数
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
           echo "BUILD_TIME=${{ needs.prepare.outputs.build_time }}"
@@ -158,7 +120,6 @@ jobs:
           echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
       - name: 打印系统信息
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
           echo "操作系统: $(uname -a)"
@@ -168,8 +129,8 @@ jobs:
       # 缓存 apt 已下载的 .deb 包，避免每次 apt-get install 重新从源拉取
       # libgtk-4-dev / libwebkitgtk-6.0-dev 等大依赖（ubuntu runner 有效）。
       - name: 缓存 apt 包
-        if: ${{ matrix.enabled && runner.os == 'Linux' }}
-        uses: actions/cache@v4
+        if: ${{ runner.os == 'Linux' }}
+        uses: actions/cache@v6
         with:
           path: /var/cache/apt/archives
           key: apt-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
@@ -177,14 +138,13 @@ jobs:
             apt-${{ runner.os }}-
 
       - name: 安装系统依赖
-        if: ${{ matrix.enabled && runner.os == 'Linux' }}
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: 安装 Go
-        if: ${{ matrix.enabled }}
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -192,8 +152,7 @@ jobs:
       # 缓存 Go module 下载（GOMODCACHE），让 go mod download / wails3 go install
       # 命中已下载的模块，避免重复从 proxy 拉取。
       - name: 缓存 Go module 缓存
-        if: ${{ matrix.enabled }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # 注意：setup-go 不会注入 GOMODCACHE / GOCACHE 环境变量（仅注入 GOPATH 等），
           # 故 path 必须用确定表达式（HOME + 默认 GOPATH/pkg/mod），不能写 ${{ env.GOMODCACHE }}，
@@ -207,20 +166,17 @@ jobs:
       # GOCACHE 跨平台路径不同：Windows %LocalAppData%/go-build，macOS ~/Library/Caches/go-build，
       # Linux ~/.cache/go-build；同样不能用 ${{ env.GOCACHE }}（setup-go 未注入）。
       - name: 缓存 Go build 缓存
-        if: ${{ matrix.enabled }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.os == 'Windows' && format('{0}\\AppData\\Local\\go-build', env.HOME) || runner.os == 'macOS' && format('{0}/Library/Caches/go-build', env.HOME) || format('{0}/.cache/go-build', env.HOME) }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.goarch }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-build-
 
       - name: 下载 Go 依赖
-        if: ${{ matrix.enabled }}
         run: go mod download
 
       - name: 安装 pnpm
-        if: ${{ matrix.enabled }}
         uses: pnpm/action-setup@v6
         with:
           package_json_file: 'frontend/package.json'
@@ -228,7 +184,6 @@ jobs:
       # 用 setup-node 的 cache 直接缓存 frontend/node_modules（按 lockfile hash），
       # 比 pnpm/action-setup 的 cache:true（仅缓存 pnpm store）更快，pnpm install 命中后秒过。
       - name: 安装 Node.js
-        if: ${{ matrix.enabled }}
         uses: actions/setup-node@v7
         with:
           node-version-file: 'frontend/.nvmrc'
@@ -236,7 +191,6 @@ jobs:
           cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: 安装前端依赖
-        if: ${{ matrix.enabled }}
         run: pnpm install
         working-directory: frontend
 
@@ -244,13 +198,14 @@ jobs:
       # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
       # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
       # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
-      - name: 缓存 wails3 二进制
-        id: cache-wails3
-        if: ${{ matrix.enabled }}
-        uses: actions/cache@v4
+      # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
+      # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
+      - name: 缓存 Go bin 目录
+        id: cache-gobin
+        uses: actions/cache@v6
         with:
-          path: ${{ env.GO_BIN_DIR }}/wails3${{ runner.os == 'Windows' && '.exe' || '' }}
-          key: wails3-${{ runner.os }}-${{ hashFiles('go.mod') }}
+          path: ${{ env.GO_BIN_DIR }}
+          key: gobin-${{ runner.os }}-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}
 
       # 统一计算 Go 工具链目录并写入 $GITHUB_ENV，供后续所有步骤用 ${{ env.GO_PATH_DIR }}/${{ env.GO_BIN_DIR }} 引用。
       # 必须在步骤级 shell 里算（workflow 级 env 不允许用 runner/env context），避免重复写长表达式。
@@ -266,7 +221,6 @@ jobs:
           fi
 
       - name: 安装 Wails3
-        if: ${{ matrix.enabled && steps.cache-wails3.outputs.cache-hit != 'true' }}
         env:
           # 必须同时钉 GOPATH 和 GOBIN：CI 容器里 setup-go 把 GOPATH 默认设为只读的 /go，
           # 仅设 GOBIN 无法覆盖，go install 仍会去写 /go 导致 "mkdir /go: read-only file system"。
@@ -280,105 +234,93 @@ jobs:
       - name: 将 GOBIN 加入 PATH
         run: echo "${{ env.GO_BIN_DIR }}" >> $GITHUB_PATH
 
+      # 环境检查：wails3 doctor 仅做环境体检，不影响实际编译/打包，故允许失败不阻断构建。
       - name: 检查构建环境
-        if: ${{ matrix.enabled }}
+        continue-on-error: true
         run: wails3 doctor
 
-      # 缓存 Chocolatey 已装包（nsis/mingw/dotnet-sdk 每次从网络下载很慢）。
-      # 命中后下方 choco install 会自动 detect 已安装并跳过下载；写 PATH 的步骤仍需执行。
-      - name: 缓存 Chocolatey 包
-        if: ${{ matrix.enabled && runner.os == 'Windows' }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\ProgramData\chocolatey\lib
-            C:\ProgramData\chocolatey\bin
-          key: choco-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            choco-${{ runner.os }}-
-
       - name: 安装 NSIS
-        if: ${{ matrix.enabled && runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          choco install nsis -y
-          $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
-          echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-
-      # mattn 是 CGO 驱动，Windows 需要 MinGW 提供的 gcc 才能编译。
-      # 注：choco 安装的 mingw 为 x86_64 工具链，仅能产出 windows/amd64 的 mattn 二进制；
-      # windows/arm64 选择 mattn 时需 aarch64 MinGW 工具链（标准 runner 无），
-      # 故「配置 SQLite 驱动」步骤会对其强制回退 modernc，这里略过 arm64 的 MinGW 安装。
-      - name: 安装 MinGW（mattn 需要 CGO 编译器）
-        if: ${{ matrix.enabled && inputs.sqlite_driver == 'mattn' && runner.os == 'Windows' && matrix.goarch != 'arm64' }}
-        shell: pwsh
-        run: |
-          choco install mingw -y
-          $mingwBin = "${env:ProgramData}\chocolatey\lib\mingw\tools\install\mingw64\bin"
-          if (Test-Path $mingwBin) {
-            echo $mingwBin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-            echo "CC=$mingwBin\gcc.exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
-          } else {
-            Write-Warning "MinGW 未出现在预期路径 $mingwBin，mattn (CGO) 构建可能失败"
+          # 下载 NSIS 官方便携版（绿色 zip，无需安装器）。
+          # 不依赖 winget/choco：arm runner 上 winget 不可用，choco 缓存恢复会导致解压目录未落地。
+          # 注意：GitHub 的 pwsh 默认 $ErrorActionPreference='Stop'，Write-Error 会被升级为
+          # OperationStopped 异常直接终止脚本（表现为 "OperationStopped: exit code 1"）。
+          # 故显式设为 Continue，并用 Write-Host + exit 1 报告失败，避免异常中断。
+          $ErrorActionPreference = 'Continue'
+          $nsisVer = "${{ inputs.nsis_version }}"
+          $urls = @(
+            "https://downloads.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip",
+            "https://master.dl.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip"
+          )
+          $dest = "$env:RUNNER_TEMP\nsis"
+          $zip = "$env:RUNNER_TEMP\nsis-$nsisVer.zip"
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $ok = $false
+          foreach ($u in $urls) {
+            try {
+              Write-Host "下载 NSIS $nsisVer from $u ..."
+              # 用 curl.exe（Windows 自带）而非 Invoke-WebRequest：SourceForge 返回带签名参数的
+              # 302 重定向，Invoke-WebRequest 在部分 runner 上跟随重定向会写入错误页而非真文件，
+              # 导致后续 Expand-Archive 拿到损坏 zip 解压失败。curl.exe 能稳定跟随重定向取回真文件。
+              curl.exe -L -f -o $zip $u
+              if (Test-Path $zip) {
+                $ok = $true
+                break
+              } else {
+                Write-Host "下载后文件不存在"
+              }
+            } catch {
+              Write-Host "下载失败: $_"
+            }
           }
+          if (-not $ok) {
+            Write-Host "NSIS 下载失败：所有镜像均不可用"
+            exit 1
+          }
+          try {
+            Expand-Archive -Path $zip -DestinationPath $dest -Force -ErrorAction Stop
+          } catch {
+            Write-Host "解压失败: $($_.Exception.Message)"
+            exit 1
+          }
+          # 在解压目录动态探测 makensis.exe（不假设固定目录结构）
+          $candidates = @(
+            "$dest\nsis-$nsisVer\Bin\makensis.exe",
+            "$dest\nsis-$nsisVer\makensis.exe"
+          )
+          $makensis = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $makensis) {
+            $found = Get-ChildItem -Path $dest -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $makensis = $found.FullName }
+          }
+          if (-not $makensis) {
+            Write-Host "makensis.exe 未找到，请检查 NSIS 下载包"
+            exit 1
+          }
+          # 把 makensis.exe 所在目录加入 PATH
+          $makensisDir = Split-Path -Parent $makensis
+          Add-Content -Path $env:GITHUB_PATH -Value $makensisDir
+          Write-Host "makensis 路径: $makensis"
 
-      # 编译 Windows 生物识别 Helper（仅在启用 biometric 且为 Windows 平台时）
-      - name: 安装 .NET SDK
-        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'Windows' }}
-        shell: pwsh
-        run: |
-          choco install dotnet-sdk -y
-          # 刷新 PATH
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-      - name: 编译 Windows 生物识别 Helper
-        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'Windows' }}
-        shell: pwsh
-        run: |
-          cd native/windows
-          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true
-          # 复制到目标目录
-          $targetDir = "../../internal/biometric/binaries/windows"
-          if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force }
-          Copy-Item "bin/Release/net6.0/win-x64/publish/biometric_helper.exe" -Destination $targetDir -Force
-          Write-Host "Windows biometric helper compiled and copied to $targetDir"
-
-      # 编译 macOS 生物识别 Helper（仅在启用 biometric 且为 macOS 平台时）
-      - name: 编译 macOS 生物识别 Helper
-        if: ${{ matrix.enabled && inputs.biometric && runner.os == 'macOS' }}
-        shell: bash
-        run: |
-          cd native/macos
-          swiftc -o biometric_helper biometric_helper.swift -framework LocalAuthentication
-          # 复制到目标目录
-          mkdir -p ../../internal/biometric/binaries/macos
-          cp biometric_helper ../../internal/biometric/binaries/macos/
-          echo "macOS biometric helper compiled and copied"
-
-      # 根据输入选择 SQLite 驱动：默认 modernc（纯 Go）；可选 mattn（CGO）。
-      # darwin/linux 的 native 构建任务已硬编码 CGO_ENABLED=1 且 runner 自带编译器，mattn 直接可用；
-      # Windows native 任务读取 CGO_ENABLED Task 变量（默认 0），故 mattn 需显式传入 CGO_ENABLED=1。
+      # 固定 SQLite 驱动策略（不提供手动选择）：
+      # - Windows 平台使用 modernc（纯 Go，避免 CGO/MinGW 麻烦）
+      # - 其他平台（macOS / Linux）使用 mattn（CGO，性能更佳，且这些平台 runner 自带 C 编译器）
       # 将 EXTRA_TAGS / CGO_FLAG 写入 $GITHUB_ENV，供后续构建与打包步骤复用。
       - name: 配置 SQLite 驱动
-        if: ${{ matrix.enabled }}
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         shell: bash
         run: |
           EXTRA_TAGS=""
-          if [ "${{ inputs.biometric }}" = "true" ]; then
-            EXTRA_TAGS="biometric"
-          fi
-          # windows/arm64 的 mattn（CGO）需要 aarch64-w64-mingw32 交叉工具链，
-          # 标准 Windows runner 仅提供 x86_64 的 MinGW，无法编译 arm64 的 CGO 代码
-          # （表现为 gcc 把 AArch64 汇编当 x86 解析导致 `stp`/`ldp` 找不到指令）。
-          # 因此该平台强制回退到 modernc（纯 Go，无需 C 编译器），忽略 sqlite_driver 输入。
-          if [ "${{ inputs.sqlite_driver }}" = "mattn" ] && [ "$GOOS" = "windows" ] && [ "$GOARCH" = "arm64" ]; then
-            echo "::warning::windows/arm64 不支持 mattn（CGO）构建，已自动回退到 modernc（纯 Go）"
+          if [ "$GOOS" = "windows" ]; then
+            # Windows 统一用 modernc（纯 Go），无需 C 编译器
             echo "CGO_FLAG=" >> "$GITHUB_ENV"
-            echo "::notice::使用 modernc.org/sqlite（纯 Go）构建 SQLite"
-          elif [ "${{ inputs.sqlite_driver }}" = "mattn" ]; then
+            echo "::notice::Windows 使用 modernc.org/sqlite（纯 Go）"
+          else
+            # macOS / Linux 使用 mattn（CGO），runner 自带 clang/gcc
             if [ -n "$EXTRA_TAGS" ]; then
               EXTRA_TAGS="$EXTRA_TAGS sqlite_mattn"
             else
@@ -394,7 +336,6 @@ jobs:
 
       # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
       - name: 构建
-        if: ${{ matrix.enabled }}
         shell: bash
         # wails3 task build 内部会调用 go 编译，必须覆盖 setup-go 注入的只读 GOPATH(/go)，否则写 /go 失败。
         env:
@@ -408,7 +349,6 @@ jobs:
           wails3 task build BUILD_TIME=${{ needs.prepare.outputs.build_time }} PRODUCTION=true VERSION=${{ inputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       - name: 打包
-        if: ${{ matrix.enabled }}
         shell: bash
         # wails3 task package 内部同样调用 go，需可写 GOPATH（覆盖 setup-go 的只读 /go）。
         env:
@@ -424,7 +364,7 @@ jobs:
       # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
       - name: macOS 签名与公证
         # 判断用 workflow 级 env（已在 workflow env 中由 secret 赋值），步骤级 env 在 if 求值时尚不存在。
-        if: ${{ matrix.enabled && runner.os == 'macOS' && env.APPLE_DEVELOPER_ID_CERTIFICATE != '' }}
+        if: ${{ runner.os == 'macOS' && env.APPLE_DEVELOPER_ID_CERTIFICATE != '' }}
         shell: bash
         run: |
           wails3 task darwin:sign:notarize
@@ -432,7 +372,7 @@ jobs:
       # Windows: 将 base64 编码的证书 secret 解码为本地 .pfx 文件
       # WINDOWS_SIGN_CERTIFICATE 中存放的是 .pfx 的 base64（含私钥，禁止入库，仅作 secret）
       - name: 解码 Windows 签名证书
-        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        if: ${{ runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
         shell: bash
         run: |
           PFX="$RUNNER_TEMP/certflow_authenticode.pfx"
@@ -448,7 +388,7 @@ jobs:
       # Windows: 先签名安装包（-install.exe，用户实际下载的文件，修复 SmartScreen 拦截）
       # windows:sign:installer 内部会重新生成 installer 并签名外层 exe
       - name: Windows 安装包签名
-        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        if: ${{ runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
         env:
           SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
           WAILS_WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
@@ -460,7 +400,7 @@ jobs:
 
       # Windows: 再签名独立 exe（供自更新 updater-*.zip 使用，保证替换后的二进制已签名）
       - name: Windows 可执行文件签名
-        if: ${{ matrix.enabled && runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
+        if: ${{ runner.os == 'Windows' && env.SIGN_CERTIFICATE != '' }}
         env:
           SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
           WAILS_WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
@@ -471,7 +411,6 @@ jobs:
           wails3 task windows:sign
 
       - name: 重命名产物
-        if: ${{ matrix.enabled }}
         shell: bash
         run: |
           VERSION="${{ inputs.version }}"
@@ -545,7 +484,6 @@ jobs:
           cat SHA256SUMS
 
       - name: 上传产物
-        if: ${{ matrix.enabled }}
         uses: actions/upload-artifact@v7
         with:
           name: certflow-${{ matrix.goos }}-${{ matrix.goarch }}

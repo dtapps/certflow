@@ -103,7 +103,6 @@ certflow/
 ├── ent_log/                   # Standalone Ent package (HTTP request logs, single HttpLog table)
 ├── internal/                  # Internal implementations
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
-│   ├── biometric/             # Biometric helper binaries (Touch ID/Windows Hello)
 │   ├── ca/                    # CA management
 │   ├── certificate/           # Certificate issuance/renewal/revocation/upload
 │   ├── db/                    # Database initialization

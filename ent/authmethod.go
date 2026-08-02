@@ -17,7 +17,7 @@ type AuthMethod struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 认证方式: password/totp/passkey/biometric
+	// 认证方式: password/totp/passkey
 	Method authmethod.Method `json:"method,omitempty"`
 	// 是否为当前激活的认证方式
 	IsActive bool `json:"is_active,omitempty"`

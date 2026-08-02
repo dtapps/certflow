@@ -83,10 +83,9 @@ type Method string
 
 // Method values.
 const (
-	MethodPassword  Method = "password"
-	MethodTotp      Method = "totp"
-	MethodPasskey   Method = "passkey"
-	MethodBiometric Method = "biometric"
+	MethodPassword Method = "password"
+	MethodTotp     Method = "totp"
+	MethodPasskey  Method = "passkey"
 )
 
 func (m Method) String() string {
@@ -96,7 +95,7 @@ func (m Method) String() string {
 // MethodValidator is a validator for the "method" field enum values. It is called by the builders before save.
 func MethodValidator(m Method) error {
 	switch m {
-	case MethodPassword, MethodTotp, MethodPasskey, MethodBiometric:
+	case MethodPassword, MethodTotp, MethodPasskey:
 		return nil
 	default:
 		return fmt.Errorf("authmethod: invalid enum value for method field: %q", m)

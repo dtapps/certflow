@@ -103,7 +103,6 @@ certflow/
 ├── ent_log/                   # 独立 Ent 包（HTTP 请求日志，单表 HttpLog）
 ├── internal/                  # 内部实现
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
-│   ├── biometric/             # 生物识别 Helper 二进制（Touch ID/Windows Hello）
 │   ├── ca/                    # CA 管理
 │   ├── certificate/           # 证书申请/续期/撤销/上传
 │   ├── db/                    # 数据库初始化

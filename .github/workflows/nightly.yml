@@ -2,6 +2,7 @@
 # 每天 00:00 UTC 自动构建 nightly 版本并发布为 Pre-release
 # https://github.com/actions/runner-images
 # https://github.com/actions/checkout
+# https://github.com/actions/cache
 # https://github.com/actions/setup-go
 # https://github.com/actions/setup-node
 # https://github.com/pnpm/action-setup
@@ -14,6 +15,12 @@ on:
   schedule:
     - cron: '0 0 * * *'  # 每天 UTC 00:00（北京时间 08:00）
   workflow_dispatch:  # 支持手动触发
+    inputs:
+      nsis_version:
+        description: 'NSIS 版本号（例如 3.12，留空用默认）'
+        required: false
+        type: string
+        default: '3.12'
 
 permissions:
   contents: write
@@ -124,7 +131,7 @@ jobs:
       # libgtk-4-dev / libwebkitgtk-6.0-dev 等大依赖（ubuntu runner 有效）。
       - name: 缓存 apt 包
         if: runner.os == 'Linux'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /var/cache/apt/archives
           key: apt-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
@@ -138,7 +145,7 @@ jobs:
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: 安装 Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -159,7 +166,7 @@ jobs:
       # 缓存 Go module 下载（GOMODCACHE），让 go mod download / wails3 go install
       # 命中已下载的模块，避免重复从 proxy 拉取。
       - name: 缓存 Go module 缓存
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # 注意：setup-go 不会注入 GOMODCACHE / GOCACHE 环境变量（仅注入 GOPATH 等），
           # 故 path 必须用确定表达式（HOME + 默认 GOPATH/pkg/mod），不能写 ${{ env.GOMODCACHE }}，
@@ -173,10 +180,10 @@ jobs:
       # GOCACHE 跨平台路径不同：Windows %LocalAppData%/go-build，macOS ~/Library/Caches/go-build，
       # Linux ~/.cache/go-build；同样不能用 ${{ env.GOCACHE }}（setup-go 未注入）。
       - name: 缓存 Go build 缓存
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.os == 'Windows' && format('{0}\\AppData\\Local\\go-build', env.HOME) || runner.os == 'macOS' && format('{0}/Library/Caches/go-build', env.HOME) || format('{0}/.cache/go-build', env.HOME) }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.goarch }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-build-
 
@@ -187,15 +194,16 @@ jobs:
       # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
       # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
       # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
-      - name: 缓存 wails3 二进制
-        id: cache-wails3
-        uses: actions/cache@v4
+      # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
+      # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
+      - name: 缓存 Go bin 目录
+        id: cache-gobin
+        uses: actions/cache@v6
         with:
-          path: ${{ env.GO_BIN_DIR }}/wails3${{ runner.os == 'Windows' && '.exe' || '' }}
-          key: wails3-${{ runner.os }}-${{ hashFiles('go.mod') }}
+          path: ${{ env.GO_BIN_DIR }}
+          key: gobin-${{ runner.os }}-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}
 
       - name: 安装 Wails3
-        if: steps.cache-wails3.outputs.cache-hit != 'true'
         env:
           # 必须同时钉 GOPATH 和 GOBIN：CI 容器里 setup-go 把 GOPATH 默认设为只读的 /go，
           # 仅设 GOBIN 无法覆盖，go install 仍会去写 /go 导致 "mkdir /go: read-only file system"。
@@ -227,29 +235,102 @@ jobs:
         run: pnpm install
         working-directory: frontend
 
+      # 环境检查：wails3 doctor 仅做环境体检，不影响实际编译/打包，故允许失败不阻断构建。
       - name: 检查构建环境
+        continue-on-error: true
         run: wails3 doctor
-
-      # 缓存 Chocolatey 已装包（nsis 每次从网络下载很慢）。
-      # 命中后下方 choco install 会自动 detect 已安装并跳过下载；写 PATH 的步骤仍需执行。
-      - name: 缓存 Chocolatey 包
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\ProgramData\chocolatey\lib
-            C:\ProgramData\chocolatey\bin
-          key: choco-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            choco-${{ runner.os }}-
 
       - name: 安装 NSIS
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install nsis -y
-          $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
-          echo $nsisPath | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          # 下载 NSIS 官方便携版（绿色 zip，无需安装器）。
+          # 不依赖 winget/choco：arm runner 上 winget 不可用，choco 缓存恢复会导致解压目录未落地。
+          # 注意：GitHub 的 pwsh 默认 $ErrorActionPreference='Stop'，Write-Error 会被升级为
+          # OperationStopped 异常直接终止脚本（表现为 "OperationStopped: exit code 1"）。
+          # 故显式设为 Continue，并用 Write-Host + exit 1 报告失败，避免异常中断。
+          $ErrorActionPreference = 'Continue'
+          $nsisVer = "${{ inputs.nsis_version }}"
+          $urls = @(
+            "https://downloads.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip",
+            "https://master.dl.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip"
+          )
+          $dest = "$env:RUNNER_TEMP\nsis"
+          $zip = "$env:RUNNER_TEMP\nsis-$nsisVer.zip"
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $ok = $false
+          foreach ($u in $urls) {
+            try {
+              Write-Host "下载 NSIS $nsisVer from $u ..."
+              # 用 curl.exe（Windows 自带）而非 Invoke-WebRequest：SourceForge 返回带签名参数的
+              # 302 重定向，Invoke-WebRequest 在部分 runner 上跟随重定向会写入错误页而非真文件，
+              # 导致后续 Expand-Archive 拿到损坏 zip 解压失败。curl.exe 能稳定跟随重定向取回真文件。
+              curl.exe -L -f -o $zip $u
+              if (Test-Path $zip) {
+                $ok = $true
+                break
+              } else {
+                Write-Host "下载后文件不存在"
+              }
+            } catch {
+              Write-Host "下载失败: $_"
+            }
+          }
+          if (-not $ok) {
+            Write-Host "NSIS 下载失败：所有镜像均不可用"
+            exit 1
+          }
+          try {
+            Expand-Archive -Path $zip -DestinationPath $dest -Force -ErrorAction Stop
+          } catch {
+            Write-Host "解压失败: $($_.Exception.Message)"
+            exit 1
+          }
+          # 在解压目录动态探测 makensis.exe（不假设固定目录结构）
+          $candidates = @(
+            "$dest\nsis-$nsisVer\Bin\makensis.exe",
+            "$dest\nsis-$nsisVer\makensis.exe"
+          )
+          $makensis = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $makensis) {
+            $found = Get-ChildItem -Path $dest -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $makensis = $found.FullName }
+          }
+          if (-not $makensis) {
+            Write-Host "makensis.exe 未找到，请检查 NSIS 下载包"
+            exit 1
+          }
+          # 把 makensis.exe 所在目录加入 PATH
+          $makensisDir = Split-Path -Parent $makensis
+          Add-Content -Path $env:GITHUB_PATH -Value $makensisDir
+          Write-Host "makensis 路径: $makensis"
+
+      # 固定 SQLite 驱动策略（不提供手动选择）：
+      # - Windows 平台使用 modernc（纯 Go，避免 CGO/MinGW 麻烦）
+      # - 其他平台（macOS / Linux）使用 mattn（CGO，性能更佳，且这些平台 runner 自带 C 编译器）
+      # 将 EXTRA_TAGS / CGO_FLAG 写入 $GITHUB_ENV，供后续构建与打包步骤复用。
+      - name: 配置 SQLite 驱动
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        shell: bash
+        run: |
+          EXTRA_TAGS=""
+          if [ "$GOOS" = "windows" ]; then
+            # Windows 统一用 modernc（纯 Go），无需 C 编译器
+            echo "CGO_FLAG=" >> "$GITHUB_ENV"
+            echo "::notice::Windows 使用 modernc.org/sqlite（纯 Go）"
+          else
+            # macOS / Linux 使用 mattn（CGO），runner 自带 clang/gcc
+            if [ -n "$EXTRA_TAGS" ]; then
+              EXTRA_TAGS="$EXTRA_TAGS sqlite_mattn"
+            else
+              EXTRA_TAGS="sqlite_mattn"
+            fi
+            echo "CGO_FLAG=CGO_ENABLED=1" >> "$GITHUB_ENV"
+            echo "::notice::使用 mattn/go-sqlite3（CGO）构建 SQLite"
+          fi
+          echo "EXTRA_TAGS=$EXTRA_TAGS" >> "$GITHUB_ENV"
 
       # 构建和打包（BUILD_TIME/VERSION 由 prepare job 统一生成，各平台一致）
       - name: 构建
@@ -258,7 +339,12 @@ jobs:
         env:
           GOPATH: ${{ env.GO_PATH_DIR }}
           GOBIN: ${{ env.GO_BIN_DIR }}
-        run: wails3 task build BUILD_TIME=${{ needs.prepare.outputs.build_time }} VERSION=${{ needs.prepare.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN
+        run: |
+          EXTRA_ARGS=""
+          if [ -n "$EXTRA_TAGS" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
+          fi
+          wails3 task build BUILD_TIME=${{ needs.prepare.outputs.build_time }} PRODUCTION=true VERSION=${{ needs.prepare.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       - name: 打包
         shell: bash
@@ -266,7 +352,12 @@ jobs:
         env:
           GOPATH: ${{ env.GO_PATH_DIR }}
           GOBIN: ${{ env.GO_BIN_DIR }}
-        run: wails3 task package BUILD_TIME=${{ needs.prepare.outputs.build_time }} VERSION=${{ needs.prepare.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN
+        run: |
+          EXTRA_ARGS=""
+          if [ -n "$EXTRA_TAGS" ]; then
+            EXTRA_ARGS="EXTRA_TAGS=$EXTRA_TAGS"
+          fi
+          wails3 task package BUILD_TIME=${{ needs.prepare.outputs.build_time }} PRODUCTION=true VERSION=${{ needs.prepare.outputs.version }} GITHUB_TOKEN=$UPDATER_TOKEN CNB_TOKEN=$CNB_TOKEN $CGO_FLAG $EXTRA_ARGS
 
       # macOS: 签名 + 公证（解决 Gatekeeper 在系统升级后阻止 App 的问题）
       - name: macOS 签名与公证

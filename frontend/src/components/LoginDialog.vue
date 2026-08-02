@@ -235,28 +235,6 @@ const loginWithPasskey = async () => {
   }
 }
 
-// 生物识别登录
-const loginWithBiometric = async () => {
-  loading.value = true
-  error.value = ''
-
-  try {
-    // 调用后端生物识别验证
-    const success = await AuthService.VerifyBiometric(t('login.biometricPrompt'))
-
-    if (success) {
-      emit('verified')
-    } else {
-      error.value = t('login.biometricFailed')
-    }
-  } catch (e: any) {
-    console.error(t('login.biometricFailed'), e)
-    error.value = t('login.biometricFailed')
-  } finally {
-    loading.value = false
-  }
-}
-
 // 同步主题/语言到后端
 watch(theme, async (val) => {
   try {
@@ -424,23 +402,6 @@ function toggleLocale() {
           @click="loginWithPasskey"
         >
           {{ t('login.usePasskey') }}
-        </n-button>
-      </div>
-
-      <!-- 生物识别登录 -->
-      <div v-else-if="activeMethod === 'biometric'" class="space-y-4">
-        <p class="text-sm text-center text-gray-600">{{ t('login.biometricPrompt') }}</p>
-        <p v-if="error" class="text-red-500 text-xs">{{ error }}</p>
-
-        <n-button
-          type="primary"
-          block
-          size="large"
-          :loading="loading"
-          :disabled="loading"
-          @click="loginWithBiometric"
-        >
-          {{ t('login.useBiometric') }}
         </n-button>
       </div>
 

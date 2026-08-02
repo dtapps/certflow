@@ -36,20 +36,6 @@ export function ChangePassword(oldPassword: string, newPassword: string): $Cance
 }
 
 /**
- * CheckBiometricSupport 检查设备是否支持生物识别
- */
-export function CheckBiometricSupport(): $CancellablePromise<boolean> {
-    return $Call.ByID(4032157405);
-}
-
-/**
- * ClearBiometric 清除生物识别设置
- */
-export function ClearBiometric(): $CancellablePromise<void> {
-    return $Call.ByID(1987371273);
-}
-
-/**
  * ClearPasskey 清除 Passkey 设置
  */
 export function ClearPasskey(): $CancellablePromise<void> {
@@ -99,13 +85,6 @@ export function GetAvailableMethods(): $CancellablePromise<string[] | null> {
 }
 
 /**
- * GetBiometricInfo 获取生物识别信息
- */
-export function GetBiometricInfo(): $CancellablePromise<auth$0.BiometricInfo | null> {
-    return $Call.ByID(2145665186);
-}
-
-/**
  * GetPasskeyInfo 获取 Passkey 信息
  */
 export function GetPasskeyInfo(): $CancellablePromise<auth$0.PasskeyInfo | null> {
@@ -141,13 +120,6 @@ export function SetPassword(password: string): $CancellablePromise<void> {
 }
 
 /**
- * SetupBiometric 设置生物识别认证
- */
-export function SetupBiometric(): $CancellablePromise<void> {
-    return $Call.ByID(1125719073);
-}
-
-/**
  * SetupTOTP 生成 TOTP 密钥
  */
 export function SetupTOTP(): $CancellablePromise<auth$0.TOTPSetupResult | null> {
@@ -166,13 +138,6 @@ export function StartPasskeyLogin(): $CancellablePromise<auth$0.PasskeyAuthentic
  */
 export function StartPasskeyRegistration(): $CancellablePromise<auth$0.PasskeyRegistrationResponse | null> {
     return $Call.ByID(2733158049);
-}
-
-/**
- * VerifyBiometric 验证生物识别
- */
-export function VerifyBiometric(reason: string): $CancellablePromise<boolean> {
-    return $Call.ByID(3879194729, reason);
 }
 
 /**

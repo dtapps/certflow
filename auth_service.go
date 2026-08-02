@@ -156,31 +156,6 @@ func (s *AuthServiceWrapper) Authenticate(method, credential string) bool {
 	return result
 }
 
-// SetupBiometric 设置生物识别认证
-func (s *AuthServiceWrapper) SetupBiometric() error {
-	return s.authService.SetupBiometric()
-}
-
-// VerifyBiometric 验证生物识别
-func (s *AuthServiceWrapper) VerifyBiometric(reason string) bool {
-	return s.authService.VerifyBiometric(reason)
-}
-
-// ClearBiometric 清除生物识别设置
-func (s *AuthServiceWrapper) ClearBiometric() error {
-	return s.authService.ClearBiometric()
-}
-
-// GetBiometricInfo 获取生物识别信息
-func (s *AuthServiceWrapper) GetBiometricInfo() (*auth.BiometricInfo, error) {
-	return s.authService.GetBiometricInfo()
-}
-
-// CheckBiometricSupport 检查设备是否支持生物识别
-func (s *AuthServiceWrapper) CheckBiometricSupport() bool {
-	return s.authService.CheckBiometricSupport()
-}
-
 // ServiceStartup 实现 Wails 服务接口
 func (s *AuthServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil

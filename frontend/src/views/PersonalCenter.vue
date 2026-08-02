@@ -59,10 +59,6 @@ const isPasskeySet = ref(false)
 const passkeyInfo = ref<{ credential_count: number } | null>(null)
 const showPasskeyForm = ref(false)
 
-// 生物识别状态
-const isBiometricSet = ref(false)
-const biometricSupported = ref(false)
-
 // 认证方式状态
 const activeMethod = ref('')
 const availableMethods = ref<string[]>([])
@@ -117,11 +113,6 @@ const loadAuthInfo = async () => {
     const passkeyInfoResult = await AuthService.GetPasskeyInfo()
     isPasskeySet.value = passkeyInfoResult?.is_configured || false
     passkeyInfo.value = passkeyInfoResult
-
-    // 加载生物识别状态
-    const biometricInfoResult = await AuthService.GetBiometricInfo()
-    isBiometricSet.value = biometricInfoResult?.is_configured || false
-    biometricSupported.value = biometricInfoResult?.supported || false
 
     // 加载认证方式
     activeMethod.value = await AuthService.GetActiveMethod()
@@ -346,32 +337,6 @@ const clearPasskey = async () => {
     isPasskeySet.value = false
     showPasskeyForm.value = false
     passkeyInfo.value = null
-    message.value = { type: 'success', text: t('personal.removedSuccess') }
-    await loadAuthInfo()
-  } catch (e: any) {
-    message.value = { type: 'error', text: e.message || t('personal.removeFailed') }
-  }
-}
-
-// ==================== 生物识别操作 ====================
-
-const setupBiometric = async () => {
-  message.value = null
-  try {
-    await AuthService.SetupBiometric()
-    isBiometricSet.value = true
-    message.value = { type: 'success', text: t('personal.biometricSetupSuccess') }
-    await loadAuthInfo()
-  } catch (e: any) {
-    message.value = { type: 'error', text: e.message || t('personal.biometricSetupFailed') }
-  }
-}
-
-const clearBiometric = async () => {
-  message.value = null
-  try {
-    await AuthService.ClearBiometric()
-    isBiometricSet.value = false
     message.value = { type: 'success', text: t('personal.removedSuccess') }
     await loadAuthInfo()
   } catch (e: any) {
@@ -674,67 +639,6 @@ const switchMethod = async (method: string) => {
             {{ t('personal.passkeyExperimental') }}
           </n-tag>
         </div>
-
-        <!-- 生物识别 -->
-        <div class="flex items-center justify-between p-3 rounded-lg border">
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-50 dark:bg-orange-900/30"
-            >
-              <svg
-                class="w-5 h-5 text-orange-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"
-                />
-              </svg>
-            </div>
-            <div>
-              <h4 class="font-medium">{{ t('personal.biometric') }}</h4>
-              <p class="text-xs" :class="isBiometricSet ? 'text-green-500' : 'text-yellow-500'">
-                {{
-                  biometricSupported
-                    ? isBiometricSet
-                      ? t('personal.biometricSet')
-                      : t('personal.biometricNotSet')
-                    : t('personal.biometricNotSupported')
-                }}
-              </p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <n-button v-if="activeMethod === 'biometric'" type="primary" size="small" disabled>
-              {{ t('personal.activeMethod') }}
-            </n-button>
-            <template v-else>
-              <n-button
-                v-if="isBiometricSet"
-                secondary
-                size="small"
-                @click="switchMethod('biometric')"
-              >
-                {{ t('personal.switchMethod') }}
-              </n-button>
-              <n-button
-                v-if="!isBiometricSet && biometricSupported"
-                type="primary"
-                size="small"
-                @click="setupBiometric"
-              >
-                {{ t('personal.setupBiometric') }}
-              </n-button>
-              <n-button v-if="isBiometricSet" type="error" size="small" @click="clearBiometric">
-                {{ t('personal.clearBiometric') }}
-              </n-button>
-            </template>
-          </div>
-        </div>
       </div>
     </n-card>
 
@@ -804,22 +708,6 @@ const switchMethod = async (method: string) => {
             />
           </svg>
           {{ t('personal.passkeyNote') }}
-        </div>
-        <div class="flex items-start gap-2">
-          <svg
-            class="w-4 h-4 text-green-500 mt-0.5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          {{ t('personal.biometricNote') }}
         </div>
         <div class="flex items-start gap-2">
           <svg

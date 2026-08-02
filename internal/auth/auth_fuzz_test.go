@@ -100,7 +100,6 @@ func FuzzAuthenticate(f *testing.F) {
 	f.Add("password", "mypassword", "wrongpass")
 	f.Add("totp", "123456", "")
 	f.Add("passkey", "data", "")
-	f.Add("biometric", "credential", "")
 	f.Add("unsupported", "any", "")
 
 	f.Fuzz(func(t *testing.T, method, setPw, tryPw string) {
