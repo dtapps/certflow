@@ -148,7 +148,6 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
-          cache: true
 
       # 统一计算 Go 工具链目录并写入 $GITHUB_ENV，供后续所有步骤用 ${{ env.GO_PATH_DIR }}/${{ env.GO_BIN_DIR }} 引用。
       # 必须在步骤级 shell 里算（workflow 级 env 不允许用 runner/env context），避免重复写长表达式。
@@ -197,7 +196,6 @@ jobs:
       # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
       # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
       - name: 缓存 Go bin 目录
-        id: cache-gobin
         uses: actions/cache@v6
         with:
           path: ${{ env.GO_BIN_DIR }}
@@ -222,14 +220,29 @@ jobs:
         with:
           package_json_file: 'frontend/package.json'
 
-      # 用 setup-node 的 cache 直接缓存 frontend/node_modules（按 lockfile hash），
-      # 比 pnpm/action-setup 的 cache:true（仅缓存 pnpm store）更快，pnpm install 命中后秒过。
       - name: 安装 Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: 'frontend/.nvmrc'
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+      # 动态获取 pnpm 实际 store 目录（受 PNPM_HOME / 配置影响，写死路径可能 Miss），
+      # 写入 $GITHUB_ENV 供下方缓存步骤引用。
+      - name: 获取 pnpm store 目录
+        id: pnpm-store
+        shell: bash
+        run: |
+          STORE_DIR=$(pnpm config get store-dir)
+          echo "PNPM_STORE_DIR=$STORE_DIR" >> "$GITHUB_ENV"
+
+      # 自定义缓存 pnpm store（替代 setup-node 的 cache: 'pnpm'），按 lockfile hash 命中，
+      # pnpm install 命中后跳过从 registry 下载，加速前端依赖安装。
+      - name: 缓存 pnpm store
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.PNPM_STORE_DIR }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - name: 安装前端依赖
         run: pnpm install
