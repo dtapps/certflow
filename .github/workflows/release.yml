@@ -24,10 +24,9 @@ on:
         type: string
         default: ''
       nsis_version:
-        description: 'NSIS 版本号（例如 3.12，留空用默认）'
+        description: 'NSIS 版本号（例如 3.12，留空用默认 3.12）'
         required: false
         type: string
-        default: '3.12'
 
 permissions:
   contents: write
@@ -83,6 +82,8 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
       CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+      # NSIS 官方便携版版本号：引用 input，留空兜底默认 3.12；脚本只读此 env，单一真值来源。
+      NSIS_VERSION: ${{ inputs.nsis_version || '3.12' }}
       # Windows Authenticode 签名所需的证书（未配置对应 secret 时签名步骤自动跳过）
       SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
       SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
@@ -262,7 +263,8 @@ jobs:
           # OperationStopped 异常直接终止脚本（表现为 "OperationStopped: exit code 1"）。
           # 故显式设为 Continue，并用 Write-Host + exit 1 报告失败，避免异常中断。
           $ErrorActionPreference = 'Continue'
-          $nsisVer = "${{ inputs.nsis_version }}"
+          # 读取 job 级 env（不依赖 inputs，保持与 nightly 一致）。
+          $nsisVer = $env:NSIS_VERSION
           $urls = @(
             "https://downloads.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip",
             "https://master.dl.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip"
