@@ -902,6 +902,7 @@
   "settings.expiryCheckStarted": "Expiry check started",
   "settings.loadFailed": "Failed to load settings:",
   "settings.log.all": "All",
+  "settings.log.archive": "Archive",
   "settings.log.beforeYesterday": "The day before yesterday",
   "settings.log.fullscreen": "Fullscreen View",
   "settings.log.last100": "Last 100 lines",

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/ent/authmethod"
@@ -228,7 +229,7 @@ func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 		IsConfigured: true,
 		Issuer:       "CertFlow",
 		AccountName:  "user",
-		CreatedAt:    am.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    am.CreatedAt.Format(time.RFC3339),
 	}
 
 	return info, nil

@@ -189,11 +189,7 @@ const columns: DataTableColumns<CertificateListItem> = [
     render(row) {
       const days = getDaysLeft(row.not_after, row.status)
       if (days === null) return h('span', { class: 'opacity-50' }, '—')
-      return h(
-        'span',
-        { class: `font-medium ${getDaysLeftClass(days)}` },
-        `${days} ${t('cert.daysLeft')}`,
-      )
+      return h('span', { class: `font-medium ${getDaysLeftClass(days)}` }, String(days))
     },
   },
   {

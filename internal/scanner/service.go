@@ -92,7 +92,7 @@ func (s *ScannerService) Scan(ctx context.Context, input ScanInput) (*ScanResult
 		Domain:    domain,
 		Port:      port,
 		ScanType:  scanType,
-		ScannedAt: time.Now().Format(time.DateTime),
+		ScannedAt: time.Now().Format(time.RFC3339),
 	}
 
 	// 使用带 DNS/代理支持的 HTTP 客户端
@@ -180,8 +180,8 @@ func (s *ScannerService) extractCertInfo(domain string, port int, client *http.C
 
 		result.CertIssuer = leaf.Issuer.CommonName
 		result.CertSubject = leaf.Subject.CommonName
-		result.CertNotBefore = leaf.NotBefore.Format(time.DateTime)
-		result.CertNotAfter = leaf.NotAfter.Format(time.DateTime)
+		result.CertNotBefore = leaf.NotBefore.Format(time.RFC3339)
+		result.CertNotAfter = leaf.NotAfter.Format(time.RFC3339)
 		result.CertRemainingDays = int(time.Until(leaf.NotAfter).Hours() / 24)
 		result.CertFingerprint = fmt.Sprintf("%x", fp)
 		result.CertSignatureAlgo = leaf.SignatureAlgorithm.String()
@@ -269,12 +269,12 @@ func (s *ScannerService) ListHistory(ctx context.Context) ([]*ScanResultItem, er
 			Domain:            item.Domain,
 			Port:              item.Port,
 			ScanType:          string(item.ScanType),
-			ScannedAt:         item.ScannedAt.Format(time.DateTime),
+			ScannedAt:         item.ScannedAt.Format(time.RFC3339),
 			ResponseTimeMs:    item.ResponseTimeMs,
 			CertIssuer:        item.CertIssuer,
 			CertSubject:       item.CertSubject,
-			CertNotBefore:     item.CertNotBefore.Format(time.DateTime),
-			CertNotAfter:      item.CertNotAfter.Format(time.DateTime),
+			CertNotBefore:     item.CertNotBefore.Format(time.RFC3339),
+			CertNotAfter:      item.CertNotAfter.Format(time.RFC3339),
 			CertRemainingDays: item.CertRemainingDays,
 			CertFingerprint:   item.CertFingerprint,
 			CertSignatureAlgo: item.CertSignatureAlgo,

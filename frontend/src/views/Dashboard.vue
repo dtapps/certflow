@@ -8,7 +8,7 @@ import * as SchedulerService from '@bindings/cnb.cool/dtapp/certflow/schedulerse
 import type { CertificateListItem, RenewalLogItem } from '@bindings/cnb.cool/dtapp/certflow/models'
 import { useI18nStore } from '../stores/i18n'
 import { getDaysLeftBgClass } from '../utils/certificate'
-import { formatRelativeTime } from '../utils/format'
+import { formatRelativeTime, parseDateTime, formatDateTime } from '../utils/format'
 
 const router = useRouter()
 const i18nStore = useI18nStore()
@@ -44,7 +44,9 @@ const recentActivity = computed(() => {
 
 const expiringCertificates = computed(() => {
   return expiringCerts.value.map((c) => {
-    const daysLeft = Math.ceil((new Date(c.not_after).getTime() - Date.now()) / 86400000)
+    // 统一走 parseDateTime（处理 time.DateTime 空格格式 + WebKit 兼容）。
+    const expiry = parseDateTime(c.not_after)
+    const daysLeft = expiry ? Math.floor((expiry.getTime() - Date.now()) / 86400000) : null
     return { id: c.id, domain: c.domain, notAfter: c.not_after, daysLeft }
   })
 })
@@ -176,12 +178,16 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
                   <div>
                     <p class="font-medium">{{ cert.domain }}</p>
                     <p class="text-sm opacity-60">
-                      {{ t('dashboard.expiryTime') }} {{ cert.notAfter }}
+                      {{ t('dashboard.expiryTime') }} {{ formatDateTime(cert.notAfter) }}
                     </p>
                   </div>
                 </div>
-                <n-tag :type="cert.daysLeft <= 7 ? 'error' : 'warning'" size="small">
-                  {{ t('dashboard.daysLeft').replace('{count}', String(cert.daysLeft)) }}
+                <n-tag :type="(cert.daysLeft ?? 999) <= 7 ? 'error' : 'warning'" size="small">
+                  {{
+                    cert.daysLeft === null
+                      ? '—'
+                      : t('dashboard.daysLeft').replace('{count}', String(cert.daysLeft))
+                  }}
                 </n-tag>
               </div>
             </div>

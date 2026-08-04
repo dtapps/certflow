@@ -80,8 +80,8 @@ func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, e
 			Config:       convertConfig(p.Config),
 			IsActive:     p.IsActive,
 			Comment:      p.Comment,
-			CreatedAt:    p.CreatedAt.Format(time.DateTime),
-			UpdatedAt:    p.UpdatedAt.Format(time.DateTime),
+			CreatedAt:    p.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:    p.UpdatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil
@@ -107,8 +107,8 @@ func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderReq
 		Config:       convertConfig(result.Config),
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -132,8 +132,8 @@ func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSPro
 		Config:       convertConfig(result.Config),
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -151,8 +151,8 @@ func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProvider
 		Config:       convertConfig(result.Config),
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 

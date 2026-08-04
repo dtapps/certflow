@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/ent/renewallog"
-	"cnb.cool/dtapp/certflow/internal/certificate"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/notification"
@@ -79,10 +79,10 @@ func (s *Scheduler) logJobEvent(key string, jobID uuid.UUID, jobName string, lev
 	lastRun, nextRun := "-", "-"
 	if job, err := s.GetJob(jobID.String()); err == nil {
 		if t, e := job.LastRunStartedAt(); e == nil && !t.IsZero() {
-			lastRun = t.Format(time.DateTime)
+			lastRun = t.Format(time.RFC3339)
 		}
 		if t, e := job.NextRun(); e == nil && !t.IsZero() {
-			nextRun = t.Format(time.DateTime)
+			nextRun = t.Format(time.RFC3339)
 		}
 	}
 	args := []any{

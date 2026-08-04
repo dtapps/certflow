@@ -902,6 +902,7 @@
   "settings.expiryCheckStarted": "过期检查已启动",
   "settings.loadFailed": "加载设置失败:",
   "settings.log.all": "全部",
+  "settings.log.archive": "归档",
   "settings.log.beforeYesterday": "前天",
   "settings.log.fullscreen": "全屏查看",
   "settings.log.last100": "最近 100 行",

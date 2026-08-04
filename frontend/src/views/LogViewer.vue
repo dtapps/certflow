@@ -8,6 +8,7 @@ import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapp
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { initMessage, showMessage } from '../utils/message'
+import { parseDateTime } from '../utils/format'
 import TitleBar from '../components/TitleBar.vue'
 
 const i18nStore = useI18nStore()
@@ -66,7 +67,8 @@ const getThreshold = (hoursAgo: number) => {
 const parseLogTime = (line: string): number => {
   const match = line.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
   if (!match) return 0
-  return new Date(match[1]).getTime()
+  const d = parseDateTime(match[1])
+  return d ? d.getTime() : 0
 }
 
 // 过滤后的日志行
@@ -181,7 +183,12 @@ const refresh = async () => {
 }
 
 // 监听文件选择变化
-watch(selectedLogFile, () => {
+watch(selectedLogFile, (file) => {
+  // 轮转的压缩日志（.gz）为历史文件，其时间戳必然早于今天，
+  // 若仍按默认时间筛选会被全部过滤导致“看不到内容”，故自动切换为“全部”。
+  if (file && file.endsWith('.gz') && logTail.value !== 'all') {
+    logTail.value = 'all'
+  }
   loadLogContent()
 })
 
@@ -203,7 +210,12 @@ const logTailOptions = [
   { label: t('settings.log.all'), value: 'all' },
 ]
 
-const logFileOptions = computed(() => logFiles.value.map((f) => ({ label: f, value: f })))
+const logFileOptions = computed(() =>
+  logFiles.value.map((f) => ({
+    label: f.endsWith('.gz') ? `${f} (${t('settings.log.archive')})` : f,
+    value: f,
+  })),
+)
 </script>
 
 <template>

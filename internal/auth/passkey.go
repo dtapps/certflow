@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/ent/authmethod"
@@ -346,7 +347,7 @@ func (s *AuthService) GetPasskeyInfo() (*PasskeyInfo, error) {
 	info := &PasskeyInfo{
 		IsConfigured:    true,
 		CredentialCount: len(am.Edges.PasskeyCredentials),
-		CreatedAt:       am.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:       am.CreatedAt.Format(time.RFC3339),
 	}
 
 	return info, nil

@@ -847,6 +847,7 @@
   "settings.log.maxSize": "单文件最大大小",
   "settings.log.maxSizeDesc": "超过此大小时自动轮转并压缩",
   "settings.log.noContent": "暂无日志内容",
+  "settings.log.archive": "归档",
   "settings.log.openDir": "打开日志目录",
   "settings.log.openWindowFailed": "打开日志窗口失败:",
   "settings.log.title": "日志设置",

@@ -265,7 +265,7 @@ const loadCertDetails = async () => {
             class="text-2xl font-bold mt-1"
             :class="getDaysLeftClass(daysLeft)"
           >
-            {{ daysLeft }} {{ t('common.daysLeft') }}
+            {{ daysLeft }}
           </p>
           <p v-else class="text-2xl font-bold mt-1 opacity-50">--</p>
         </n-card>

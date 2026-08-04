@@ -44,7 +44,7 @@ func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogI
 	for i, l := range logs {
 		completedAt := ""
 		if !l.CompletedAt.IsZero() {
-			completedAt = l.CompletedAt.Format(time.DateTime)
+			completedAt = l.CompletedAt.Format(time.RFC3339)
 		}
 		certID := 0
 		domain := ""
@@ -60,9 +60,9 @@ func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogI
 			ErrorMessage:  l.ErrorMessage,
 			CertContent:   l.CertContent,
 			KeyContent:    l.KeyContent,
-			AttemptAt:     l.AttemptAt.Format(time.DateTime),
+			AttemptAt:     l.AttemptAt.Format(time.RFC3339),
 			CompletedAt:   completedAt,
-			CreatedAt:     l.CreatedAt.Format(time.DateTime),
+			CreatedAt:     l.CreatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil
@@ -80,7 +80,7 @@ func (s *SchedulerServiceWrapper) GetRenewalLogs(certID int) ([]RenewalLogItem, 
 	for i, l := range logs {
 		completedAt := ""
 		if !l.CompletedAt.IsZero() {
-			completedAt = l.CompletedAt.Format(time.DateTime)
+			completedAt = l.CompletedAt.Format(time.RFC3339)
 		}
 		certID := 0
 		if l.Edges.Certificate != nil {
@@ -93,9 +93,9 @@ func (s *SchedulerServiceWrapper) GetRenewalLogs(certID int) ([]RenewalLogItem, 
 			ErrorMessage:  l.ErrorMessage,
 			CertContent:   l.CertContent,
 			KeyContent:    l.KeyContent,
-			AttemptAt:     l.AttemptAt.Format(time.DateTime),
+			AttemptAt:     l.AttemptAt.Format(time.RFC3339),
 			CompletedAt:   completedAt,
-			CreatedAt:     l.CreatedAt.Format(time.DateTime),
+			CreatedAt:     l.CreatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil

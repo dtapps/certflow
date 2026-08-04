@@ -1,4 +1,5 @@
 import { useI18nStore } from '../stores/i18n'
+import { parseDateTime } from './format'
 
 export function getStatusBadge(status: string) {
   const { t } = useI18nStore()
@@ -16,11 +17,13 @@ export function getDaysLeft(notAfter: string, status?: string): number | null {
   if (!notAfter || status === 'failed' || status === 'pending') {
     return null
   }
-  const expiry = new Date(notAfter)
-  if (isNaN(expiry.getTime())) {
+  // 统一走 parseDateTime（处理后端 time.DateTime 空格格式 + WebKit 兼容 + 非法值兜底）。
+  const expiry = parseDateTime(notAfter)
+  if (!expiry) {
     return null
   }
-  return Math.ceil((expiry.getTime() - Date.now()) / 86400000)
+  // 用 floor 而非 ceil：剩余天数向下取整（已过期返回负数），避免 ceil 把「还差不到 1 天」算成 2 天、把「刚过期」掩盖成 0 天。
+  return Math.floor((expiry.getTime() - Date.now()) / 86400000)
 }
 
 export function getDaysLeftClass(days: number | null): string {

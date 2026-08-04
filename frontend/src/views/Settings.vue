@@ -785,7 +785,12 @@ onMounted(async () => {
             <div class="flex items-center gap-2">
               <n-select
                 v-model:value="selectedLogFile"
-                :options="logFiles.map((f) => ({ label: f, value: f }))"
+                :options="
+                  logFiles.map((f) => ({
+                    label: f.endsWith('.gz') ? f + ' (' + t('settings.log.archive') + ')' : f,
+                    value: f,
+                  }))
+                "
                 size="small"
                 class="log-file-select"
                 @update:value="loadLogContent()"

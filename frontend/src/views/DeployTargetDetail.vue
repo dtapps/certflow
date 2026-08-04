@@ -33,6 +33,7 @@ import { showMessage, translateBackend } from '../utils/message'
 import { regionOf, regionLabel } from '../utils/region'
 import ProviderIcon from '../components/ProviderIcon.vue'
 import { isPanelProvider, providerLabel, serviceLabel } from '../utils/deploy'
+import { formatDateTime } from '../utils/format'
 
 const router = useRouter()
 const route = useRoute()
@@ -451,7 +452,7 @@ const historyColumns: DataTableColumns<DeployLogListItem> = [
     title: t('deploy.time'),
     key: 'created_at',
     width: 170,
-    render: (row) => row.created_at || '-',
+    render: (row) => formatDateTime(row.created_at) || '-',
   },
   {
     title: t('deploy.certDomain'),
@@ -638,7 +639,9 @@ onMounted(async () => {
           </n-card>
           <n-card :bordered="false" size="small">
             <div class="text-xs opacity-60">{{ t('deploy.time') }}</div>
-            <div class="mt-1">{{ target.last_deployed_at || t('deploy.status.never') }}</div>
+            <div class="mt-1">
+              {{ formatDateTime(target.last_deployed_at) || t('deploy.status.never') }}
+            </div>
           </n-card>
         </div>
 
@@ -697,11 +700,11 @@ onMounted(async () => {
                   </div>
                   <div class="info-row">
                     <span class="info-label">{{ t('common.createdAt') }}</span>
-                    <span class="info-value">{{ target.created_at || '-' }}</span>
+                    <span class="info-value">{{ formatDateTime(target.created_at) || '-' }}</span>
                   </div>
                   <div class="info-row">
                     <span class="info-label">{{ t('common.updatedAt') }}</span>
-                    <span class="info-value">{{ target.updated_at || '-' }}</span>
+                    <span class="info-value">{{ formatDateTime(target.updated_at) || '-' }}</span>
                   </div>
                   <div v-if="target.last_error" class="info-row full">
                     <span class="info-label">{{ t('deploy.error') }}</span>
@@ -860,8 +863,11 @@ onMounted(async () => {
                               +{{ (currentCerts[row.key].sans || []).length - 2 }}</template
                             >
                           </n-tag>
-                          <span class="cloud-after" :title="currentCerts[row.key].not_after">
-                            {{ currentCerts[row.key].not_after }}
+                          <span
+                            class="cloud-after"
+                            :title="formatDateTime(currentCerts[row.key].not_after)"
+                          >
+                            {{ formatDateTime(currentCerts[row.key].not_after) }}
                             <template v-if="remainingDays(currentCerts[row.key].not_after) !== '-'">
                               ({{ remainingDays(currentCerts[row.key].not_after) }})
                             </template>

@@ -133,8 +133,8 @@ func toItem(m *ent.MonitoredDomain) *MonitoredDomainItem {
 		LastCheckError:    m.LastCheckError,
 		HTTPStatusCode:    m.HTTPStatusCode,
 		ResponseTimeMs:    m.ResponseTimeMs,
-		CreatedAt:         m.CreatedAt.Format(time.DateTime),
-		UpdatedAt:         m.UpdatedAt.Format(time.DateTime),
+		CreatedAt:         m.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:         m.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
@@ -142,7 +142,7 @@ func formatTime(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
-	return t.Format(time.DateTime)
+	return t.Format(time.RFC3339)
 }
 
 // createCheckLog 将一次检查结果写入历史表（趋势图数据源）

@@ -104,15 +104,15 @@ func (s *CertificateServiceWrapper) ListCertificates() ([]CertificateListItem, e
 	for i, c := range certs {
 		lastRenewed := ""
 		if !c.LastRenewedAt.IsZero() {
-			lastRenewed = c.LastRenewedAt.Format(time.DateTime)
+			lastRenewed = c.LastRenewedAt.Format(time.RFC3339)
 		}
 		notBefore := ""
 		if !c.NotBefore.IsZero() {
-			notBefore = c.NotBefore.Format(time.DateTime)
+			notBefore = c.NotBefore.Format(time.RFC3339)
 		}
 		notAfter := ""
 		if !c.NotAfter.IsZero() {
-			notAfter = c.NotAfter.Format(time.DateTime)
+			notAfter = c.NotAfter.Format(time.RFC3339)
 		}
 		// 查询关联的 CA 与 DNS 提供商名称（与 GetCertificateInfo 保持一致）
 		caName := ""
@@ -140,8 +140,8 @@ func (s *CertificateServiceWrapper) ListCertificates() ([]CertificateListItem, e
 			KeyType:         c.KeyType.String(),
 			CAName:          caName,
 			DNSProviderName: dnsProviderName,
-			CreatedAt:       c.CreatedAt.Format(time.DateTime),
-			UpdatedAt:       c.UpdatedAt.Format(time.DateTime),
+			CreatedAt:       c.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:       c.UpdatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil
@@ -226,15 +226,15 @@ func (s *CertificateServiceWrapper) GetCertificateInfo(id int) (*CertificateList
 
 	lastRenewed := ""
 	if !cert.LastRenewedAt.IsZero() {
-		lastRenewed = cert.LastRenewedAt.Format(time.DateTime)
+		lastRenewed = cert.LastRenewedAt.Format(time.RFC3339)
 	}
 	notBefore := ""
 	if !cert.NotBefore.IsZero() {
-		notBefore = cert.NotBefore.Format(time.DateTime)
+		notBefore = cert.NotBefore.Format(time.RFC3339)
 	}
 	notAfter := ""
 	if !cert.NotAfter.IsZero() {
-		notAfter = cert.NotAfter.Format(time.DateTime)
+		notAfter = cert.NotAfter.Format(time.RFC3339)
 	}
 
 	// 查询关联的 CA 和 DNS 提供商名称
@@ -264,8 +264,8 @@ func (s *CertificateServiceWrapper) GetCertificateInfo(id int) (*CertificateList
 		KeyType:         cert.KeyType.String(),
 		CAName:          caName,
 		DNSProviderName: dnsProviderName,
-		CreatedAt:       cert.CreatedAt.Format(time.DateTime),
-		UpdatedAt:       cert.UpdatedAt.Format(time.DateTime),
+		CreatedAt:       cert.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       cert.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -349,11 +349,11 @@ func (s *CertificateServiceWrapper) GetExpiringCertificates(days int) ([]Certifi
 	for i, c := range certs {
 		notBefore := ""
 		if !c.NotBefore.IsZero() {
-			notBefore = c.NotBefore.Format(time.DateTime)
+			notBefore = c.NotBefore.Format(time.RFC3339)
 		}
 		notAfter := ""
 		if !c.NotAfter.IsZero() {
-			notAfter = c.NotAfter.Format(time.DateTime)
+			notAfter = c.NotAfter.Format(time.RFC3339)
 		}
 		items[i] = CertificateListItem{
 			ID:        c.ID,

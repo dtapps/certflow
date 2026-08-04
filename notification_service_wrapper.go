@@ -69,7 +69,7 @@ func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([
 			Category:  item.Category.String(),
 			Level:     item.Level.String(),
 			Read:      item.Read,
-			CreatedAt: item.CreatedAt.Format(time.DateTime),
+			CreatedAt: item.CreatedAt.Format(time.RFC3339),
 		}
 	}
 	return result, nil

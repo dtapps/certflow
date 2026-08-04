@@ -23,6 +23,7 @@ import { regionOf, regionLabel } from '../utils/region'
 import { EventWindowResized, type WindowResizedPayload } from '../utils/events'
 import ProviderIcon from '../components/ProviderIcon.vue'
 import { isPanelProvider, providerLabel, serviceLabel } from '../utils/deploy'
+import { formatDateTime } from '../utils/format'
 
 const router = useRouter()
 const i18nStore = useI18nStore()
@@ -227,7 +228,9 @@ const allColumns = computed<DataTableColumns<DeployTargetListItem>>(() => [
     key: 'last_deployed_at',
     width: 160,
     render: (row: DeployTargetListItem) =>
-      row.last_deployed_at ? h('span', { class: 'text-xs opacity-50' }, row.last_deployed_at) : '-',
+      row.last_deployed_at
+        ? h('span', { class: 'text-xs opacity-50' }, formatDateTime(row.last_deployed_at))
+        : '-',
   },
   {
     title: t('common.actions'),

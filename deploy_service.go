@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/deploy"
+	"cnb.cool/dtapp/certflow/internal/ent"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -91,8 +91,8 @@ func toDeployTargetListItem(t *ent.DeployTarget) DeployTargetListItem {
 		Comment:          t.Comment,
 		LastStatus:       t.LastStatus,
 		LastError:        t.LastError,
-		CreatedAt:        t.CreatedAt.Format(time.DateTime),
-		UpdatedAt:        t.UpdatedAt.Format(time.DateTime),
+		CreatedAt:        t.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:        t.UpdatedAt.Format(time.RFC3339),
 	}
 	if len(t.Config) > 0 {
 		_ = json.Unmarshal(t.Config, &item.Config)
@@ -117,7 +117,7 @@ func toDeployTargetListItem(t *ent.DeployTarget) DeployTargetListItem {
 		item.CertIds = ids
 	}
 	if !t.LastDeployedAt.IsZero() {
-		item.LastDeployedAt = t.LastDeployedAt.Format(time.DateTime)
+		item.LastDeployedAt = t.LastDeployedAt.Format(time.RFC3339)
 	}
 	return item
 }
@@ -326,7 +326,7 @@ func (s *DeployServiceWrapper) ListDeployLogs(targetID int) ([]DeployLogListItem
 			Message:       l.Message,
 			Response:      l.Response,
 			CloudCertID:   l.CloudCertID,
-			CreatedAt:     l.CreatedAt.Format(time.DateTime),
+			CreatedAt:     l.CreatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil

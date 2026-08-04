@@ -18,6 +18,7 @@ import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { storeToRefs } from 'pinia'
 import { initMessage, showMessage } from '../utils/message'
+import { formatDateTime } from '../utils/format'
 
 const i18nStore = useI18nStore()
 const { t } = i18nStore
@@ -258,7 +259,7 @@ onMounted(loadHistory)
                     }}
                   </p>
                   <p class="text-xs mt-0.5 opacity-50">
-                    {{ item.scanned_at }}
+                    {{ formatDateTime(item.scanned_at) }}
                     <span v-if="item.response_time_ms"> · {{ item.response_time_ms }}ms</span>
                   </p>
                 </div>
@@ -317,7 +318,7 @@ onMounted(loadHistory)
                   </div>
                   <div>
                     <p class="opacity-50">{{ t('scan.validFrom') }}</p>
-                    <p class="font-medium">{{ item.cert_not_before }}</p>
+                    <p class="font-medium">{{ formatDateTime(item.cert_not_before) }}</p>
                   </div>
                   <div>
                     <p class="opacity-50">{{ t('scan.validTo') }}</p>
@@ -325,7 +326,7 @@ onMounted(loadHistory)
                       class="font-medium"
                       :class="item.cert_remaining_days <= 30 ? 'text-yellow-500' : ''"
                     >
-                      {{ item.cert_not_after }}
+                      {{ formatDateTime(item.cert_not_after) }}
                     </p>
                   </div>
                 </div>

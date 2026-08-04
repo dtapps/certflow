@@ -69,8 +69,8 @@ func (s *CAServiceWrapper) ListCA() ([]CAListItem, error) {
 			EabHmac:      c.EabHmac,
 			IsBuiltin:    c.IsBuiltin,
 			IsActive:     c.IsActive,
-			CreatedAt:    c.CreatedAt.Format(time.DateTime),
-			UpdatedAt:    c.UpdatedAt.Format(time.DateTime),
+			CreatedAt:    c.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:    c.UpdatedAt.Format(time.RFC3339),
 		}
 	}
 	return items, nil
@@ -99,8 +99,8 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		EabHmac:      result.EabHmac,
 		IsBuiltin:    result.IsBuiltin,
 		IsActive:     result.IsActive,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -127,8 +127,8 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		EabHmac:      result.EabHmac,
 		IsBuiltin:    result.IsBuiltin,
 		IsActive:     result.IsActive,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -155,8 +155,8 @@ func (s *CAServiceWrapper) SetCAActive(id int, active bool) (*CAListItem, error)
 		EabHmac:      result.EabHmac,
 		IsBuiltin:    result.IsBuiltin,
 		IsActive:     result.IsActive,
-		CreatedAt:    result.CreatedAt.Format(time.DateTime),
-		UpdatedAt:    result.UpdatedAt.Format(time.DateTime),
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    result.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 

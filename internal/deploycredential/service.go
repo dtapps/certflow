@@ -3,6 +3,7 @@ package deploycredential
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
@@ -68,8 +69,8 @@ func (s *Service) List(ctx context.Context) ([]*DeployCredentialListItem, error)
 			Config:       config,
 			IsActive:     item.IsActive,
 			Comment:      item.Comment,
-			CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    item.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 	return result, nil
@@ -92,8 +93,8 @@ func (s *Service) GetByID(ctx context.Context, id int) (*DeployCredentialListIte
 		Config:       config,
 		IsActive:     item.IsActive,
 		Comment:      item.Comment,
-		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -117,8 +118,8 @@ func (s *Service) Create(ctx context.Context, input CreateDeployCredentialInput)
 		Config:       input.Config,
 		IsActive:     item.IsActive,
 		Comment:      item.Comment,
-		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -142,8 +143,8 @@ func (s *Service) Update(ctx context.Context, id int, input UpdateDeployCredenti
 		Config:       input.Config,
 		IsActive:     item.IsActive,
 		Comment:      item.Comment,
-		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -167,8 +168,8 @@ func (s *Service) SetActive(ctx context.Context, id int, active bool) (*DeployCr
 		Config:       config,
 		IsActive:     item.IsActive,
 		Comment:      item.Comment,
-		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    item.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 

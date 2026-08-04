@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"github.com/go-acme/lego/v5/challenge"
