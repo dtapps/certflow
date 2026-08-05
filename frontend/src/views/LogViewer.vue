@@ -2,13 +2,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { NSelect, NButton, NSpin, NIcon, useMessage } from 'naive-ui'
-import { RefreshOutline, FolderOpenOutline } from '@vicons/ionicons5'
+import { RefreshOutline, FolderOpenOutline, CopyOutline } from '@vicons/ionicons5'
 import * as LoggingService from '@bindings/cnb.cool/dtapp/certflow/loggingservicewrapper'
 import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapper'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { initMessage, showMessage } from '../utils/message'
 import { parseDateTime } from '../utils/format'
+import { copyToClipboard } from '../utils/clipboard'
 import TitleBar from '../components/TitleBar.vue'
 
 const i18nStore = useI18nStore()
@@ -182,6 +183,19 @@ const refresh = async () => {
   await loadLogContent()
 }
 
+// 复制当前显示的日志（含筛选结果）到剪贴板
+const copyLog = async () => {
+  if (filteredLines.value.length === 0) {
+    showMessage(t('settings.log.noContent'), 'warning')
+    return
+  }
+  const ok = await copyToClipboard(filteredLines.value.join('\n'))
+  showMessage(
+    ok ? t('settings.log.copied') : t('settings.log.copyFailed'),
+    ok ? 'success' : 'error',
+  )
+}
+
 // 监听文件选择变化
 watch(selectedLogFile, (file) => {
   // 轮转的压缩日志（.gz）为历史文件，其时间戳必然早于今天，
@@ -268,6 +282,12 @@ const logFileOptions = computed(() =>
       >
         <template #icon>
           <n-icon :size="16"><FolderOpenOutline /></n-icon>
+        </template>
+      </n-button>
+
+      <n-button quaternary circle size="small" @click="copyLog" :title="t('settings.log.copy')">
+        <template #icon>
+          <n-icon :size="16"><CopyOutline /></n-icon>
         </template>
       </n-button>
     </div>
