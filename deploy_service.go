@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/deploy"
 	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -127,12 +130,14 @@ func (s *DeployServiceWrapper) ListDeployTargets() ([]DeployTargetListItem, erro
 	ctx := context.Background()
 	targets, err := s.deployService.List(ctx)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_list_failed", "Error", err))
 		return nil, err
 	}
 	items := make([]DeployTargetListItem, len(targets))
 	for i, t := range targets {
 		items[i] = toDeployTargetListItem(t)
 	}
+	logging.Debug("%s", i18n.T("log.deploy_targets_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -141,6 +146,7 @@ func (s *DeployServiceWrapper) GetDeployTarget(id int) (*DeployTargetListItem, e
 	ctx := context.Background()
 	t, err := s.deployService.Get(ctx, id)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_get_failed", "Error", err))
 		return nil, err
 	}
 	item := toDeployTargetListItem(t)
@@ -162,6 +168,7 @@ func (s *DeployServiceWrapper) CreateDeployTarget(input CreateDeployTargetReques
 		Comment:            input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_create_failed", "Error", err))
 		return nil, err
 	}
 	item := toDeployTargetListItem(t)
@@ -183,6 +190,7 @@ func (s *DeployServiceWrapper) UpdateDeployTarget(id int, input UpdateDeployTarg
 		Comment:            input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_update_failed", "Error", err))
 		return nil, err
 	}
 	item := toDeployTargetListItem(t)
@@ -192,19 +200,31 @@ func (s *DeployServiceWrapper) UpdateDeployTarget(id int, input UpdateDeployTarg
 // DeleteDeployTarget 删除部署目标
 func (s *DeployServiceWrapper) DeleteDeployTarget(id int) error {
 	ctx := context.Background()
-	return s.deployService.Delete(ctx, id)
+	if err := s.deployService.Delete(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.deploy_delete_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // LinkCert 关联证书到部署目标
 func (s *DeployServiceWrapper) LinkCert(targetID, certID int) error {
 	ctx := context.Background()
-	return s.deployService.LinkCert(ctx, targetID, certID)
+	if err := s.deployService.LinkCert(ctx, targetID, certID); err != nil {
+		logging.Error("%s", i18n.T("log.deploy_link_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // UnlinkCert 取消证书与部署目标的关联
 func (s *DeployServiceWrapper) UnlinkCert(targetID, certID int) error {
 	ctx := context.Background()
-	return s.deployService.UnlinkCert(ctx, targetID, certID)
+	if err := s.deployService.UnlinkCert(ctx, targetID, certID); err != nil {
+		logging.Error("%s", i18n.T("log.deploy_unlink_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // ListTargetsByCert 获取关联了某证书的部署目标
@@ -212,12 +232,14 @@ func (s *DeployServiceWrapper) ListTargetsByCert(certID int) ([]DeployTargetList
 	ctx := context.Background()
 	targets, err := s.deployService.ListByCert(ctx, certID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_targets_bycert_failed", "Error", err))
 		return nil, err
 	}
 	items := make([]DeployTargetListItem, len(targets))
 	for i, t := range targets {
 		items[i] = toDeployTargetListItem(t)
 	}
+	logging.Debug("%s", i18n.T("log.deploy_targets_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -226,8 +248,10 @@ func (s *DeployServiceWrapper) DeployCertificate(targetID, certID int, domain, s
 	ctx := context.Background()
 	outcome, err := s.deployService.DeployCertificate(ctx, targetID, certID, domain, siteID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cert_failed", "Error", err))
 		return nil, err
 	}
+	logging.Debug("%s", i18n.T("log.deploy_done", "Data", fmt.Sprintf("%+v", outcome)))
 	return &DeployOutcomeDTO{
 		TargetID:    outcome.TargetID,
 		TargetName:  outcome.TargetName,
@@ -243,6 +267,7 @@ func (s *DeployServiceWrapper) DeployAllForCert(certID int) ([]DeployOutcomeDTO,
 	ctx := context.Background()
 	outcomes, err := s.deployService.DeployAllForCert(ctx, certID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_all_failed", "Error", err))
 		return nil, err
 	}
 	dtos := make([]DeployOutcomeDTO, len(outcomes))

@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/scheduler"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -37,6 +40,7 @@ func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogI
 	ctx := context.Background()
 	logs, err := s.scheduler.GetRecentRenewalLogs(ctx, limit)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.scheduler_recent_renewal_logs_failed", "Error", err))
 		return nil, err
 	}
 
@@ -65,6 +69,7 @@ func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogI
 			CreatedAt:     l.CreatedAt.Format(time.RFC3339),
 		}
 	}
+	logging.Debug("%s", i18n.T("log.scheduler_recent_renewal_logs_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -73,6 +78,7 @@ func (s *SchedulerServiceWrapper) GetRenewalLogs(certID int) ([]RenewalLogItem, 
 	ctx := context.Background()
 	logs, err := s.scheduler.GetRenewalLogs(ctx, certID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.scheduler_renewal_logs_failed", "CertID", certID, "Error", err))
 		return nil, err
 	}
 
@@ -98,6 +104,7 @@ func (s *SchedulerServiceWrapper) GetRenewalLogs(certID int) ([]RenewalLogItem, 
 			CreatedAt:     l.CreatedAt.Format(time.RFC3339),
 		}
 	}
+	logging.Debug("%s", i18n.T("log.scheduler_renewal_logs_loaded", "CertID", certID, "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 

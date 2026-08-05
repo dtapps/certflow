@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ca"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -55,6 +58,7 @@ func (s *CAServiceWrapper) ListCA() ([]CAListItem, error) {
 	ctx := context.Background()
 	cas, err := s.caService.List(ctx)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_list_failed", "Error", err))
 		return nil, err
 	}
 
@@ -73,6 +77,7 @@ func (s *CAServiceWrapper) ListCA() ([]CAListItem, error) {
 			UpdatedAt:    c.UpdatedAt.Format(time.RFC3339),
 		}
 	}
+	logging.Debug("%s", i18n.T("log.ca_list_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -87,6 +92,7 @@ func (s *CAServiceWrapper) CreateCA(input CreateCACreateRequest) (*CAListItem, e
 		EabHmac:      input.EabHmac,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_create_failed", "Error", err))
 		return nil, err
 	}
 
@@ -115,6 +121,7 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 		EabHmac:      input.EabHmac,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_update_failed", "Error", err))
 		return nil, err
 	}
 
@@ -135,7 +142,11 @@ func (s *CAServiceWrapper) UpdateCA(id int, input CAUpdateRequest) (*CAListItem,
 // DeleteCA 删除 CA
 func (s *CAServiceWrapper) DeleteCA(id int) error {
 	ctx := context.Background()
-	return s.caService.Delete(ctx, id)
+	if err := s.caService.Delete(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.ca_delete_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // SetCAActive 启用/禁用 CA（独立接口）
@@ -143,6 +154,7 @@ func (s *CAServiceWrapper) SetCAActive(id int, active bool) (*CAListItem, error)
 	ctx := context.Background()
 	result, err := s.caService.SetActive(ctx, id, active)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_setactive_failed", "Error", err))
 		return nil, err
 	}
 
@@ -163,13 +175,23 @@ func (s *CAServiceWrapper) SetCAActive(id int, active bool) (*CAListItem, error)
 // TestCAConnection 测试 CA 连接
 func (s *CAServiceWrapper) TestCAConnection(id int) (string, error) {
 	ctx := context.Background()
-	return s.caService.TestConnection(ctx, id)
+	res, err := s.caService.TestConnection(ctx, id)
+	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_test_failed", "Error", err))
+		return "", err
+	}
+	return res, nil
 }
 
 // CheckDirectoryURL 验证 ACME 目录 URL 是否可访问（按 URL，不依赖已有记录）
 func (s *CAServiceWrapper) CheckDirectoryURL(rawURL string) (string, error) {
 	ctx := context.Background()
-	return s.caService.CheckDirectoryURL(ctx, rawURL)
+	res, err := s.caService.CheckDirectoryURL(ctx, rawURL)
+	if err != nil {
+		logging.Error("%s", i18n.T("log.ca_checkdir_failed", "Error", err))
+		return "", err
+	}
+	return res, nil
 }
 
 // ServiceStartup 实现 Wails 服务接口

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/deploycredential"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -51,6 +53,7 @@ func (s *DeployCredentialServiceWrapper) ListDeployCredentials() ([]DeployCreden
 	ctx := context.Background()
 	list, err := s.credentialService.List(ctx)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_list_failed", "Error", err))
 		return nil, err
 	}
 
@@ -75,6 +78,7 @@ func (s *DeployCredentialServiceWrapper) GetDeployCredential(id int) (*DeployCre
 	ctx := context.Background()
 	item, err := s.credentialService.GetByID(ctx, id)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_get_failed", "Error", err))
 		return nil, err
 	}
 
@@ -100,6 +104,7 @@ func (s *DeployCredentialServiceWrapper) CreateDeployCredential(input CreateDepl
 		Comment:      input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_create_failed", "Error", err))
 		return nil, err
 	}
 
@@ -125,6 +130,7 @@ func (s *DeployCredentialServiceWrapper) UpdateDeployCredential(id int, input Up
 		Comment:      input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_update_failed", "Error", err))
 		return nil, err
 	}
 
@@ -145,6 +151,7 @@ func (s *DeployCredentialServiceWrapper) SetActive(id int, active bool) (*Deploy
 	ctx := context.Background()
 	result, err := s.credentialService.SetActive(ctx, id, active)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_setactive_failed", "Error", err))
 		return nil, err
 	}
 	return &DeployCredentialListItem{
@@ -162,7 +169,11 @@ func (s *DeployCredentialServiceWrapper) SetActive(id int, active bool) (*Deploy
 // DeleteDeployCredential 删除部署凭证
 func (s *DeployCredentialServiceWrapper) DeleteDeployCredential(id int) error {
 	ctx := context.Background()
-	return s.credentialService.Delete(ctx, id)
+	if err := s.credentialService.Delete(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.deploy_cred_delete_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // ServiceStartup 实现 Wails 服务接口

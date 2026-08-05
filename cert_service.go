@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/certificate"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -97,6 +99,7 @@ func (s *CertificateServiceWrapper) ListCertificates() ([]CertificateListItem, e
 	ctx := context.Background()
 	certs, err := s.certService.List(ctx)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_list_failed", "Error", err))
 		return nil, err
 	}
 
@@ -144,6 +147,7 @@ func (s *CertificateServiceWrapper) ListCertificates() ([]CertificateListItem, e
 			UpdatedAt:       c.UpdatedAt.Format(time.RFC3339),
 		}
 	}
+	logging.Debug("%s", i18n.T("log.cert_list_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -160,6 +164,7 @@ func (s *CertificateServiceWrapper) ApplyCertificate(input ApplyCertRequest) (*A
 		KeyType:       input.KeyType,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_apply_failed", "Domain", input.Domain, "Error", err))
 		return &ApplyCertResult{
 			Success: false,
 			Error:   err.Error(),
@@ -182,6 +187,7 @@ func (s *CertificateServiceWrapper) RenewCertificate(id int) (*ApplyCertResult, 
 	ctx := context.Background()
 	result, err := s.certService.RenewCertificate(ctx, id)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_renew_failed", "ID", id, "Error", err))
 		return &ApplyCertResult{
 			Success: false,
 			Error:   err.Error(),
@@ -201,19 +207,31 @@ func (s *CertificateServiceWrapper) RenewCertificate(id int) (*ApplyCertResult, 
 // RevokeCertificate 撤销证书
 func (s *CertificateServiceWrapper) RevokeCertificate(id int) error {
 	ctx := context.Background()
-	return s.certService.RevokeCertificate(ctx, id)
+	if err := s.certService.RevokeCertificate(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.cert_revoke_failed", "ID", id, "Error", err))
+		return err
+	}
+	return nil
 }
 
 // UpdateCertificateSettings 更新证书设置（自动续期、续期天数）
 func (s *CertificateServiceWrapper) UpdateCertificateSettings(id int, autoRenew bool, renewalDays int) error {
 	ctx := context.Background()
-	return s.certService.UpdateSettings(ctx, id, autoRenew, renewalDays)
+	if err := s.certService.UpdateSettings(ctx, id, autoRenew, renewalDays); err != nil {
+		logging.Error("%s", i18n.T("log.cert_update_settings_failed", "ID", id, "Error", err))
+		return err
+	}
+	return nil
 }
 
 // DeleteCertificate 删除证书
 func (s *CertificateServiceWrapper) DeleteCertificate(id int) error {
 	ctx := context.Background()
-	return s.certService.Delete(ctx, id)
+	if err := s.certService.Delete(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.cert_delete_failed", "ID", id, "Error", err))
+		return err
+	}
+	return nil
 }
 
 // GetCertificateInfo 获取证书详情
@@ -221,6 +239,7 @@ func (s *CertificateServiceWrapper) GetCertificateInfo(id int) (*CertificateList
 	ctx := context.Background()
 	cert, err := s.certService.GetByID(ctx, id)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_detail_failed", "ID", id, "Error", err))
 		return nil, err
 	}
 
@@ -247,7 +266,7 @@ func (s *CertificateServiceWrapper) GetCertificateInfo(id int) (*CertificateList
 		dnsProviderName = dp.Name
 	}
 
-	return &CertificateListItem{
+	item := &CertificateListItem{
 		ID:              cert.ID,
 		Domain:          cert.Domain,
 		Sans:            cert.Sans,
@@ -266,7 +285,9 @@ func (s *CertificateServiceWrapper) GetCertificateInfo(id int) (*CertificateList
 		DNSProviderName: dnsProviderName,
 		CreatedAt:       cert.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       cert.UpdatedAt.Format(time.RFC3339),
-	}, nil
+	}
+	logging.Debug("%s", i18n.T("log.cert_detail_loaded", "ID", item.ID, "NotAfter", item.NotAfter, "NotBefore", item.NotBefore, "CreatedAt", item.CreatedAt, "Status", item.Status))
+	return item, nil
 }
 
 // StartManualDNSChallenge 开始手动 DNS 挑战（第一步）
@@ -282,6 +303,7 @@ func (s *CertificateServiceWrapper) StartManualDNSChallenge(input ApplyCertReque
 		KeyType:       input.KeyType,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_start_manual_dns_failed", "Domain", input.Domain, "Error", err))
 		return nil, err
 	}
 	return &ManualDNSChallenge{
@@ -295,6 +317,7 @@ func (s *CertificateServiceWrapper) CompleteManualDNSChallenge(domain string) (*
 	ctx := context.Background()
 	result, err := s.certService.CompleteManualDNSChallenge(ctx, domain)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_complete_manual_dns_failed", "Domain", domain, "Error", err))
 		return &ApplyCertResult{
 			Success: false,
 			Error:   err.Error(),
@@ -316,6 +339,7 @@ func (s *CertificateServiceWrapper) GetPendingChallengeInfo(certID int) (*Manual
 	ctx := context.Background()
 	info, err := s.certService.GetPendingChallengeInfo(ctx, certID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_pending_challenge_failed", "CertID", certID, "Error", err))
 		return nil, err
 	}
 	return &ManualDNSChallenge{
@@ -329,6 +353,7 @@ func (s *CertificateServiceWrapper) ResumeManualDNSChallenge(certID int) (*Manua
 	ctx := context.Background()
 	info, err := s.certService.ResumeManualDNSChallenge(ctx, certID)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_resume_manual_dns_failed", "CertID", certID, "Error", err))
 		return nil, err
 	}
 	return &ManualDNSChallenge{
@@ -342,6 +367,7 @@ func (s *CertificateServiceWrapper) GetExpiringCertificates(days int) ([]Certifi
 	ctx := context.Background()
 	certs, err := s.certService.ListExpiring(ctx, days)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_expiring_failed", "Days", days, "Error", err))
 		return nil, err
 	}
 
@@ -367,6 +393,12 @@ func (s *CertificateServiceWrapper) GetExpiringCertificates(days int) ([]Certifi
 			KeyType:   c.KeyType.String(),
 		}
 	}
+	first := ""
+	if len(items) > 0 {
+		c := items[0]
+		first = fmt.Sprintf("domain=%s not_after=%s status=%s", c.Domain, c.NotAfter, c.Status)
+	}
+	logging.Debug("%s", i18n.T("log.cert_expiring_loaded", "Days", days, "Count", len(items), "First", first))
 	return items, nil
 }
 
@@ -391,10 +423,12 @@ func (s *CertificateServiceWrapper) ParseCertificateDetails(id int) (*Certificat
 	ctx := context.Background()
 	cert, err := s.certService.GetByID(ctx, id)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_detail_failed", "ID", id, "Error", err))
 		return nil, err
 	}
 
 	if cert.CertContent == "" {
+		logging.Error("%s", i18n.T("log.cert_parse_details_failed", "Error", "certificate content is empty"))
 		return nil, fmt.Errorf("certificate content is empty")
 	}
 
@@ -405,6 +439,7 @@ func (s *CertificateServiceWrapper) ParseCertificateDetails(id int) (*Certificat
 	}
 	x509Cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.cert_parse_details_failed", "Error", err))
 		return nil, fmt.Errorf("failed to parse certificate: %w", err)
 	}
 

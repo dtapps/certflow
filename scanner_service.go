@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/scanner"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -28,7 +31,13 @@ func (w *ScannerServiceWrapper) Scan(domain string, port int, scanType string) (
 
 // ListHistory 获取扫描历史
 func (w *ScannerServiceWrapper) ListHistory() ([]*scanner.ScanResultItem, error) {
-	return w.scannerService.ListHistory(context.Background())
+	items, err := w.scannerService.ListHistory(context.Background())
+	if err != nil {
+		logging.Error("%s", i18n.T("log.scanner_listhistory_failed", "Error", err))
+		return nil, err
+	}
+	logging.Debug("%s", i18n.T("log.scanner_list_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
+	return items, nil
 }
 
 // DeleteResult 删除扫描结果

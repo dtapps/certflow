@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -64,6 +67,7 @@ func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, e
 	ctx := context.Background()
 	providers, err := s.dnsService.List(ctx)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.dns_list_failed", "Error", err))
 		return nil, err
 	}
 
@@ -84,6 +88,7 @@ func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, e
 			UpdatedAt:    p.UpdatedAt.Format(time.RFC3339),
 		}
 	}
+	logging.Debug("%s", i18n.T("log.dns_providers_loaded", "Count", len(items), "Data", fmt.Sprintf("%+v", items)))
 	return items, nil
 }
 
@@ -97,6 +102,7 @@ func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderReq
 		Comment:      input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.dns_create_failed", "Error", err))
 		return nil, err
 	}
 
@@ -122,6 +128,7 @@ func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSPro
 		Comment:      input.Comment,
 	})
 	if err != nil {
+		logging.Error("%s", i18n.T("log.dns_update_failed", "Error", err))
 		return nil, err
 	}
 
@@ -142,6 +149,7 @@ func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProvider
 	ctx := context.Background()
 	result, err := s.dnsService.SetActive(ctx, id, active)
 	if err != nil {
+		logging.Error("%s", i18n.T("log.dns_setactive_failed", "Error", err))
 		return nil, err
 	}
 	return &DNSProviderListItem{
@@ -159,7 +167,11 @@ func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProvider
 // DeleteDNSProvider 删除 DNS 提供商
 func (s *DNSProviderServiceWrapper) DeleteDNSProvider(id int) error {
 	ctx := context.Background()
-	return s.dnsService.Delete(ctx, id)
+	if err := s.dnsService.Delete(ctx, id); err != nil {
+		logging.Error("%s", i18n.T("log.dns_delete_failed", "Error", err))
+		return err
+	}
+	return nil
 }
 
 // GetDNSProviderTypes 获取支持的 DNS 提供商类型
