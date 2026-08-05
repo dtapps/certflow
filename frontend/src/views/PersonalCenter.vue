@@ -117,6 +117,17 @@ const loadAuthInfo = async () => {
     // 加载认证方式
     activeMethod.value = await AuthService.GetActiveMethod()
     availableMethods.value = await AuthService.GetAvailableMethods()
+    console.debug(
+      t('log.personalLoad', {
+        data: JSON.stringify({
+          isPasswordSet: isPasswordSet.value,
+          isTOTPSet: isTOTPSet.value,
+          isPasskeySet: isPasskeySet.value,
+          activeMethod: activeMethod.value,
+          availableMethods: availableMethods.value,
+        }),
+      }),
+    )
   } catch (e) {
     console.error(t('personal.authLoadFailed'), e)
   }

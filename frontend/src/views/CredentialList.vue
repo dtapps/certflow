@@ -101,8 +101,18 @@ const loadData = async () => {
   isLoading.value = true
   try {
     items.value = (await props.loadItems()) || []
+    console.debug(
+      t('log.credentialLoad', {
+        count: items.value.length,
+        first: JSON.stringify(
+          items.value[0]
+            ? { name: items.value[0].name, provider_type: items.value[0].provider_type }
+            : null,
+        ),
+      }),
+    )
   } catch (e) {
-    console.error('加载失败', e)
+    console.error(t('log.credentialLoadFailed', { err: String(e) }))
   } finally {
     isLoading.value = false
   }

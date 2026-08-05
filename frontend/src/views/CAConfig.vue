@@ -237,6 +237,20 @@ async function runBatch(fn: (id: number) => Promise<unknown>, successKey: string
 async function loadCAs() {
   try {
     cas.value = (await CAService.ListCA()) ?? []
+    console.debug(
+      t('log.caLoad', {
+        count: cas.value.length,
+        first: JSON.stringify(
+          cas.value[0]
+            ? {
+                name: cas.value[0].name,
+                directory_url: cas.value[0].directory_url,
+                is_active: cas.value[0].is_active,
+              }
+            : null,
+        ),
+      }),
+    )
   } catch (e) {
     console.error(t('ca.loadFailed'), e)
   }

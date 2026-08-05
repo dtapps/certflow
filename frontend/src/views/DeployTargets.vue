@@ -34,12 +34,29 @@ const targets = ref<DeployTargetListItem[]>([])
 const search = ref('')
 
 function regionName(target: DeployTargetListItem): string {
-  return regionLabel(target.provider_type, target.deploy_service, regionOf(target.config))
+  const r = regionLabel(target.provider_type, target.deploy_service, regionOf(target.config))
+  console.debug(
+    t('log.deployTargetsRegionName', {
+      name: target.name,
+      regionRaw: JSON.stringify(regionOf(target.config)),
+      result: JSON.stringify(r),
+    }),
+  )
+  return r
 }
 function credName(target: DeployTargetListItem): string {
-  return target.credential_source === 'dns_provider'
-    ? target.dns_provider_name || ''
-    : target.deploy_credential_name || ''
+  const c =
+    target.credential_source === 'dns_provider'
+      ? target.dns_provider_name || ''
+      : target.deploy_credential_name || ''
+  console.debug(
+    t('log.deployTargetsCredName', {
+      name: target.name,
+      source: String(target.credential_source),
+      cred: JSON.stringify(c),
+    }),
+  )
+  return c
 }
 function statusText(s?: string) {
   if (!s) return t('deploy.status.never')
@@ -60,8 +77,22 @@ function domainList(target: DeployTargetListItem): string[] {
     if (!raw) return []
     try {
       const arr = JSON.parse(raw)
-      return Array.isArray(arr) ? arr : []
+      const res = Array.isArray(arr) ? arr : []
+      console.debug(
+        t('log.deployTargetsDomainList', {
+          name: target.name,
+          raw: JSON.stringify(raw),
+          result: JSON.stringify(res),
+        }),
+      )
+      return res
     } catch {
+      console.error(
+        t('log.deployTargetsDomainListParseFailed', {
+          name: target.name,
+          raw: JSON.stringify(raw),
+        }),
+      )
       return []
     }
   }
@@ -69,7 +100,15 @@ function domainList(target: DeployTargetListItem): string[] {
   if (!raw) return []
   try {
     const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr : []
+    const res = Array.isArray(arr) ? arr : []
+    console.debug(
+      t('log.deployTargetsDomainList', {
+        name: target.name,
+        raw: JSON.stringify(raw),
+        result: JSON.stringify(res),
+      }),
+    )
+    return res
   } catch {
     return []
   }
@@ -227,10 +266,17 @@ const allColumns = computed<DataTableColumns<DeployTargetListItem>>(() => [
     title: t('deploy.time'),
     key: 'last_deployed_at',
     width: 160,
-    render: (row: DeployTargetListItem) =>
-      row.last_deployed_at
+    render: (row: DeployTargetListItem) => {
+      console.debug(
+        t('log.deployTargetsLastDeployedAt', {
+          name: row.name,
+          raw: JSON.stringify(row.last_deployed_at),
+        }),
+      )
+      return row.last_deployed_at
         ? h('span', { class: 'text-xs opacity-50' }, formatDateTime(row.last_deployed_at))
-        : '-',
+        : '-'
+    },
   },
   {
     title: t('common.actions'),
@@ -330,6 +376,20 @@ async function loadAll() {
   try {
     const tlist = await DeployService.ListDeployTargets()
     targets.value = tlist || []
+    console.debug(
+      t('log.deployTargetsLoad', {
+        count: (tlist || []).length,
+        first: JSON.stringify(
+          (tlist || [])[0]
+            ? {
+                name: (tlist || [])[0].name,
+                provider: (tlist || [])[0].provider_type,
+                last_deployed_at: (tlist || [])[0].last_deployed_at,
+              }
+            : null,
+        ),
+      }),
+    )
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
   } finally {

@@ -12,7 +12,22 @@ const credentialListRef = ref<InstanceType<typeof CredentialList>>()
 
 const loadItems = async () => {
   const list = await DNSProviderService.ListDNSProviders()
-  return list || []
+  const items = list || []
+  console.debug(
+    t('log.dnsLoad', {
+      count: items.length,
+      first: JSON.stringify(
+        items[0]
+          ? {
+              name: items[0].name,
+              provider_type: items[0].provider_type,
+              is_active: items[0].is_active,
+            }
+          : null,
+      ),
+    }),
+  )
+  return items
 }
 
 const createItem = async (data: any) => {

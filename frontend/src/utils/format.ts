@@ -12,6 +12,7 @@ import { useI18nStore } from '../stores/i18n'
  * 所有时间解析都必须走此函数，避免各处重复处理导致漏改（见证书剩余天数正式版不显示 bug）。
  */
 export function parseDateTime(ts: string | undefined | null): Date | null {
+  const { t } = useI18nStore()
   if (!ts) return null
   let s = ts.trim()
 
@@ -26,13 +27,27 @@ export function parseDateTime(ts: string | undefined | null): Date | null {
   // 空格分隔转 ISO：仅替换第一个空格（日期与时间之间），保留时区偏移里的符号
   const normalized = s.includes(' ') ? s.replace(' ', 'T') : s
   const d = new Date(normalized)
+  console.debug(t('log.parseDateTimeInput', { input: String(ts) }))
+  if (isNaN(d.getTime())) {
+    console.error(
+      t('log.parseDateTimeResult', { normalized, result: String(d), valid: String(false) }),
+    )
+  } else {
+    console.debug(
+      t('log.parseDateTimeResult', { normalized, result: String(d), valid: String(true) }),
+    )
+  }
   return isNaN(d.getTime()) ? null : d
 }
 
 export function formatRelativeTime(ts: string) {
   const { t } = useI18nStore()
   const d = parseDateTime(ts)
-  if (!d) return ts
+  if (!d) {
+    console.error(t('log.formatRelativeTimeInput', { input: ts, result: '原样返回' }))
+    return ts
+  }
+  console.debug(t('log.formatRelativeTimeInput', { input: ts, result: '相对时间' }))
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffMin = Math.floor(diffMs / 60000)
@@ -52,11 +67,15 @@ function pad2(n: number): string {
  * 不使用 toLocaleString 的本地化输出（“/”分隔），避免中英环境下显示不统一、看着奇怪。
  */
 export function formatDateTime(ts: string) {
-  if (!ts) return '--'
+  const { t } = useI18nStore()
+  if (!ts) {
+    console.debug(t('log.formatDateTimeInput', { input: ts, result: '--' }))
+    return '--'
+  }
   const d = parseDateTime(ts)
-  if (!d) return ts
-  return (
-    `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ` +
-    `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-  )
+  const out = d
+    ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+    : ts
+  console.debug(t('log.formatDateTimeInput', { input: ts, result: out }))
+  return out
 }

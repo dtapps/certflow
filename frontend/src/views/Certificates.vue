@@ -45,6 +45,20 @@ onMounted(async () => {
   isLoading.value = true
   try {
     certificates.value = (await CertificateService.ListCertificates()) ?? []
+    console.debug(
+      t('log.certsLoad', {
+        count: certificates.value.length,
+        first: JSON.stringify(
+          certificates.value[0]
+            ? {
+                domain: certificates.value[0].domain,
+                not_after: certificates.value[0].not_after,
+                status: certificates.value[0].status,
+              }
+            : null,
+        ),
+      }),
+    )
   } catch (e) {
     console.error(t('certs.loadFailed'), e)
   } finally {
@@ -188,6 +202,14 @@ const columns: DataTableColumns<CertificateListItem> = [
     key: 'daysLeft',
     render(row) {
       const days = getDaysLeft(row.not_after, row.status)
+      console.debug(
+        t('log.certsDaysLeft', {
+          domain: row.domain,
+          notAfter: String(row.not_after),
+          status: String(row.status),
+          days: String(days),
+        }),
+      )
       if (days === null) return h('span', { class: 'opacity-50' }, '—')
       return h('span', { class: `font-medium ${getDaysLeftClass(days)}` }, String(days))
     },

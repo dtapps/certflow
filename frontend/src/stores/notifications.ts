@@ -61,6 +61,22 @@ export const useNotificationsStore = defineStore('notifications', () => {
       }
       notifications.value = mapItems(items)
       hasMore.value = items.length === PAGE_SIZE
+      console.debug(
+        t('log.notificationsLoaded', {
+          count: items.length,
+          first: JSON.stringify(
+            items[0]
+              ? {
+                  id: items[0].id,
+                  level: items[0].level,
+                  category: items[0].category,
+                  created_at: items[0].created_at,
+                  title: items[0].title,
+                }
+              : null,
+          ),
+        }),
+      )
     } catch (e) {
       console.error(t('notifications.loadListFailed'), e)
     }

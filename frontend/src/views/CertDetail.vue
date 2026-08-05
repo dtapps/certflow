@@ -53,6 +53,25 @@ onMounted(async () => {
       certificate.value = cert
       editAutoRenew.value = cert.auto_renew
       editRenewalDays.value = cert.renewal_days
+      console.debug(
+        t('log.certDetailLoaded', {
+          id: String(cert.id),
+          notAfter: String(cert.not_after),
+          notBefore: String(cert.not_before),
+          createdAt: String(cert.created_at),
+          status: String(cert.status),
+        }),
+      )
+    } else {
+      console.error(
+        t('log.certDetailLoaded', {
+          id: String(certId.value),
+          notAfter: 'null',
+          notBefore: 'null',
+          createdAt: 'null',
+          status: 'null',
+        }),
+      )
     }
     renewalLogs.value = logs ?? []
   } catch (e) {
@@ -65,7 +84,15 @@ onMounted(async () => {
 
 const daysLeft = computed(() => {
   if (!certificate.value?.not_after) return null
-  return getDaysLeft(certificate.value.not_after, certificate.value.status)
+  const d = getDaysLeft(certificate.value.not_after, certificate.value.status)
+  console.debug(
+    t('log.certDetailDaysLeft', {
+      notAfter: String(certificate.value?.not_after),
+      status: String(certificate.value?.status),
+      daysLeft: String(d),
+    }),
+  )
+  return d
 })
 
 const handleRenew = async () => {

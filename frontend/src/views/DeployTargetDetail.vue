@@ -135,11 +135,19 @@ const highlightedConfig = computed(() => {
 
 function regionName(): string {
   if (!target.value) return ''
-  return regionLabel(
+  const r = regionLabel(
     target.value.provider_type,
     target.value.deploy_service,
     regionOf(target.value.config),
   )
+  console.debug(
+    t('log.deployTargetRegionName', {
+      provider: String(target.value.provider_type),
+      service: String(target.value.deploy_service),
+      result: JSON.stringify(r),
+    }),
+  )
+  return r
 }
 function siteName(): string {
   const cf = (target.value?.config || {}) as Record<string, any>
@@ -148,10 +156,16 @@ function siteName(): string {
   // 面板类 site_name 为 JSON 数组，展示为逗号分隔
   try {
     const arr = JSON.parse(raw)
-    if (Array.isArray(arr)) return arr.join(', ')
+    if (Array.isArray(arr)) {
+      console.debug(
+        t('log.deployTargetSiteName', { raw: JSON.stringify(raw), result: arr.join(', ') }),
+      )
+      return arr.join(', ')
+    }
   } catch {
     // 非 JSON 直接返回
   }
+  console.debug(t('log.deployTargetSiteName', { raw: JSON.stringify(raw), result: raw }))
   return raw
 }
 function credName(): string {
@@ -175,17 +189,32 @@ function statusType(s?: string) {
 // 兼容 RFC3339（"2026-09-29T07:28:29Z"）与 Go time.DateTime（"2026-09-29 07:28:29"，按 UTC 处理）。
 function parseNotAfter(s?: string): number | null {
   if (!s) return null
+  console.debug(i18nStore.t('log.deployTargetParseNotAfterInput', { input: String(s) }))
   const direct = new Date(s).getTime()
-  if (!isNaN(direct)) return direct
+  if (!isNaN(direct)) {
+    console.debug(
+      i18nStore.t('log.deployTargetParseNotAfterDirect', {
+        result: new Date(direct).toISOString(),
+      }),
+    )
+    return direct
+  }
   const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/)
   if (m) {
     const t = new Date(m[1] + 'T' + m[2] + 'Z').getTime()
-    if (!isNaN(t)) return t
+    if (!isNaN(t)) {
+      console.debug(
+        i18nStore.t('log.deployTargetParseNotAfterFallback', { result: new Date(t).toISOString() }),
+      )
+      return t
+    }
   }
+  console.error(i18nStore.t('log.deployTargetParseNotAfterFailed', { input: String(s) }))
   return null
 }
 function remainingDays(notAfter?: string): string {
   const ts = parseNotAfter(notAfter)
+  console.debug(t('log.deployTargetRemainingDays', { notAfter: String(notAfter), ts: String(ts) }))
   if (ts == null) return '-'
   const diff = ts - Date.now()
   const days = Math.floor(diff / 86400000)
@@ -278,7 +307,15 @@ const fetchDomains = async () => {
 }
 
 function renderCertLabel(c: CertificateListItem) {
-  return `${c.domain} (${remainingDays(c.not_after)})`
+  const label = `${c.domain} (${remainingDays(c.not_after)})`
+  console.debug(
+    t('log.deployTargetRenderCertLabel', {
+      domain: c.domain,
+      notAfter: String(c.not_after),
+      label,
+    }),
+  )
+  return label
 }
 // 判断证书中的某个域名条目（支持通配符 *.example.com）是否覆盖目标域名
 function patternCovers(pattern: string, domain: string): boolean {
@@ -420,7 +457,21 @@ async function loadCurrentCerts() {
       }
     }
     currentCerts.value = m
+    console.debug(
+      t('log.deployTargetLoadCurrentCerts', {
+        results: JSON.stringify(
+          Object.entries(m).map(([k, v]) => ({
+            key: k,
+            common_name: v.common_name,
+            not_after: v.not_after,
+            supported: v.supported,
+            error: v.error,
+          })),
+        ),
+      }),
+    )
   } catch (e: any) {
+    console.error(t('log.deployTargetLoadCurrentCertsError', { err: String(e) }))
     showMessage(translateBackend(e?.message || String(e)), 'error')
   } finally {
     fetchingCurrentCerts.value = false
@@ -444,7 +495,16 @@ function compareStatus(row: DeployRow): 'same' | 'diff' | 'none' {
   const ct = parseNotAfter(cloud.not_after)
   if (lt == null || ct == null) return 'none'
   const dayOf = (ts: number) => Math.floor(ts / 86400000) // UTC 天序号
-  return dayOf(lt) === dayOf(ct) ? 'same' : 'diff'
+  const status = dayOf(lt) === dayOf(ct) ? 'same' : 'diff'
+  console.debug(
+    t('log.deployTargetCompareStatus', {
+      key: String(row.key),
+      local: JSON.stringify(local),
+      cloud: JSON.stringify(cloud.not_after),
+      status,
+    }),
+  )
+  return status
 }
 
 const historyColumns: DataTableColumns<DeployLogListItem> = [
@@ -480,12 +540,30 @@ const historyColumns: DataTableColumns<DeployLogListItem> = [
 async function loadTarget() {
   const t2 = await DeployService.GetDeployTarget(id)
   target.value = t2
+  console.debug(
+    t('log.deployTargetLoaded', {
+      id: String(t2?.id),
+      name: String(t2?.name),
+      provider: String(t2?.provider_type),
+      service: String(t2?.deploy_service),
+    }),
+  )
 }
 async function loadLogs() {
   logs.value = (await DeployService.ListDeployLogs(id)) || []
 }
 async function loadCertificates() {
   certificates.value = (await CertificateService.ListCertificates()) || []
+  console.debug(
+    t('log.deployTargetLoadCertificates', {
+      count: certificates.value.length,
+      first: JSON.stringify(
+        certificates.value[0]
+          ? { domain: certificates.value[0].domain, not_after: certificates.value[0].not_after }
+          : null,
+      ),
+    }),
+  )
 }
 
 async function doRemove() {

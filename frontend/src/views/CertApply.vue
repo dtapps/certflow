@@ -120,6 +120,25 @@ onMounted(async () => {
     ])
     cas.value = (caList ?? []).filter((c) => c.is_active)
     dnsProviders.value = dnsList ?? []
+    console.debug(
+      t('log.providersLoad', {
+        data: JSON.stringify({
+          count: (dnsList ?? []).length,
+          first: (dnsList ?? [])[0]?.name ?? null,
+        }),
+      }),
+    )
+    console.debug(
+      t('log.certApplyLoaded', {
+        data: JSON.stringify({
+          caCount: (caList ?? []).length,
+          caActive: cas.value.length,
+          dnsCount: (dnsList ?? []).length,
+          firstCA: (caList ?? [])[0]?.name,
+          firstDNS: (dnsList ?? [])[0]?.name,
+        }),
+      }),
+    )
 
     // 检查是否是继续申请模式（从证书列表跳转过来）
     const certIdParam = route.query.certId

@@ -100,6 +100,20 @@ const loadHistory = async () => {
   isLoadingHistory.value = true
   try {
     history.value = ((await ScannerService.ListHistory()) ?? []).filter(Boolean) as ScanResultItem[]
+    console.debug(
+      t('log.scanLoad', {
+        count: history.value.length,
+        first: JSON.stringify(
+          history.value[0]
+            ? {
+                domain: history.value[0].domain,
+                cert_not_after: history.value[0].cert_not_after,
+                cert_remaining_days: history.value[0].cert_remaining_days,
+              }
+            : null,
+        ),
+      }),
+    )
   } catch (e) {
     console.error(t('scan.loadHistoryFailed'), e)
   } finally {
@@ -147,6 +161,7 @@ const scanTypeOptions = [
 ]
 
 const formatRemainingDays = (days: number) => {
+  console.debug(t('log.scanRemainingDays', { domain: 'n/a', notAfter: 'n/a', days: String(days) }))
   if (days <= 0) return t('monitor.expired')
   return `${days} ${t('common.daysLeft')}`
 }

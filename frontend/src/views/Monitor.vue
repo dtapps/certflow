@@ -50,6 +50,20 @@ const loadDomains = async () => {
     domains.value = ((await MonitorService.List()) ?? []).filter(
       (item): item is MonitoredDomainItem => item !== null,
     )
+    console.debug(
+      t('log.monitorLoad', {
+        count: domains.value.length,
+        first: JSON.stringify(
+          domains.value[0]
+            ? {
+                domain: domains.value[0].domain,
+                status: domains.value[0].status,
+                cert_remaining_days: domains.value[0].cert_remaining_days,
+              }
+            : null,
+        ),
+      }),
+    )
   } catch (e) {
     console.error(t('monitor.loadDomainsFailed'), e)
   } finally {
@@ -175,6 +189,7 @@ const getStatusLabel = (status: string) => {
 }
 
 const formatRemainingDays = (days: number) => {
+  console.debug(t('log.monitorDaysLeft', { domain: 'n/a', notAfter: 'n/a', days: String(days) }))
   if (days <= 0) return t('monitor.expired')
   if (days <= 30) return `${days} ${t('common.daysLeft')} ⚠️`
   return `${days} ${t('common.daysLeft')}`

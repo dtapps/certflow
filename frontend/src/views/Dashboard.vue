@@ -28,7 +28,7 @@ const stats = computed(() => ({
 }))
 
 const recentActivity = computed(() => {
-  return renewalLogs.value.map((log) => ({
+  const items = renewalLogs.value.map((log) => ({
     id: log.id,
     action:
       log.status === 'success'
@@ -40,6 +40,10 @@ const recentActivity = computed(() => {
     time: log.attempt_at,
     status: log.status === 'success' ? 'success' : log.status === 'failed' ? 'error' : 'warning',
   }))
+  console.debug(
+    t('log.dashboardRecentActivity', { attemptAt: JSON.stringify(items.map((i) => i.time)) }),
+  )
+  return items
 })
 
 const expiringCertificates = computed(() => {
@@ -47,6 +51,13 @@ const expiringCertificates = computed(() => {
     // 统一走 parseDateTime（处理 time.DateTime 空格格式 + WebKit 兼容）。
     const expiry = parseDateTime(c.not_after)
     const daysLeft = expiry ? Math.floor((expiry.getTime() - Date.now()) / 86400000) : null
+    console.debug(
+      t('log.dashboardExpiringCerts', {
+        domain: c.domain,
+        notAfter: String(c.not_after),
+        daysLeft: String(daysLeft),
+      }),
+    )
     return { id: c.id, domain: c.domain, notAfter: c.not_after, daysLeft }
   })
 })
@@ -64,6 +75,17 @@ onMounted(async () => {
     expiringCerts.value = expiring ?? []
     renewalLogs.value = logs ?? []
     cas.value = caList ?? []
+    console.debug(
+      t('log.dashboardLoad', {
+        certs: String((certs ?? []).length),
+        expiring: JSON.stringify(
+          (expiring ?? []).slice(0, 3).map((c) => ({ domain: c.domain, not_after: c.not_after })),
+        ),
+        logs: JSON.stringify(
+          (logs ?? []).slice(0, 3).map((l) => ({ attempt_at: l.attempt_at, status: l.status })),
+        ),
+      }),
+    )
   } catch (e) {
     console.error(t('dashboard.loadFailed'), e)
   } finally {

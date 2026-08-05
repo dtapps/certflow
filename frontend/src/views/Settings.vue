@@ -191,6 +191,17 @@ const loadSettings = async () => {
       log: loaded.log || { level: 'INFO', max_mb: 10, max_backups: 5 },
     }
     settings.value = safe
+    console.debug(
+      t('log.settingsLoad', {
+        data: JSON.stringify({
+          language: safe.language,
+          theme: safe.theme,
+          proxy: safe.proxy,
+          dns_configs: safe.dns_configs.length,
+          log: safe.log,
+        }),
+      }),
+    )
     // 初始化 DNS 总开关状态
     dnsEnabled.value = safe.dns_configs.some((d) => d.enabled)
     // 关键：表单字段对齐「前端真相源」(store/localStorage)，绝不反向写回 store。
