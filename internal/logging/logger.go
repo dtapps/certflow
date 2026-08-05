@@ -275,7 +275,7 @@ func (l *Logger) GetLogFiles() []string {
 		return nil
 	}
 
-	logPrefixes := []string{"certflow.log", "ent.log", "gocron.log"}
+	logPrefixes := []string{"certflow.log", "ent.log", "gocron.log", "frontend.log"}
 	var files []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -357,6 +357,9 @@ func readGzTail(filePath string, tail int) (string, error) {
 // globalLogger 全局日志记录器
 var globalLogger *Logger
 
+// frontendLogger 前端错误专用日志记录器（独立文件 frontend.log，不混入 certflow.log）
+var frontendLogger *Logger
+
 // InitGlobalLogger 初始化全局日志记录器
 func InitGlobalLogger(logDir string, level string, maxMB int, maxBackups int) error {
 	if globalLogger != nil {
@@ -370,9 +373,32 @@ func InitGlobalLogger(logDir string, level string, maxMB int, maxBackups int) er
 	return nil
 }
 
+// InitFrontendLogger 初始化前端错误日志器，写入独立的 frontend.log（与 certflow.log 同级目录）。
+// 必须在 InitGlobalLogger 之后调用，以复用已就绪的日志目录与轮转参数。
+func InitFrontendLogger(logDir string, level string, maxMB int, maxBackups int) error {
+	if frontendLogger != nil {
+		frontendLogger.Close()
+	}
+	l, err := NewLoggerWithFilename(logDir, "frontend.log", ParseLevel(level), maxMB, maxBackups)
+	if err != nil {
+		return err
+	}
+	frontendLogger = l
+	return nil
+}
+
 // Global 获取全局日志记录器
 func Global() *Logger {
 	return globalLogger
+}
+
+// Frontend 获取前端错误日志器（独立文件 frontend.log）
+func Frontend() *Logger {
+	if frontendLogger == nil {
+		// 兜底：未初始化时回退到全局日志，避免前端错误丢失。
+		return globalLogger
+	}
+	return frontendLogger
 }
 
 // 便捷函数

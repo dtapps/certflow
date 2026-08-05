@@ -29,6 +29,21 @@ export function IsDarkMode(): $CancellablePromise<boolean> {
 }
 
 /**
+ * ReportFrontendError 接收前端运行时的错误并写入独立的 frontend.log（logging 包，
+ * 等价于 slog，不混入 certflow.log）。用于在生产版本中定位前端问题：开发版可通过
+ * 浏览器控制台查看报错，但发布版 esbuild 会 drop 掉 console，错误被静默吞噬，
+ * 故由前端统一拦截后上报到后端落盘。
+ * 参数：
+ *   - level：错误级别（error/warn/info），直接进对应级别日志。
+ *   - message：错误描述。
+ *   - stack：错误堆栈或上下文（可为空）。
+ *   - url：触发错误的页面/路由（可为空）。
+ */
+export function ReportFrontendError(level: string, message: string, stack: string, url: string): $CancellablePromise<void> {
+    return $Call.ByID(3798188807, level, message, stack, url);
+}
+
+/**
  * SetApp 设置 app 引用
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {

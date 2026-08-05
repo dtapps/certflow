@@ -91,6 +91,10 @@ func main() {
 	if err := logging.InitGlobalLogger(logDir, settings.Log.Level, settings.Log.MaxMB, settings.Log.MaxBackups); err != nil {
 		log.Fatalf(i18n.T("error.create_log_dir_failed")+": %v", err)
 	}
+	// 前端错误日志写入独立的 frontend.log（不混入 certflow.log），供前端运行时错误上报落盘。
+	if err := logging.InitFrontendLogger(logDir, settings.Log.Level, settings.Log.MaxMB, settings.Log.MaxBackups); err != nil {
+		logging.Error(i18n.T("error.create_log_dir_failed")+": %v", err)
+	}
 	// 全局兜底：捕获主流程及任何 goroutine 中未 recover 的 panic，
 	// 先写 ERROR 日志（再 defer Close 会落盘）再退出，避免进程静默消失、无任何痕迹。
 	// 必须在 InitGlobalLogger 之后、defer Close 之前注册，以确保 LIFO 时最后关闭日志。

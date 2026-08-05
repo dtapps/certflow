@@ -53,6 +53,8 @@ export default defineConfig({
     },
   },
   esbuild: {
-    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+    // 生产环境仅剥离 debugger；保留 console 以便 errorReporter 拦截上报到 frontend.log。
+    // 注意：若在此 drop console，console 语句会被编译期删除，errorReporter 的 patchConsole 也将失效。
+    drop: process.env.NODE_ENV === "production" ? ["debugger"] : [],
   },
 });

@@ -13,7 +13,7 @@ require (
 	github.com/alibabacloud-go/esa-20240910/v3 v3.12.0
 	github.com/alibabacloud-go/ga-20191120/v4 v4.0.2
 	github.com/alibabacloud-go/tea v1.5.3
-	github.com/baidubce/bce-sdk-go v0.9.272
+	github.com/baidubce/bce-sdk-go v0.9.273
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-acme/lego/v5 v5.3.1
 	github.com/go-co-op/gocron/v2 v2.22.0
@@ -26,16 +26,16 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.116
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.149
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.152
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.147
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.151
 	github.com/volcengine/volc-sdk-golang v1.0.253
-	github.com/wailsapp/wails/v3 v3.0.0-alpha2.122
+	github.com/wailsapp/wails/v3 v3.0.0-beta.3
 	go.dtapp.net/library/contrib/http_log v1.0.13
 	golang.org/x/crypto v0.54.0
 	golang.org/x/text v0.40.0
-	modernc.org/sqlite v1.55.0
+	modernc.org/sqlite v1.56.0
 )
 
 require (
@@ -134,7 +134,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	github.com/ucloud/ucloud-sdk-go v0.22.98 // indirect
+	github.com/ucloud/ucloud-sdk-go v0.22.99 // indirect
 	github.com/vultr/govultr/v3 v3.32.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
