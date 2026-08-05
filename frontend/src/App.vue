@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NLayout } from 'naive-ui'
 import { Events } from '@wailsio/runtime'
 import Sidebar from './components/Sidebar.vue'
 import TitleBar from './components/TitleBar.vue'
@@ -111,7 +111,7 @@ const rootStyle = computed(() => ({
 
           <!-- 主界面 -->
           <div v-else class="app-layout" :style="mainStyle">
-            <div class="app-body">
+            <n-layout has-sider class="app-body">
               <!-- Sidebar -->
               <Sidebar />
 
@@ -126,7 +126,7 @@ const rootStyle = computed(() => ({
                 <!-- 公共底部操作栏：默认隐藏，由页面通过 actionBar store 控制 -->
                 <ActionBar />
               </div>
-            </div>
+            </n-layout>
           </div>
         </div>
       </n-dialog-provider>
@@ -153,8 +153,8 @@ const rootStyle = computed(() => ({
 }
 
 .app-body {
-  display: flex;
   flex: 1;
+  height: 100%;
   overflow: hidden;
 }
 

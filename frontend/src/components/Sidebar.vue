@@ -110,7 +110,7 @@ function handleMenuUpdate(key: string) {
     <!-- 导航 -->
     <nav class="flex-1 pt-1 pb-4 overflow-y-auto">
       <n-menu
-        v-model:value="activeKey"
+        :value="activeKey"
         :collapsed="collapsed"
         :collapsed-width="64"
         :collapsed-icon-size="22"
