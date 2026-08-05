@@ -637,3 +637,42 @@ jobs:
           prerelease: true
           body_path: release_body.md
           files: release/*
+
+      # GitHub nightly Release 发布成功后，触发 CNB 同步构建（把 nightly 镜像到 CNB）。
+      # 延迟 1 分钟：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
+      # 使用独立的 SYNC_CNB_TOKEN（仅 repo-cnb-trigger:rw 权限），
+      # 与给软件升级下载用的 CNB_TOKEN（repo-release:rw）区分，互不干扰。
+      - name: 触发 CNB 同步构建
+        if: ${{ env.SYNC_CNB_TOKEN != '' }}
+        env:
+          SYNC_CNB_TOKEN: ${{ secrets.SYNC_CNB_TOKEN }}
+          CNB_API_ENDPOINT: ${{ secrets.CNB_API_ENDPOINT || 'https://api.cnb.cool' }}
+        shell: bash
+        run: |
+          echo "等待 60 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 60
+
+          API="${CNB_API_ENDPOINT%/}"
+          REPO="dtapp/certflow"
+          EVENT="api_trigger_nightly"
+          TITLE="GitHub 每日构建同步 ${{ needs.prepare.outputs.version }}"
+
+          echo "触发 CNB 同步构建: ${API}/${REPO}/-/build/start (event=${EVENT})"
+          HTTP=$(curl -s -o /tmp/cnb_start.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${SYNC_CNB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.cnb.api+json" \
+            -d "$(jq -n \
+              --arg branch "master" \
+              --arg event "$EVENT" \
+              --arg title "$TITLE" \
+              '{branch: $branch, event: $event, title: $title}')" \
+            "${API}/${REPO}/-/build/start")
+
+          echo "CNB build/start 响应 HTTP=${HTTP}"
+          cat /tmp/cnb_start.json
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+            echo "::warning::触发 CNB 同步构建失败（HTTP=${HTTP}），不影响 GitHub Release"
+          else
+            echo "✓ 已成功请求 CNB 执行同步构建"
+          fi
