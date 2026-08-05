@@ -15,12 +15,18 @@ import (
 
 // DeployServiceWrapper 包装 deploy.DeployService 以适配 Wails v3 服务接口
 type DeployServiceWrapper struct {
+	app           *application.App
 	deployService *deploy.DeployService
 }
 
 // NewDeployServiceWrapper 创建部署服务包装器
 func NewDeployServiceWrapper(deployService *deploy.DeployService) *DeployServiceWrapper {
 	return &DeployServiceWrapper{deployService: deployService}
+}
+
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (s *DeployServiceWrapper) SetApp(app *application.App) {
+	s.app = app
 }
 
 // DeployTargetListItem 部署目标列表项（前端展示用）
@@ -127,7 +133,7 @@ func toDeployTargetListItem(t *ent.DeployTarget) DeployTargetListItem {
 
 // ListDeployTargets 获取所有部署目标
 func (s *DeployServiceWrapper) ListDeployTargets() ([]DeployTargetListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	targets, err := s.deployService.List(ctx)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_list_failed", "Error", err))
@@ -143,7 +149,7 @@ func (s *DeployServiceWrapper) ListDeployTargets() ([]DeployTargetListItem, erro
 
 // GetDeployTarget 获取单个部署目标
 func (s *DeployServiceWrapper) GetDeployTarget(id int) (*DeployTargetListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	t, err := s.deployService.Get(ctx, id)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_get_failed", "Error", err))
@@ -155,7 +161,7 @@ func (s *DeployServiceWrapper) GetDeployTarget(id int) (*DeployTargetListItem, e
 
 // CreateDeployTarget 创建部署目标
 func (s *DeployServiceWrapper) CreateDeployTarget(input CreateDeployTargetRequest) (*DeployTargetListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	t, err := s.deployService.Create(ctx, deploy.CreateDeployTargetInput{
 		Name:               input.Name,
 		ProviderType:       input.ProviderType,
@@ -177,7 +183,7 @@ func (s *DeployServiceWrapper) CreateDeployTarget(input CreateDeployTargetReques
 
 // UpdateDeployTarget 更新部署目标
 func (s *DeployServiceWrapper) UpdateDeployTarget(id int, input UpdateDeployTargetRequest) (*DeployTargetListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	t, err := s.deployService.Update(ctx, id, deploy.UpdateDeployTargetInput{
 		Name:               input.Name,
 		ProviderType:       input.ProviderType,
@@ -199,7 +205,7 @@ func (s *DeployServiceWrapper) UpdateDeployTarget(id int, input UpdateDeployTarg
 
 // DeleteDeployTarget 删除部署目标
 func (s *DeployServiceWrapper) DeleteDeployTarget(id int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.deployService.Delete(ctx, id); err != nil {
 		logging.Error("%s", i18n.T("log.deploy_delete_failed", "Error", err))
 		return err
@@ -209,7 +215,7 @@ func (s *DeployServiceWrapper) DeleteDeployTarget(id int) error {
 
 // LinkCert 关联证书到部署目标
 func (s *DeployServiceWrapper) LinkCert(targetID, certID int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.deployService.LinkCert(ctx, targetID, certID); err != nil {
 		logging.Error("%s", i18n.T("log.deploy_link_failed", "Error", err))
 		return err
@@ -219,7 +225,7 @@ func (s *DeployServiceWrapper) LinkCert(targetID, certID int) error {
 
 // UnlinkCert 取消证书与部署目标的关联
 func (s *DeployServiceWrapper) UnlinkCert(targetID, certID int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.deployService.UnlinkCert(ctx, targetID, certID); err != nil {
 		logging.Error("%s", i18n.T("log.deploy_unlink_failed", "Error", err))
 		return err
@@ -229,7 +235,7 @@ func (s *DeployServiceWrapper) UnlinkCert(targetID, certID int) error {
 
 // ListTargetsByCert 获取关联了某证书的部署目标
 func (s *DeployServiceWrapper) ListTargetsByCert(certID int) ([]DeployTargetListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	targets, err := s.deployService.ListByCert(ctx, certID)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_targets_bycert_failed", "Error", err))
@@ -245,7 +251,7 @@ func (s *DeployServiceWrapper) ListTargetsByCert(certID int) ([]DeployTargetList
 
 // DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名；siteID 为面板/防火墙类的站点 ID，云厂商忽略）
 func (s *DeployServiceWrapper) DeployCertificate(targetID, certID int, domain, siteID string) (*DeployOutcomeDTO, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	outcome, err := s.deployService.DeployCertificate(ctx, targetID, certID, domain, siteID)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_cert_failed", "Error", err))
@@ -264,7 +270,7 @@ func (s *DeployServiceWrapper) DeployCertificate(targetID, certID int, domain, s
 
 // DeployAllForCert 将证书部署到所有关联目标
 func (s *DeployServiceWrapper) DeployAllForCert(certID int) ([]DeployOutcomeDTO, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	outcomes, err := s.deployService.DeployAllForCert(ctx, certID)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_all_failed", "Error", err))
@@ -296,7 +302,7 @@ type FetchCDNDomainsRequest struct {
 
 // FetchCDNDomains 根据内联凭证拉取 CDN 域名列表
 func (s *DeployServiceWrapper) FetchCDNDomains(input FetchCDNDomainsRequest) ([]string, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	return s.deployService.FetchCDNDomains(ctx, deploy.FetchDomainsInput{
 		ProviderType:       input.ProviderType,
 		DeployService:      input.DeployService,
@@ -310,7 +316,7 @@ func (s *DeployServiceWrapper) FetchCDNDomains(input FetchCDNDomainsRequest) ([]
 
 // ListCDNDomains 拉取指定部署目标下的 CDN 域名列表
 func (s *DeployServiceWrapper) ListCDNDomains(targetID int) ([]string, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	return s.deployService.ListCDNDomains(ctx, targetID)
 }
 
@@ -332,7 +338,7 @@ type DeployLogListItem struct {
 
 // ListDeployLogs 获取某部署目标的部署历史（按时间倒序）
 func (s *DeployServiceWrapper) ListDeployLogs(targetID int) ([]DeployLogListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	logs, err := s.deployService.ListDeployLogs(ctx, targetID)
 	if err != nil {
 		return nil, err
@@ -391,7 +397,7 @@ type CurrentCertsResultDTO struct {
 
 // GetCurrentCerts 查询部署目标下所有资源当前生效证书（本地+云端对比用）。
 func (s *DeployServiceWrapper) GetCurrentCerts(targetID int) (*CurrentCertsResultDTO, error) {
-	m, err := s.deployService.GetCurrentCerts(context.Background(), targetID)
+	m, err := s.deployService.GetCurrentCerts(s.app.Context(), targetID)
 	if err != nil {
 		return nil, err
 	}

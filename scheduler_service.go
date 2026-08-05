@@ -13,12 +13,18 @@ import (
 
 // SchedulerServiceWrapper 包装 scheduler.Scheduler 以适配 Wails v3 服务接口
 type SchedulerServiceWrapper struct {
+	app       *application.App
 	scheduler *scheduler.Scheduler
 }
 
 // NewSchedulerServiceWrapper 创建新的调度器服务包装器
 func NewSchedulerServiceWrapper(scheduler *scheduler.Scheduler) *SchedulerServiceWrapper {
 	return &SchedulerServiceWrapper{scheduler: scheduler}
+}
+
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (s *SchedulerServiceWrapper) SetApp(app *application.App) {
+	s.app = app
 }
 
 // RenewalLogItem 续期日志项（前端展示用）
@@ -37,7 +43,7 @@ type RenewalLogItem struct {
 
 // GetRecentRenewalLogs 获取最近的续期日志
 func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	logs, err := s.scheduler.GetRecentRenewalLogs(ctx, limit)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.scheduler_recent_renewal_logs_failed", "Error", err))
@@ -75,7 +81,7 @@ func (s *SchedulerServiceWrapper) GetRecentRenewalLogs(limit int) ([]RenewalLogI
 
 // GetRenewalLogs 获取指定证书的续期日志
 func (s *SchedulerServiceWrapper) GetRenewalLogs(certID int) ([]RenewalLogItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	logs, err := s.scheduler.GetRenewalLogs(ctx, certID)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.scheduler_renewal_logs_failed", "CertID", certID, "Error", err))

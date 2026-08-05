@@ -86,7 +86,7 @@ fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s）
 	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/... $(FILTER) || exit 1
 
 vuln-go: ## Go 依赖漏洞检查
-	govulncheck ./...
+	govulncheck -show verbose ./...
 
 # ==================== 构建打包 ====================
 

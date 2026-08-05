@@ -12,12 +12,18 @@ import (
 
 // DeployCredentialServiceWrapper 包装 deploycredential.Service 以适配 Wails v3 服务接口
 type DeployCredentialServiceWrapper struct {
+	app               *application.App
 	credentialService *deploycredential.Service
 }
 
 // NewDeployCredentialServiceWrapper 创建新的部署凭证服务包装器
 func NewDeployCredentialServiceWrapper(credentialService *deploycredential.Service) *DeployCredentialServiceWrapper {
 	return &DeployCredentialServiceWrapper{credentialService: credentialService}
+}
+
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (s *DeployCredentialServiceWrapper) SetApp(app *application.App) {
+	s.app = app
 }
 
 // DeployCredentialListItem 部署凭证列表项（前端展示用）
@@ -50,7 +56,7 @@ type UpdateDeployCredentialRequest struct {
 
 // ListDeployCredentials 获取所有部署凭证
 func (s *DeployCredentialServiceWrapper) ListDeployCredentials() ([]DeployCredentialListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	list, err := s.credentialService.List(ctx)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_cred_list_failed", "Error", err))
@@ -75,7 +81,7 @@ func (s *DeployCredentialServiceWrapper) ListDeployCredentials() ([]DeployCreden
 
 // GetDeployCredential 获取单个部署凭证
 func (s *DeployCredentialServiceWrapper) GetDeployCredential(id int) (*DeployCredentialListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	item, err := s.credentialService.GetByID(ctx, id)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_cred_get_failed", "Error", err))
@@ -96,7 +102,7 @@ func (s *DeployCredentialServiceWrapper) GetDeployCredential(id int) (*DeployCre
 
 // CreateDeployCredential 创建部署凭证
 func (s *DeployCredentialServiceWrapper) CreateDeployCredential(input CreateDeployCredentialRequest) (*DeployCredentialListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.credentialService.Create(ctx, deploycredential.CreateDeployCredentialInput{
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
@@ -122,7 +128,7 @@ func (s *DeployCredentialServiceWrapper) CreateDeployCredential(input CreateDepl
 
 // UpdateDeployCredential 更新部署凭证
 func (s *DeployCredentialServiceWrapper) UpdateDeployCredential(id int, input UpdateDeployCredentialRequest) (*DeployCredentialListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.credentialService.Update(ctx, id, deploycredential.UpdateDeployCredentialInput{
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
@@ -148,7 +154,7 @@ func (s *DeployCredentialServiceWrapper) UpdateDeployCredential(id int, input Up
 
 // SetActive 设置部署凭证的启用状态
 func (s *DeployCredentialServiceWrapper) SetActive(id int, active bool) (*DeployCredentialListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.credentialService.SetActive(ctx, id, active)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.deploy_cred_setactive_failed", "Error", err))
@@ -168,7 +174,7 @@ func (s *DeployCredentialServiceWrapper) SetActive(id int, active bool) (*Deploy
 
 // DeleteDeployCredential 删除部署凭证
 func (s *DeployCredentialServiceWrapper) DeleteDeployCredential(id int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.credentialService.Delete(ctx, id); err != nil {
 		logging.Error("%s", i18n.T("log.deploy_cred_delete_failed", "Error", err))
 		return err

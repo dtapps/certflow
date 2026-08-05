@@ -14,12 +14,18 @@ import (
 
 // DNSProviderServiceWrapper 包装 dnsprovider.DNSProviderService 以适配 Wails v3 服务接口
 type DNSProviderServiceWrapper struct {
+	app        *application.App
 	dnsService *dnsprovider.DNSProviderService
 }
 
 // NewDNSProviderServiceWrapper 创建新的 DNS 提供商服务包装器
 func NewDNSProviderServiceWrapper(dnsService *dnsprovider.DNSProviderService) *DNSProviderServiceWrapper {
 	return &DNSProviderServiceWrapper{dnsService: dnsService}
+}
+
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (w *DNSProviderServiceWrapper) SetApp(app *application.App) {
+	w.app = app
 }
 
 // convertConfig 将 ent 的 json.RawMessage 转换为 map[string]string
@@ -64,7 +70,7 @@ type UpdateDNSProviderRequest struct {
 
 // ListDNSProviders 获取所有 DNS 提供商
 func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	providers, err := s.dnsService.List(ctx)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.dns_list_failed", "Error", err))
@@ -94,7 +100,7 @@ func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, e
 
 // CreateDNSProvider 创建 DNS 提供商
 func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderRequest) (*DNSProviderListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.dnsService.Create(ctx, dnsprovider.CreateDNSProviderInput{
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
@@ -120,7 +126,7 @@ func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderReq
 
 // UpdateDNSProvider 更新 DNS 提供商
 func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSProviderRequest) (*DNSProviderListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.dnsService.Update(ctx, id, dnsprovider.UpdateDNSProviderInput{
 		Name:         input.Name,
 		ProviderType: input.ProviderType,
@@ -146,7 +152,7 @@ func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSPro
 
 // SetActive 设置 DNS 提供商的启用状态
 func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProviderListItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	result, err := s.dnsService.SetActive(ctx, id, active)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.dns_setactive_failed", "Error", err))
@@ -166,7 +172,7 @@ func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProvider
 
 // DeleteDNSProvider 删除 DNS 提供商
 func (s *DNSProviderServiceWrapper) DeleteDNSProvider(id int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.dnsService.Delete(ctx, id); err != nil {
 		logging.Error("%s", i18n.T("log.dns_delete_failed", "Error", err))
 		return err
@@ -176,7 +182,7 @@ func (s *DNSProviderServiceWrapper) DeleteDNSProvider(id int) error {
 
 // GetDNSProviderTypes 获取支持的 DNS 提供商类型
 func (s *DNSProviderServiceWrapper) GetDNSProviderTypes() []string {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	return s.dnsService.GetProviderTypes(ctx)
 }
 

@@ -75,7 +75,7 @@ func (s *SysTrayService) Init() {
 						logging.Error("%s: %v", i18n.T("log.updater_check_panic"), r)
 					}
 				}()
-				if err := s.app.Updater.CheckAndInstall(context.Background()); err != nil {
+				if err := s.app.Updater.CheckAndInstall(s.app.Context()); err != nil {
 					logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
 				} else {
 					logging.Info("%s", i18n.T("log.updater_check_done"))

@@ -12,6 +12,7 @@ import (
 
 // NotificationServiceWrapper 包装 notification.NotificationService 以适配 Wails v3 服务接口
 type NotificationServiceWrapper struct {
+	app          *application.App
 	notifService *notification.NotificationService
 }
 
@@ -19,6 +20,11 @@ type NotificationServiceWrapper struct {
 // https://v3.wails.io/features/notifications/overview/
 func NewNotificationServiceWrapper(notifService *notification.NotificationService) *NotificationServiceWrapper {
 	return &NotificationServiceWrapper{notifService: notifService}
+}
+
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (s *NotificationServiceWrapper) SetApp(app *application.App) {
+	s.app = app
 }
 
 // NotificationItem 通知列表项（前端展示用）
@@ -53,7 +59,7 @@ func (s *NotificationServiceWrapper) RequestPermission() bool {
 
 // ListNotifications 获取通知列表
 func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([]NotificationItem, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	items, err := s.notifService.ListNotifications(ctx, limit, offset)
 	if err != nil {
 		logging.Error("%s: %v", i18n.T("log.notification_list_failed"), err)
@@ -77,7 +83,7 @@ func (s *NotificationServiceWrapper) ListNotifications(limit int, offset int) ([
 
 // CountUnread 获取未读通知数量
 func (s *NotificationServiceWrapper) CountUnread() (int, error) {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	count, err := s.notifService.CountUnread(ctx)
 	if err != nil {
 		logging.Error("%s: %v", i18n.T("log.notification_count_failed"), err)
@@ -88,7 +94,7 @@ func (s *NotificationServiceWrapper) CountUnread() (int, error) {
 
 // MarkAsRead 标记通知为已读
 func (s *NotificationServiceWrapper) MarkAsRead(id int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.notifService.MarkAsRead(ctx, id); err != nil {
 		logging.Error("%s: %v", i18n.T("log.notification_mark_read_failed"), err)
 		return err
@@ -98,13 +104,13 @@ func (s *NotificationServiceWrapper) MarkAsRead(id int) error {
 
 // MarkAllAsRead 标记所有通知为已读
 func (s *NotificationServiceWrapper) MarkAllAsRead() error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	return s.notifService.MarkAllAsRead(ctx)
 }
 
 // DeleteNotification 删除通知
 func (s *NotificationServiceWrapper) DeleteNotification(id int) error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.notifService.DeleteNotification(ctx, id); err != nil {
 		logging.Error("%s: %v", i18n.T("log.notification_delete_failed"), err)
 		return err
@@ -114,7 +120,7 @@ func (s *NotificationServiceWrapper) DeleteNotification(id int) error {
 
 // ClearAllNotifications 清空所有通知
 func (s *NotificationServiceWrapper) ClearAllNotifications() error {
-	ctx := context.Background()
+	ctx := s.app.Context()
 	if err := s.notifService.ClearAllNotifications(ctx); err != nil {
 		logging.Error("%s: %v", i18n.T("log.notification_clear_failed"), err)
 		return err

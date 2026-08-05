@@ -12,6 +12,7 @@ import (
 
 // MonitorServiceWrapper 包装 monitor.MonitorService
 type MonitorServiceWrapper struct {
+	app            *application.App
 	monitorService *monitor.MonitorService
 }
 
@@ -20,9 +21,14 @@ func NewMonitorServiceWrapper(monitorService *monitor.MonitorService) *MonitorSe
 	return &MonitorServiceWrapper{monitorService: monitorService}
 }
 
+// SetApp 设置 app 引用（用于获取应用生命周期 context）
+func (w *MonitorServiceWrapper) SetApp(app *application.App) {
+	w.app = app
+}
+
 // List 获取所有监控域名
 func (s *MonitorServiceWrapper) List() ([]*monitor.MonitoredDomainItem, error) {
-	items, err := s.monitorService.List(context.Background())
+	items, err := s.monitorService.List(s.app.Context())
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_list_failed", "Error", err))
 	}
@@ -34,7 +40,7 @@ func (s *MonitorServiceWrapper) List() ([]*monitor.MonitoredDomainItem, error) {
 
 // Create 创建监控域名
 func (s *MonitorServiceWrapper) Create(input monitor.CreateInput) (*monitor.MonitoredDomainItem, error) {
-	item, err := s.monitorService.Create(context.Background(), input)
+	item, err := s.monitorService.Create(s.app.Context(), input)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_create_failed", "Error", err))
 	}
@@ -43,7 +49,7 @@ func (s *MonitorServiceWrapper) Create(input monitor.CreateInput) (*monitor.Moni
 
 // Update 更新监控域名
 func (s *MonitorServiceWrapper) Update(id int, input monitor.UpdateInput) (*monitor.MonitoredDomainItem, error) {
-	item, err := s.monitorService.Update(context.Background(), id, input)
+	item, err := s.monitorService.Update(s.app.Context(), id, input)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_update_failed", "Error", err))
 	}
@@ -52,7 +58,7 @@ func (s *MonitorServiceWrapper) Update(id int, input monitor.UpdateInput) (*moni
 
 // SetActive 设置监控域名的启用状态
 func (s *MonitorServiceWrapper) SetActive(id int, active bool) (*monitor.MonitoredDomainItem, error) {
-	item, err := s.monitorService.SetActive(context.Background(), id, active)
+	item, err := s.monitorService.SetActive(s.app.Context(), id, active)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_setactive_failed", "Error", err))
 	}
@@ -61,7 +67,7 @@ func (s *MonitorServiceWrapper) SetActive(id int, active bool) (*monitor.Monitor
 
 // Delete 删除监控域名
 func (s *MonitorServiceWrapper) Delete(id int) error {
-	if err := s.monitorService.Delete(context.Background(), id); err != nil {
+	if err := s.monitorService.Delete(s.app.Context(), id); err != nil {
 		logging.Error("%s", i18n.T("log.monitor_delete_failed", "Error", err))
 		return err
 	}
@@ -70,7 +76,7 @@ func (s *MonitorServiceWrapper) Delete(id int) error {
 
 // CheckNow 立即执行一次检查
 func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, error) {
-	item, err := s.monitorService.CheckNow(context.Background(), id)
+	item, err := s.monitorService.CheckNow(s.app.Context(), id)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_checknow_failed", "Error", err))
 	}
@@ -80,7 +86,7 @@ func (s *MonitorServiceWrapper) CheckNow(id int) (*monitor.MonitoredDomainItem, 
 // ListHistory 获取监控域名的检查历史记录（用于趋势图）。
 // id: 监控域名ID；days: 查询最近多少天；返回检查历史列表。
 func (s *MonitorServiceWrapper) ListHistory(id int, days int) ([]*monitor.MonitorCheckLogItem, error) {
-	items, err := s.monitorService.ListHistory(context.Background(), id, days)
+	items, err := s.monitorService.ListHistory(s.app.Context(), id, days)
 	if err != nil {
 		logging.Error("%s", i18n.T("log.monitor_listhistory_failed", "Error", err))
 	}

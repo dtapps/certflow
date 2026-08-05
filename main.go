@@ -169,6 +169,16 @@ func main() {
 	clipboardSvc := NewClipboardServiceWrapper(nil)
 	browserSvc := NewBrowserServiceWrapper(nil)
 	systemSvc := NewSystemServiceWrapper()
+	// 业务服务包装器（需在 app 创建后调用 SetApp 注入生命周期 context）
+	caSvc := NewCAServiceWrapper(caService)
+	dnsSvc := NewDNSProviderServiceWrapper(dnsService)
+	certSvc := NewCertificateServiceWrapper(certService)
+	deploySvc := NewDeployServiceWrapper(deployService)
+	deployCredSvc := NewDeployCredentialServiceWrapper(deployCredentialService)
+	schedulerSvc := NewSchedulerServiceWrapper(schedulerService)
+	monitorSvc := NewMonitorServiceWrapper(monitorService)
+	scannerSvc := NewScannerServiceWrapper(scannerService)
+	notifSvc := NewNotificationServiceWrapper(notifService)
 	fileSvc := NewFileServiceWrapper()
 	windowSvc := NewWindowServiceWrapper()
 	systraySvc := NewSysTrayService()
@@ -197,18 +207,18 @@ func main() {
 			},
 		},
 		Services: []application.Service{
-			application.NewService(NewCAServiceWrapper(caService)),
-			application.NewService(NewDNSProviderServiceWrapper(dnsService)),
-			application.NewService(NewCertificateServiceWrapper(certService)),
-			application.NewService(NewDeployServiceWrapper(deployService)),
-			application.NewService(NewDeployCredentialServiceWrapper(deployCredentialService)),
-			application.NewService(NewSchedulerServiceWrapper(schedulerService)),
-			application.NewService(NewNotificationServiceWrapper(notifService)),
+			application.NewService(caSvc),
+			application.NewService(dnsSvc),
+			application.NewService(certSvc),
+			application.NewService(deploySvc),
+			application.NewService(deployCredSvc),
+			application.NewService(schedulerSvc),
+			application.NewService(notifSvc),
 			application.NewService(NewSettingsServiceWrapper(settingsService)),
 			application.NewService(NewLoggingServiceWrapper()),
 			application.NewService(NewAuthServiceWrapper(authService)),
-			application.NewService(NewMonitorServiceWrapper(monitorService)),
-			application.NewService(NewScannerServiceWrapper(scannerService)),
+			application.NewService(monitorSvc),
+			application.NewService(scannerSvc),
 			application.NewService(clipboardSvc),
 			application.NewService(browserSvc),
 			application.NewService(systemSvc),
@@ -229,13 +239,22 @@ func main() {
 	// 设置剪贴板服务和浏览器服务的 app 引用
 	clipboardSvc.SetApp(app)
 	browserSvc.SetApp(app)
-	notifService.SetApp(app)
 	systemSvc.SetApp(app)
 	fileSvc.SetApp(app)
 	windowSvc.SetApp(app)
 	systraySvc.SetApp(app)
 	dockSvc.SetApp(app)
 	autostartSvc.SetApp(app)
+	// 业务服务包装器：注入 app 以使用应用生命周期 context（替代 context.Background()）
+	caSvc.SetApp(app)
+	dnsSvc.SetApp(app)
+	certSvc.SetApp(app)
+	deploySvc.SetApp(app)
+	deployCredSvc.SetApp(app)
+	schedulerSvc.SetApp(app)
+	monitorSvc.SetApp(app)
+	scannerSvc.SetApp(app)
+	notifSvc.SetApp(app)
 
 	// 配置自更新功能
 	// https://v3.wails.io/guides/updater/
