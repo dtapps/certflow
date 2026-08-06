@@ -116,11 +116,6 @@ export interface Settings {
     "http_log_retention_days": number;
 
     /**
-     * 数据目录
-     */
-    "data_dir": string;
-
-    /**
      * 语言：zh-CN/en-US/auto
      */
     "language": string;

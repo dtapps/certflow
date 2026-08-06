@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"os"
@@ -119,6 +120,87 @@ func TestExportImportRoundTrip(t *testing.T) {
 	if restoredCAID != ca.ID {
 		t.Fatalf("restored ca id mismatch: expected %d got %d", ca.ID, restoredCAID)
 	}
+}
+
+// TestImportNullVsEmptyString 验证 CSV 往返能正确区分 NULL 与空串：
+// cert_uploads.region 是 NOT NULL 列，存储空串（""）是合法的；若导入把空串误当 NULL，
+// 会触发 NOT NULL constraint failed。本用例同时覆盖空串（NOT NULL 列）与真 NULL（可空列）。
+func TestImportNullVsEmptyString(t *testing.T) {
+	ctx := context.Background()
+	client, dbPath := newTestDB(t)
+
+	// 构造 cert_uploads 行：region 用空串（合法，满足 NOT NULL）
+	cu := client.CertUpload.Create().
+		SetProvider("aliyun").
+		SetAccessKeyID("akid-empty-region").
+		SetRegion(""). // 空串，合法
+		SetCertFingerprint("fp-empty").
+		SetCloudCertID("cid-empty").
+		SaveX(ctx)
+	_ = cu
+
+	conn := openConn(t, sqlite.BuildDSN(dbPath))
+
+	// 确认空串确实写入（region 列为空串而非 NULL）
+	var regionVal sql.NullString
+	if err := conn.QueryRowContext(ctx, "SELECT region FROM cert_uploads WHERE provider='aliyun'").Scan(&regionVal); err != nil {
+		t.Fatalf("query region failed: %v", err)
+	}
+	if !regionVal.Valid || regionVal.String != "" {
+		t.Fatalf("expected empty (non-null) region, got valid=%v str=%q", regionVal.Valid, regionVal.String)
+	}
+
+	// 导出
+	exportDir := t.TempDir()
+	tables, err := listBusinessTables(conn)
+	if err != nil {
+		t.Fatalf("listBusinessTables failed: %v", err)
+	}
+	if err := exportTablesToCSV(conn, exportDir, tables); err != nil {
+		t.Fatalf("exportTablesToCSV failed: %v", err)
+	}
+
+	// 校验导出的 CSV：region 列应是空串（不是哨兵 \N）
+	csvPath := filepath.Join(exportDir, "cert_uploads.csv")
+	raw, err := os.ReadFile(csvPath)
+	if err != nil {
+		t.Fatalf("read csv failed: %v", err)
+	}
+	if string(raw) == "" {
+		t.Fatal("csv is empty")
+	}
+	if containsSentinel(t, raw) {
+		t.Fatalf("empty region should NOT be serialized as NULL sentinel, csv=%q", string(raw))
+	}
+
+	// 清空并导入
+	for _, tbl := range tables {
+		//nolint:gosec // 表名来自白名单
+		if _, err := conn.ExecContext(ctx, "DELETE FROM "+quote(tbl)); err != nil {
+			t.Fatalf("clear %s failed: %v", tbl, err)
+		}
+	}
+	if err := importTablesFromCSV(conn, exportDir, tables); err != nil {
+		t.Fatalf("importTablesFromCSV failed (NOT NULL constraint?): %v", err)
+	}
+
+	// 校验导入后 region 仍为空串（非 NULL），且行数正确
+	var afterRegion sql.NullString
+	if err := conn.QueryRowContext(ctx, "SELECT region FROM cert_uploads WHERE provider='aliyun'").Scan(&afterRegion); err != nil {
+		t.Fatalf("query after import failed: %v", err)
+	}
+	if !afterRegion.Valid || afterRegion.String != "" {
+		t.Fatalf("after import: expected empty (non-null) region, got valid=%v str=%q", afterRegion.Valid, afterRegion.String)
+	}
+	if n := countRows(t, conn, "cert_uploads"); n != 1 {
+		t.Fatalf("cert_uploads rows after import: expected 1 got %d", n)
+	}
+}
+
+// containsSentinel 检查 CSV 原始内容是否包含 NULL 哨兵（用于断言"空串不应被序列化为哨兵"）。
+func containsSentinel(t *testing.T, raw []byte) bool {
+	t.Helper()
+	return bytes.Contains(raw, []byte(csvNullSentinel))
 }
 
 func TestListBusinessTablesExcludesInternals(t *testing.T) {

@@ -326,11 +326,17 @@ func insertTableFromCSV(conn *sql.DB, ctx context.Context, table, csvPath string
 	return nil
 }
 
-// csvCell 将数据库值格式化为 CSV 文本。NULL 写为空串；[]byte 转为字符串；
-// 其他类型用 fmt 还原为文本（SQLite 文本亲和，读回时由列类型转换）。
+// csvNullSentinel 是 CSV 中表示 NULL 的哨兵串。选择 \N 是借鉴 MySQL 的文本协议 NULL 标记，
+// 它在真实业务数据（厂商名、region、证书指纹等）中出现的概率极低，从而与"空串"区分开。
+// 关键：SQLite 的 NOT NULL 列允许存储空串（""≠NULL），但 CSV 本身无法区分空串与 NULL，
+// 若把空串一律当 NULL 导入，会破坏合法的空串值（触发 NOT NULL 约束）。因此 NULL 必须显式标记。
+const csvNullSentinel = "\\N"
+
+// csvCell 将数据库值格式化为 CSV 文本。NULL 写为哨兵 \N（而非空串，以与空串区分）；
+// []byte 转为字符串；其他类型用 fmt 还原为文本（SQLite 文本亲和，读回时由列类型转换）。
 func csvCell(v any) string {
 	if v == nil {
-		return ""
+		return csvNullSentinel
 	}
 	switch t := v.(type) {
 	case []byte:
@@ -346,11 +352,12 @@ func csvCell(v any) string {
 	}
 }
 
-// parseCell 将 CSV 文本还原为插入参数。空串表示 NULL（可空列），返回 nil；
-// 非空串统一以字符串传入，由 SQLite 的列式类型亲和转换为对应类型（整数/实数/文本）。
+// parseCell 将 CSV 文本还原为插入参数。仅哨兵 \N 表示 NULL（返回 nil）；
+// 其余一律以字符串原样传入（含空串""），由 SQLite 的列式类型亲和转换为对应类型
+// （整数/实数/文本），并保留空串以满足 NOT NULL 列（空串≠NULL 合法）。
 // 保留原 ID 场景下 id 列在 CSV 中恒为数字字符串，不会为空，故不会误触 NULL。
 func parseCell(s string) any {
-	if s == "" {
+	if s == csvNullSentinel {
 		return nil
 	}
 	return s
