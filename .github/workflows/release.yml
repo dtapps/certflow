@@ -627,10 +627,15 @@ jobs:
           body_path: release_body.md
           files: release/*
 
-      # GitHub Release 发布成功后，触发 CNB 同步构建（把 GitHub Release 镜像到 CNB）。
-      # 延迟 1 分钟：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
-      # 注意：使用独立的 SYNC_CNB_TOKEN（仅 repo-cnb-trigger:rw 权限），
-      # 与给软件升级下载用的 CNB_TOKEN（repo-release:rw）区分，互不干扰。
+  # GitHub Release 发布成功后，触发 CNB 同步构建（把 GitHub Release 镜像到 CNB）。
+  # 独立成 job：便于在其后追加 webhook 通知（notify job），也让「同步」与「发布」解耦。
+  # 延迟 1 分钟：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
+  # 注意：使用独立的 SYNC_CNB_TOKEN（仅 repo-cnb-trigger:rw 权限），
+  # 与给软件升级下载用的 CNB_TOKEN（repo-release:rw）区分，互不干扰。
+  sync-cnb:
+    needs: [release, prepare]
+    runs-on: ubuntu-latest
+    steps:
       - name: 触发 CNB 同步构建
         if: ${{ env.SYNC_CNB_TOKEN != '' }}
         env:
@@ -665,4 +670,57 @@ jobs:
             echo "::warning::触发 CNB 同步构建失败（HTTP=${HTTP}），不影响 GitHub Release"
           else
             echo "✓ 已成功请求 CNB 执行同步构建"
+          fi
+
+  # 构建 / 发布 / CNB 同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
+  # 需配置 secret SERVERCHAN_SENDKEY（形如 sctp{uid}t...）；未配置则跳过通知。
+  # API 文档：https://doc.sc3.ft07.com/zh/serverchan3/server/api
+  # 推送地址：https://<uid>.push.ft07.com/send/<sendkey>.send
+  notify:
+    needs: [sync-cnb, release, prepare]
+    runs-on: ubuntu-latest
+    if: ${{ needs.release.result == 'success' }}
+    steps:
+      - name: 发送 ServerChan3 通知
+        if: ${{ secrets.SERVERCHAN_SENDKEY != '' }}
+        env:
+          SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+        shell: bash
+        run: |
+          # 从 sendkey 解析 uid（正则 sctp(\d+)t），拼接推送 URL
+          SENDKEY_VAL="$SENDKEY"
+          UID=$(echo "$SENDKEY_VAL" | sed -E 's/^sctp([0-9]+)t.*/\1/')
+          if [ -z "$UID" ] || [ "$UID" = "$SENDKEY_VAL" ]; then
+            echo "::warning::无法从 SERVERCHAN_SENDKEY 解析 uid，跳过通知"
+            exit 0
+          fi
+          URL="https://${UID}.push.ft07.com/send/${SENDKEY_VAL}.send"
+
+          VERSION="${{ inputs.version }}"
+          TAG="v${{ inputs.version }}"
+          BUILD_TIME="${{ needs.prepare.outputs.build_time }}"
+          REPO="${{ github.repository }}"
+          RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
+
+          TITLE="CertFlow v${VERSION} 构建完成"
+          DESP="**版本**: \`${VERSION}\`"$'\n'
+          DESP="${DESP}**构建时间**: ${BUILD_TIME}"$'\n'
+          DESP="${DESP}**GitHub Release**: [${TAG}](${RELEASE_URL})"$'\n'
+          DESP="${DESP}**CNB 同步**: 已请求 CNB 执行镜像构建"
+
+          echo "推送 ServerChan3 通知: ${TITLE}"
+          HTTP=$(curl -s -o /tmp/sc3.json -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg title "$TITLE" \
+              --arg desp "$DESP" \
+              '{title: $title, desp: $desp}')" \
+            "$URL")
+
+          echo "ServerChan3 响应 HTTP=${HTTP}"
+          cat /tmp/sc3.json
+          if [ "$HTTP" != "200" ]; then
+            echo "::warning::ServerChan3 通知发送失败（HTTP=${HTTP}）"
+          else
+            echo "✓ 已发送 ServerChan3 通知"
           fi
