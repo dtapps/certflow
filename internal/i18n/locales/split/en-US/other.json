@@ -20,5 +20,7 @@
   "settings.autostart.title": "Startup Settings",
   "settings.autostart.enabled": "Launch at Login",
   "settings.autostart.enabled.desc": "Automatically start CertFlow when you log in",
-  "ca.dir_url_ok": "The directory URL is valid and reachable"
+  "ca.dir_url_ok": "The directory URL is valid and reachable",
+  "settings.data.export": "Export Data",
+  "settings.data.import": "Import Data"
 }

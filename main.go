@@ -16,6 +16,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/auth"
 	"cnb.cool/dtapp/certflow/internal/ca"
 	"cnb.cool/dtapp/certflow/internal/certificate"
+	"cnb.cool/dtapp/certflow/internal/data"
 	"cnb.cool/dtapp/certflow/internal/db"
 	"cnb.cool/dtapp/certflow/internal/deploy"
 	"cnb.cool/dtapp/certflow/internal/deploycredential"
@@ -169,7 +170,7 @@ func main() {
 	clipboardSvc := NewClipboardServiceWrapper(nil)
 	browserSvc := NewBrowserServiceWrapper(nil)
 	systemSvc := NewSystemServiceWrapper()
-	// 业务服务包装器（需在 app 创建后调用 SetApp 注入生命周期 context）
+	// 业务服务包装器（需在 app 创建后调用 SetApp 注入生命周期）
 	caSvc := NewCAServiceWrapper(caService)
 	dnsSvc := NewDNSProviderServiceWrapper(dnsService)
 	certSvc := NewCertificateServiceWrapper(certService)
@@ -184,6 +185,9 @@ func main() {
 	systraySvc := NewSysTrayService()
 	dockSvc := NewDockServiceWrapper()
 	autostartSvc := NewAutostartServiceWrapper()
+	// 数据管理服务（使用原生文件对话框，app 在下方 SetApp 注入；
+	// 因 Wails 绑定解析器要求 Service 在 Options 之前声明，而 app 在 Options 之后才可用）
+	dataSvc := data.NewService(dataDir)
 
 	// 主窗口引用（提前声明，供单实例回调闭包引用）
 	var mainWindow *application.WebviewWindow
@@ -227,6 +231,7 @@ func main() {
 			application.NewService(systraySvc),
 			application.NewService(dockSvc),
 			application.NewService(autostartSvc),
+			application.NewService(dataSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -243,6 +248,8 @@ func main() {
 	fileSvc.SetApp(app)
 	windowSvc.SetApp(app)
 	systraySvc.SetApp(app)
+	dockSvc.SetApp(app)
+	dataSvc.SetApp(app)
 	dockSvc.SetApp(app)
 	autostartSvc.SetApp(app)
 	// 业务服务包装器：注入 app 以使用应用生命周期 context（替代 context.Background()）

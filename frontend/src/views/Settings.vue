@@ -13,6 +13,7 @@ import {
   NFormItem,
   NTag,
   useMessage,
+  useDialog,
 } from 'naive-ui'
 import * as SettingsService from '@bindings/cnb.cool/dtapp/certflow/settingsservicewrapper'
 import * as NotificationService from '@bindings/cnb.cool/dtapp/certflow/notificationservicewrapper'
@@ -24,6 +25,7 @@ import * as FileService from '@bindings/cnb.cool/dtapp/certflow/fileservicewrapp
 import * as WindowService from '@bindings/cnb.cool/dtapp/certflow/windowservicewrapper'
 import * as AutostartService from '@bindings/cnb.cool/dtapp/certflow/autostartservicewrapper'
 import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
+import * as DataService from '@bindings/cnb.cool/dtapp/certflow/internal/data'
 import { copyToClipboard } from '../utils/clipboard'
 import type {
   Settings,
@@ -97,6 +99,11 @@ const themeModel = computed({
 
 const message = useMessage()
 initMessage(message)
+const dialog = useDialog()
+
+// 数据管理（导入/导出）
+const exporting = ref(false)
+const importing = ref(false)
 
 // 检测是否有变更
 const hasChanges = computed(() => {
@@ -275,6 +282,42 @@ const handleRunMonitorCheck = async () => {
   } catch (e) {
     showMessage(t('settings.monitorCheckFailed'), 'error')
   }
+}
+
+// 导出全部业务数据为 zip 文件（原生保存对话框）
+const handleExportData = async () => {
+  exporting.value = true
+  try {
+    const path = await DataService.Service.ExportData()
+    if (path) {
+      showMessage(t('settings.data.export.success'), 'success')
+    }
+  } catch (e) {
+    showMessage(String(e), 'error')
+  } finally {
+    exporting.value = false
+  }
+}
+
+// 导入备份文件（先确认，再清空替换；原生打开对话框选文件）
+const handleImportData = async () => {
+  dialog.warning({
+    title: t('settings.data.import'),
+    content: t('settings.data.import.confirm'),
+    positiveText: t('common.confirm') ?? 'OK',
+    negativeText: t('common.cancel') ?? 'Cancel',
+    onPositiveClick: async () => {
+      importing.value = true
+      try {
+        await DataService.Service.ImportData()
+        showMessage(t('settings.data.import.success'), 'success')
+      } catch (e) {
+        showMessage(String(e), 'error')
+      } finally {
+        importing.value = false
+      }
+    },
+  })
 }
 
 const handleCheckUpdate = async () => {
@@ -561,6 +604,40 @@ onMounted(async () => {
                 t('settings.maintenance.run')
               }}</n-button>
               <span class="text-sm opacity-60">{{ t('settings.maintenance.monitor.desc') }}</span>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
+
+      <!-- 数据管理 -->
+      <n-card :title="t('settings.data.title')" size="small" class="mt-4">
+        <n-form label-placement="top">
+          <n-form-item :label="t('settings.data.export')">
+            <div class="flex items-center gap-3">
+              <n-button
+                secondary
+                type="primary"
+                :loading="exporting"
+                :disabled="importing"
+                @click="handleExportData"
+              >
+                {{ t('settings.data.export') }}
+              </n-button>
+              <span class="text-sm opacity-60">{{ t('settings.data.export.desc') }}</span>
+            </div>
+          </n-form-item>
+          <n-form-item :label="t('settings.data.import')">
+            <div class="flex items-center gap-3">
+              <n-button
+                secondary
+                type="warning"
+                :loading="importing"
+                :disabled="exporting"
+                @click="handleImportData"
+              >
+                {{ t('settings.data.import') }}
+              </n-button>
+              <span class="text-sm opacity-60">{{ t('settings.data.import.desc') }}</span>
             </div>
           </n-form-item>
         </n-form>

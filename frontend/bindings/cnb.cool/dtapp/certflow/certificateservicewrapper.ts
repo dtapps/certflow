@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -89,6 +93,13 @@ export function ResumeManualDNSChallenge(certID: number): $CancellablePromise<$m
  */
 export function RevokeCertificate(id: number): $CancellablePromise<void> {
     return $Call.ByID(3877758404, id);
+}
+
+/**
+ * SetApp 设置 app 引用（用于获取应用生命周期）
+ */
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(3353235872, app);
 }
 
 /**

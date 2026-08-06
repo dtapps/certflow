@@ -24,7 +24,7 @@ func NewDeployServiceWrapper(deployService *deploy.DeployService) *DeployService
 	return &DeployServiceWrapper{deployService: deployService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *DeployServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

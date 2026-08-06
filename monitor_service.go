@@ -21,7 +21,7 @@ func NewMonitorServiceWrapper(monitorService *monitor.MonitorService) *MonitorSe
 	return &MonitorServiceWrapper{monitorService: monitorService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (w *MonitorServiceWrapper) SetApp(app *application.App) {
 	w.app = app
 }

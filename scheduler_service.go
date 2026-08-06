@@ -22,7 +22,7 @@ func NewSchedulerServiceWrapper(scheduler *scheduler.Scheduler) *SchedulerServic
 	return &SchedulerServiceWrapper{scheduler: scheduler}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *SchedulerServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

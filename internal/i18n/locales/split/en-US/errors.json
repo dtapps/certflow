@@ -221,5 +221,8 @@
   "deploy.error.current_cert_cloud_not_supported": "Real-time query of the current active certificate for this cloud provider is pending (requires the corresponding SDK describe call verified under real credentials)",
   "deploy.error.tencent_ssl_no_zone": "No EdgeOne ZoneId configured (zone_id)",
   "deploy.error.ctyun_query_cert": "Failed to query the CTYUN certificate",
-  "deploy.error.aliyun_ga_listener_id_required": "No listener ID configured (listener_id)"
+  "deploy.error.aliyun_ga_listener_id_required": "No listener ID configured (listener_id)",
+  "error.backup_failed": "Failed to export data: {{.Error}}",
+  "error.import_failed": "Failed to import data: {{.Error}}",
+  "error.import_invalid_file": "Invalid backup file"
 }

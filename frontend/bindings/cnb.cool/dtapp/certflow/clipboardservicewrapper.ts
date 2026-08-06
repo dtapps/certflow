@@ -15,7 +15,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
- * SetApp 设置应用实例（在 app 创建后调用）
+ * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(2792114035, app);

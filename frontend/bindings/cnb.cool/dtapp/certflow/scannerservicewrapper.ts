@@ -13,6 +13,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as scanner$0 from "./internal/scanner/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
  * ClearHistory 清空扫描历史
@@ -40,4 +43,11 @@ export function ListHistory(): $CancellablePromise<(scanner$0.ScanResultItem | n
  */
 export function Scan(domain: string, port: number, scanType: string): $CancellablePromise<scanner$0.ScanResultItem | null> {
     return $Call.ByID(2263998317, domain, port, scanType);
+}
+
+/**
+ * SetApp 设置 app 引用（用于获取应用生命周期）
+ */
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(1891311383, app);
 }

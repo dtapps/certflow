@@ -20,5 +20,7 @@
   "settings.autostart.title": "启动设置",
   "settings.autostart.enabled": "开机自启动",
   "settings.autostart.enabled.desc": "登录系统时自动启动 CertFlow",
-  "ca.dir_url_ok": "目录 URL 有效，可正常访问"
+  "ca.dir_url_ok": "目录 URL 有效，可正常访问",
+  "settings.data.export": "导出数据",
+  "settings.data.import": "导入数据"
 }

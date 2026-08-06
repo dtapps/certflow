@@ -21,7 +21,7 @@ func NewDeployCredentialServiceWrapper(credentialService *deploycredential.Servi
 	return &DeployCredentialServiceWrapper{credentialService: credentialService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *DeployCredentialServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

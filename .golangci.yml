@@ -43,6 +43,18 @@ linters:
       # gosec exec.Command 变量参数：构建脚本中是安全的
       - linters: [gosec]
         text: "G204"
+      # gosec G202 SQL 拼接：internal/data 的表名来自 listBusinessTables 读 sqlite_master 白名单且经 %q 反引号包裹
+      - linters: [gosec]
+        path: "internal/data/"
+        text: "G202"
+      # gosec G305/G110 zip 解压：internal/data 已用 filepath.Base 校验拦截路径穿越，备份为用户本地可信文件
+      - linters: [gosec]
+        path: "internal/data/"
+        text: "G305|G110"
+      # gosec G404 弱随机：基准/测试文件用 math/rand 是合理的
+      - linters: [gosec]
+        path: "_test\\.go$"
+        text: "G404"
       # errcheck: defer Close / 文件操作 / 日志写入忽略错误是常见写法
       - linters: [errcheck]
         text: "Error return value of"

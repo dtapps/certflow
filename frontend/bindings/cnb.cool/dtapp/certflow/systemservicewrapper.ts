@@ -44,7 +44,7 @@ export function ReportFrontendError(level: string, message: string, stack: strin
 }
 
 /**
- * SetApp 设置 app 引用
+ * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(3339081910, app);

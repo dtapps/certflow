@@ -221,5 +221,8 @@
   "deploy.error.current_cert_cloud_not_supported": "该云厂商当前生效证书实时查询待接入（需在真实凭证下接入对应 SDK 的 describe 调用）",
   "deploy.error.tencent_ssl_no_zone": "未配置 EdgeOne 站点 ID（zone_id）",
   "deploy.error.ctyun_query_cert": "查询天翼云证书失败",
-  "deploy.error.aliyun_ga_listener_id_required": "未配置监听器 ID（listener_id）"
+  "deploy.error.aliyun_ga_listener_id_required": "未配置监听器 ID（listener_id）",
+  "error.backup_failed": "导出数据失败: {{.Error}}",
+  "error.import_failed": "导入数据失败: {{.Error}}",
+  "error.import_invalid_file": "备份文件无效"
 }

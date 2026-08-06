@@ -23,7 +23,7 @@ func NewDockServiceWrapper() *DockServiceWrapper {
 	}
 }
 
-// SetApp 设置 app 引用
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *DockServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

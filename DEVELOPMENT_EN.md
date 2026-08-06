@@ -261,6 +261,41 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 
 > HTTP request logs use a standalone sqlc-implemented `internal/httplog/` (single `http_log` table) stored in a separate database `dataDir/data/httplog.db`, enabled only at DEBUG level.
 
+### SQLite Driver Benchmark
+
+Test environment: Apple M1, Go 1.24+, in-memory (`:memory:`), `benchtime=3s`. Benchmark code in `internal/sqlitetest/`.
+
+#### Latency Comparison (ns/op, lower is better)
+
+| Operation | modernc (pure Go) | mattn (CGO) | mattn advantage |
+|------|:---:|:---:|:---:|
+| **Insert** (single row) | 8,603 | 5,095 | 1.69x faster |
+| **InsertBulk** (100 rows/txn) | 382,696 | 194,203 | 1.97x faster |
+| **Select** (by primary key) | 5,024 | 3,343 | 1.50x faster |
+| **SelectRows** (scan 100 rows) | 41,587 | 38,949 | 1.07x faster |
+| **Update** | 4,848 | 3,065 | 1.58x faster |
+| **Delete** | 7,968 | 6,489 | 1.23x faster |
+| **QueryLike** (5K rows LIKE) | 2,415,319 | 1,785,577 | 1.35x faster |
+
+#### Memory Allocation Comparison (B/op | allocs/op)
+
+| Operation | modernc | mattn |
+|------|:---:|:---:|
+| **Insert** | 344 / 14 | 400 / 14 |
+| **InsertBulk** | 31,886 / 1309 | 30,419 / 1118 |
+| **Select** | 735 / 27 | 798 / 30 |
+| **SelectRows** | 6,952 / 517 | 7,024 / 520 |
+| **Update** | 176 / 7 | 248 / 8 |
+| **Delete** | 184 / 9 | 248 / 10 |
+| **QueryLike** | 397,722 / 29663 | 397,770 / 29664 |
+
+#### Conclusions
+
+- **mattn (CGO) is faster in all operations**, especially writes (InsertBulk 97% faster), because it directly calls the C SQLite amalgamation while modernc is a pure-Go translation with emulation overhead.
+- **Memory allocation is roughly equivalent** — modernc slightly better in single-row ops (~20–30B less), mattn ~5% less in bulk writes.
+- **Heavy read gap narrows** (SelectRows only 1.07x) as driver overhead is diluted by SQL execution cost.
+- **Current strategy**: default to modernc (pure Go, zero CGO, simplest cross-compilation); mattn available via build tag `sqlite_mattn` + `CGO_ENABLED=1`; windows/arm64 unsupported, CI falls back to modernc. This strategy remains sound.
+
 ---
 
 ## Certificate Deployment

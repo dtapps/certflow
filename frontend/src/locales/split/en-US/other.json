@@ -937,5 +937,16 @@
   "topbar.noMoreNotifications": "No more",
   "topbar.scrollForMore": "Scroll for more",
   "clipboard.wailsFallback": "Wails clipboard unavailable, falling back to browser clipboard:",
-  "clipboard.copyFailed": "Copy failed:"
+  "clipboard.copyFailed": "Copy failed:",
+  "settings.data.title": "Data Management",
+  "settings.data.export": "Export Data",
+  "settings.data.export.desc": "Back up all business data (certificates, deploy credentials, monitors, etc.) into a single file",
+  "settings.data.import": "Import Data",
+  "settings.data.import.desc": "Restore all business data from a backup file; current data is cleared before import",
+  "settings.data.exporting": "Exporting…",
+  "settings.data.importing": "Importing…",
+  "settings.data.export.success": "Data exported",
+  "settings.data.import.success": "Data imported successfully, please restart the app to take effect",
+  "settings.data.import.confirm": "Importing will clear all current business data and replace it with the backup. Continue?",
+  "settings.data.import.invalid": "Invalid backup file: certflow.db is missing"
 }

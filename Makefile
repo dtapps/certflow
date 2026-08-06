@@ -71,7 +71,7 @@ format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分�
 check: lint-frontend lint-go test-go fuzz-go vuln-go ## 检查和测试（全部）
 
 lint-go: ## Go 代码检查
-	golangci-lint run ./... $(FILTER) || exit 1
+	golangci-lint run ./... $(FILTER) 2>&1
 
 lint-go-fix: ## Go 代码检查（自动修复）
 	golangci-lint run --fix ./...

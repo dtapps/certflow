@@ -22,7 +22,7 @@ func NewNotificationServiceWrapper(notifService *notification.NotificationServic
 	return &NotificationServiceWrapper{notifService: notifService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *NotificationServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

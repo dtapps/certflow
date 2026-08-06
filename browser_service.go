@@ -19,7 +19,7 @@ func NewBrowserServiceWrapper(app *application.App) *BrowserServiceWrapper {
 	return &BrowserServiceWrapper{app: app}
 }
 
-// SetApp 设置应用实例（在 app 创建后调用）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *BrowserServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

@@ -22,7 +22,7 @@ func NewCAServiceWrapper(caService *ca.CAService) *CAServiceWrapper {
 	return &CAServiceWrapper{caService: caService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (w *CAServiceWrapper) SetApp(app *application.App) {
 	w.app = app
 }

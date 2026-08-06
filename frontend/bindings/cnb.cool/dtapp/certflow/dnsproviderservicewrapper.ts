@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -47,6 +51,13 @@ export function ListDNSProviders(): $CancellablePromise<$models.DNSProviderListI
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<$models.DNSProviderListItem | null> {
     return $Call.ByID(544552946, id, active);
+}
+
+/**
+ * SetApp 设置 app 引用（用于获取应用生命周期）
+ */
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(3412293203, app);
 }
 
 /**

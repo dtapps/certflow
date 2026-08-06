@@ -27,7 +27,7 @@ func NewCertificateServiceWrapper(certService *certificate.CertificateService) *
 	return &CertificateServiceWrapper{certService: certService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *CertificateServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

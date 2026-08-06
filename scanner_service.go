@@ -21,7 +21,7 @@ func NewScannerServiceWrapper(s *scanner.ScannerService) *ScannerServiceWrapper 
 	return &ScannerServiceWrapper{scannerService: s}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (w *ScannerServiceWrapper) SetApp(app *application.App) {
 	w.app = app
 }

@@ -13,6 +13,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as monitor$0 from "./internal/monitor/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
  * CheckNow 立即执行一次检查
@@ -55,6 +58,13 @@ export function ListHistory(id: number, days: number): $CancellablePromise<(moni
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
     return $Call.ByID(2564808074, id, active);
+}
+
+/**
+ * SetApp 设置 app 引用（用于获取应用生命周期）
+ */
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(1142570155, app);
 }
 
 /**

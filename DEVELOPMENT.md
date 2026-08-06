@@ -262,6 +262,41 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 > HTTP 请求日志使用独立的 sqlc 实现的 `internal/httplog/`（单表 `http_log`），落在独立数据库 `dataDir/data/httplog.db`，仅 DEBUG 级别启用。
 
+### SQLite 驱动性能对比
+
+测试环境：Apple M1, Go 1.24+, 内存库 (`:memory:`), `benchtime=3s`。现代码位于 `internal/sqlitetest/`。
+
+#### 耗时对比（ns/op，越小越好）
+
+| 操作 | modernc (纯Go) | mattn (CGO) | mattn 优势 |
+|------|:---:|:---:|:---:|
+| **Insert** (单行) | 8,603 | 5,095 | 快 1.69x |
+| **InsertBulk** (100行/事务) | 382,696 | 194,203 | 快 1.97x |
+| **Select** (主键查询) | 5,024 | 3,343 | 快 1.50x |
+| **SelectRows** (100行扫描) | 41,587 | 38,949 | 快 1.07x |
+| **Update** | 4,848 | 3,065 | 快 1.58x |
+| **Delete** | 7,968 | 6,489 | 快 1.23x |
+| **QueryLike** (5K行LIKE) | 2,415,319 | 1,785,577 | 快 1.35x |
+
+#### 内存分配对比（B/op | allocs/op）
+
+| 操作 | modernc | mattn |
+|------|:---:|:---:|
+| **Insert** | 344 / 14 | 400 / 14 |
+| **InsertBulk** | 31,886 / 1309 | 30,419 / 1118 |
+| **Select** | 735 / 27 | 798 / 30 |
+| **SelectRows** | 6,952 / 517 | 7,024 / 520 |
+| **Update** | 176 / 7 | 248 / 8 |
+| **Delete** | 184 / 9 | 248 / 10 |
+| **QueryLike** | 397,722 / 29663 | 397,770 / 29664 |
+
+#### 结论
+
+- **mattn (CGO) 在所有操作上都更快**，写操作优势尤为明显（InsertBulk 快 97%），原因是直接调用 C 语言 SQLite amalgamation，而 modernc 是纯 Go 翻译实现，多了一层模拟开销。
+- **内存分配两者基本持平**，modernc 单行操作略优（少 20~30B），mattn 批量写入时少分配 ~5%。
+- **大量读操作差距缩小**（SelectRows 仅 1.07x），驱动层开销被 SQL 执行本身稀释。
+- **当前默认策略**：默认 modernc（纯Go，零 CGO 依赖，跨平台编译最简单），mattn 通过构建标签 `sqlite_mattn` + `CGO_ENABLED=1` 可选启用；windows/arm64 不支持 mattn，CI 强制回退 modernc。此策略合理，无需调整。
+
 ---
 
 ## 证书部署

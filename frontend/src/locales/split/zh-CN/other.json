@@ -937,5 +937,16 @@
   "topbar.noMoreNotifications": "没有更多了",
   "topbar.scrollForMore": "下滑加载更多",
   "clipboard.wailsFallback": "Wails 剪贴板不可用，回退到浏览器剪贴板：",
-  "clipboard.copyFailed": "复制失败："
+  "clipboard.copyFailed": "复制失败：",
+  "settings.data.title": "数据管理",
+  "settings.data.export": "导出数据",
+  "settings.data.export.desc": "将全部业务数据（证书、部署凭证、监控记录等）备份为单个文件",
+  "settings.data.import": "导入数据",
+  "settings.data.import.desc": "从备份文件恢复全部业务数据，导入前会清空当前数据",
+  "settings.data.exporting": "正在导出…",
+  "settings.data.importing": "正在导入…",
+  "settings.data.export.success": "数据已导出",
+  "settings.data.import.success": "数据导入成功，请重启应用以生效",
+  "settings.data.import.confirm": "导入将清空当前所有业务数据并替换为备份内容，确定继续吗？",
+  "settings.data.import.invalid": "备份文件无效，缺少 certflow.db"
 }

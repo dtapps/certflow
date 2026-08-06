@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -75,4 +79,11 @@ export function RequestPermission(): $CancellablePromise<boolean> {
  */
 export function SendTestNotification(): $CancellablePromise<void> {
     return $Call.ByID(2590084522);
+}
+
+/**
+ * SetApp 设置 app 引用（用于获取应用生命周期）
+ */
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(1488100316, app);
 }

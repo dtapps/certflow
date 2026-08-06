@@ -20,7 +20,7 @@ func NewSystemServiceWrapper() *SystemServiceWrapper {
 	return &SystemServiceWrapper{}
 }
 
-// SetApp 设置 app 引用
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (s *SystemServiceWrapper) SetApp(app *application.App) {
 	s.app = app
 }

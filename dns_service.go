@@ -23,7 +23,7 @@ func NewDNSProviderServiceWrapper(dnsService *dnsprovider.DNSProviderService) *D
 	return &DNSProviderServiceWrapper{dnsService: dnsService}
 }
 
-// SetApp 设置 app 引用（用于获取应用生命周期 context）
+// SetApp 设置 app 引用（用于获取应用生命周期）
 func (w *DNSProviderServiceWrapper) SetApp(app *application.App) {
 	w.app = app
 }
