@@ -201,18 +201,6 @@ jobs:
         run: pnpm install
         working-directory: frontend
 
-      # 缓存 wails3 CLI 二进制（go install 每次从源码编译很慢）。
-      # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
-      # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
-      # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
-      # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
-      # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
-      - name: 缓存 Go bin 目录
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.GO_BIN_DIR }}
-          key: gobin-${{ runner.os }}-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}
-
       # 统一计算 Go 工具链目录并写入 $GITHUB_ENV，供后续所有步骤用 ${{ env.GO_PATH_DIR }}/${{ env.GO_BIN_DIR }} 引用。
       # 必须在步骤级 shell 里算（workflow 级 env 不允许用 runner/env context），避免重复写长表达式。
       - name: 设置 Go 工具链目录
@@ -225,6 +213,18 @@ jobs:
             printf '%s\n' "GO_PATH_DIR=$HOME/go" >> "$GITHUB_ENV"
             printf '%s\n' "GO_BIN_DIR=$HOME/go/bin" >> "$GITHUB_ENV"
           fi
+
+      # 缓存 wails3 CLI 二进制（go install 每次从源码编译很慢）。
+      # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
+      # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
+      # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
+      # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
+      # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
+      - name: 缓存 Go bin 目录
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.GO_BIN_DIR }}
+          key: gobin-${{ runner.os }}-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}
 
       - name: 安装 Wails3
         env:
@@ -632,8 +632,8 @@ jobs:
           CNB_API_ENDPOINT: ${{ secrets.CNB_API_ENDPOINT || 'https://api.cnb.cool' }}
         shell: bash
         run: |
-          echo "等待 60 秒，确保 GitHub Release 附件已同步到 CDN ..."
-          sleep 60
+          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 8
 
           API="${CNB_API_ENDPOINT%/}"
           REPO="dtapp/certflow"
@@ -662,9 +662,10 @@ jobs:
           fi
 
   # 构建 / 发布 / CNB 同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
-  # 需配置 secret SERVERCHAN_SENDKEY（形如 sctp{uid}t...）；未配置则跳过通知。
+  # 需配置 secret SERVERCHAN_SENDKEY（形如 SCTxxxx 或 sctp{uid}t...）；未配置则跳过通知。
   # API 文档：https://doc.sc3.ft07.com/zh/serverchan3/server/api
-  # 推送地址：https://<uid>.push.ft07.com/send/<sendkey>.send
+  # 推送地址：SCT 转发 key → https://sctapi.ftqq.com/<sendkey>.send
+  #          带 uid 的 sendkey（sctp 开头）→ https://<uid>.push.ft07.com/send/<sendkey>.send
   notify:
     needs: [sync-cnb, release, prepare]
     runs-on: ubuntu-latest
@@ -678,14 +679,17 @@ jobs:
           SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
         shell: bash
         run: |
-          # 从 sendkey 解析 uid（正则 sctp(\d+)t），拼接推送 URL
+          # 支持两种 ServerChan3 key：
+          #   - 以 sctp 开头（带 uid 的 sendkey）→ https://<uid>.push.ft07.com/send/<key>.send
+          #   - 其他（SCT 转发 key）            → https://sctapi.ftqq.com/<key>.send
           SENDKEY_VAL="$SENDKEY"
-          UID=$(echo "$SENDKEY_VAL" | sed -E 's/^sctp([0-9]+)t.*/\1/')
-          if [ -z "$UID" ] || [ "$UID" = "$SENDKEY_VAL" ]; then
-            echo "::warning::无法从 SERVERCHAN_SENDKEY 解析 uid，跳过通知"
-            exit 0
+          if [[ "$SENDKEY_VAL" =~ ^sctp([0-9]+)t ]]; then
+            URL="https://${BASH_REMATCH[1]}.push.ft07.com/send/${SENDKEY_VAL}.send"
+          else
+            URL="https://sctapi.ftqq.com/${SENDKEY_VAL}.send"
           fi
-          URL="https://${UID}.push.ft07.com/send/${SENDKEY_VAL}.send"
+          # 注意：URL 含 sendkey（密钥），禁止整体打印，仅打印域名避免日志泄露密钥
+          echo "推送 ServerChan3 通知: ${URL%%/*}"
 
           VERSION="${{ inputs.version }}"
           TAG="v${{ inputs.version }}"

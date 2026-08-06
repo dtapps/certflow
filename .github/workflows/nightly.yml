@@ -654,8 +654,8 @@ jobs:
           CNB_API_ENDPOINT: ${{ secrets.CNB_API_ENDPOINT || 'https://api.cnb.cool' }}
         shell: bash
         run: |
-          echo "等待 60 秒，确保 GitHub Release 附件已同步到 CDN ..."
-          sleep 60
+          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 8
 
           API="${CNB_API_ENDPOINT%/}"
           REPO="dtapp/certflow"
@@ -683,9 +683,10 @@ jobs:
           fi
 
   # 构建 / 发布 / CNB 同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
-  # 需配置 secret SERVERCHAN_SENDKEY（形如 sctp{uid}t...）；未配置则跳过通知。
+  # 需配置 secret SERVERCHAN_SENDKEY（形如 SCTxxxx 或 sctp{uid}t...）；未配置则跳过通知。
   # API 文档：https://doc.sc3.ft07.com/zh/serverchan3/server/api
-  # 推送地址：https://<uid>.push.ft07.com/send/<sendkey>.send
+  # 推送地址：SCT 转发 key → https://sctapi.ftqq.com/<sendkey>.send
+  #          带 uid 的 sendkey（sctp 开头）→ https://<uid>.push.ft07.com/send/<sendkey>.send
   notify:
     needs: [sync-cnb, release, prepare]
     runs-on: ubuntu-latest
@@ -699,14 +700,17 @@ jobs:
           SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
         shell: bash
         run: |
-          # 从 sendkey 解析 uid（正则 sctp(\d+)t），拼接推送 URL
+          # 支持两种 ServerChan3 key：
+          #   - 以 sctp 开头（带 uid 的 sendkey）→ https://<uid>.push.ft07.com/send/<key>.send
+          #   - 其他（SCT 转发 key）            → https://sctapi.ftqq.com/<key>.send
           SENDKEY_VAL="$SENDKEY"
-          UID=$(echo "$SENDKEY_VAL" | sed -E 's/^sctp([0-9]+)t.*/\1/')
-          if [ -z "$UID" ] || [ "$UID" = "$SENDKEY_VAL" ]; then
-            echo "::warning::无法从 SERVERCHAN_SENDKEY 解析 uid，跳过通知"
-            exit 0
+          if [[ "$SENDKEY_VAL" =~ ^sctp([0-9]+)t ]]; then
+            URL="https://${BASH_REMATCH[1]}.push.ft07.com/send/${SENDKEY_VAL}.send"
+          else
+            URL="https://sctapi.ftqq.com/${SENDKEY_VAL}.send"
           fi
-          URL="https://${UID}.push.ft07.com/send/${SENDKEY_VAL}.send"
+          # 注意：URL 含 sendkey（密钥），禁止整体打印，仅打印域名避免日志泄露密钥
+          echo "推送 ServerChan3 通知: ${URL%%/*}"
 
           VERSION="${{ needs.prepare.outputs.version }}"
           TAG="${{ needs.prepare.outputs.tag }}"
