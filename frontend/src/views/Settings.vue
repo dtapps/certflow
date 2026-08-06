@@ -103,6 +103,15 @@ const dialog = useDialog()
 // 数据管理（导入/导出）
 const exporting = ref(false)
 const importing = ref(false)
+// 导入进度状态（由后端 GetImportStatus 轮询填充）
+const importStatus = ref<{
+  running: boolean
+  stage: string
+  current: number
+  total: number
+  error: string
+  finished_at: number
+}>({ running: false, stage: '', current: 0, total: 0, error: '', finished_at: 0 })
 
 // 检测是否有变更
 const hasChanges = computed(() => {
@@ -298,6 +307,37 @@ const handleExportData = async () => {
   }
 }
 
+// 导入导入进度轮询定时器
+let importPollTimer: ReturnType<typeof setInterval> | null = null
+
+// 启动进度轮询：导入改为后端异步执行，前端通过 GetImportStatus 轮询展示进度条，
+// 直到 running=false，再依据 error 给出最终结果。
+const startImportPoll = () => {
+  if (importPollTimer) {
+    clearInterval(importPollTimer)
+  }
+  importPollTimer = setInterval(async () => {
+    try {
+      const status = await DataService.Service.GetImportStatus()
+      importStatus.value = status
+      if (!status.running) {
+        if (importPollTimer) {
+          clearInterval(importPollTimer)
+          importPollTimer = null
+        }
+        importing.value = false
+        if (status.error) {
+          showMessage(status.error, 'error')
+        } else {
+          showMessage(t('settings.data.import.success'), 'success')
+        }
+      }
+    } catch {
+      // 轮询失败忽略，下一周期重试
+    }
+  }, 300)
+}
+
 // 导入备份文件（先确认，再清空替换；原生打开对话框选文件）
 const handleImportData = async () => {
   dialog.warning({
@@ -307,13 +347,21 @@ const handleImportData = async () => {
     negativeText: t('common.cancel') ?? 'Cancel',
     onPositiveClick: async () => {
       importing.value = true
+      importStatus.value = {
+        running: true,
+        stage: '',
+        current: 0,
+        total: 0,
+        error: '',
+        finished_at: 0,
+      }
       try {
+        // ImportData 仅负责弹窗选文件+解压，真正的数据库写入在后端异步执行并带进度
         await DataService.Service.ImportData()
-        showMessage(t('settings.data.import.success'), 'success')
+        startImportPoll()
       } catch (e) {
-        showMessage(String(e), 'error')
-      } finally {
         importing.value = false
+        showMessage(String(e), 'error')
       }
     },
   })
@@ -626,17 +674,45 @@ onMounted(async () => {
             </div>
           </n-form-item>
           <n-form-item :label="t('settings.data.import')">
-            <div class="flex items-center gap-3">
-              <n-button
-                secondary
-                type="warning"
-                :loading="importing"
-                :disabled="exporting"
-                @click="handleImportData"
+            <div class="flex w-full flex-col gap-3">
+              <div class="flex items-center gap-3">
+                <n-button
+                  secondary
+                  type="warning"
+                  :loading="importing"
+                  :disabled="exporting || importStatus.running"
+                  @click="handleImportData"
+                >
+                  {{ t('settings.data.import') }}
+                </n-button>
+                <span class="text-sm opacity-60">{{ t('settings.data.import.desc') }}</span>
+              </div>
+              <div
+                v-if="importStatus.running || (importStatus.finished_at && importStatus.stage)"
+                class="w-full"
               >
-                {{ t('settings.data.import') }}
-              </n-button>
-              <span class="text-sm opacity-60">{{ t('settings.data.import.desc') }}</span>
+                <n-progress
+                  type="line"
+                  :percentage="
+                    importStatus.total > 0
+                      ? Math.round((importStatus.current / importStatus.total) * 100)
+                      : importStatus.running
+                        ? 5
+                        : 100
+                  "
+                  :status="
+                    importStatus.error ? 'error' : importStatus.running ? undefined : 'success'
+                  "
+                  :processing="importStatus.running"
+                  :height="12"
+                />
+                <div class="mt-1 text-xs opacity-60">
+                  {{ importStatus.stage || '' }}
+                  <span v-if="importStatus.total > 0"
+                    >（{{ importStatus.current }}/{{ importStatus.total }}）</span
+                  >
+                </div>
+              </div>
             </div>
           </n-form-item>
         </n-form>

@@ -22,5 +22,9 @@
   "settings.autostart.enabled.desc": "Automatically start CertFlow when you log in",
   "ca.dir_url_ok": "The directory URL is valid and reachable",
   "settings.data.export": "Export Data",
-  "settings.data.import": "Import Data"
+  "settings.data.import": "Import Data",
+  "settings.data.import.preparing": "Preparing import",
+  "settings.data.import.clearing": "Clearing and writing data",
+  "settings.data.import.done": "Import done",
+  "settings.data.import.failed": "Import failed"
 }

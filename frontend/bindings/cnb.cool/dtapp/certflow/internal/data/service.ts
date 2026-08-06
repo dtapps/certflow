@@ -17,12 +17,24 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // @ts-ignore: Unused imports
 import * as application$0 from "../../../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * ExportData 通过原生保存对话框选择路径，将业务数据库按表导出为 CSV 并打包为 zip 写入该路径。
  * 用户取消对话框时返回空字符串与 nil 错误。
  */
 export function ExportData(): $CancellablePromise<string> {
     return $Call.ByID(2350441544);
+}
+
+/**
+ * GetImportStatus 返回当前导入进度，供前端轮询渲染进度条。
+ * 前端在触发导入后用定时器轮询本方法，直到 Running 变为 false 再给出结果提示。
+ */
+export function GetImportStatus(): $CancellablePromise<$models.ImportStatus> {
+    return $Call.ByID(2879933685);
 }
 
 /**

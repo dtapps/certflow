@@ -460,13 +460,44 @@ export interface CreateDeployTargetRequest {
  * CurrentCertDTO 云端/面板当前生效证书信息（前端展示用）。
  */
 export interface CurrentCertDTO {
+    /**
+     * CommonName 证书主体名称（CN），即证书绑定的主域名。
+     */
     "common_name": string;
+
+    /**
+     * SANs 证书主题备用名称列表（Subject Alternative Names），含主域名及所有附加域名。
+     */
     "sans": string[] | null;
+
+    /**
+     * Issuer 证书颁发者（CA）名称。
+     */
     "issuer": string;
+
+    /**
+     * NotBefore 证书生效时间（RFC3339 或可读文本）。
+     */
     "not_before": string;
+
+    /**
+     * NotAfter 证书过期时间（RFC3339 或可读文本）。
+     */
     "not_after": string;
+
+    /**
+     * SerialNumber 证书序列号（十六进制字符串）。
+     */
     "serial_number": string;
+
+    /**
+     * Supported 标记该部署目标是否支持查询当前生效证书（不支持时为 false 且 Error 含原因）。
+     */
     "supported": boolean;
+
+    /**
+     * Error 查询失败时的问题描述（成功时省略）。
+     */
     "error"?: string;
 }
 

@@ -18,6 +18,7 @@ declare module 'vue' {
     NCard: typeof import('naive-ui')['NCard']
     NCheckbox: typeof import('naive-ui')['NCheckbox']
     NInputNumber: typeof import('naive-ui')['NInputNumber']
+    NProgress: typeof import('naive-ui')['NProgress']
     NSelect: typeof import('naive-ui')['NSelect']
     NSpin: typeof import('naive-ui')['NSpin']
     ProviderIcon: typeof import('./components/ProviderIcon.vue')['default']

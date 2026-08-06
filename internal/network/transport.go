@@ -10,7 +10,26 @@ import (
 
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/settings"
+	"cnb.cool/dtapp/certflow/internal/useragent"
 )
+
+// unwrapHTTPTransport 逐层解包被 useragent.Wrap（httplog.WrapTransport 最外层）
+// 包裹的 RoundTripper，还原出底层 *http.Transport。BuildHTTPClient 借此在包裹层
+// 之外设置代理；测试也用它断言底层 Transport 类型。仅解包 *useragent.Transport
+// 一层（测试/非 DEBUG 环境足矣）；DEBUG 下多包的 LoggingRoundTripper 不在此处理。
+func unwrapHTTPTransport(rt http.RoundTripper) (*http.Transport, bool) {
+	for rt != nil {
+		if t, ok := rt.(*http.Transport); ok {
+			return t, true
+		}
+		if t, ok := rt.(*useragent.Transport); ok {
+			rt = t.Base
+			continue
+		}
+		return nil, false
+	}
+	return nil, false
+}
 
 // BuildHTTPClient 根据设置构建带有自定义 DNS 和代理的 HTTP 客户端
 func BuildHTTPClient(s settings.Settings) *http.Client {
@@ -41,9 +60,9 @@ func BuildHTTPClient(s settings.Settings) *http.Client {
 	if s.Proxy.Enabled && s.Proxy.Host != "" {
 		proxyURL := buildProxyURL(s.Proxy)
 		if proxyURL != nil {
-			// WrapTransport 在 DEBUG 下返回的是 LoggingRoundTripper（不含 Proxy 字段），
-			// 故先解出底层 *http.Transport 再设置代理。
-			if t, ok := transport.(*http.Transport); ok {
+			// WrapTransport 返回的是被 useragent.Transport 包裹的 RoundTripper，
+			// 故须先解包拿到底层 *http.Transport 再设置代理（直接断言 *http.Transport 必失败）。
+			if t, ok := unwrapHTTPTransport(transport); ok {
 				t.Proxy = http.ProxyURL(proxyURL)
 			}
 		}

@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"cnb.cool/dtapp/certflow/internal/db"
 	"cnb.cool/dtapp/certflow/internal/ent"
+	"cnb.cool/dtapp/certflow/internal/ent/certificate"
 	"cnb.cool/dtapp/certflow/internal/sqlite"
 )
 
@@ -194,6 +196,122 @@ func TestImportNullVsEmptyString(t *testing.T) {
 	}
 	if n := countRows(t, conn, "cert_uploads"); n != 1 {
 		t.Fatalf("cert_uploads rows after import: expected 1 got %d", n)
+	}
+}
+
+// TestImportTimeColumnRoundTrip 验证时间列（如 certificates.last_renewed_at 为 field.Time）
+// 在导出→导入往返后仍可被 ent 以 time.Time 正确读取，不会变成 TEXT 导致 Scan 失败。
+func TestImportTimeColumnRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	client, dbPath := newTestDB(t)
+
+	// 构造 certificates 行：设置 last_renewed_at 为固定时间（RFC3339 友好）
+	renewed := time.Date(2026, 8, 6, 11, 26, 50, 0, time.UTC)
+	ca := client.CA.Create().SetName("ca-time").SetDirectoryURL("https://acme.example.com/dir").SaveX(ctx)
+	client.Certificate.Create().
+		SetDomain("time.example.com").
+		SetCaID(ca.ID).
+		SetLastRenewedAt(renewed).
+		SaveX(ctx)
+
+	conn := openConn(t, sqlite.BuildDSN(dbPath))
+
+	exportDir := t.TempDir()
+	tables, err := listBusinessTables(conn)
+	if err != nil {
+		t.Fatalf("listBusinessTables failed: %v", err)
+	}
+	if err := exportTablesToCSV(conn, exportDir, tables); err != nil {
+		t.Fatalf("exportTablesToCSV failed: %v", err)
+	}
+
+	// 清空并导入
+	for _, tbl := range tables {
+		//nolint:gosec // 表名来自白名单
+		if _, err := conn.ExecContext(ctx, "DELETE FROM "+quote(tbl)); err != nil {
+			t.Fatalf("clear %s failed: %v", tbl, err)
+		}
+	}
+	if err := importTablesFromCSV(conn, exportDir, tables); err != nil {
+		t.Fatalf("importTablesFromCSV failed: %v", err)
+	}
+
+	// 用 ent 读回，验证 last_renewed_at 是合法 time.Time（此前会 Scan 失败）
+	got, err := client.Certificate.Query().Where(certificate.Domain("time.example.com")).Only(ctx)
+	if err != nil {
+		t.Fatalf("query certificate after import failed (time scan?): %v", err)
+	}
+	if !got.LastRenewedAt.Equal(renewed) {
+		t.Fatalf("last_renewed_at mismatch: got %v want %v", got.LastRenewedAt, renewed)
+	}
+}
+
+// TestImportFailureRollback 验证导入中途失败时数据完整回滚：原本存在的业务数据不被清空。
+// 通过构造一个含非法时间文本的 certificates CSV（无法解析）触发 importTablesFromCSV 报错，
+// 此时事务 ROLLBACK，导入前的数据应原样保留。
+func TestImportFailureRollback(t *testing.T) {
+	ctx := context.Background()
+	client, dbPath := newTestDB(t)
+
+	ca := client.CA.Create().SetName("ca-rollback").SetDirectoryURL("https://acme.example.com/dir").SaveX(ctx)
+	client.Certificate.Create().
+		SetDomain("keep.example.com").
+		SetCaID(ca.ID).
+		SaveX(ctx)
+	client.CertUpload.Create().
+		SetProvider("aliyun").
+		SetAccessKeyID("akid-rollback").
+		SetRegion("ap-guangzhou").
+		SetCertFingerprint("fp-rollback").
+		SetCloudCertID("cid-rollback").
+		SaveX(ctx)
+
+	conn := openConn(t, sqlite.BuildDSN(dbPath))
+
+	// 直接构造"破损"的备份 CSV：certificates 的 last_renewed_at 写一个无法解析的垃圾，
+	// 触发 parseTime 报错，进而 importTablesFromCSV 返回错误 -> 事务回滚。
+	tmpDir := t.TempDir()
+	// 先正常导出，拿到真实表结构
+	tables, err := listBusinessTables(conn)
+	if err != nil {
+		t.Fatalf("listBusinessTables failed: %v", err)
+	}
+	if err := exportTablesToCSV(conn, tmpDir, tables); err != nil {
+		t.Fatalf("export failed: %v", err)
+	}
+	// 篡改 certificates.csv 的时间列
+	caPath := filepath.Join(tmpDir, "certificates.csv")
+	rawCa, err := os.ReadFile(caPath)
+	if err != nil {
+		t.Fatalf("read certificates.csv failed: %v", err)
+	}
+	// 把 RFC3339 时间替换成垃圾，确保 parseTime 失败
+	corrupted := bytes.Replace(rawCa, []byte("2026-08-06T11:26:50Z"), []byte("not-a-time"), 1)
+	if bytes.Equal(corrupted, rawCa) {
+		t.Skip("未找到预期时间文本，跳过篡改")
+	}
+	//nolint:gosec // 路径由 filepath.Join(tmpDir,"certificates.csv") 构造，tmpDir 为本测试可控临时目录，非外部输入
+	if err := os.WriteFile(caPath, corrupted, 0644); err != nil {
+		t.Fatalf("write corrupted csv failed: %v", err)
+	}
+
+	// 记录导入前数据量
+	certBefore := countRows(t, conn, "certificates")
+	uploadBefore := countRows(t, conn, "cert_uploads")
+
+	// 执行导入，预期失败
+	if err := importTablesFromCSV(conn, tmpDir, tables); err == nil {
+		t.Fatal("expected import error due to corrupted time, got nil")
+	}
+
+	// 验证数据完整回滚（未被清空）
+	certAfter := countRows(t, conn, "certificates")
+	uploadAfter := countRows(t, conn, "cert_uploads")
+	if certAfter != certBefore {
+		t.Fatalf("rollback failed: certificates before=%d after=%d (data lost)", certBefore, certAfter)
+	}
+	if uploadAfter != uploadBefore {
+		t.Fatalf("rollback failed: cert_uploads before=%d after=%d (data lost)", uploadBefore, uploadAfter)
 	}
 }
 

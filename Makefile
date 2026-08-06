@@ -1,8 +1,10 @@
 .PHONY: help bindings ent sqlc i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend
 
-# 过滤 macOS 链接器噪声（ld: warning / was built for newer / ignoring duplicate libraries），
-# 让真正的编译/测试/检查错误清晰可见。用法：<命令> $(FILTER) || exit 1
-FILTER := 2>&1 | grep -vE 'ld: warning|was built for newer|ignoring duplicate libraries'
+# 将 stderr 合并到 stdout（便于查看完整输出）。注意：此处「绝不」接 grep 管道，
+# 否则会吞掉 golangci-lint 的退出码（grep 匹配到噪声即返回 0），导致 make check
+# 在 lint 失败时仍继续（"失败还在继续"）。噪声可裸打印，不影响正确性。
+# 用法：<命令> $(FILTER)
+FILTER := 2>&1
 
 # 默认目标
 help: ## 显示帮助信息
@@ -70,23 +72,28 @@ format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分�
 
 check: lint-frontend lint-go test-go fuzz-go vuln-go ## 检查和测试（全部）
 
-lint-go: ## Go 代码检查
-	golangci-lint run ./... $(FILTER) 2>&1
+lint-go: ## Go 代码检查（有 issue 即停止）
+	golangci-lint run ./... $(FILTER) || exit 1
 
 lint-go-fix: ## Go 代码检查（自动修复）
 	golangci-lint run --fix ./...
 
-lint-frontend: ## 前端 TypeScript 类型检查
-	cd frontend && pnpm exec vue-tsc --noEmit
+lint-frontend: ## 前端 TypeScript 类型检查（类型错误即停止）
+	cd frontend && pnpm exec vue-tsc --noEmit || exit 1
 
-test-go: ## Go 后端测试
+test-go: ## Go 后端测试（测试失败即停止）
 	go test -vet=off -v ./internal/... -count=1 $(FILTER) || exit 1
 
-fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s）
+fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s；失败即停止）
 	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/... $(FILTER) || exit 1
 
-vuln-go: ## Go 依赖漏洞检查
-	govulncheck -show verbose ./...
+vuln-go: ## Go 依赖漏洞检查（发现漏洞即停止）
+	govulncheck -show verbose ./... || exit 1
+
+# check 为扁平先决目标，按顺序执行：任一目标返回非零即在此处停止，
+# 不再继续后续环节（前端类型检查 → Go lint → 测试 → 模糊测试 → 漏洞检查）。
+# 每个先决目标末尾的 `|| exit 1` 确保「有错误就停止」，不被 Make 默认语义或
+# 噪声输出吞掉退出码。
 
 # ==================== 构建打包 ====================
 

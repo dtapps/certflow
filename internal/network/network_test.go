@@ -1,7 +1,6 @@
 package network
 
 import (
-	"net/http"
 	"testing"
 
 	"cnb.cool/dtapp/certflow/internal/settings"
@@ -21,9 +20,9 @@ func TestBuildHTTPClient_Default(t *testing.T) {
 		t.Fatal("expected non-nil Transport")
 	}
 
-	// 验证 Transport 类型为 *http.Transport
-	if _, ok := client.Transport.(*http.Transport); !ok {
-		t.Error("expected Transport to be *http.Transport")
+	// 验证底层 Transport 类型为 *http.Transport（外层会被 useragent/httplog 包裹）
+	if _, ok := unwrapHTTPTransport(client.Transport); !ok {
+		t.Error("expected underlying Transport to be *http.Transport")
 	}
 }
 
@@ -52,10 +51,10 @@ func TestBuildHTTPClient_WithProxy(t *testing.T) {
 		t.Fatal("expected non-nil transport")
 	}
 
-	// Transport 应已配置代理
-	tr, ok := client.Transport.(*http.Transport)
+	// Transport 应已配置代理（解包外层 useragent.Transport 拿到底层 *http.Transport）
+	tr, ok := unwrapHTTPTransport(client.Transport)
 	if !ok {
-		t.Fatal("expected *http.Transport")
+		t.Fatal("expected underlying *http.Transport")
 	}
 	if tr.Proxy == nil {
 		t.Error("expected Proxy to be set when proxy is enabled")
@@ -76,9 +75,9 @@ func TestBuildHTTPClient_ProxyWithAuth(t *testing.T) {
 		t.Fatal("expected non-nil client")
 	}
 
-	tr, ok := client.Transport.(*http.Transport)
+	tr, ok := unwrapHTTPTransport(client.Transport)
 	if !ok {
-		t.Fatal("expected *http.Transport")
+		t.Fatal("expected underlying *http.Transport")
 	}
 	if tr.Proxy == nil {
 		t.Error("expected Proxy to be set")
@@ -92,9 +91,9 @@ func TestBuildHTTPClient_DisabledProxyWithHost(t *testing.T) {
 	s.Proxy.Port = 8080
 
 	client := BuildHTTPClient(s)
-	tr, ok := client.Transport.(*http.Transport)
+	tr, ok := unwrapHTTPTransport(client.Transport)
 	if !ok {
-		t.Fatal("expected *http.Transport")
+		t.Fatal("expected underlying *http.Transport")
 	}
 	if tr.Proxy != nil {
 		t.Error("expected nil Proxy when proxy is disabled")
