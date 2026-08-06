@@ -112,14 +112,6 @@ jobs:
           echo "GIT_COMMIT=${{ needs.prepare.outputs.git_commit }}"
           echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
 
-      - name: 打印构建参数
-        shell: bash
-        run: |
-          echo "BUILD_TIME=${{ needs.prepare.outputs.build_time }}"
-          echo "VERSION=${{ inputs.version }}"
-          echo "GIT_COMMIT=${{ needs.prepare.outputs.git_commit }}"
-          echo "PLATFORM=${{ matrix.goos }}/${{ matrix.goarch }}"
-
       - name: 打印系统信息
         shell: bash
         run: |
@@ -343,9 +335,6 @@ jobs:
             fi
             echo "CGO_FLAG=CGO_ENABLED=1" >> "$GITHUB_ENV"
             echo "::notice::使用 mattn/go-sqlite3（CGO）构建 SQLite"
-          else
-            echo "CGO_FLAG=" >> "$GITHUB_ENV"
-            echo "::notice::使用 modernc.org/sqlite（纯 Go）构建 SQLite（默认）"
           fi
           echo "EXTRA_TAGS=$EXTRA_TAGS" >> "$GITHUB_ENV"
 
@@ -680,9 +669,11 @@ jobs:
     needs: [sync-cnb, release, prepare]
     runs-on: ubuntu-latest
     if: ${{ needs.release.result == 'success' }}
+    env:
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
     steps:
       - name: 发送 ServerChan3 通知
-        if: ${{ secrets.SERVERCHAN_SENDKEY != '' }}
+        if: ${{ env.SERVERCHAN_SENDKEY != '' }}
         env:
           SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
         shell: bash

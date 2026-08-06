@@ -690,9 +690,11 @@ jobs:
     needs: [sync-cnb, release, prepare]
     runs-on: ubuntu-latest
     if: ${{ needs.release.result == 'success' }}
+    env:
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
     steps:
       - name: 发送 ServerChan3 通知
-        if: ${{ secrets.SERVERCHAN_SENDKEY != '' }}
+        if: ${{ env.SERVERCHAN_SENDKEY != '' }}
         env:
           SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
         shell: bash
