@@ -51,7 +51,6 @@ const defaultSettings: SafeSettings = {
   check_interval: 6,
   monitor_history_days: 90,
   http_log_retention_days: 30,
-  data_dir: '~/.certflow',
   language: 'auto',
   theme: 'auto',
   prerelease: false,
@@ -821,10 +820,6 @@ onMounted(async () => {
           <div class="flex justify-between py-2">
             <span class="opacity-50">{{ t('settings.about.version') }}</span
             ><span>{{ appVersion || 'unknown' }}</span>
-          </div>
-          <div class="flex justify-between py-2">
-            <span class="opacity-50">{{ t('settings.about.datadir') }}</span
-            ><span class="text-sm font-mono">{{ settings.data_dir }}</span>
           </div>
           <div class="flex items-center justify-between py-2">
             <div>

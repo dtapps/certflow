@@ -343,6 +343,7 @@
   "log.create_acme_client_failed": "创建 ACME 客户端失败: {{.Error}}",
   "log.create_renewal_log_failed": "创建续期日志失败 (证书 {{.ID}}): {{.Error}}",
   "log.custom_http_client_set": "已设置自定义 HTTP 客户端（DNS + 代理）",
+  "log.data_dir": "数据目录: {{.Dir}}",
   "log.deploy.aapanel_get_current_cert": "aaPanel 查询当前生效证书 site_id={{.SiteID}} site_name={{.SiteName}}",
   "log.deploy.aawaf_get_current_cert": "堡塔云WAF 查询当前生效证书 site_id={{.SiteID}}",
   "log.deploy.acepanel_get_current_cert": "AcePanel 查询当前生效证书 site_id={{.SiteID}}",

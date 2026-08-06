@@ -64,11 +64,17 @@ func init() {
 
 func main() {
 	// 确定数据目录
+	// 开发构建（currentVersion == "dev"，即 `wails3 dev` / 未注入 VERSION）使用独立的
+	// .certflow.dev 目录，与正式版 .certflow 隔离，避免开发调试污染正式数据。
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalf("Failed to get home dir: %v", err)
 	}
-	dataDir := filepath.Join(homeDir, ".certflow")
+	dataDirName := ".certflow"
+	if currentVersion == "dev" {
+		dataDirName = ".certflow.dev"
+	}
+	dataDir := filepath.Join(homeDir, dataDirName)
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		log.Fatalf("Failed to create data dir: %v", err)
 	}
@@ -107,6 +113,7 @@ func main() {
 	}()
 	defer logging.Global().Close()
 	logging.Info(i18n.T("log.app_starting", "Version", currentVersion, "BuildTime", buildTime))
+	logging.Info(i18n.T("log.data_dir", "Dir", dataDir))
 
 	// 初始化 HTTP 请求日志（独立日志库 httplog.db，仅 DEBUG 级别记录）
 	if err := httplog.Init(dataDir); err != nil {

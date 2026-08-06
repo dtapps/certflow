@@ -75,7 +75,6 @@ func TestGetSaveRoundtrip(t *testing.T) {
 	}
 
 	s := svc.Get()
-	s.DataDir = "/tmp/test-data"
 	s.Language = "en-US"
 	s.Theme = "light"
 
@@ -84,9 +83,6 @@ func TestGetSaveRoundtrip(t *testing.T) {
 	}
 
 	got := svc.Get()
-	if got.DataDir != "/tmp/test-data" {
-		t.Errorf("DataDir = %q, want %q", got.DataDir, "/tmp/test-data")
-	}
 	if got.Language != "en-US" {
 		t.Errorf("Language = %q, want %q", got.Language, "en-US")
 	}

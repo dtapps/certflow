@@ -51,7 +51,6 @@ type Settings struct {
 	RenewInterval        int         `json:"renew_interval" mapstructure:"renew_interval"`                   // 自动续期间隔（小时）
 	MonitorHistoryDays   int         `json:"monitor_history_days" mapstructure:"monitor_history_days"`       // 监控检查历史保留天数（超期自动清理）
 	HttpLogRetentionDays int         `json:"http_log_retention_days" mapstructure:"http_log_retention_days"` // HTTP 请求日志保留天数（超期自动清理，<=0 表示不清理）
-	DataDir              string      `json:"data_dir" mapstructure:"data_dir"`                               // 数据目录
 	Language             string      `json:"language" mapstructure:"language"`                               // 语言：zh-CN/en-US/auto
 	Theme                string      `json:"theme" mapstructure:"theme"`                                     // 主题：dark/light/auto
 	Prerelease           bool        `json:"prerelease" mapstructure:"prerelease"`                           // 是否检查预发布版本
@@ -146,7 +145,6 @@ func DefaultSettings() Settings {
 		RenewInterval:        1,
 		MonitorHistoryDays:   90,
 		HttpLogRetentionDays: 30,
-		DataDir:              "~/.certflow",
 		Language:             "auto",
 		Theme:                "auto",
 		Prerelease:           false,
@@ -248,7 +246,6 @@ func (s *Service) setDefaults() {
 	s.v.SetDefault("renew_interval", def.RenewInterval)
 	s.v.SetDefault("monitor_history_days", def.MonitorHistoryDays)
 	s.v.SetDefault("http_log_retention_days", def.HttpLogRetentionDays)
-	s.v.SetDefault("data_dir", def.DataDir)
 	s.v.SetDefault("language", def.Language)
 	s.v.SetDefault("theme", def.Theme)
 	s.v.SetDefault("prerelease", def.Prerelease)
@@ -341,7 +338,6 @@ func (s *Service) writeConfig() error {
 	v.Set("renew_interval", s.settings.RenewInterval)
 	v.Set("monitor_history_days", s.settings.MonitorHistoryDays)
 	v.Set("http_log_retention_days", s.settings.HttpLogRetentionDays)
-	v.Set("data_dir", s.settings.DataDir)
 	v.Set("language", s.settings.Language)
 	v.Set("theme", s.settings.Theme)
 	v.Set("prerelease", s.settings.Prerelease)

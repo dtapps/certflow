@@ -808,7 +808,6 @@
   "scan.validTo": "Valid To",
   "settings.about.buildTime": "Build Time",
   "settings.about.checkUpdate": "Check for Updates",
-  "settings.about.datadir": "Data Directory",
   "settings.about.gitCommit": "Git Commit",
   "settings.about.name": "Application",
   "settings.about.prerelease": "Check for Pre-releases",

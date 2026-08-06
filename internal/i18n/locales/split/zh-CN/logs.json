@@ -221,6 +221,7 @@
   "log.background_obtain_failed": "日志: background_obtain_failed",
   "log.dns_provider_create_failed": "日志: dns_provider_create_failed",
   "log.app_starting": "CertFlow 启动中... 版本={{.Version}} 打包时间={{.BuildTime}}",
+  "log.data_dir": "数据目录: {{.Dir}}",
   "log.set_window_appearance": "设置窗口外观",
   "log.main_window_nil": "主窗口引用为空",
   "log.updater_check_start": "开始检查更新",

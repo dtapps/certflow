@@ -343,6 +343,7 @@
   "log.create_acme_client_failed": "Failed to create ACME client: {{.Error}}",
   "log.create_renewal_log_failed": "Failed to create renewal log (cert {{.ID}}): {{.Error}}",
   "log.custom_http_client_set": "Custom HTTP client set (DNS + Proxy)",
+  "log.data_dir": "Data directory: {{.Dir}}",
   "log.deploy.aapanel_get_current_cert": "aaPanel query current effective cert site_id={{.SiteID}} site_name={{.SiteName}}",
   "log.deploy.aawaf_get_current_cert": "BaoTa CloudWAF query current effective cert site_id={{.SiteID}}",
   "log.deploy.acepanel_get_current_cert": "AcePanel query current effective cert site_id={{.SiteID}}",

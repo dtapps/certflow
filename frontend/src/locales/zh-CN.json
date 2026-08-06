@@ -931,7 +931,6 @@
   "scan.validTo": "过期时间",
   "settings.about.buildTime": "构建时间",
   "settings.about.checkUpdate": "检查更新",
-  "settings.about.datadir": "数据目录",
   "settings.about.gitCommit": "Git 提交",
   "settings.about.name": "应用名称",
   "settings.about.prerelease": "检查预发布版本",
