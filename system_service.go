@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
@@ -87,6 +88,18 @@ func (s *SystemServiceWrapper) ReportFrontendError(level, message, stack, url st
 	default:
 		fl.Error("[%s] %s | stack: %s", loc, message, stack)
 	}
+}
+
+// Quit 退出应用。Wails v3（beta.3）未提供内建重启 API（无 Restart/Relaunch），
+// 数据导入等场景需要重启才能生效，但自写「先起新进程再退出」在 SingleInstance
+// 锁释放时序上存在跨平台风险。故采用更稳妥的「退出应用」方式：导入成功后提示
+// 用户，由用户手动重新打开应用（重新打开即触发 db.Init 读入导入数据）。
+func (s *SystemServiceWrapper) Quit() error {
+	if s.app == nil {
+		return fmt.Errorf("%s", i18n.T("error.app_not_initialized"))
+	}
+	s.app.Quit()
+	return nil
 }
 
 // SetWindowAppearance 设置主窗口外观（标题栏主题）

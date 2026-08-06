@@ -111,6 +111,7 @@
   "error.add_dns_txt_records": "Operation failed: {{.Error}}",
   "error.add_expiry_check_job_failed": "Failed to add expiry check job: {{.Error}}",
   "error.add_renew_job_failed": "Failed to add auto-renewal job: {{.Error}}",
+  "error.app_not_initialized": "App not initialized",
   "error.apply_cert_failed": "Failed to apply certificate: {{.Error}}",
   "error.auth_method_invalid": "Invalid authentication method: {{.Method}}",
   "error.auth_method_not_configured": "Authentication method {{.Method}} is not configured",

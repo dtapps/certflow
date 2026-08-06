@@ -29,6 +29,16 @@ export function IsDarkMode(): $CancellablePromise<boolean> {
 }
 
 /**
+ * Quit 退出应用。Wails v3（beta.3）未提供内建重启 API（无 Restart/Relaunch），
+ * 数据导入等场景需要重启才能生效，但自写「先起新进程再退出」在 SingleInstance
+ * 锁释放时序上存在跨平台风险。故采用更稳妥的「退出应用」方式：导入成功后提示
+ * 用户，由用户手动重新打开应用（重新打开即触发 db.Init 读入导入数据）。
+ */
+export function Quit(): $CancellablePromise<void> {
+    return $Call.ByID(130765846);
+}
+
+/**
  * ReportFrontendError 接收前端运行时的错误并写入独立的 frontend.log（logging 包，
  * 等价于 slog，不混入 certflow.log）。用于在生产版本中定位前端问题：开发版可通过
  * 浏览器控制台查看报错，但发布版 esbuild 会 drop 掉 console，错误被静默吞噬，

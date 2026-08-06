@@ -111,6 +111,7 @@
   "error.add_dns_txt_records": "操作失败: {{.Error}}",
   "error.add_expiry_check_job_failed": "添加过期检查任务失败: {{.Error}}",
   "error.add_renew_job_failed": "添加自动续期任务失败: {{.Error}}",
+  "error.app_not_initialized": "应用未初始化",
   "error.apply_cert_failed": "申请证书失败: {{.Error}}",
   "error.auth_method_invalid": "无效的认证方式: {{.Method}}",
   "error.auth_method_not_configured": "认证方式 {{.Method}} 尚未配置",

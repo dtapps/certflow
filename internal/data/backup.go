@@ -25,6 +25,10 @@ const (
 	certflowDB = "certflow.db"
 )
 
+// errUserCancel 是用户取消文件选择框时的哨兵错误。跨 Wails 边界后错误被
+// 序列化为字符串，前端用其固定英文文案识别「取消」并跳过进度/成功提示。
+var errUserCancel = fmt.Errorf("user cancelled file selection")
+
 // listBusinessTables 返回当前库中实际存在的业务表（排除 SQLite 内部表与 ent 辅助表）。
 // 表清单直接从 sqlite_master 读取，避免手写表名与 ent 生成的真实表名（复数形式）不一致。
 func listBusinessTables(conn *sql.DB) ([]string, error) {
@@ -185,7 +189,7 @@ func (s *Service) ImportData() error {
 		return fmt.Errorf("%s", i18n.T("error.import_failed", "Error", err))
 	}
 	if zipPath == "" {
-		return nil // 用户取消
+		return errUserCancel // 用户取消
 	}
 
 	// 解压到临时目录（此步耗时短，仍同步执行；真正的数据库写入在异步 goroutine 中并带进度）

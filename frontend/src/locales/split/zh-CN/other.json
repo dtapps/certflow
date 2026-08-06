@@ -945,7 +945,9 @@
   "settings.data.exporting": "正在导出…",
   "settings.data.importing": "正在导入…",
   "settings.data.export.success": "数据已导出",
-  "settings.data.import.success": "数据导入成功，请重启应用以生效",
+  "settings.data.import.success": "数据导入成功，请退出后重新打开应用以生效",
+  "settings.data.import.successTitle": "导入成功",
+  "settings.data.import.quitApp": "退出应用",
   "settings.data.import.confirm": "导入将清空当前所有业务数据并替换为备份内容，确定继续吗？",
   "settings.data.import.invalid": "备份文件无效，缺少 certflow.db"
 }

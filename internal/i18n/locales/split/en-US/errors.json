@@ -139,6 +139,7 @@
   "error.request_notification_auth_failed": "Failed to request notification authorization: {{.Error}}",
   "error.notification_permission_denied": "User denied notification permission",
   "error.db_not_initialized": "Database not initialized",
+  "error.app_not_initialized": "App not initialized",
   "error.password_too_short": "Password must be at least 6 characters",
   "error.password_incorrect": "Incorrect password",
   "error.password_set_failed": "Failed to set password: {{.Error}}",

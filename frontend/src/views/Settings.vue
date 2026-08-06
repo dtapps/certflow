@@ -329,7 +329,21 @@ const startImportPoll = () => {
         if (status.error) {
           showMessage(status.error, 'error')
         } else {
-          showMessage(t('settings.data.import.success'), 'success')
+          // 导入成功：提示需要退出并重新打开应用以生效，
+          // Wails v3 无内建重启 API，故提供「退出应用」按钮直接 Quit。
+          dialog.success({
+            title: t('settings.data.import.successTitle'),
+            content: t('settings.data.import.success'),
+            positiveText: t('settings.data.import.quitApp'),
+            negativeText: t('common.cancel') ?? 'Cancel',
+            onPositiveClick: async () => {
+              try {
+                await SystemService.Quit()
+              } catch (e) {
+                showMessage(String(e), 'error')
+              }
+            },
+          })
         }
       }
     } catch {
@@ -346,21 +360,29 @@ const handleImportData = async () => {
     positiveText: t('common.confirm') ?? 'OK',
     negativeText: t('common.cancel') ?? 'Cancel',
     onPositiveClick: async () => {
-      importing.value = true
-      importStatus.value = {
-        running: true,
-        stage: '',
-        current: 0,
-        total: 0,
-        error: '',
-        finished_at: 0,
-      }
       try {
-        // ImportData 仅负责弹窗选文件+解压，真正的数据库写入在后端异步执行并带进度
+        // ImportData 内部弹原生文件选择框。用户取消时后端返回哨兵错误
+        // "user cancelled file selection"（非 nil），此时不应进入进度、也不提示成功。
+        // 只有真正选了文件并开始导入（返回成功）后才显示进度条，
+        // 避免「点确认就出进度条、但还没选文件」的错误观感。
         await DataService.Service.ImportData()
+        // 到此说明用户已选文件、后端已启动异步导入
+        importing.value = true
+        importStatus.value = {
+          running: true,
+          stage: '',
+          current: 0,
+          total: 0,
+          error: '',
+          finished_at: 0,
+        }
         startImportPoll()
       } catch (e) {
         importing.value = false
+        // 用户取消文件选择框：静默跳过，不提示成功、也不报错
+        if (String(e).includes('user cancelled')) {
+          return
+        }
         showMessage(String(e), 'error')
       }
     },

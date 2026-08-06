@@ -139,6 +139,7 @@
   "error.request_notification_auth_failed": "请求通知权限失败: {{.Error}}",
   "error.notification_permission_denied": "用户拒绝了通知权限",
   "error.db_not_initialized": "数据库未初始化",
+  "error.app_not_initialized": "应用未初始化",
   "error.password_too_short": "密码长度不能少于 6 位",
   "error.password_incorrect": "旧密码错误",
   "error.password_set_failed": "设置密码失败: {{.Error}}",

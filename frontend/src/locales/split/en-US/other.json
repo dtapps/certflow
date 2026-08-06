@@ -945,7 +945,9 @@
   "settings.data.exporting": "Exporting…",
   "settings.data.importing": "Importing…",
   "settings.data.export.success": "Data exported",
-  "settings.data.import.success": "Data imported successfully, please restart the app to take effect",
+  "settings.data.import.success": "Data imported successfully, please quit and reopen the app to take effect",
+  "settings.data.import.successTitle": "Import Successful",
+  "settings.data.import.quitApp": "Quit App",
   "settings.data.import.confirm": "Importing will clear all current business data and replace it with the backup. Continue?",
   "settings.data.import.invalid": "Invalid backup file: certflow.db is missing"
 }
