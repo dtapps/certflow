@@ -22,7 +22,7 @@ importers:
         version: 14.4.0(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       '@wailsio/runtime':
         specifier: latest
-        version: 3.0.0-beta.1
+        version: 3.0.0-beta.5
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
@@ -45,8 +45,8 @@ importers:
         specifier: 3.6.0-rc.2
         version: 3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
       vue-echarts:
-        specifier: ^8.0.1
-        version: 8.0.1(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
+        specifier: ^8.1.0
+        version: 8.1.0(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       vue-router:
         specifier: ^5.2.0
         version: 5.2.0(@vue/compiler-sfc@3.5.40)(pinia@4.0.2(@vue/devtools-api@8.2.1)(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)))(rolldown@1.2.2)(vite@8.2.0(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
@@ -693,8 +693,8 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
-  '@wailsio/runtime@3.0.0-beta.1':
-    resolution: {integrity: sha512-y0FFOONsaWyRbQItjERV9sjUFmO4M5XGrHE8aX+rdYQG3YclTfYkMrpalMQcdxEh1CUrrpyvLabHt/2zCFnv+Q==}
+  '@wailsio/runtime@3.0.0-beta.5':
+    resolution: {integrity: sha512-WPJcKfD/iN5EbzLAE0B2AjwRVVSSnhpGQSjgFORtIA3h1bkiw/k7rTd06emNsI1ZFGFgMiUEEmXgEcVfeWoRVQ==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -1721,8 +1721,8 @@ packages:
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
-  vue-echarts@8.0.1:
-    resolution: {integrity: sha512-23rJTFLu1OUEGRWjJGmdGt8fP+8+ja1gVgzMYPIPaHWpXegcO1viIAaeu2H4QHESlVeHzUAHIxKXGrwjsyXAaA==}
+  vue-echarts@8.1.0:
+    resolution: {integrity: sha512-/uJVwijy3M2vIZ0NcPDgdZVqgboc6zZtC/vERfESau0eFpkHOIujj0sIiMiLP4kztQrckMFnDYWrid+gLI+IOg==}
     peerDependencies:
       echarts: ^6.0.0
       vue: ^3.3.0
@@ -2408,7 +2408,7 @@ snapshots:
     dependencies:
       vue: 3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
 
-  '@wailsio/runtime@3.0.0-beta.1': {}
+  '@wailsio/runtime@3.0.0-beta.5': {}
 
   acorn-jsx@5.3.2(acorn@8.18.0):
     dependencies:
@@ -3336,7 +3336,7 @@ snapshots:
 
   vscode-uri@3.1.0: {}
 
-  vue-echarts@8.0.1(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
+  vue-echarts@8.1.0(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
     dependencies:
       echarts: 6.1.0
       vue: 3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
@@ -3435,8 +3435,8 @@ snapshots:
   wrap-ansi@7.0.0:
     dependencies:
       ansi-styles: 4.0.0
-      string-width: 4.1.0
-      strip-ansi: 6.0.0
+      string-width: 4.2.0
+      strip-ansi: 6.0.1
 
   wrap-ansi@8.1.0:
     dependencies:
