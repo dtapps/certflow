@@ -101,6 +101,7 @@ go-build: ## 快速编译（make go-build VERSION=1.0.0）
 	go build -tags production -trimpath -buildvcs=false "-ldflags=-w -s" -o bin/certflow
 
 build: ## 构建生产包（make build VERSION=1.0.0）
+	wails3 task common:update:build-assets
 	wails3 task build VERSION=$(VERSION)
 
 package: ## 打包应用（make package VERSION=1.0.0）

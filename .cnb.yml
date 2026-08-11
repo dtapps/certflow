@@ -293,8 +293,8 @@
 
 master:
   # 定时触发：每天 12:00 自动执行
-  "crontab: 0 12 * * *":
-    - *trigger_nightly
+  # "crontab: 0 12 * * *":
+  #   - *trigger_nightly
     
   # 手动触发：通过页面自定义按钮执行
   web_trigger_nightly:
