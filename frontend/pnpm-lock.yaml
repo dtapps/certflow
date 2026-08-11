@@ -45,8 +45,8 @@ importers:
         specifier: 3.6.0-rc.2
         version: 3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
       vue-echarts:
-        specifier: ^8.0.1
-        version: 8.0.1(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
+        specifier: ^8.1.0
+        version: 8.1.0(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       vue-router:
         specifier: ^5.2.0
         version: 5.2.0(@vue/compiler-sfc@3.5.40)(pinia@4.0.2(@vue/devtools-api@8.2.1)(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)))(rolldown@1.2.3)(vite@8.2.1(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
@@ -1730,8 +1730,8 @@ packages:
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
-  vue-echarts@8.0.1:
-    resolution: {integrity: sha512-23rJTFLu1OUEGRWjJGmdGt8fP+8+ja1gVgzMYPIPaHWpXegcO1viIAaeu2H4QHESlVeHzUAHIxKXGrwjsyXAaA==}
+  vue-echarts@8.1.0:
+    resolution: {integrity: sha512-/uJVwijy3M2vIZ0NcPDgdZVqgboc6zZtC/vERfESau0eFpkHOIujj0sIiMiLP4kztQrckMFnDYWrid+gLI+IOg==}
     peerDependencies:
       echarts: ^6.0.0
       vue: ^3.3.0
@@ -3353,7 +3353,7 @@ snapshots:
 
   vscode-uri@3.1.0: {}
 
-  vue-echarts@8.0.1(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
+  vue-echarts@8.1.0(echarts@6.1.0)(vue@3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
     dependencies:
       echarts: 6.1.0
       vue: 3.6.0-rc.2(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
