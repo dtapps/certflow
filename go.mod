@@ -20,7 +20,7 @@ require (
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.209
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.210
 	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pquerna/otp v1.5.0
