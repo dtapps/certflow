@@ -1,4 +1,4 @@
-.PHONY: help bindings ent sqlc i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend
+.PHONY: help bindings ent sqlc i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend sync pull
 
 # 将 stderr 合并到 stdout（便于查看完整输出）。注意：此处「绝不」接 grep 管道，
 # 否则会吞掉 golangci-lint 的退出码（grep 匹配到噪声即返回 0），导致 make check
@@ -167,6 +167,15 @@ update-deps: ## 更新所有依赖
 
 setup: deps bindings ent sqlc ## 完整项目初始化
 	@echo "项目初始化完成！运行 'make dev' 启动开发模式"
+
+# ==================== 更新 / 拉取 ====================
+
+sync: ## 拉取 GitHub 最新并以 fast-forward 合并（保留本地未提交改动）
+	git fetch origin
+	git merge --ff-only origin/master
+	@echo "已同步 origin/master 最新代码，本地未提交改动已保留"
+
+pull: sync ## sync 别名（拉取远程最新并保留本地改动）
 
 # ==================== 推送 ====================
 

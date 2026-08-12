@@ -15,4 +15,4 @@ AGENTS.md
 image/systray*
 .vscode/
 # Dev logs (per-session notes, not committed)
-docs/
+docs/*-*-*.md

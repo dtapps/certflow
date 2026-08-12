@@ -4,9 +4,9 @@
         <key>CFBundlePackageType</key>
             <string>APPL</string>
         <key>CFBundleName</key>
-            <string>CertFlow</string>
+            <string>CertFlow Dev</string>
         <key>CFBundleExecutable</key>
-            <string>certflow</string>
+            <string>certflow dev</string>
         <key>CFBundleIdentifier</key>
             <string>net.dtapp.certflow.dev</string>
         <key>CFBundleVersion</key>
