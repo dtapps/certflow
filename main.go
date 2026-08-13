@@ -52,6 +52,19 @@ var gitCommit = ""
 var githubToken = ""
 var cnbToken = ""
 
+// formatBuildTime 将构建注入的 UTC RFC3339 时间（如 2006-01-02T15:04:05Z）
+// 解析为本地时区可读格式（2006-01-02 15:04:05）；解析失败则原样返回，空字符串返回"-"。
+func formatBuildTime(raw string) string {
+	if raw == "" {
+		return "-"
+	}
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return raw
+	}
+	return t.Local().Format("2006-01-02 15:04:05")
+}
+
 func init() {
 	application.RegisterEvent[events.TimePayload](events.EventTime)
 	application.RegisterEvent[events.NotificationPayload](events.EventNotification)
@@ -112,7 +125,7 @@ func main() {
 		}
 	}()
 	defer logging.Global().Close()
-	logging.Info(i18n.T("log.app_starting", "Version", currentVersion, "BuildTime", buildTime))
+	logging.Info(i18n.T("log.app_starting", "Version", currentVersion, "BuildTime", formatBuildTime(buildTime), "GitCommit", gitCommit))
 	logging.Info(i18n.T("log.data_dir", "Dir", dataDir))
 
 	// 初始化 HTTP 请求日志（独立日志库 httplog.db，仅 DEBUG 级别记录）
@@ -322,7 +335,7 @@ func main() {
 			logging.Debug(i18n.T("log.updater_matcher_none"))
 			return -1
 		},
-	}, updaterClient, buildTime, cnbToken)
+	}, updaterClient, buildTime, gitCommit, cnbToken)
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
 	} else {
