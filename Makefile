@@ -21,6 +21,19 @@ install: ## 安装前端依赖
 bindings: ## 生成 Wails TypeScript 绑定
 	wails3 generate bindings -clean=true -ts -i
 
+icons: ## 生成图标资源（icns/ico/Assets.car）
+	task common:generate:icons
+
+build-assets: ## 同步版本号/应用名到构建资源（Info.plist、Windows 清单）
+	task common:update:build-assets
+
+# wails3 生成命令全集（备查）：
+#   通用（全平台）：generate bindings / generate icons / update build-assets  ← 已聚合进下方 wails3-generate
+#   Windows 专属：generate syso / generate webview2bootstrapper  ← 由 build/windows/Taskfile.yml 在 build/package 时自动触发
+#   Linux  专属：generate appimage / generate .desktop            ← 由 build/linux/Taskfile.yml 在 build/package 时自动触发
+# 平台专属命令不在本 Makefile 暴露（非目标平台跑无意义，依赖各自 Taskfile 自动跑）。
+wails3-generate: bindings icons build-assets ## 生成 Wails 绑定/图标/构建资源
+
 ent: ## 生成 Ent ORM 代码
 	go run -tags entc ./entc_generate.go
 
@@ -101,11 +114,10 @@ go-build: ## 快速编译（make go-build VERSION=1.0.0）
 	go build -tags production -trimpath -buildvcs=false "-ldflags=-w -s" -o bin/certflow
 
 build: ## 构建生产包（make build VERSION=1.0.0）
-	wails3 task common:update:build-assets
-	wails3 task build VERSION=$(VERSION)
+	task build VERSION=$(VERSION)
 
 package: ## 打包应用（make package VERSION=1.0.0）
-	wails3 task package VERSION=$(VERSION)
+	task package VERSION=$(VERSION)
 
 # ==================== 其他 ====================
 

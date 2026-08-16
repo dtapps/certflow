@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "0.1.0"
+		"file_version": "0.0.1"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "0.1.0",
+			"ProductVersion": "0.0.1",
 			"CompanyName": "DTApp",
-			"FileDescription": "SSL 证书管理工具",
-			"LegalCopyright": "© 2026, DTApp",
+			"FileDescription": "SSL 证书管理工具，支持证书申请、续期、过期监控等功能。",
+			"LegalCopyright": "(c) 2026, DTApp",
 			"ProductName": "CertFlow",
-			"Comments": "SSL Certificate Management"
+			"Comments": "SSL certificate management tool with support for certificate issuance, renewal, and expiration monitoring."
 		}
 	}
 }
