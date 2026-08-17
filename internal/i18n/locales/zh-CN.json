@@ -154,6 +154,7 @@
   "error.db_not_initialized": "数据库未初始化",
   "error.delete_cert_failed": "删除证书记录失败: {{.Error}}",
   "error.deploy_credential_missing": "部署凭证缺失，请检查 DNS 提供商配置或自行填写 AccessKey/Secret",
+  "error.deploy_no_credential": "未配置部署凭证",
   "error.deploy_no_dns_provider": "部署目标未关联 DNS 提供商凭证",
   "error.deploy_panel_cert_deploy": "部署证书到面板站点失败",
   "error.deploy_panel_cert_upload": "上传证书到面板失败",

@@ -383,6 +383,7 @@
   "deploy.empty": "暂无部署凭证，点击右上角新建",
   "deploy.enabled": "启用",
   "deploy.error": "错误信息",
+  "deploy.error.aliyun_cas_client_create": "创建阿里云 CAS 客户端失败",
   "deploy.error.aliyun_cas_upload": "上传证书到阿里云 CAS 失败",
   "deploy.error.aliyun_cdn_client_create": "创建阿里云 CDN 客户端失败",
   "deploy.error.aliyun_cdn_deploy": "部署证书到阿里云 CDN 失败",

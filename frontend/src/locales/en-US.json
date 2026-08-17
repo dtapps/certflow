@@ -383,6 +383,7 @@
   "deploy.empty": "No deploy credentials yet, click the button above to create one",
   "deploy.enabled": "Enabled",
   "deploy.error": "Error",
+  "deploy.error.aliyun_cas_client_create": "Failed to create Alibaba Cloud CAS client",
   "deploy.error.aliyun_cas_upload": "Failed to upload certificate to Alibaba Cloud CAS",
   "deploy.error.aliyun_cdn_client_create": "Failed to create Alibaba Cloud CDN client",
   "deploy.error.aliyun_cdn_deploy": "Failed to deploy certificate to Alibaba Cloud CDN",

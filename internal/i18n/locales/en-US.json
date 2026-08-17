@@ -154,6 +154,7 @@
   "error.db_not_initialized": "Database not initialized",
   "error.delete_cert_failed": "Failed to delete certificate record: {{.Error}}",
   "error.deploy_credential_missing": "Deploy credentials missing, please check the DNS provider config or fill AccessKey/Secret manually",
+  "error.deploy_no_credential": "Deploy credential not configured",
   "error.deploy_no_dns_provider": "Deploy target has no linked DNS provider credentials",
   "error.deploy_panel_cert_deploy": "Failed to deploy certificate to panel site",
   "error.deploy_panel_cert_upload": "Failed to upload certificate to panel",
