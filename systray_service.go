@@ -11,7 +11,7 @@ import (
 	wailsEvents "github.com/wailsapp/wails/v3/pkg/events"
 )
 
-//go:embed build/tray.png
+//go:embed build/trayicon.png
 var systrayIcon []byte
 
 // SysTrayService 系统托盘服务
