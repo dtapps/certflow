@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+
 	//nolint:gosec // 面板鉴权（1panel/aapanel/aawaf/btpanel）强制使用 md5，属外部 API 协议要求，无法替换为安全算法
 	"crypto/md5"
 	"crypto/sha256"

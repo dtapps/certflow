@@ -11,18 +11,16 @@ import (
 	"sync"
 	"time"
 
-	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
-	"github.com/alibabacloud-go/tea/tea"
-
-	cas "github.com/alibabacloud-go/cas-20200407/v3/client"
-	cdn "github.com/alibabacloud-go/cdn-20180510/v5/client"
-	dcdn "github.com/alibabacloud-go/dcdn-20180115/v4/client"
-	esa "github.com/alibabacloud-go/esa-20240910/v3/client"
-	ga "github.com/alibabacloud-go/ga-20191120/v4/client"
-
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	cas "github.com/alibabacloud-go/cas-20200407/v3/client"
+	cdn "github.com/alibabacloud-go/cdn-20180510/v5/client"
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	dcdn "github.com/alibabacloud-go/dcdn-20180115/v4/client"
+	esa "github.com/alibabacloud-go/esa-20240910/v3/client"
+	ga "github.com/alibabacloud-go/ga-20191120/v4/client"
+	"github.com/alibabacloud-go/tea/tea"
 )
 
 // AliyunDeployer 阿里云部署器：上传证书到 CAS，再部署到 CDN / ESA。

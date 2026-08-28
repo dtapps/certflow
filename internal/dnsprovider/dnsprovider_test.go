@@ -67,7 +67,7 @@ func TestCreateAndGetByID(t *testing.T) {
 	input := CreateDNSProviderInput{
 		Name:         "My Cloudflare",
 		ProviderType: "cloudflare",
-		Config:       map[string]string{"api_token": "test-token"},
+		Config:       DNSProviderConfig{APIToken: "test-token"},
 		Comment:      "test provider",
 	}
 

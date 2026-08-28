@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
@@ -26,7 +28,7 @@ type DeployTarget struct {
 	// 部署服务：cdn / clb / slb / scm / oss 等
 	DeployService string `json:"deploy_service,omitempty"`
 	// 服务配置 JSON（region、资源 ID、证书名等）
-	Config []byte `json:"config,omitempty"`
+	Config schema.DeployTargetConfig `json:"config,omitempty"`
 	// 凭证来源：复用 DNS 凭证 或 部署凭证
 	CredentialSource deploytarget.CredentialSource `json:"credential_source,omitempty"`
 	// 是否启用
@@ -167,8 +169,10 @@ func (_m *DeployTarget) assignValues(columns []string, values []any) error {
 		case deploytarget.FieldConfig:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field config", values[i])
-			} else if value != nil {
-				_m.Config = *value
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Config); err != nil {
+					return fmt.Errorf("unmarshal field config: %w", err)
+				}
 			}
 		case deploytarget.FieldCredentialSource:
 			if value, ok := values[i].(*sql.NullString); !ok {

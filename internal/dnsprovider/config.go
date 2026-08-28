@@ -1,11 +1,44 @@
 package dnsprovider
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"cnb.cool/dtapp/certflow/internal/cloudcred"
 	"cnb.cool/dtapp/certflow/internal/config"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 )
+
+// DNSProviderConfig 是 DNS 提供商配置的统一结构体，引用自 schema 包。
+type DNSProviderConfig = schema.DNSProviderConfig
+
+// ToCloudCredentials 提取云厂商统一凭证（适用于 AK/SK 类厂商）。
+// 优先返回 region，为空时回退 region_id。
+func ToCloudCredentials(c DNSProviderConfig) cloudcred.Credentials {
+	region := c.Region
+	if region == "" {
+		region = c.RegionID
+	}
+	accessKey := c.AccessKeyID
+	if accessKey == "" {
+		accessKey = c.AccessKey
+	}
+	if accessKey == "" {
+		accessKey = c.SecretID
+	}
+	secretKey := c.AccessKeySecret
+	if secretKey == "" {
+		secretKey = c.SecretAccessKey
+	}
+	if secretKey == "" {
+		secretKey = c.SecretKey
+	}
+	return cloudcred.Credentials{
+		AccessKeyID:     accessKey,
+		AccessKeySecret: secretKey,
+		Region:          region,
+	}
+}
 
 // 以下结构体是 dns_providers.config 按厂商逐一声明的强类型定义。
 // 每个厂商的字段名严格对应其 lego provider 所需的配置键（见 internal/certificate/dns_provider.go），
@@ -252,8 +285,8 @@ type credentialer interface {
 }
 
 // parseCred 泛型解析为具体厂商凭证结构体并提取统一凭证，错误上抛。
-func parseCred[T credentialer](raw []byte) (cloudcred.Credentials, error) {
-	v, err := config.ParseConfig[T](raw)
+func parseCred[T credentialer](raw DNSProviderConfig) (cloudcred.Credentials, error) {
+	v, err := config.ParseConfig[T](mustMarshal(raw))
 	if err != nil {
 		return cloudcred.Credentials{}, err
 	}
@@ -261,17 +294,23 @@ func parseCred[T credentialer](raw []byte) (cloudcred.Credentials, error) {
 }
 
 // parseAny 泛型解析为具体厂商结构体并以 any 返回，由调用方类型断言。
-func parseAny[T any](raw []byte) (any, error) {
-	v, err := config.ParseConfig[T](raw)
+func parseAny[T any](raw DNSProviderConfig) (any, error) {
+	v, err := config.ParseConfig[T](mustMarshal(raw))
 	if err != nil {
 		return nil, err
 	}
 	return v, nil
 }
 
-// Parse 按厂商标识将存储的配置字节解析为对应厂商的结构体（以 any 返回，由调用方类型断言）。
+// mustMarshal 将 DNSProviderConfig 序列化为 JSON 字节。
+func mustMarshal(raw DNSProviderConfig) []byte {
+	b, _ := json.Marshal(raw)
+	return b
+}
+
+// Parse 按厂商标识将存储的配置结构体解析为对应厂商的结构体（以 any 返回，由调用方类型断言）。
 // 使用泛型 config.ParseConfig 完成反序列化。
-func Parse(providerType string, raw []byte) (any, error) {
+func Parse(providerType string, raw DNSProviderConfig) (any, error) {
 	switch providerType {
 	case "cloudflare":
 		return parseAny[CloudflareConfig](raw)
@@ -344,7 +383,7 @@ func Parse(providerType string, raw []byte) (any, error) {
 
 // ParseCredential 当部署目标以 dns_provider 作为凭证来源时，提取其云厂商密钥为 cloudcred.Credentials。
 // 仅支持具备 AK/SK 的云厂商（与 deploy_credential 来源一致）。
-func ParseCredential(providerType string, raw []byte) (cloudcred.Credentials, error) {
+func ParseCredential(providerType string, raw DNSProviderConfig) (cloudcred.Credentials, error) {
 	switch providerType {
 	case "aliyun":
 		return parseCred[AliyunConfig](raw)

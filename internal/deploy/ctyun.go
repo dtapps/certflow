@@ -16,11 +16,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"uuid"
 
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
-	"github.com/google/uuid"
 )
 
 // CtyunDeployer 天翼云部署器：支持天翼云 CDN/全站加速/边缘安全加速平台证书部署
@@ -240,7 +240,7 @@ func extractFirstPEM(b []byte) string {
 func ctyunSign(body []byte, query url.Values, ak, sk string) (string, string, string) {
 	tim := time.Now()
 	date := tim.Format("20060102T150405Z") // eop-date: yyyyMMddTHHmmssZ
-	requestID := uuid.NewString()
+	requestID := uuid.NewV7().String()
 	stringToSign := ctyunStringToSign(requestID, date, query, body)
 
 	// 2) 派生动态密钥

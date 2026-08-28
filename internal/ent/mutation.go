@@ -3956,7 +3956,7 @@ type DNSProviderMutation struct {
 	id                    *int
 	name                  *string
 	provider_type         *dnsprovider.ProviderType
-	_config               *[]byte
+	_config               *schema.DNSProviderConfig
 	is_active             *bool
 	comment               *string
 	created_at            *time.Time
@@ -4144,12 +4144,12 @@ func (m *DNSProviderMutation) ResetProviderType() {
 }
 
 // SetConfig sets the "config" field.
-func (m *DNSProviderMutation) SetConfig(b []byte) {
-	m._config = &b
+func (m *DNSProviderMutation) SetConfig(spc schema.DNSProviderConfig) {
+	m._config = &spc
 }
 
 // Config returns the value of the "config" field in the mutation.
-func (m *DNSProviderMutation) Config() (r []byte, exists bool) {
+func (m *DNSProviderMutation) Config() (r schema.DNSProviderConfig, exists bool) {
 	v := m._config
 	if v == nil {
 		return
@@ -4160,7 +4160,7 @@ func (m *DNSProviderMutation) Config() (r []byte, exists bool) {
 // OldConfig returns the old "config" field's value of the DNSProvider entity.
 // If the DNSProvider object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DNSProviderMutation) OldConfig(ctx context.Context) (v []byte, err error) {
+func (m *DNSProviderMutation) OldConfig(ctx context.Context) (v schema.DNSProviderConfig, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
@@ -4582,7 +4582,7 @@ func (m *DNSProviderMutation) SetField(name string, value ent.Value) error {
 		m.SetProviderType(v)
 		return nil
 	case dnsprovider.FieldConfig:
-		v, ok := value.([]byte)
+		v, ok := value.(schema.DNSProviderConfig)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -4823,7 +4823,7 @@ type DeployCredentialMutation struct {
 	id                    *int
 	name                  *string
 	provider_type         *deploycredential.ProviderType
-	_config               *[]byte
+	_config               *schema.DeployCredentialConfig
 	is_active             *bool
 	comment               *string
 	created_at            *time.Time
@@ -5008,12 +5008,12 @@ func (m *DeployCredentialMutation) ResetProviderType() {
 }
 
 // SetConfig sets the "config" field.
-func (m *DeployCredentialMutation) SetConfig(b []byte) {
-	m._config = &b
+func (m *DeployCredentialMutation) SetConfig(scc schema.DeployCredentialConfig) {
+	m._config = &scc
 }
 
 // Config returns the value of the "config" field in the mutation.
-func (m *DeployCredentialMutation) Config() (r []byte, exists bool) {
+func (m *DeployCredentialMutation) Config() (r schema.DeployCredentialConfig, exists bool) {
 	v := m._config
 	if v == nil {
 		return
@@ -5024,7 +5024,7 @@ func (m *DeployCredentialMutation) Config() (r []byte, exists bool) {
 // OldConfig returns the old "config" field's value of the DeployCredential entity.
 // If the DeployCredential object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DeployCredentialMutation) OldConfig(ctx context.Context) (v []byte, err error) {
+func (m *DeployCredentialMutation) OldConfig(ctx context.Context) (v schema.DeployCredentialConfig, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
@@ -5392,7 +5392,7 @@ func (m *DeployCredentialMutation) SetField(name string, value ent.Value) error 
 		m.SetProviderType(v)
 		return nil
 	case deploycredential.FieldConfig:
-		v, ok := value.([]byte)
+		v, ok := value.(schema.DeployCredentialConfig)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -6694,7 +6694,7 @@ type DeployTargetMutation struct {
 	name                     *string
 	provider_type            *deploytarget.ProviderType
 	deploy_service           *string
-	_config                  *[]byte
+	_config                  *schema.DeployTargetConfig
 	credential_source        *deploytarget.CredentialSource
 	is_active                *bool
 	comment                  *string
@@ -6926,12 +6926,12 @@ func (m *DeployTargetMutation) ResetDeployService() {
 }
 
 // SetConfig sets the "config" field.
-func (m *DeployTargetMutation) SetConfig(b []byte) {
-	m._config = &b
+func (m *DeployTargetMutation) SetConfig(stc schema.DeployTargetConfig) {
+	m._config = &stc
 }
 
 // Config returns the value of the "config" field in the mutation.
-func (m *DeployTargetMutation) Config() (r []byte, exists bool) {
+func (m *DeployTargetMutation) Config() (r schema.DeployTargetConfig, exists bool) {
 	v := m._config
 	if v == nil {
 		return
@@ -6942,7 +6942,7 @@ func (m *DeployTargetMutation) Config() (r []byte, exists bool) {
 // OldConfig returns the old "config" field's value of the DeployTarget entity.
 // If the DeployTarget object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DeployTargetMutation) OldConfig(ctx context.Context) (v []byte, err error) {
+func (m *DeployTargetMutation) OldConfig(ctx context.Context) (v schema.DeployTargetConfig, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldConfig is only allowed on UpdateOne operations")
 	}
@@ -7667,7 +7667,7 @@ func (m *DeployTargetMutation) SetField(name string, value ent.Value) error {
 		m.SetDeployService(v)
 		return nil
 	case deploytarget.FieldConfig:
-		v, ok := value.([]byte)
+		v, ok := value.(schema.DeployTargetConfig)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

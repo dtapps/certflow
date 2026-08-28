@@ -14,6 +14,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/ent/predicate"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -75,8 +76,16 @@ func (_u *DeployTargetUpdate) SetNillableDeployService(v *string) *DeployTargetU
 }
 
 // SetConfig sets the "config" field.
-func (_u *DeployTargetUpdate) SetConfig(v []byte) *DeployTargetUpdate {
+func (_u *DeployTargetUpdate) SetConfig(v schema.DeployTargetConfig) *DeployTargetUpdate {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DeployTargetUpdate) SetNillableConfig(v *schema.DeployTargetConfig) *DeployTargetUpdate {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -410,10 +419,10 @@ func (_u *DeployTargetUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.SetField(deploytarget.FieldDeployService, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(deploytarget.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploytarget.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(deploytarget.FieldConfig, field.TypeBytes)
+		_spec.ClearField(deploytarget.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CredentialSource(); ok {
 		_spec.SetField(deploytarget.FieldCredentialSource, field.TypeEnum, value)
@@ -659,8 +668,16 @@ func (_u *DeployTargetUpdateOne) SetNillableDeployService(v *string) *DeployTarg
 }
 
 // SetConfig sets the "config" field.
-func (_u *DeployTargetUpdateOne) SetConfig(v []byte) *DeployTargetUpdateOne {
+func (_u *DeployTargetUpdateOne) SetConfig(v schema.DeployTargetConfig) *DeployTargetUpdateOne {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DeployTargetUpdateOne) SetNillableConfig(v *schema.DeployTargetConfig) *DeployTargetUpdateOne {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -1024,10 +1041,10 @@ func (_u *DeployTargetUpdateOne) sqlSave(ctx context.Context) (_node *DeployTarg
 		_spec.SetField(deploytarget.FieldDeployService, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(deploytarget.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploytarget.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(deploytarget.FieldConfig, field.TypeBytes)
+		_spec.ClearField(deploytarget.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CredentialSource(); ok {
 		_spec.SetField(deploytarget.FieldCredentialSource, field.TypeEnum, value)

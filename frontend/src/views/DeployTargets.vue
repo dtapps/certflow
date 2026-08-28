@@ -70,48 +70,13 @@ function statusType(s?: string) {
   return 'default'
 }
 function domainList(target: DeployTargetListItem): string[] {
-  const cfg = target.config || {}
-  // 面板/防火墙类：网站名称存在 config.site_name（JSON 数组）
+  const cfg = target.config
+  if (!cfg) return []
+  // 面板/防火墙类：网站名称存在 config.site_name
   if (isPanelProvider(target.provider_type)) {
-    const raw = cfg['site_name']
-    if (!raw) return []
-    try {
-      const arr = JSON.parse(raw)
-      const res = Array.isArray(arr) ? arr : []
-      console.debug(
-        t('log.deployTargetsDomainList', {
-          name: target.name,
-          raw: JSON.stringify(raw),
-          result: JSON.stringify(res),
-        }),
-      )
-      return res
-    } catch {
-      console.error(
-        t('log.deployTargetsDomainListParseFailed', {
-          name: target.name,
-          raw: JSON.stringify(raw),
-        }),
-      )
-      return []
-    }
+    return cfg.site_name || []
   }
-  const raw = cfg['domains']
-  if (!raw) return []
-  try {
-    const arr = JSON.parse(raw)
-    const res = Array.isArray(arr) ? arr : []
-    console.debug(
-      t('log.deployTargetsDomainList', {
-        name: target.name,
-        raw: JSON.stringify(raw),
-        result: JSON.stringify(res),
-      }),
-    )
-    return res
-  } catch {
-    return []
-  }
+  return cfg.domains || []
 }
 
 const filteredTargets = computed(() => {

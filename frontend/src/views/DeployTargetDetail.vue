@@ -235,26 +235,16 @@ function parseSiteEntry(s: string): { name: string; id: string } {
   return { name: s, id: '' }
 }
 
-// 解析配置里的 JSON 字符串数组（site_name / site_id / domains）
-function parseConfigArray(raw?: string): string[] {
-  if (!raw) return []
-  try {
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? (arr as string[]) : []
-  } catch {
-    return []
-  }
-}
-
 // 初始根据已保存配置填充下拉选项（配置里站点名与站点 ID 各自独立存储）
 function buildInitialDomainOptions(): { label: string; value: string }[] {
   domainMeta.value = {}
-  const cfg = (target.value?.config || {}) as Record<string, any>
+  const cfg = target.value?.config
+  if (!cfg) return []
   const isPanel = isPanelProvider(target.value?.provider_type || '')
   const opts: { label: string; value: string }[] = []
   if (isPanel) {
-    const names = parseConfigArray(cfg['site_name'])
-    const ids = parseConfigArray(cfg['site_id'])
+    const names = cfg.site_name || []
+    const ids = cfg.site_id || []
     names.forEach((name, i) => {
       const id = ids[i] || ''
       const key = id || name
@@ -262,7 +252,7 @@ function buildInitialDomainOptions(): { label: string; value: string }[] {
       opts.push({ label: name, value: key })
     })
   } else {
-    parseConfigArray(cfg['domains']).forEach((d) => {
+    ;(cfg.domains || []).forEach((d) => {
       domainMeta.value[d] = { name: d, id: '' }
       opts.push({ label: d, value: d })
     })

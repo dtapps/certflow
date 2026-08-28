@@ -294,19 +294,6 @@ async function loadDeployCredentials() {
   }
 }
 
-function parseDomains(cf: Record<string, any>): string[] {
-  let doms: string[] = []
-  if (cf.domains) {
-    try {
-      doms = JSON.parse(cf.domains)
-    } catch {
-      doms = []
-    }
-  }
-  if (doms.length === 0 && cf.domain) doms = [cf.domain]
-  return doms
-}
-
 async function loadEditTarget() {
   loading.value = true
   try {
@@ -316,8 +303,8 @@ async function loadEditTarget() {
       showMessage(t('deploy.operationFailed'), 'error')
       return
     }
-    const cf = (target.config || {}) as Record<string, any>
-    const doms = parseDomains(cf)
+    const cf = target.config
+    const doms = cf?.domains || []
     domainOptions.value = doms.map((d) => ({ label: d, value: d }))
     form.name = target.name
     form.provider_type = target.provider_type
@@ -327,39 +314,32 @@ async function loadEditTarget() {
     form.deploy_credential_id = target.deploy_credential_id
     form.access_key = ''
     form.secret_key = ''
-    form.region = cf.region || cf.region_id || ''
+    form.region = cf?.region || cf?.region_id || ''
     form.domains = doms
-    form.cert_name = cf.cert_name || ''
-    form.zone_id = cf.zone_id || ''
-    form.zone_name = cf.zone_name || ''
-    form.site_id = cf.site_id || ''
-    form.site_name = cf.site_name || ''
-    form.accelerator_id = cf.accelerator_id || ''
-    form.listener_id = cf.listener_id || ''
+    form.cert_name = cf?.cert_name || ''
+    form.zone_id = cf?.zone_id || ''
+    form.zone_name = cf?.zone_name || ''
+    form.site_id = cf?.site_id?.[0] || ''
+    form.site_name = cf?.site_name?.[0] || ''
+    form.accelerator_id = cf?.accelerator_id || ''
+    form.listener_id = cf?.listener_id || ''
     // EdgeOne / ESA 站点下拉复用 zoneOptions：编辑回填时先放入已存 Id + 名称作为占位，
-    // 待用户点“获取站点”后再替换为真实列表，避免下拉无显示且能直接看到站点名。
+    // 待用户点"获取站点"后再替换为真实列表，避免下拉无显示且能直接看到站点名。
     if (form.deploy_service === 'edgeone' && form.zone_id) {
       zoneOptions.value = [{ label: form.zone_name || form.zone_id, value: form.zone_id }]
     }
     if (form.deploy_service === 'esa' && form.site_id) {
       zoneOptions.value = [{ label: form.site_name || form.site_id, value: form.site_id }]
     }
-    // 面板/防火墙：编辑回显站点（点“获取网站”可刷新为完整列表）。
-    // 多选站点以 JSON 数组存于 site_id / site_name，解析后回填 site_ids / site_names。
-    if (isPanelProvider(form.provider_type) && form.deploy_service === 'site' && form.site_id) {
-      let ids: string[] = []
-      let names: string[] = []
-      try {
-        ids = JSON.parse(form.site_id)
-      } catch {
-        // 兼容旧格式（逗号分隔）
-        ids = form.site_id.split(',').filter(Boolean)
-      }
-      try {
-        names = JSON.parse(form.site_name)
-      } catch {
-        names = form.site_name ? form.site_name.split(',') : []
-      }
+    // 面板/防火墙：编辑回显站点（点"获取网站"可刷新为完整列表）。
+    // 多选站点以数组存于 site_id / site_name，直接回填 site_ids / site_names。
+    if (
+      isPanelProvider(form.provider_type) &&
+      form.deploy_service === 'site' &&
+      cf?.site_id?.length
+    ) {
+      const ids = cf.site_id || []
+      const names = cf.site_name || []
       form.site_ids = ids
       form.site_names = names
       zoneOptions.value = ids.map((id, i) => ({
@@ -375,14 +355,14 @@ async function loadEditTarget() {
   }
 }
 
-function buildConfig(): Record<string, string> {
-  const cfg: Record<string, string> = {}
+function buildConfig(): Record<string, any> {
+  const cfg: Record<string, any> = {}
   if (form.provider_type === 'aliyun') {
     cfg.region_id = form.region
   } else if (!isPanelProvider(form.provider_type)) {
     cfg.region = form.region
   }
-  if (form.domains.length) cfg.domains = JSON.stringify(form.domains)
+  if (form.domains.length) cfg.domains = form.domains
   if (form.cert_name) cfg.cert_name = form.cert_name
   if (form.deploy_service === 'edgeone' && form.zone_id) {
     cfg.zone_id = form.zone_id
@@ -397,8 +377,8 @@ function buildConfig(): Record<string, string> {
     if (form.listener_id) cfg.listener_id = form.listener_id
   }
   if (isPanelProvider(form.provider_type) && form.site_ids.length) {
-    cfg.site_id = JSON.stringify(form.site_ids)
-    cfg.site_name = JSON.stringify(form.site_names)
+    cfg.site_id = form.site_ids
+    cfg.site_name = form.site_names
   }
   return cfg
 }

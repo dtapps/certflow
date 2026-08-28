@@ -3,13 +3,13 @@ package notification
 import (
 	"context"
 	"fmt"
+	"uuid"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
 	entnotification "cnb.cool/dtapp/certflow/internal/ent/notification"
 	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
-	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
@@ -76,7 +76,7 @@ func (s *NotificationService) SendNotification(opt NotificationOption) error {
 		level = entnotification.LevelInfo.String()
 	}
 	logging.Debug(i18n.T("log.notification_send", "Title", opt.Title, "Category", opt.Category, "Level", level))
-	id, _ := uuid.NewV7()
+	id := uuid.NewV7()
 	options := notifications.NotificationOptions{
 		ID:    id.String(),
 		Title: opt.Title,

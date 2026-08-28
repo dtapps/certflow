@@ -13,6 +13,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/deploylog"
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -45,8 +46,16 @@ func (_c *DeployTargetCreate) SetDeployService(v string) *DeployTargetCreate {
 }
 
 // SetConfig sets the "config" field.
-func (_c *DeployTargetCreate) SetConfig(v []byte) *DeployTargetCreate {
+func (_c *DeployTargetCreate) SetConfig(v schema.DeployTargetConfig) *DeployTargetCreate {
 	_c.mutation.SetConfig(v)
+	return _c
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_c *DeployTargetCreate) SetNillableConfig(v *schema.DeployTargetConfig) *DeployTargetCreate {
+	if v != nil {
+		_c.SetConfig(*v)
+	}
 	return _c
 }
 
@@ -366,7 +375,7 @@ func (_c *DeployTargetCreate) createSpec() (*DeployTarget, *sqlgraph.CreateSpec)
 		_node.DeployService = value
 	}
 	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(deploytarget.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploytarget.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if value, ok := _c.mutation.CredentialSource(); ok {
@@ -556,7 +565,7 @@ func (u *DeployTargetUpsert) UpdateDeployService() *DeployTargetUpsert {
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployTargetUpsert) SetConfig(v []byte) *DeployTargetUpsert {
+func (u *DeployTargetUpsert) SetConfig(v schema.DeployTargetConfig) *DeployTargetUpsert {
 	u.Set(deploytarget.FieldConfig, v)
 	return u
 }
@@ -769,7 +778,7 @@ func (u *DeployTargetUpsertOne) UpdateDeployService() *DeployTargetUpsertOne {
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployTargetUpsertOne) SetConfig(v []byte) *DeployTargetUpsertOne {
+func (u *DeployTargetUpsertOne) SetConfig(v schema.DeployTargetConfig) *DeployTargetUpsertOne {
 	return u.Update(func(s *DeployTargetUpsert) {
 		s.SetConfig(v)
 	})
@@ -1169,7 +1178,7 @@ func (u *DeployTargetUpsertBulk) UpdateDeployService() *DeployTargetUpsertBulk {
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployTargetUpsertBulk) SetConfig(v []byte) *DeployTargetUpsertBulk {
+func (u *DeployTargetUpsertBulk) SetConfig(v schema.DeployTargetConfig) *DeployTargetUpsertBulk {
 	return u.Update(func(s *DeployTargetUpsert) {
 		s.SetConfig(v)
 	})

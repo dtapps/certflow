@@ -10,6 +10,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -36,8 +37,16 @@ func (_c *DeployCredentialCreate) SetProviderType(v deploycredential.ProviderTyp
 }
 
 // SetConfig sets the "config" field.
-func (_c *DeployCredentialCreate) SetConfig(v []byte) *DeployCredentialCreate {
+func (_c *DeployCredentialCreate) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialCreate {
 	_c.mutation.SetConfig(v)
+	return _c
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_c *DeployCredentialCreate) SetNillableConfig(v *schema.DeployCredentialConfig) *DeployCredentialCreate {
+	if v != nil {
+		_c.SetConfig(*v)
+	}
 	return _c
 }
 
@@ -224,7 +233,7 @@ func (_c *DeployCredentialCreate) createSpec() (*DeployCredential, *sqlgraph.Cre
 		_node.ProviderType = value
 	}
 	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(deploycredential.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploycredential.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
@@ -336,7 +345,7 @@ func (u *DeployCredentialUpsert) UpdateProviderType() *DeployCredentialUpsert {
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployCredentialUpsert) SetConfig(v []byte) *DeployCredentialUpsert {
+func (u *DeployCredentialUpsert) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialUpsert {
 	u.Set(deploycredential.FieldConfig, v)
 	return u
 }
@@ -469,7 +478,7 @@ func (u *DeployCredentialUpsertOne) UpdateProviderType() *DeployCredentialUpsert
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployCredentialUpsertOne) SetConfig(v []byte) *DeployCredentialUpsertOne {
+func (u *DeployCredentialUpsertOne) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialUpsertOne {
 	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetConfig(v)
 	})
@@ -778,7 +787,7 @@ func (u *DeployCredentialUpsertBulk) UpdateProviderType() *DeployCredentialUpser
 }
 
 // SetConfig sets the "config" field.
-func (u *DeployCredentialUpsertBulk) SetConfig(v []byte) *DeployCredentialUpsertBulk {
+func (u *DeployCredentialUpsertBulk) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialUpsertBulk {
 	return u.Update(func(s *DeployCredentialUpsert) {
 		s.SetConfig(v)
 	})

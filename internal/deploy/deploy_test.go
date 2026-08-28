@@ -139,13 +139,34 @@ func TestCredsFromConfig(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.provider+"/"+c.credSource, func(t *testing.T) {
-			raw, _ := json.Marshal(c.cfg)
 			var creds Credentials
 			var err error
 			if c.credSource == deploy {
-				creds, err = deploycredential.Parse(c.provider, raw)
+				creds, err = deploycredential.Parse(c.provider, deploycredential.DeployCredentialConfig{
+					AccessKeyID:     c.cfg["access_key_id"],
+					AccessKeySecret: c.cfg["access_key_secret"],
+					SecretAccessKey: c.cfg["secret_access_key"],
+					SecretID:        c.cfg["secret_id"],
+					SecretKey:       c.cfg["secret_key"],
+					Region:          c.cfg["region"],
+					RegionID:        c.cfg["region_id"],
+					APIKey:          c.cfg["api_key"],
+					PanelURL:        c.cfg["panel_url"],
+					TokenID:         c.cfg["token_id"],
+					TokenSecret:     c.cfg["token_secret"],
+					JWTSecret:       c.cfg["jwt_secret"],
+				})
 			} else {
-				creds, err = dnsprovider.ParseCredential(c.provider, raw)
+				creds, err = dnsprovider.ParseCredential(c.provider, dnsprovider.DNSProviderConfig{
+					AccessKeyID:     c.cfg["access_key_id"],
+					AccessKeySecret: c.cfg["access_key_secret"],
+					SecretAccessKey: c.cfg["secret_access_key"],
+					AccessKey:       c.cfg["access_key"],
+					SecretKey:       c.cfg["secret_key"],
+					SecretID:        c.cfg["secret_id"],
+					Region:          c.cfg["region"],
+					RegionID:        c.cfg["region_id"],
+				})
 			}
 			if c.wantErr {
 				if err == nil {

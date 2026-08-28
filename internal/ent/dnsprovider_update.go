@@ -12,6 +12,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
 	"cnb.cool/dtapp/certflow/internal/ent/predicate"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -59,8 +60,16 @@ func (_u *DNSProviderUpdate) SetNillableProviderType(v *dnsprovider.ProviderType
 }
 
 // SetConfig sets the "config" field.
-func (_u *DNSProviderUpdate) SetConfig(v []byte) *DNSProviderUpdate {
+func (_u *DNSProviderUpdate) SetConfig(v schema.DNSProviderConfig) *DNSProviderUpdate {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DNSProviderUpdate) SetNillableConfig(v *schema.DNSProviderConfig) *DNSProviderUpdate {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -257,10 +266,10 @@ func (_u *DNSProviderUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.SetField(dnsprovider.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
+		_spec.ClearField(dnsprovider.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dnsprovider.FieldIsActive, field.TypeBool, value)
@@ -413,8 +422,16 @@ func (_u *DNSProviderUpdateOne) SetNillableProviderType(v *dnsprovider.ProviderT
 }
 
 // SetConfig sets the "config" field.
-func (_u *DNSProviderUpdateOne) SetConfig(v []byte) *DNSProviderUpdateOne {
+func (_u *DNSProviderUpdateOne) SetConfig(v schema.DNSProviderConfig) *DNSProviderUpdateOne {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DNSProviderUpdateOne) SetNillableConfig(v *schema.DNSProviderConfig) *DNSProviderUpdateOne {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -641,10 +658,10 @@ func (_u *DNSProviderUpdateOne) sqlSave(ctx context.Context) (_node *DNSProvider
 		_spec.SetField(dnsprovider.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(dnsprovider.FieldConfig, field.TypeBytes)
+		_spec.ClearField(dnsprovider.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dnsprovider.FieldIsActive, field.TypeBool, value)

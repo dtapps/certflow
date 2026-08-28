@@ -11,6 +11,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/certificate"
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/dnsprovider"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -37,8 +38,16 @@ func (_c *DNSProviderCreate) SetProviderType(v dnsprovider.ProviderType) *DNSPro
 }
 
 // SetConfig sets the "config" field.
-func (_c *DNSProviderCreate) SetConfig(v []byte) *DNSProviderCreate {
+func (_c *DNSProviderCreate) SetConfig(v schema.DNSProviderConfig) *DNSProviderCreate {
 	_c.mutation.SetConfig(v)
+	return _c
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_c *DNSProviderCreate) SetNillableConfig(v *schema.DNSProviderConfig) *DNSProviderCreate {
+	if v != nil {
+		_c.SetConfig(*v)
+	}
 	return _c
 }
 
@@ -240,7 +249,7 @@ func (_c *DNSProviderCreate) createSpec() (*DNSProvider, *sqlgraph.CreateSpec) {
 		_node.ProviderType = value
 	}
 	if value, ok := _c.mutation.Config(); ok {
-		_spec.SetField(dnsprovider.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(dnsprovider.FieldConfig, field.TypeJSON, value)
 		_node.Config = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
@@ -368,7 +377,7 @@ func (u *DNSProviderUpsert) UpdateProviderType() *DNSProviderUpsert {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsert) SetConfig(v []byte) *DNSProviderUpsert {
+func (u *DNSProviderUpsert) SetConfig(v schema.DNSProviderConfig) *DNSProviderUpsert {
 	u.Set(dnsprovider.FieldConfig, v)
 	return u
 }
@@ -501,7 +510,7 @@ func (u *DNSProviderUpsertOne) UpdateProviderType() *DNSProviderUpsertOne {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertOne) SetConfig(v []byte) *DNSProviderUpsertOne {
+func (u *DNSProviderUpsertOne) SetConfig(v schema.DNSProviderConfig) *DNSProviderUpsertOne {
 	return u.Update(func(s *DNSProviderUpsert) {
 		s.SetConfig(v)
 	})
@@ -810,7 +819,7 @@ func (u *DNSProviderUpsertBulk) UpdateProviderType() *DNSProviderUpsertBulk {
 }
 
 // SetConfig sets the "config" field.
-func (u *DNSProviderUpsertBulk) SetConfig(v []byte) *DNSProviderUpsertBulk {
+func (u *DNSProviderUpsertBulk) SetConfig(v schema.DNSProviderConfig) *DNSProviderUpsertBulk {
 	return u.Update(func(s *DNSProviderUpsert) {
 		s.SetConfig(v)
 	})

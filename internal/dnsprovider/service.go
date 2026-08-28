@@ -2,7 +2,6 @@ package dnsprovider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
@@ -25,7 +24,7 @@ func NewDNSProviderService(client *ent.Client) *DNSProviderService {
 type CreateDNSProviderInput struct {
 	Name         string            `json:"name"`          // 提供商名称
 	ProviderType string            `json:"provider_type"` // 提供商类型
-	Config       map[string]string `json:"config"`        // 配置参数
+	Config       DNSProviderConfig `json:"config"`        // 配置参数
 	Comment      string            `json:"comment"`       // 备注
 }
 
@@ -33,20 +32,16 @@ type CreateDNSProviderInput struct {
 type UpdateDNSProviderInput struct {
 	Name         string            `json:"name,omitempty"`          // 提供商名称
 	ProviderType string            `json:"provider_type,omitempty"` // 提供商类型
-	Config       map[string]string `json:"config,omitempty"`        // 配置参数
+	Config       DNSProviderConfig `json:"config"`                  // 配置参数
 	Comment      string            `json:"comment,omitempty"`       // 备注
 }
 
 // Create 创建新的 DNS 提供商
 func (s *DNSProviderService) Create(ctx context.Context, input CreateDNSProviderInput) (*ent.DNSProvider, error) {
-	configJSON, err := json.Marshal(input.Config)
-	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("error.dns_config_marshal_failed", "Error", err))
-	}
 	builder := s.db.DNSProvider.Create().
 		SetName(input.Name).
 		SetProviderType(dnsprovider.ProviderType(input.ProviderType)).
-		SetConfig(configJSON).
+		SetConfig(input.Config).
 		SetComment(input.Comment)
 
 	result, err := builder.Save(ctx)
@@ -121,12 +116,8 @@ func (s *DNSProviderService) Update(ctx context.Context, id int, input UpdateDNS
 	if input.ProviderType != "" {
 		builder.SetProviderType(dnsprovider.ProviderType(input.ProviderType))
 	}
-	if input.Config != nil {
-		configJSON, err := json.Marshal(input.Config)
-		if err != nil {
-			return nil, fmt.Errorf("%s", i18n.T("error.dns_config_marshal_failed", "Error", err))
-		}
-		builder.SetConfig(configJSON)
+	if !isConfigEmpty(input.Config) {
+		builder.SetConfig(input.Config)
 	}
 	if input.Comment != "" {
 		builder.SetComment(input.Comment)
@@ -166,4 +157,19 @@ func (s *DNSProviderService) GetProviderTypes(ctx context.Context) []string {
 		"dynadot", "azuredns", "digitalocean", "vultr",
 		"hetzner", "linode", "ovh", "dnsimple", "ns1",
 	}
+}
+
+// isConfigEmpty 检查 DNSProviderConfig 是否为空（所有字段都是零值）
+func isConfigEmpty(c DNSProviderConfig) bool {
+	return c.AccessKeyID == "" && c.AccessKeySecret == "" && c.SecretAccessKey == "" &&
+		c.AccessKey == "" && c.SecretKey == "" && c.SecretID == "" &&
+		c.Region == "" && c.RegionID == "" && c.APIToken == "" &&
+		c.APIKey == "" && c.APISecret == "" && c.ApplicationKey == "" &&
+		c.ApplicationSecret == "" && c.ConsumerKey == "" && c.AuthToken == "" &&
+		c.PersonalAccessToken == "" && c.Token == "" && c.AccessToken == "" &&
+		c.Email == "" && c.Password == "" && c.ClientSecret == "" &&
+		c.SubscriptionID == "" && c.ResourceGroup == "" && c.ClientID == "" &&
+		c.TenantID == "" && c.PublicKey == "" && c.PrivateKey == "" &&
+		c.Username == "" && c.AgentID == "" && c.AuthUserID == "" &&
+		c.APIID == "" && c.ClientIP == ""
 }

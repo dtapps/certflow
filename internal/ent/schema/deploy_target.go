@@ -24,7 +24,7 @@ func (DeployTarget) Fields() []ent.Field {
 		field.String("deploy_service").
 			NotEmpty().
 			Comment("部署服务：cdn / clb / slb / scm / oss 等"),
-		field.Bytes("config").
+		field.JSON("config", DeployTargetConfig{}).
 			Optional().
 			Comment("服务配置 JSON（region、资源 ID、证书名等）"),
 		field.Enum("credential_source").

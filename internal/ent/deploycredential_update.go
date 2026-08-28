@@ -11,6 +11,7 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
 	"cnb.cool/dtapp/certflow/internal/ent/deploytarget"
 	"cnb.cool/dtapp/certflow/internal/ent/predicate"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -58,8 +59,16 @@ func (_u *DeployCredentialUpdate) SetNillableProviderType(v *deploycredential.Pr
 }
 
 // SetConfig sets the "config" field.
-func (_u *DeployCredentialUpdate) SetConfig(v []byte) *DeployCredentialUpdate {
+func (_u *DeployCredentialUpdate) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialUpdate {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DeployCredentialUpdate) SetNillableConfig(v *schema.DeployCredentialConfig) *DeployCredentialUpdate {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -220,10 +229,10 @@ func (_u *DeployCredentialUpdate) sqlSave(ctx context.Context) (_node int, err e
 		_spec.SetField(deploycredential.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(deploycredential.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploycredential.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(deploycredential.FieldConfig, field.TypeBytes)
+		_spec.ClearField(deploycredential.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(deploycredential.FieldIsActive, field.TypeBool, value)
@@ -331,8 +340,16 @@ func (_u *DeployCredentialUpdateOne) SetNillableProviderType(v *deploycredential
 }
 
 // SetConfig sets the "config" field.
-func (_u *DeployCredentialUpdateOne) SetConfig(v []byte) *DeployCredentialUpdateOne {
+func (_u *DeployCredentialUpdateOne) SetConfig(v schema.DeployCredentialConfig) *DeployCredentialUpdateOne {
 	_u.mutation.SetConfig(v)
+	return _u
+}
+
+// SetNillableConfig sets the "config" field if the given value is not nil.
+func (_u *DeployCredentialUpdateOne) SetNillableConfig(v *schema.DeployCredentialConfig) *DeployCredentialUpdateOne {
+	if v != nil {
+		_u.SetConfig(*v)
+	}
 	return _u
 }
 
@@ -523,10 +540,10 @@ func (_u *DeployCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Deploy
 		_spec.SetField(deploycredential.FieldProviderType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Config(); ok {
-		_spec.SetField(deploycredential.FieldConfig, field.TypeBytes, value)
+		_spec.SetField(deploycredential.FieldConfig, field.TypeJSON, value)
 	}
 	if _u.mutation.ConfigCleared() {
-		_spec.ClearField(deploycredential.FieldConfig, field.TypeBytes)
+		_spec.ClearField(deploycredential.FieldConfig, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(deploycredential.FieldIsActive, field.TypeBool, value)

@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	"cnb.cool/dtapp/certflow/internal/httplog"
+	"cnb.cool/dtapp/certflow/internal/i18n"
+	"cnb.cool/dtapp/certflow/internal/logging"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/global"
 	config "github.com/huaweicloud/huaweicloud-sdk-go-v3/core/config"
@@ -17,10 +20,6 @@ import (
 	scm "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/scm/v3"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/scm/v3/model"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/scm/v3/region"
-
-	"cnb.cool/dtapp/certflow/internal/httplog"
-	"cnb.cool/dtapp/certflow/internal/i18n"
-	"cnb.cool/dtapp/certflow/internal/logging"
 )
 
 // leafCertDER 从 PEM 文本中提取第一张证书（叶子证书）的 DER 字节。

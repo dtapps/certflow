@@ -3,11 +3,13 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent/deploycredential"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
@@ -22,7 +24,7 @@ type DeployCredential struct {
 	// 提供商类型
 	ProviderType deploycredential.ProviderType `json:"provider_type,omitempty"`
 	// 配置 JSON（API 密钥等）
-	Config []byte `json:"config,omitempty"`
+	Config schema.DeployCredentialConfig `json:"config,omitempty"`
 	// 是否启用
 	IsActive bool `json:"is_active,omitempty"`
 	// 备注
@@ -106,8 +108,10 @@ func (_m *DeployCredential) assignValues(columns []string, values []any) error {
 		case deploycredential.FieldConfig:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field config", values[i])
-			} else if value != nil {
-				_m.Config = *value
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Config); err != nil {
+					return fmt.Errorf("unmarshal field config: %w", err)
+				}
 			}
 		case deploycredential.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {

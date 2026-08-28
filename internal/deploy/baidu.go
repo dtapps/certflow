@@ -13,13 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baidubce/bce-sdk-go/services/cdn"
-	"github.com/baidubce/bce-sdk-go/services/cdn/api"
-	bcecert "github.com/baidubce/bce-sdk-go/services/cert"
-
 	"cnb.cool/dtapp/certflow/internal/httplog"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"github.com/baidubce/bce-sdk-go/services/cdn"
+	"github.com/baidubce/bce-sdk-go/services/cdn/api"
+	bcecert "github.com/baidubce/bce-sdk-go/services/cert"
 )
 
 // BaiduDeployer 百度云部署器：支持百度云 CDN 与全站加速 DRCDN。

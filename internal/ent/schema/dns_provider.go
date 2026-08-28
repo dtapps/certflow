@@ -19,14 +19,9 @@ func (DNSProvider) Fields() []ent.Field {
 			NotEmpty().
 			Comment("提供商名称"),
 		field.Enum("provider_type").
-			Values(
-				"cloudflare", "aliyun", "tencentcloud", "huawei", "aws", "googlecloud",
-				"baiducloud", "jdcloud", "volcengine", "edgeone", "aliesa",
-				"ucloud", "westcn", "com35", "rainyun", "todaynic",
-				"dnsla", "dns51", "xinnet",
-			).
+			Values(DnsProviderTypes...).
 			Comment("提供商类型"),
-		field.Bytes("config").
+		field.JSON("config", DNSProviderConfig{}).
 			Optional().
 			Comment("配置 JSON"),
 		field.Bool("is_active").

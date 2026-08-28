@@ -10,10 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // OpenRestyManagerDeployer OpenResty Manager（Safe3/openresty-manager 面板）部署器。
@@ -66,13 +65,11 @@ type ormJWTClaims struct {
 func signORMJWT(jwtKey string) (string, error) {
 	now := time.Now()
 	claims := ormJWTClaims{
-		Uid:      1,
-		Username: "admin",
-		Role:     0, // 0 代表管理员
-		RegisteredClaims: jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
-		},
+		Uid:       1,
+		Username:  "admin",
+		Role:      0, // 0 代表管理员
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(jwtKey))

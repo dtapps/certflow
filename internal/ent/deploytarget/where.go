@@ -65,11 +65,6 @@ func DeployService(v string) predicate.DeployTarget {
 	return predicate.DeployTarget(sql.FieldEQ(FieldDeployService, v))
 }
 
-// Config applies equality check predicate on the "config" field. It's identical to ConfigEQ.
-func Config(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldEQ(FieldConfig, v))
-}
-
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.DeployTarget {
 	return predicate.DeployTarget(sql.FieldEQ(FieldIsActive, v))
@@ -253,46 +248,6 @@ func DeployServiceEqualFold(v string) predicate.DeployTarget {
 // DeployServiceContainsFold applies the ContainsFold predicate on the "deploy_service" field.
 func DeployServiceContainsFold(v string) predicate.DeployTarget {
 	return predicate.DeployTarget(sql.FieldContainsFold(FieldDeployService, v))
-}
-
-// ConfigEQ applies the EQ predicate on the "config" field.
-func ConfigEQ(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldEQ(FieldConfig, v))
-}
-
-// ConfigNEQ applies the NEQ predicate on the "config" field.
-func ConfigNEQ(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldNEQ(FieldConfig, v))
-}
-
-// ConfigIn applies the In predicate on the "config" field.
-func ConfigIn(vs ...[]byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldIn(FieldConfig, vs...))
-}
-
-// ConfigNotIn applies the NotIn predicate on the "config" field.
-func ConfigNotIn(vs ...[]byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldNotIn(FieldConfig, vs...))
-}
-
-// ConfigGT applies the GT predicate on the "config" field.
-func ConfigGT(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldGT(FieldConfig, v))
-}
-
-// ConfigGTE applies the GTE predicate on the "config" field.
-func ConfigGTE(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldGTE(FieldConfig, v))
-}
-
-// ConfigLT applies the LT predicate on the "config" field.
-func ConfigLT(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldLT(FieldConfig, v))
-}
-
-// ConfigLTE applies the LTE predicate on the "config" field.
-func ConfigLTE(v []byte) predicate.DeployTarget {
-	return predicate.DeployTarget(sql.FieldLTE(FieldConfig, v))
 }
 
 // ConfigIsNil applies the IsNil predicate on the "config" field.

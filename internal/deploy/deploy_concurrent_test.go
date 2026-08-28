@@ -76,11 +76,15 @@ func TestConcurrentPureHelpers(t *testing.T) {
 			if RegionFromConfig(cfg) != "cn-hangzhou" {
 				t.Errorf("RegionFromConfig mismatch")
 			}
-			raw, _ := json.Marshal(cfg)
-			c, err := deploycredential.Parse("aliyun", raw)
+			c, err := deploycredential.Parse("aliyun", deploycredential.DeployCredentialConfig{
+				AccessKeyID:     cfg["access_key_id"],
+				AccessKeySecret: cfg["access_key_secret"],
+				Region:          cfg["region"],
+			})
 			if err != nil || c.AccessKeyID != "ak" || c.AccessKeySecret != "sk" {
 				t.Errorf("deploycredential.Parse mismatch")
 			}
+			raw, _ := json.Marshal(cfg)
 			s, _ := config.StripSecrets[deploycredential.AliyunDeployCred](raw)
 			var stripped map[string]string
 			json.Unmarshal(s, &stripped)

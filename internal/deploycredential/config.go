@@ -5,20 +5,31 @@
 package deploycredential
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"cnb.cool/dtapp/certflow/internal/cloudcred"
 	"cnb.cool/dtapp/certflow/internal/config"
+	"cnb.cool/dtapp/certflow/internal/ent/schema"
 )
+
+// DeployCredentialConfig 是部署凭证配置的统一结构体，引用自 schema 包。
+type DeployCredentialConfig = schema.DeployCredentialConfig
 
 // credentialer 是部署凭证的统一接口，各结构体实现 toCredentials 返回 cloudcred.Credentials。
 type credentialer interface {
 	toCredentials() cloudcred.Credentials
 }
 
+// mustMarshal 将 DeployCredentialConfig 序列化为 JSON 字节。
+func mustMarshal(raw DeployCredentialConfig) []byte {
+	b, _ := json.Marshal(raw)
+	return b
+}
+
 // parseCred 将 JSON 反序列化为具体凭证类型 T，并转为 cloudcred.Credentials。
-func parseCred[T credentialer](raw []byte) (cloudcred.Credentials, error) {
-	v, err := config.ParseConfig[T](raw)
+func parseCred[T credentialer](raw DeployCredentialConfig) (cloudcred.Credentials, error) {
+	v, err := config.ParseConfig[T](mustMarshal(raw))
 	if err != nil {
 		return cloudcred.Credentials{}, err
 	}
@@ -26,7 +37,7 @@ func parseCred[T credentialer](raw []byte) (cloudcred.Credentials, error) {
 }
 
 // Parse 根据 provider_type 选择对应结构体解析部署凭证 config。
-func Parse(providerType string, raw []byte) (cloudcred.Credentials, error) {
+func Parse(providerType string, raw DeployCredentialConfig) (cloudcred.Credentials, error) {
 	switch providerType {
 	// site（面板/防火墙）
 	case "btpanel":

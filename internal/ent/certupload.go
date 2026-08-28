@@ -27,9 +27,9 @@ type CertUpload struct {
 	CertFingerprint string `json:"cert_fingerprint,omitempty"`
 	// 云端返回的证书 ID
 	CloudCertID string `json:"cloud_cert_id,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
+	// 创建时间
 	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
+	// 更新时间
 	UpdatedAt    time.Time `json:"updated_at,omitempty"`
 	selectValues sql.SelectValues
 }

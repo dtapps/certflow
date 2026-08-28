@@ -17,19 +17,31 @@ type CertUpload struct {
 
 func (CertUpload) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("provider").Comment("云厂商：aliyun / tencentcloud / huawei"),
-		field.String("access_key_id").Comment("用于区分云账号的 AccessKeyId（非密钥）"),
-		field.String("region").Comment("区域"),
-		field.String("cert_fingerprint").Comment("证书内容指纹（sha256），用于标识同一张证书"),
-		field.String("cloud_cert_id").Comment("云端返回的证书 ID"),
-		field.Time("created_at").Default(time.Now).Immutable(),
-		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.String("provider").
+			Comment("云厂商：aliyun / tencentcloud / huawei"),
+		field.String("access_key_id").
+			Comment("用于区分云账号的 AccessKeyId（非密钥）"),
+		field.String("region").
+			Comment("区域"),
+		field.String("cert_fingerprint").
+			Comment("证书内容指纹（sha256），用于标识同一张证书"),
+		field.String("cloud_cert_id").
+			Comment("云端返回的证书 ID"),
+		field.Time("created_at").
+			Default(time.Now).
+			Immutable().
+			Comment("创建时间"),
+		field.Time("updated_at").
+			Default(time.Now).
+			UpdateDefault(time.Now).
+			Comment("更新时间"),
 	}
 }
 
 func (CertUpload) Indexes() []ent.Index {
 	return []ent.Index{
 		// 同一云账号下，一张证书只应有一条记录，作为去重的唯一键。
-		index.Fields("provider", "access_key_id", "region", "cert_fingerprint").Unique(),
+		index.Fields("provider", "access_key_id", "region", "cert_fingerprint").
+			Unique(),
 	}
 }

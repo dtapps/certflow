@@ -47,7 +47,7 @@ import (
 // 配置按厂商经 dnsprovider.Parse 解析为强类型结构体（泛型反序列化），
 // 再通过类型断言分派到对应的构造器，彻底消除原先散落的 map[string]string 字符串读取。
 func createDNSProvider(provider *ent.DNSProvider) (challenge.Provider, error) {
-	if len(provider.Config) == 0 {
+	if isConfigEmpty(provider.Config) {
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_config_empty"))
 	}
 	cfg, err := dnsprovider.Parse(provider.ProviderType.String(), provider.Config)
@@ -122,6 +122,21 @@ func createDNSProvider(provider *ent.DNSProvider) (challenge.Provider, error) {
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_unsupported", "Type", provider.ProviderType))
 	}
+}
+
+// isConfigEmpty 检查 DNSProviderConfig 是否为空（所有字段都是零值）
+func isConfigEmpty(c dnsprovider.DNSProviderConfig) bool {
+	return c.AccessKeyID == "" && c.AccessKeySecret == "" && c.SecretAccessKey == "" &&
+		c.AccessKey == "" && c.SecretKey == "" && c.SecretID == "" &&
+		c.Region == "" && c.RegionID == "" && c.APIToken == "" &&
+		c.APIKey == "" && c.APISecret == "" && c.ApplicationKey == "" &&
+		c.ApplicationSecret == "" && c.ConsumerKey == "" && c.AuthToken == "" &&
+		c.PersonalAccessToken == "" && c.Token == "" && c.AccessToken == "" &&
+		c.Email == "" && c.Password == "" && c.ClientSecret == "" &&
+		c.SubscriptionID == "" && c.ResourceGroup == "" && c.ClientID == "" &&
+		c.TenantID == "" && c.PublicKey == "" && c.PrivateKey == "" &&
+		c.Username == "" && c.AgentID == "" && c.AuthUserID == "" &&
+		c.APIID == "" && c.ClientIP == ""
 }
 
 // createCloudflareProvider 创建 Cloudflare DNS provider，用于 ACME DNS 验证

@@ -60,11 +60,6 @@ func Name(v string) predicate.DeployCredential {
 	return predicate.DeployCredential(sql.FieldEQ(FieldName, v))
 }
 
-// Config applies equality check predicate on the "config" field. It's identical to ConfigEQ.
-func Config(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldEQ(FieldConfig, v))
-}
-
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.DeployCredential {
 	return predicate.DeployCredential(sql.FieldEQ(FieldIsActive, v))
@@ -168,46 +163,6 @@ func ProviderTypeIn(vs ...ProviderType) predicate.DeployCredential {
 // ProviderTypeNotIn applies the NotIn predicate on the "provider_type" field.
 func ProviderTypeNotIn(vs ...ProviderType) predicate.DeployCredential {
 	return predicate.DeployCredential(sql.FieldNotIn(FieldProviderType, vs...))
-}
-
-// ConfigEQ applies the EQ predicate on the "config" field.
-func ConfigEQ(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldEQ(FieldConfig, v))
-}
-
-// ConfigNEQ applies the NEQ predicate on the "config" field.
-func ConfigNEQ(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldNEQ(FieldConfig, v))
-}
-
-// ConfigIn applies the In predicate on the "config" field.
-func ConfigIn(vs ...[]byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldIn(FieldConfig, vs...))
-}
-
-// ConfigNotIn applies the NotIn predicate on the "config" field.
-func ConfigNotIn(vs ...[]byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldNotIn(FieldConfig, vs...))
-}
-
-// ConfigGT applies the GT predicate on the "config" field.
-func ConfigGT(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldGT(FieldConfig, v))
-}
-
-// ConfigGTE applies the GTE predicate on the "config" field.
-func ConfigGTE(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldGTE(FieldConfig, v))
-}
-
-// ConfigLT applies the LT predicate on the "config" field.
-func ConfigLT(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldLT(FieldConfig, v))
-}
-
-// ConfigLTE applies the LTE predicate on the "config" field.
-func ConfigLTE(v []byte) predicate.DeployCredential {
-	return predicate.DeployCredential(sql.FieldLTE(FieldConfig, v))
 }
 
 // ConfigIsNil applies the IsNil predicate on the "config" field.

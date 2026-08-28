@@ -21,7 +21,7 @@ func (DeployCredential) Fields() []ent.Field {
 		field.Enum("provider_type").
 			Values(DeployProviderTypes...).
 			Comment("提供商类型"),
-		field.Bytes("config").
+		field.JSON("config", DeployCredentialConfig{}).
 			Optional().
 			Comment("配置 JSON（API 密钥等）"),
 		field.Bool("is_active").

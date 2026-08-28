@@ -28,30 +28,30 @@ func (s *DeployCredentialServiceWrapper) SetApp(app *application.App) {
 
 // DeployCredentialListItem 部署凭证列表项（前端展示用）
 type DeployCredentialListItem struct {
-	ID           int               `json:"id"`            // 部署凭证 ID
-	Name         string            `json:"name"`          // 凭证名称
-	ProviderType string            `json:"provider_type"` // 提供商类型（见 ent/schema/provider_types.go 的 DeployProviderTypes）
-	Config       map[string]string `json:"config"`        // 配置参数（API 密钥等）
-	IsActive     bool              `json:"is_active"`     // 是否启用
-	Comment      string            `json:"comment"`       // 备注
-	CreatedAt    string            `json:"created_at"`    // 创建时间
-	UpdatedAt    string            `json:"updated_at"`    // 更新时间
+	ID           int                                     `json:"id"`            // 部署凭证 ID
+	Name         string                                  `json:"name"`          // 凭证名称
+	ProviderType string                                  `json:"provider_type"` // 提供商类型（见 ent/schema/provider_types.go 的 DeployProviderTypes）
+	Config       deploycredential.DeployCredentialConfig `json:"config"`        // 配置参数（API 密钥等）
+	IsActive     bool                                    `json:"is_active"`     // 是否启用
+	Comment      string                                  `json:"comment"`       // 备注
+	CreatedAt    string                                  `json:"created_at"`    // 创建时间
+	UpdatedAt    string                                  `json:"updated_at"`    // 更新时间
 }
 
 // CreateDeployCredentialRequest 创建部署凭证请求
 type CreateDeployCredentialRequest struct {
-	Name         string            `json:"name"`          // 凭证名称
-	ProviderType string            `json:"provider_type"` // 提供商类型
-	Config       map[string]string `json:"config"`        // 配置参数
-	Comment      string            `json:"comment"`       // 备注
+	Name         string                                  `json:"name"`          // 凭证名称
+	ProviderType string                                  `json:"provider_type"` // 提供商类型
+	Config       deploycredential.DeployCredentialConfig `json:"config"`        // 配置参数
+	Comment      string                                  `json:"comment"`       // 备注
 }
 
 // UpdateDeployCredentialRequest 更新部署凭证请求
 type UpdateDeployCredentialRequest struct {
-	Name         string            `json:"name"`          // 凭证名称
-	ProviderType string            `json:"provider_type"` // 提供商类型
-	Config       map[string]string `json:"config"`        // 配置参数
-	Comment      string            `json:"comment"`       // 备注
+	Name         string                                  `json:"name"`          // 凭证名称
+	ProviderType string                                  `json:"provider_type"` // 提供商类型
+	Config       deploycredential.DeployCredentialConfig `json:"config"`        // 配置参数
+	Comment      string                                  `json:"comment"`       // 备注
 }
 
 // ListDeployCredentials 获取所有部署凭证

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,44 +27,32 @@ func (w *DNSProviderServiceWrapper) SetApp(app *application.App) {
 	w.app = app
 }
 
-// convertConfig 将 ent 的 json.RawMessage 转换为 map[string]string
-func convertConfig(raw json.RawMessage) map[string]string {
-	if len(raw) == 0 {
-		return nil
-	}
-	var m map[string]string
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil
-	}
-	return m
-}
-
 // DNSProviderListItem DNS 提供商列表项（前端展示用）
 type DNSProviderListItem struct {
-	ID           int               `json:"id"`            // 提供商 ID
-	Name         string            `json:"name"`          // 提供商名称
-	ProviderType string            `json:"provider_type"` // 提供商类型
-	Config       map[string]string `json:"config"`        // 配置参数
-	IsActive     bool              `json:"is_active"`     // 是否启用
-	Comment      string            `json:"comment"`       // 备注
-	CreatedAt    string            `json:"created_at"`    // 创建时间
-	UpdatedAt    string            `json:"updated_at"`    // 更新时间
+	ID           int                           `json:"id"`            // 提供商 ID
+	Name         string                        `json:"name"`          // 提供商名称
+	ProviderType string                        `json:"provider_type"` // 提供商类型
+	Config       dnsprovider.DNSProviderConfig `json:"config"`        // 配置参数
+	IsActive     bool                          `json:"is_active"`     // 是否启用
+	Comment      string                        `json:"comment"`       // 备注
+	CreatedAt    string                        `json:"created_at"`    // 创建时间
+	UpdatedAt    string                        `json:"updated_at"`    // 更新时间
 }
 
 // CreateDNSProviderRequest 创建 DNS 提供商请求
 type CreateDNSProviderRequest struct {
-	Name         string            `json:"name"`          // 提供商名称
-	ProviderType string            `json:"provider_type"` // 提供商类型
-	Config       map[string]string `json:"config"`        // 配置参数
-	Comment      string            `json:"comment"`       // 备注
+	Name         string                        `json:"name"`          // 提供商名称
+	ProviderType string                        `json:"provider_type"` // 提供商类型
+	Config       dnsprovider.DNSProviderConfig `json:"config"`        // 配置参数
+	Comment      string                        `json:"comment"`       // 备注
 }
 
 // UpdateDNSProviderRequest 更新 DNS 提供商请求
 type UpdateDNSProviderRequest struct {
-	Name         string            `json:"name,omitempty"`          // 提供商名称
-	ProviderType string            `json:"provider_type,omitempty"` // 提供商类型
-	Config       map[string]string `json:"config,omitempty"`        // 配置参数
-	Comment      string            `json:"comment,omitempty"`       // 备注
+	Name         string                        `json:"name,omitempty"`          // 提供商名称
+	ProviderType string                        `json:"provider_type,omitempty"` // 提供商类型
+	Config       dnsprovider.DNSProviderConfig `json:"config"`                  // 配置参数
+	Comment      string                        `json:"comment,omitempty"`       // 备注
 }
 
 // ListDNSProviders 获取所有 DNS 提供商
@@ -79,15 +66,11 @@ func (s *DNSProviderServiceWrapper) ListDNSProviders() ([]DNSProviderListItem, e
 
 	items := make([]DNSProviderListItem, len(providers))
 	for i, p := range providers {
-		var configMap map[string]string
-		if len(p.Config) > 0 {
-			_ = json.Unmarshal(p.Config, &configMap)
-		}
 		items[i] = DNSProviderListItem{
 			ID:           p.ID,
 			Name:         p.Name,
 			ProviderType: p.ProviderType.String(),
-			Config:       convertConfig(p.Config),
+			Config:       p.Config,
 			IsActive:     p.IsActive,
 			Comment:      p.Comment,
 			CreatedAt:    p.CreatedAt.Format(time.RFC3339),
@@ -116,7 +99,7 @@ func (s *DNSProviderServiceWrapper) CreateDNSProvider(input CreateDNSProviderReq
 		ID:           result.ID,
 		Name:         result.Name,
 		ProviderType: result.ProviderType.String(),
-		Config:       convertConfig(result.Config),
+		Config:       result.Config,
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
 		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
@@ -142,7 +125,7 @@ func (s *DNSProviderServiceWrapper) UpdateDNSProvider(id int, input UpdateDNSPro
 		ID:           result.ID,
 		Name:         result.Name,
 		ProviderType: result.ProviderType.String(),
-		Config:       convertConfig(result.Config),
+		Config:       result.Config,
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
 		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
@@ -162,7 +145,7 @@ func (s *DNSProviderServiceWrapper) SetActive(id int, active bool) (*DNSProvider
 		ID:           result.ID,
 		Name:         result.Name,
 		ProviderType: result.ProviderType.String(),
-		Config:       convertConfig(result.Config),
+		Config:       result.Config,
 		IsActive:     result.IsActive,
 		Comment:      result.Comment,
 		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
