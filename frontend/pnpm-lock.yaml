@@ -22,13 +22,13 @@ importers:
         version: 14.4.0(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       '@wailsio/runtime':
         specifier: latest
-        version: 3.0.0-beta.10
+        version: 3.0.0-beta.12
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
       naive-ui:
-        specifier: ^2.45.0
-        version: 2.45.0(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
+        specifier: ^2.45.2
+        version: 2.45.2(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       pinia:
         specifier: ^4.0.3
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
@@ -699,8 +699,8 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
-  '@wailsio/runtime@3.0.0-beta.10':
-    resolution: {integrity: sha512-dyUC652oUz8TnyaY//pAIR8MOGvzQpaVzipzTJPEQR9TeHDH6gH9T8kNwli0OIZ5SfrIWhv26f2wi9VB4N+ypw==}
+  '@wailsio/runtime@3.0.0-beta.12':
+    resolution: {integrity: sha512-2B456rspX5rDXYhNjRqXNDOPkRXjletGJ4R3beF2FGs7K67MTovLy9acXHYb8nolzL96kygyJ622RIjB45oumg==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -1318,8 +1318,8 @@ packages:
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
 
-  naive-ui@2.45.0:
-    resolution: {integrity: sha512-B1I69ajv1d7wat19LHHXxHBxUrwAP2mP+FtHFzsnwzh31qQwCzA/SOJZTPSQ3To2xuTibsxN3/PDa37tZUfyEw==}
+  naive-ui@2.45.2:
+    resolution: {integrity: sha512-KshetbFOX/uZ/Pe+60hJoUAo47x5QO1JpZaUVPQCQkNhFfJ7hKsX55A8oMFQHccEpLuQUMPkJ41cX94R4nWUjg==}
     engines: {node: '>=20'}
     peerDependencies:
       vue: ^3.0.0
@@ -1775,8 +1775,8 @@ packages:
       typescript:
         optional: true
 
-  vueuc@0.4.65:
-    resolution: {integrity: sha512-lXuMl+8gsBmruudfxnMF9HW4be8rFziylXFu1VHVNbLVhRTXXV4njvpRuJapD/8q+oFEMSfQMH16E/85VoWRyQ==}
+  vueuc@0.4.66:
+    resolution: {integrity: sha512-hHrZl+0AsrUvqYPBXSXQ2QaSrO3razjeUseLAhJWlOS/Hdfw/Y2MU05fOTP1qn1A3121gMxsHLaEz2V6CkWdTg==}
     peerDependencies:
       vue: ^3.0.11
 
@@ -2421,7 +2421,7 @@ snapshots:
     dependencies:
       vue: 3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
 
-  '@wailsio/runtime@3.0.0-beta.10': {}
+  '@wailsio/runtime@3.0.0-beta.12': {}
 
   acorn-jsx@5.3.2(acorn@8.18.0):
     dependencies:
@@ -2950,7 +2950,7 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
-  naive-ui@2.45.0(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
+  naive-ui@2.45.2(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
     dependencies:
       '@css-render/plugin-bem': 0.15.14(css-render@0.15.14)
       '@css-render/vue3-ssr': 0.15.14(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
@@ -2970,7 +2970,7 @@ snapshots:
       vdirs: 0.1.8(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       vooks: 0.2.12(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       vue: 3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)
-      vueuc: 0.4.65(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
+      vueuc: 0.4.66(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
 
   nanoid@3.3.18: {}
 
@@ -3421,7 +3421,7 @@ snapshots:
     optionalDependencies:
       typescript: typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
 
-  vueuc@0.4.65(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
+  vueuc@0.4.66(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2)):
     dependencies:
       '@css-render/vue3-ssr': 0.15.14(vue@3.6.0-rc.4(typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2))
       '@juggle/resize-observer': 3.4.0
@@ -3451,8 +3451,8 @@ snapshots:
   wrap-ansi@7.0.0:
     dependencies:
       ansi-styles: 4.0.0
-      string-width: 4.1.0
-      strip-ansi: 6.0.0
+      string-width: 4.2.0
+      strip-ansi: 6.0.1
 
   wrap-ansi@8.1.0:
     dependencies:
