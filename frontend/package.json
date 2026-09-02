@@ -23,7 +23,7 @@
     "vfonts": "^0.0.3",
     "vue": "3.6.0-rc.6",
     "vue-echarts": "^8.1.0",
-    "vue-router": "^5.2.0"
+    "vue-router": "^5.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
