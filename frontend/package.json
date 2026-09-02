@@ -16,7 +16,7 @@
     "@vueuse/core": "^14.4.0",
     "@wailsio/runtime": "latest",
     "echarts": "^6.1.0",
-    "naive-ui": "^2.45.2",
+    "naive-ui": "^2.45.3",
     "pinia": "^4.0.3",
     "qrcode": "^1.5.4",
     "tailwindcss": "^4.3.3",
