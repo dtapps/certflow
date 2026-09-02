@@ -68,6 +68,9 @@ func Init(dataDir string) error {
 		return fmt.Errorf("%s", i18n.T("error.create_schema_failed", "Error", err))
 	}
 
+	// 一次性数据迁移：规整历史遗留的双重编码 config（需在业务读取前完成）
+	MigrateConfigDoubleEncoding(ctx, dsn)
+
 	Client = client
 	return nil
 }
