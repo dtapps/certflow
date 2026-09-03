@@ -1,10 +1,5 @@
 .PHONY: help bindings ent sqlc i18n dev build check lint-go lint-go-fix lint-frontend test-go fuzz-go clean install deps update-deps format-i18n format-i18n-go format-i18n-frontend sync pull
 
-# 将 stderr 合并到 stdout（便于查看完整输出）。注意：此处「绝不」接 grep 管道，
-# 否则会吞掉 golangci-lint 的退出码（grep 匹配到噪声即返回 0），导致 make check
-# 在 lint 失败时仍继续（"失败还在继续"）。噪声可裸打印，不影响正确性。
-# 用法：<命令> $(FILTER)
-FILTER := 2>&1
 
 # 默认目标
 help: ## 显示帮助信息
@@ -16,15 +11,15 @@ help: ## 显示帮助信息
 # ==================== 开发工具 ====================
 
 install: ## 安装前端依赖
-	cd frontend && pnpm install
+	pnpm --dir ./frontend install
 
 bindings: ## 生成 Wails TypeScript 绑定
 	wails3 generate bindings -clean=true -ts -i
 
-icons: ## 生成图标资源（icns/ico/Assets.car）
+icons: ## 生成图标资源
 	wails3 task common:generate:icons
 
-build-assets: ## 同步版本号/应用名到构建资源（Info.plist、Windows 清单）
+build-assets: ## 同步版本号/应用名到构建资源
 	wails3 task common:update:build-assets
 
 # wails3 生成命令全集（备查）：
@@ -37,7 +32,7 @@ wails3-generate: bindings icons build-assets ## 生成 Wails 绑定/图标/构�
 ent: ## 生成 Ent ORM 代码
 	go run -tags entc ./entc_generate.go
 
-sqlc: ## 生成 sqlc 代码（internal/httplog）
+sqlc: ## 生成 sqlc 代码
 	cd internal/httplog && sqlc generate
 
 i18n: i18n-go i18n-frontend ## 合并所有 i18n 拆分文件到主文件
@@ -53,7 +48,7 @@ dev: i18n ## 运行 Wails 开发模式
 
 # ==================== 格式化 / 修复 ====================
 
-format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix format-i18n ## 格式化和修复（全部）
+format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix format-i18n ## 格式化和修复（Go + Vue + TypeScript）
 
 format-go-fmt: ## 格式化 Go 代码
 	gofmt -w -s .
@@ -63,50 +58,48 @@ format-go-fix: ## 修复 Go 代码
 	go fix ./...
 
 format-frontend-write: ## 格式化前端代码（Vue + TypeScript）
-	cd frontend && pnpm exec prettier --write "src/**/*.{vue,ts,js,css}"
+	pnpm --dir ./frontend exec prettier --write "src/**/*.{vue,ts,js,css}"
 
 format-frontend-fix: ## 修复前端代码（Vue + TypeScript）
-	cd frontend && pnpm exec eslint --fix "src/**/*.{vue,ts,js}"
+	pnpm --dir ./frontend exec eslint --fix "src/**/*.{vue,ts,js}"
 
 # ==================== i18n JSON 格式化 ====================
 
 format-i18n: format-i18n-go format-i18n-frontend ## 格式化 Go 与前端 i18n JSON 文件
 
 format-i18n-go: ## 格式化 Go 后端 i18n JSON 文件（internal/i18n 下全部）
-	cd frontend && pnpm exec prettier --config .prettierrc --write \
+	pnpm --dir ./frontend exec prettier --config .prettierrc --write \
 		"../internal/i18n/**/*.json"
 
 format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分文件）
-	cd frontend && pnpm exec prettier --config .prettierrc --write \
+	pnpm --dir ./frontend exec prettier --config .prettierrc --write \
 		"src/locales/*.json" \
 		"src/locales/split/**/*.json"
 
 # ==================== 检查 / 测试 ====================
 
-check: lint-frontend lint-go test-go fuzz-go vuln-go ## 检查和测试（全部）
+check: lint-frontend lint-go test-go fuzz-go vuln-go ## 检查和测试（Go + Vue + TypeScript）
 
 lint-go: ## Go 代码检查（有 issue 即停止）
-	golangci-lint run ./... $(FILTER) || exit 1
+	golangci-lint run ./...
 
 lint-go-fix: ## Go 代码检查（自动修复）
 	golangci-lint run --fix ./...
 
 lint-frontend: ## 前端 TypeScript 类型检查（类型错误即停止）
-	cd frontend && pnpm exec vue-tsc --noEmit || exit 1
+	pnpm --dir ./frontend exec vue-tsc --noEmit
 
 test-go: ## Go 后端测试（测试失败即停止）
-	go test -vet=off -v ./internal/... -count=1 $(FILTER) || exit 1
+	go test -vet=off -v ./internal/... -count=1
 
 fuzz-go: ## Go 模糊测试（make fuzz-go FUZZ=FuzzXxx 时间=30s；失败即停止）
-	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/... $(FILTER) || exit 1
+	go test -vet=off -fuzz=$(FUZZ) -fuzztime=$(or $(TIME),30s) ./internal/...
 
 vuln-go: ## Go 依赖漏洞检查（发现漏洞即停止）
-	govulncheck -show verbose ./... || exit 1
+	govulncheck -show verbose ./...
 
-# check 为扁平先决目标，按顺序执行：任一目标返回非零即在此处停止，
-# 不再继续后续环节（前端类型检查 → Go lint → 测试 → 模糊测试 → 漏洞检查）。
-# 每个先决目标末尾的 `|| exit 1` 确保「有错误就停止」，不被 Make 默认语义或
-# 噪声输出吞掉退出码。
+# check 为扁平先决目标，按顺序执行：任一目标返回非零，Make 即在此处停止
+#（默认语义），不再继续后续环节（前端类型检查 → Go lint → 测试 → 模糊测试 → 漏洞检查）。
 
 # ==================== 构建打包 ====================
 
@@ -125,8 +118,8 @@ clean: ## 清理构建产物
 	rm -rf frontend/dist frontend/bindings
 	rm -f certflow bin/*
 
-tool-deps: ## 工具依赖
-	@echo "==> 安装必要的工具依赖..."
+tool-deps: ## 安装必要的工具
+	@echo "==> 安装必要的工具..."
 
 	wails3 version || true
 	go install github.com/wailsapp/wails/v3/cmd/wails3@latest
