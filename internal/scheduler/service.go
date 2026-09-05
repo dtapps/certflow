@@ -262,7 +262,7 @@ func (s *Scheduler) autoRenewTask() {
 		// 创建续期日志
 		logEntry, err := s.db.RenewalLog.Create().
 			SetCertificateID(cert.ID).
-			SetStatus("in_progress").
+			SetStatus(renewallog.StatusPending).
 			SetAttemptAt(time.Now()).
 			Save(ctx)
 		if err != nil {
@@ -276,7 +276,7 @@ func (s *Scheduler) autoRenewTask() {
 			logging.Error(i18n.T("log.renewal_failed", "ID", cert.ID, "Error", err))
 			// 更新续期日志为失败
 			_, _ = s.db.RenewalLog.UpdateOneID(logEntry.ID).
-				SetStatus("failed").
+				SetStatus(renewallog.StatusFailed).
 				SetErrorMessage(err.Error()).
 				SetCompletedAt(time.Now()).
 				Save(ctx)
@@ -289,7 +289,7 @@ func (s *Scheduler) autoRenewTask() {
 
 		// 更新续期日志为成功
 		_, err = s.db.RenewalLog.UpdateOneID(logEntry.ID).
-			SetStatus("success").
+			SetStatus(renewallog.StatusSuccess).
 			SetCertContent(result.CertContent).
 			SetKeyContent(result.KeyContent).
 			SetCompletedAt(time.Now()).
