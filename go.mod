@@ -33,7 +33,7 @@ require (
 	github.com/volcengine/volc-sdk-golang v1.0.256
 	github.com/wailsapp/wails/v3 v3.0.0-beta.16
 	go.dtapp.net/library/contrib/http_log v1.0.13
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.58.0
 )
