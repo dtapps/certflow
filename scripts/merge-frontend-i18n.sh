@@ -45,7 +45,7 @@ merge_locale() {
     # 注意：不能用 `.[1:]` 切片来跳过 _comment 再排序——jq 对拼接数组做切片会丢失
     # 元素（曾导致首键从合并产物中消失）。正确做法是把 _comment 一并并入数组后整体
     # sort_by(.key)，再 from_entries。
-    jq 'to_entries | ([{"key":"_comment","value":"⚠️ 此文件由 scripts/merge-frontend-i18n.sh 自动生成，请勿手动编辑！修改请编辑 split/ 目录下的文件后重新合并。"}] + .) | sort_by(.key) | from_entries' "$tmp_file" > "$output_file"
+    jq 'to_entries | ([{"key":"_comment","value":"⚠️ 此文件由 scripts/merge-frontend-i18n.sh 自动生成，请勿手动编辑本文件！\n\n新增或修改 i18n key 的正确流程：\n  1. 编辑 frontend/src/locales/split/<locale>/ 下对应的拆分文件（按前缀对应：log.*→logs.json，error.* 与 deploy.error.*→errors.json，notification.*→notifications.json，deploy.message.* 与 message.*→messages.json，其余 UI 文本→other.json）\n  2. 运行 make i18n 或 ./scripts/merge-frontend-i18n.sh 重新生成此主文件\n\n重要警告：本文件每次合并都 100% 由 split/ 重新生成，手动修改这里会被整体覆盖、改动直接丢失，所以永远不要手改本文件！"}] + .) | sort_by(.key) | from_entries' "$tmp_file" > "$output_file"
     rm -f "$tmp_file"
     
     local count=$(jq 'length' "$output_file")

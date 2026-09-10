@@ -405,6 +405,24 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 		}
 	}
 
+	// 加载证书关联的 DNS 提供商（通配符证书续期必须走 DNS-01 校验）
+	// 签发时已通过 SetDNSProvider 把证书与 DNS 提供商关联，这里取出来复用，否则 lego 找不到求解器
+	dnsProviderEntity, dnsErr := certEntity.QueryDNSProvider().Only(ctx)
+	if dnsErr != nil {
+		if !ent.IsNotFound(dnsErr) {
+			logging.Warn(i18n.T("log.dns_provider_not_found", "ID", certID, "Error", dnsErr))
+		}
+		logging.Debug(i18n.T("log.renew_dns_provider_none", "ID", certID))
+	} else if dnsProviderEntity != nil {
+		logging.Debug(i18n.T("log.dns_provider_using", "Name", dnsProviderEntity.Name))
+		legoDNSProvider, pErr := createDNSProvider(dnsProviderEntity)
+		if pErr != nil {
+			logging.Error(i18n.T("log.dns_provider_create_failed", "Error", pErr))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_provider_create_failed", "Error", pErr))
+		}
+		client.Challenge.SetDNS01Provider(legoDNSProvider)
+	}
+
 	// 使用新私钥重新申请
 	domains := append([]string{certEntity.Domain}, certEntity.Sans...)
 	request := legocert.ObtainRequest{

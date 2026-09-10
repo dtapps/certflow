@@ -677,6 +677,13 @@ jobs:
           echo "" >> release_body.md
           echo "${CHANGES}" >> release_body.md
 
+      - name: 删除同名旧 Release（如果存在）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ inputs.version }}"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+
       - name: 发布 Release
         uses: softprops/action-gh-release@v3
         with:
