@@ -106,6 +106,11 @@ export interface Settings {
     "renew_interval": number;
 
     /**
+     * 全局开关：是否开启自动续期（总闸，关闭后即使证书 auto_renew=true 也不续期）
+     */
+    "auto_renew_enabled": boolean;
+
+    /**
      * 监控检查历史保留天数（超期自动清理）
      */
     "monitor_history_days": number;

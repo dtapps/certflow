@@ -1,5 +1,5 @@
 {
-  "_comment": "⚠️ 此文件由 scripts/merge-go-i18n.sh 自动生成，请勿手动编辑！修改请编辑 split/ 目录下的文件后重新合并。",
+  "_comment": "⚠️ 此文件由 scripts/merge-go-i18n.sh 自动生成，请勿手动编辑本文件！\n\n新增或修改 i18n key 的正确流程：\n  1. 编辑 split/<locale>/ 下对应的拆分文件（按前缀对应：log.*→logs.json，error.* 与 deploy.error.*→errors.json，notification.*→notifications.json，deploy.message.* 与 message.*→messages.json，settings.*、app.*、menu.*、systray.*、updater.*→other.json）\n  2. 运行 make i18n 或 ./scripts/merge-go-i18n.sh 重新生成此主文件\n\n重要警告：本文件每次合并都 100% 由 split/ 重新生成，手动修改这里会被整体覆盖、改动直接丢失，所以永远不要手改本文件！",
   "app.description": "SSL Certificate Manager",
   "app.exited": "CertFlow exited",
   "app.title": "CertFlow",
@@ -582,6 +582,8 @@
   "log.register_acme_account_failed": "Failed to register/resolve ACME account: {{.Error}}",
   "log.register_acme_account_warn": "Failed to register ACME account, trying ResolveAccountByKey: {{.Error}}",
   "log.remove_badge_failed": "Failed to remove dock badge: {{.Error}}",
+  "log.renew_dns_provider_none": "Certificate has no associated DNS provider: cert_id={{.ID}}",
+  "log.renewal_disabled": "Global auto-renewal is disabled, skipping this run",
   "log.renewal_failed": "Failed to renew certificate {{.ID}}: {{.Error}}",
   "log.renewal_found_certs": "Found {{.Count}} certificates need renewal",
   "log.renewal_logs_query": "Querying renewal logs: certID={{.CertID}}",

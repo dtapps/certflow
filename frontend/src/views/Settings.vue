@@ -47,6 +47,7 @@ type SafeSettings = Omit<Settings, 'dns_configs' | 'proxy' | 'log'> & {
 
 const defaultSettings: SafeSettings = {
   renew_interval: 1,
+  auto_renew_enabled: true,
   auto_check_expiry: true,
   check_interval: 6,
   monitor_history_days: 90,
@@ -569,6 +570,12 @@ onMounted(async () => {
       <!-- 续期设置 -->
       <n-card :title="t('settings.renewal.title')" size="small">
         <n-form label-placement="top">
+          <n-form-item :label="t('settings.renewal.auto_renew')">
+            <div class="flex items-center gap-3">
+              <n-switch v-model:value="settings.auto_renew_enabled" />
+              <span class="text-sm opacity-60">{{ t('settings.renewal.auto_renew.desc') }}</span>
+            </div>
+          </n-form-item>
           <n-form-item :label="t('settings.renewal.interval')">
             <div class="flex items-center gap-3">
               <n-input-number

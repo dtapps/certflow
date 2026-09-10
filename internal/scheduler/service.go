@@ -237,12 +237,31 @@ func (s *Scheduler) Stop() error {
 	return nil
 }
 
-// autoRenewTask 自动续期任务
+// autoRenewTask 自动续期任务（由调度器按间隔触发，受全局开关控制）
 func (s *Scheduler) autoRenewTask() {
+	s.runAutoRenew(false)
+}
+
+// RunRenewalNow 立即执行一次续期检查（手动触发，忽略全局开关）
+func (s *Scheduler) RunRenewalNow() {
+	logging.Info(i18n.T("log.manual_renewal_triggered"))
+	s.runAutoRenew(true)
+}
+
+// runAutoRenew 执行自动续期。force=true 时忽略全局「自动续期」开关（手动触发用）。
+func (s *Scheduler) runAutoRenew(force bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	logging.Info(i18n.T("log.renewal_task_start"))
+
+	// 全局总闸：未开启自动续期则跳过（开启后才逐张判断证书的 auto_renew 标志）
+	if !force {
+		if s.settingsService != nil && !s.settingsService.Get().AutoRenewEnabled {
+			logging.Info(i18n.T("log.renewal_disabled"))
+			return
+		}
+	}
 
 	// 获取需要自动续期的证书
 	certs, err := s.certService.ListAutoRenew(ctx)
@@ -387,12 +406,6 @@ func (s *Scheduler) GetRecentRenewalLogs(ctx context.Context, limit int) ([]*ent
 		return nil, fmt.Errorf("%s", i18n.T("error.get_renewal_logs_failed", "Error", err))
 	}
 	return results, nil
-}
-
-// RunRenewalNow 立即执行一次续期检查（手动触发）
-func (s *Scheduler) RunRenewalNow() {
-	logging.Info(i18n.T("log.manual_renewal_triggered"))
-	s.autoRenewTask()
 }
 
 // RunExpiryCheckNow 立即执行一次过期检查（手动触发）

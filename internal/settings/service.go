@@ -49,6 +49,7 @@ type Settings struct {
 	AutoCheckExpiry      bool        `json:"auto_check_expiry" mapstructure:"auto_check_expiry"`             // 是否自动检查过期
 	CheckInterval        int         `json:"check_interval" mapstructure:"check_interval"`                   // 检查间隔（小时）
 	RenewInterval        int         `json:"renew_interval" mapstructure:"renew_interval"`                   // 自动续期间隔（小时）
+	AutoRenewEnabled     bool        `json:"auto_renew_enabled" mapstructure:"auto_renew_enabled"`           // 全局开关：是否开启自动续期（总闸，关闭后即使证书 auto_renew=true 也不续期）
 	MonitorHistoryDays   int         `json:"monitor_history_days" mapstructure:"monitor_history_days"`       // 监控检查历史保留天数（超期自动清理）
 	HttpLogRetentionDays int         `json:"http_log_retention_days" mapstructure:"http_log_retention_days"` // HTTP 请求日志保留天数（超期自动清理，<=0 表示不清理）
 	Language             string      `json:"language" mapstructure:"language"`                               // 语言：zh-CN/en-US/auto
@@ -143,6 +144,7 @@ func DefaultSettings() Settings {
 		AutoCheckExpiry:      true,
 		CheckInterval:        6,
 		RenewInterval:        1,
+		AutoRenewEnabled:     true,
 		MonitorHistoryDays:   90,
 		HttpLogRetentionDays: 30,
 		Language:             "auto",
@@ -244,6 +246,7 @@ func (s *Service) setDefaults() {
 	s.v.SetDefault("auto_check_expiry", def.AutoCheckExpiry)
 	s.v.SetDefault("check_interval", def.CheckInterval)
 	s.v.SetDefault("renew_interval", def.RenewInterval)
+	s.v.SetDefault("auto_renew_enabled", def.AutoRenewEnabled)
 	s.v.SetDefault("monitor_history_days", def.MonitorHistoryDays)
 	s.v.SetDefault("http_log_retention_days", def.HttpLogRetentionDays)
 	s.v.SetDefault("language", def.Language)
@@ -336,6 +339,7 @@ func (s *Service) writeConfig() error {
 	v.Set("auto_check_expiry", s.settings.AutoCheckExpiry)
 	v.Set("check_interval", s.settings.CheckInterval)
 	v.Set("renew_interval", s.settings.RenewInterval)
+	v.Set("auto_renew_enabled", s.settings.AutoRenewEnabled)
 	v.Set("monitor_history_days", s.settings.MonitorHistoryDays)
 	v.Set("http_log_retention_days", s.settings.HttpLogRetentionDays)
 	v.Set("language", s.settings.Language)
