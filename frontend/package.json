@@ -21,7 +21,7 @@
     "qrcode": "^1.5.4",
     "tailwindcss": "^4.3.3",
     "vfonts": "^0.0.3",
-    "vue": "3.6.0-rc.6",
+    "vue": "3.6.0-rc.7",
     "vue-echarts": "^8.2.0",
     "vue-router": "^5.3.1"
   },
