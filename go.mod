@@ -26,10 +26,10 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.173
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.175
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.178
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.175
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.178
 	github.com/volcengine/volc-sdk-golang v1.0.256
 	github.com/wailsapp/wails/v3 v3.0.0-beta.20
 	go.dtapp.net/library/contrib/http_log v1.0.13
