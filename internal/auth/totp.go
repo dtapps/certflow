@@ -37,7 +37,7 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 
 	// 检查是否已经配置了 TOTP
 	exists, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("totp")).
+		Where(authmethod.MethodEQ(authmethod.MethodTotp)).
 		Exist(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.totp_generate_failed", "Error", err))
@@ -57,7 +57,7 @@ func (s *AuthService) SetupTOTP() (*TOTPSetupResult, error) {
 
 	// 创建 TOTP 认证方式
 	am, err := s.db.AuthMethod.Create().
-		SetMethod("totp").
+		SetMethod(authmethod.MethodTotp).
 		SetIsActive(false).
 		Save(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *AuthService) VerifyTOTPSetup(code string) error {
 	_, err = s.db.AuthMethod.Update().
 		Where(
 			authmethod.IsActiveEQ(true),
-			authmethod.MethodNEQ("totp"),
+			authmethod.MethodNEQ(authmethod.MethodTotp),
 		).
 		SetIsActive(false).
 		Save(ctx)
@@ -179,7 +179,7 @@ func (s *AuthService) ClearTOTP() error {
 
 	// 再删除 TOTP 认证方式
 	if _, err := s.db.AuthMethod.Delete().
-		Where(authmethod.MethodEQ("totp")).
+		Where(authmethod.MethodEQ(authmethod.MethodTotp)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("%s", i18n.T("error.totp_setup_failed", "Error", err))
 	}
@@ -201,7 +201,7 @@ func (s *AuthService) CancelTOTP() error {
 	}
 
 	_, err = s.db.AuthMethod.Delete().
-		Where(authmethod.MethodEQ("totp")).
+		Where(authmethod.MethodEQ(authmethod.MethodTotp)).
 		Exec(ctx)
 	return err
 }
@@ -215,7 +215,7 @@ func (s *AuthService) GetTOTPInfo() (*TOTPInfo, error) {
 
 	// 是否已配置只看记录是否存在，与是否激活无关（激活状态由 activeMethod 单独表达）
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("totp")).
+		Where(authmethod.MethodEQ(authmethod.MethodTotp)).
 		WithTotpCredentials().
 		Only(ctx)
 	if err != nil {

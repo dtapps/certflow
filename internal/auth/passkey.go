@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -93,7 +94,7 @@ func (s *AuthService) StartPasskeyRegistration() (*PasskeyRegistrationResponse, 
 
 	// 检查是否已经配置了 Passkey
 	exists, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("passkey")).
+		Where(authmethod.MethodEQ(authmethod.MethodPasskey)).
 		Exist(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
@@ -113,45 +114,31 @@ func (s *AuthService) StartPasskeyRegistration() (*PasskeyRegistrationResponse, 
 		name:        "user",
 	}
 
-	// 开始注册
+	// 开始注册（wa.BeginRegistration 会生成真实 challenge，必须透传给前端）
 	credential, session, err := wa.BeginRegistration(user)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
+	_ = session // 简化实现：未做 session 持久化与 finish 阶段校验
 
-	// 将 session 信息存储（简化实现，实际应存储到 session store）
-	_ = session
-	_ = credential
-
-	// 创建认证方式（暂存，等待完成注册）
-	am, err := s.db.AuthMethod.Create().
-		SetMethod("passkey").
+	// 创建认证方式（暂存，等待完成注册；FinishPasskeyRegistration 据此查询）
+	if _, err := s.db.AuthMethod.Create().
+		SetMethod(authmethod.MethodPasskey).
 		SetIsActive(false).
-		Save(ctx)
+		Save(ctx); err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
+	}
+
+	// 用库自带的结构体描述注册选项，序列化为前端所需的扁平 JSON 字符串。
+	// 直接 marshal credential.Response（PublicKeyCredentialCreationOptions），
+	// 避免手写 JSON 字符串带来的转义/格式错误，且 challenge 来自真实 ceremony。
+	opts, err := json.Marshal(credential.Response)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
 
-	// 返回注册选项（简化：返回基本选项供前端使用）
 	response := &PasskeyRegistrationResponse{
-		CredentialCreationOptions: fmt.Sprintf(`{
-			"rp": {"name": "CertFlow", "id": "localhost"},
-			"user": {"id": "%s", "name": "user", "displayName": "CertFlow User"},
-			"challenge": "%s",
-			"pubKeyCredParams": [
-				{"type": "public-key", "alg": -7},
-				{"type": "public-key", "alg": -257}
-			],
-			"authenticatorSelection": {
-				"residentKey": "preferred",
-				"userVerification": "preferred"
-			},
-			"timeout": 60000,
-			"attestation": "none",
-			"authMethodId": %d
-		}`, base64.RawURLEncoding.EncodeToString([]byte("certflow-user")),
-			base64.RawURLEncoding.EncodeToString([]byte("challenge-placeholder")),
-			am.ID),
+		CredentialCreationOptions: string(opts),
 	}
 
 	return response, nil
@@ -178,7 +165,7 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 
 	// 获取待完成的 Passkey 认证方式
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("passkey")).
+		Where(authmethod.MethodEQ(authmethod.MethodPasskey)).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
@@ -208,7 +195,7 @@ func (s *AuthService) FinishPasskeyRegistration(data string) error {
 	_, err = s.db.AuthMethod.Update().
 		Where(
 			authmethod.IsActiveEQ(true),
-			authmethod.MethodNEQ("passkey"),
+			authmethod.MethodNEQ(authmethod.MethodPasskey),
 		).
 		SetIsActive(false).
 		Save(ctx)
@@ -245,19 +232,27 @@ func (s *AuthService) StartPasskeyLogin() (*PasskeyAuthenticationResponse, error
 		}
 	}
 
-	// 返回认证选项（简化实现）
+	// 返回认证选项（简化实现）：用库自带的结构体描述，序列化为前端所需的扁平 JSON 字符串。
+	// 生成真实 challenge（注意：简化实现未持久化 session，finish 阶段不校验）。
+	challenge := make([]byte, 32)
+	if _, err := rand.Read(challenge); err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
+	}
+
+	requestOptions := protocol.PublicKeyCredentialRequestOptions{
+		Challenge:          protocol.URLEncodedBase64(challenge),
+		Timeout:            60000,
+		RelyingPartyID:     "localhost",
+		AllowedCredentials: allowedCredentials,
+		UserVerification:   protocol.VerificationPreferred,
+	}
+	opts, err := json.Marshal(requestOptions)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.T("error.passkey_verification_failed", "Error", err))
+	}
+
 	response := &PasskeyAuthenticationResponse{
-		CredentialRequestOptions: fmt.Sprintf(`{
-			"challenge": "%s",
-			"timeout": 60000,
-			"rpId": "localhost",
-			"allowCredentials": %s,
-			"userVerification": "preferred"
-		}`, base64.RawURLEncoding.EncodeToString([]byte("challenge-placeholder")),
-			func() string {
-				b, _ := json.Marshal(allowedCredentials)
-				return string(b)
-			}()),
+		CredentialRequestOptions: string(opts),
 	}
 
 	return response, nil
@@ -319,7 +314,7 @@ func (s *AuthService) ClearPasskey() error {
 
 	// 再删除 Passkey 认证方式
 	if _, err := s.db.AuthMethod.Delete().
-		Where(authmethod.MethodEQ("passkey")).
+		Where(authmethod.MethodEQ(authmethod.MethodPasskey)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("%s", i18n.T("error.passkey_registration_failed", "Error", err))
 	}
@@ -334,7 +329,7 @@ func (s *AuthService) GetPasskeyInfo() (*PasskeyInfo, error) {
 	ctx := context.Background()
 
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("passkey")).
+		Where(authmethod.MethodEQ(authmethod.MethodPasskey)).
 		WithPasskeyCredentials().
 		Only(ctx)
 	if err != nil {

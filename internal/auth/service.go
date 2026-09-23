@@ -30,7 +30,7 @@ func (s *AuthService) IsPasswordSet() bool {
 
 	ctx := context.Background()
 	exists, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("password")).
+		Where(authmethod.MethodEQ(authmethod.MethodPassword)).
 		Exist(ctx)
 	if err != nil {
 		logging.Error(i18n.T("log.auth_query_password_failed", "Error", err))
@@ -57,7 +57,7 @@ func (s *AuthService) SetPassword(plainPassword string) error {
 
 	// 检查是否已存在密码认证方式
 	exists, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("password")).
+		Where(authmethod.MethodEQ(authmethod.MethodPassword)).
 		Exist(ctx)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.load_auth_failed"))
@@ -66,13 +66,13 @@ func (s *AuthService) SetPassword(plainPassword string) error {
 	if exists {
 		// 更新现有的密码
 		_, err = s.db.AuthMethod.Update().
-			Where(authmethod.MethodEQ("password")).
+			Where(authmethod.MethodEQ(authmethod.MethodPassword)).
 			SetPasswordHash(string(hash)).
 			Save(ctx)
 	} else {
 		// 创建新的密码认证方式
 		_, err = s.db.AuthMethod.Create().
-			SetMethod("password").
+			SetMethod(authmethod.MethodPassword).
 			SetIsActive(true).
 			SetPasswordHash(string(hash)).
 			Save(ctx)
@@ -90,7 +90,7 @@ func (s *AuthService) VerifyPassword(plainPassword string) bool {
 
 	// 获取密码认证方式
 	am, err := s.db.AuthMethod.Query().
-		Where(authmethod.MethodEQ("password")).
+		Where(authmethod.MethodEQ(authmethod.MethodPassword)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -135,7 +135,7 @@ func (s *AuthService) ClearPassword() error {
 
 	// 删除密码认证方式
 	_, err := s.db.AuthMethod.Delete().
-		Where(authmethod.MethodEQ("password")).
+		Where(authmethod.MethodEQ(authmethod.MethodPassword)).
 		Exec(ctx)
 	if err != nil {
 		return err
@@ -253,11 +253,11 @@ func (s *AuthService) GetAvailableMethods() ([]string, error) {
 // Authenticate 统一验证方法
 func (s *AuthService) Authenticate(method, credential string) (bool, error) {
 	switch method {
-	case "password":
+	case authmethod.MethodPassword.String():
 		return s.VerifyPassword(credential), nil
-	case "totp":
+	case authmethod.MethodTotp.String():
 		return s.VerifyTOTP(credential), nil
-	case "passkey":
+	case authmethod.MethodPasskey.String():
 		return s.FinishPasskeyLogin(credential)
 	default:
 		return false, fmt.Errorf("%s", i18n.T("error.auth_method_invalid", "Method", method))

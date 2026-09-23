@@ -8,6 +8,7 @@ import (
 
 	"cnb.cool/dtapp/certflow/internal/ent"
 	"cnb.cool/dtapp/certflow/internal/ent/certificate"
+	"cnb.cool/dtapp/certflow/internal/ent/renewallog"
 	_ "cnb.cool/dtapp/certflow/internal/sqlite"
 	esql "entgo.io/ent/dialect/sql"
 )
@@ -95,12 +96,12 @@ func TestGetRecentRenewalLogs_WithData(t *testing.T) {
 
 	client.RenewalLog.Create().
 		SetCertificateID(cert.ID).
-		SetStatus("success").
+		SetStatus(renewallog.StatusSuccess).
 		SetAttemptAt(time.Now().Add(-2 * time.Hour)).
 		Save(ctx)
 	client.RenewalLog.Create().
 		SetCertificateID(cert.ID).
-		SetStatus("failed").
+		SetStatus(renewallog.StatusFailed).
 		SetErrorMessage("test error").
 		SetAttemptAt(time.Now().Add(-1 * time.Hour)).
 		Save(ctx)
