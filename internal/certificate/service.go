@@ -241,7 +241,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 	createBuilder := s.db.Certificate.Create().
 		SetDomain(req.Domain).
 		SetSans(req.Sans).
-		SetStatus("pending").
+		SetStatus(certificate.StatusPending).
 		SetAutoRenew(req.AutoRenew).
 		SetRenewalDays(req.RenewalDays).
 		SetKeyType(certificate.KeyType(req.KeyType)).
@@ -264,7 +264,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		logging.Error(i18n.T("log.cert_apply_obtain_failed", "Domain", req.Domain, "Error", err))
 		// 更新数据库记录为失败
 		_, _ = s.db.Certificate.UpdateOneID(certRecord.ID).
-			SetStatus("failed").
+			SetStatus(certificate.StatusFailed).
 			SetLastError(errMsg).
 			Save(ctx)
 		// 发送失败通知
@@ -281,7 +281,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		errMsg := err.Error()
 		logging.Error(i18n.T("log.cert_parse_failed", "Error", err))
 		_, _ = s.db.Certificate.UpdateOneID(certRecord.ID).
-			SetStatus("failed").
+			SetStatus(certificate.StatusFailed).
 			SetLastError(errMsg).
 			Save(ctx)
 		if s.notifService != nil {
@@ -302,7 +302,7 @@ func (s *CertificateService) ApplyCertificate(ctx context.Context, req Certifica
 		SetIssuer(x509Cert.Issuer.CommonName).
 		SetNotBefore(x509Cert.NotBefore).
 		SetNotAfter(x509Cert.NotAfter).
-		SetStatus("active").
+		SetStatus(certificate.StatusActive).
 		SetLastError("").
 		Save(ctx)
 	if err != nil {
@@ -460,7 +460,7 @@ func (s *CertificateService) RenewCertificate(ctx context.Context, certID int) (
 		SetIssuer(x509Cert.Issuer.CommonName).
 		SetNotBefore(x509Cert.NotBefore).
 		SetNotAfter(x509Cert.NotAfter).
-		SetStatus("active").
+		SetStatus(certificate.StatusActive).
 		SetLastError("").
 		SetLastRenewedAt(time.Now()).
 		Save(ctx)
@@ -506,7 +506,7 @@ func (s *CertificateService) ListExpiring(ctx context.Context, days int) ([]*ent
 	threshold := time.Now().AddDate(0, 0, days)
 	results, err := s.db.Certificate.Query().
 		Where(certificate.NotAfterLTE(threshold)).
-		Where(certificate.StatusEQ("active")).
+		Where(certificate.StatusEQ(certificate.StatusActive)).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.list_expiring_failed", "Error", err))
@@ -517,9 +517,23 @@ func (s *CertificateService) ListExpiring(ctx context.Context, days int) ([]*ent
 // ListAutoRenew 获取需要自动续期的证书
 func (s *CertificateService) ListAutoRenew(ctx context.Context) ([]*ent.Certificate, error) {
 	now := time.Now()
+
+	// 手动 DNS 证书（未关联 DNS 提供商）需在界面人工添加 TXT 记录，无法自动续期，查询时排除
+	manualCount, err := s.db.Certificate.Query().
+		Where(certificate.AutoRenewEQ(true)).
+		Where(certificate.StatusEQ(certificate.StatusActive)).
+		Where(certificate.Not(certificate.HasDNSProvider())).
+		Count(ctx)
+	if err != nil {
+		logging.Warn(i18n.T("log.renewal_manual_dns_count_failed", "Error", err))
+	} else if manualCount > 0 {
+		logging.Info(i18n.T("log.renewal_excluded_manual_dns", "Count", manualCount))
+	}
+
 	results, err := s.db.Certificate.Query().
 		Where(certificate.AutoRenewEQ(true)).
-		Where(certificate.StatusEQ("active")).
+		Where(certificate.StatusEQ(certificate.StatusActive)).
+		Where(certificate.HasDNSProvider()).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.list_auto_renew_failed", "Error", err))
@@ -579,7 +593,7 @@ func (s *CertificateService) RevokeCertificate(ctx context.Context, certID int) 
 
 	// 更新数据库状态
 	_, err = s.db.Certificate.UpdateOneID(certID).
-		SetStatus("revoked").
+		SetStatus(certificate.StatusRevoked).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.update_cert_record_failed", "Error", err))

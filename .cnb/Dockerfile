@@ -1,11 +1,11 @@
 # 使用 golang 镜像作为基础
-FROM golang:1.27.0-trixie
+FROM golang:1.27.1-trixie
 
 # ==========================================
 # 定义版本变量
 # https://github.com/nodejs/node/releases
 # ==========================================
-ARG NODE_VERSION=26.5.0
+ARG NODE_VERSION=26.10.0
 
 # 1. 设置 Go 环境变量
 ENV GO111MODULE=on

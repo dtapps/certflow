@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"cnb.cool/dtapp/certflow/internal/ent/certificate"
 	"cnb.cool/dtapp/certflow/internal/ent/schema"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
@@ -262,7 +263,7 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 	certRecord, err := s.db.Certificate.Create().
 		SetDomain(req.Domain).
 		SetSans(req.Sans).
-		SetStatus("pending").
+		SetStatus(certificate.StatusPending).
 		SetAutoRenew(req.AutoRenew).
 		SetRenewalDays(req.RenewalDays).
 		SetChallengeRecords(challengeRecords).
@@ -494,7 +495,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		errMsg := result.err.Error()
 		logging.Error(i18n.T("log.manual_dns_challenge_failed", "Domain", domain, "Error", errMsg))
 		_, _ = s.db.Certificate.UpdateOneID(pc.certRecordID).
-			SetStatus("failed").
+			SetStatus(certificate.StatusFailed).
 			SetLastError(errMsg).
 			Save(ctx)
 		s.pendingChallenges.Delete(domain)
@@ -512,7 +513,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		errMsg := err.Error()
 		logging.Error(i18n.T("log.cert_parse_failed", "Error", err))
 		_, _ = s.db.Certificate.UpdateOneID(pc.certRecordID).
-			SetStatus("failed").
+			SetStatus(certificate.StatusFailed).
 			SetLastError(errMsg).
 			Save(ctx)
 		s.pendingChallenges.Delete(domain)
@@ -528,7 +529,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		errMsg := err.Error()
 		logging.Error(i18n.T("log.cert_save_failed", "Error", err))
 		_, _ = s.db.Certificate.UpdateOneID(pc.certRecordID).
-			SetStatus("failed").
+			SetStatus(certificate.StatusFailed).
 			SetLastError(errMsg).
 			Save(ctx)
 		s.pendingChallenges.Delete(domain)
@@ -545,7 +546,7 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 		SetIssuer(x509Cert.Issuer.CommonName).
 		SetNotBefore(x509Cert.NotBefore).
 		SetNotAfter(x509Cert.NotAfter).
-		SetStatus("active").
+		SetStatus(certificate.StatusActive).
 		SetLastError("").
 		Save(ctx)
 	if err != nil {

@@ -129,6 +129,8 @@
   "log.create_renewal_log_failed": "创建续期日志失败 (证书 {{.ID}}): {{.Error}}",
   "log.update_renewal_log_failed": "更新续期日志失败 (证书 {{.ID}}): {{.Error}}",
   "log.get_auto_renew_certs_failed": "获取自动续期证书列表失败: {{.Error}}",
+  "log.renewal_excluded_manual_dns": "已排除 {{.Count}} 个手动 DNS 证书（需人工添加 TXT 记录，不参与自动续期）",
+  "log.renewal_manual_dns_count_failed": "统计手动 DNS 证书数量失败: {{.Error}}",
   "log.get_expiring_certs_failed": "获取即将过期证书列表失败: {{.Error}}",
   "log.get_30day_expiry_failed": "获取30天内过期证书列表失败: {{.Error}}",
   "log.expiring_notification_failed": "发送过期通知失败 (证书 {{.ID}}): {{.Error}}",

@@ -129,6 +129,8 @@
   "log.create_renewal_log_failed": "Failed to create renewal log (cert {{.ID}}): {{.Error}}",
   "log.update_renewal_log_failed": "Failed to update renewal log (cert {{.ID}}): {{.Error}}",
   "log.get_auto_renew_certs_failed": "Failed to get auto-renew certificates: {{.Error}}",
+  "log.renewal_excluded_manual_dns": "Excluded {{.Count}} manual DNS certificates (require manual TXT record addition, skipped from auto-renewal)",
+  "log.renewal_manual_dns_count_failed": "Failed to count manual DNS certificates: {{.Error}}",
   "log.get_expiring_certs_failed": "Failed to get expiring certificates: {{.Error}}",
   "log.get_30day_expiry_failed": "Failed to get 30-day expiry certificates: {{.Error}}",
   "log.expiring_notification_failed": "Failed to send expiry notification (cert {{.ID}}): {{.Error}}",
