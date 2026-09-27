@@ -9,7 +9,7 @@ info:
   productName: "CertFlow" # The name of the application
   productIdentifier: "net.dtapp.certflow" # The unique product identifier
   description: "SSL 证书管理工具，支持证书申请、续期、过期监控等功能。" # The application description
-  copyright: "(c) 2026, DTApp" # Copyright text
+  copyright: "(c) 2026, liguangchun" # Copyright text
   comments: "SSL certificate management tool with support for certificate issuance, renewal, and expiration monitoring." # Comments
   version: "0.0.1" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)

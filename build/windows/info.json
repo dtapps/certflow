@@ -7,7 +7,7 @@
 			"ProductVersion": "0.0.1",
 			"CompanyName": "DTApp",
 			"FileDescription": "SSL 证书管理工具，支持证书申请、续期、过期监控等功能。",
-			"LegalCopyright": "(c) 2026, DTApp",
+			"LegalCopyright": "(c) 2026, liguangchun",
 			"ProductName": "CertFlow",
 			"Comments": "SSL certificate management tool with support for certificate issuance, renewal, and expiration monitoring."
 		}
