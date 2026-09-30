@@ -20,6 +20,7 @@ import * as MonitorService from '@bindings/cnb.cool/dtapp/certflow/monitorservic
 import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/internal/monitor/models'
 import { useI18nStore } from '../stores/i18n'
 import { initMessage, showMessage } from '../utils/message'
+import { formatInterval, formatRelativeTime } from '../utils/format'
 import MonitorTrendChart from '../components/MonitorTrendChart.vue'
 
 const i18nStore = useI18nStore()
@@ -511,9 +512,12 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
                     </div>
                     <div class="flex items-center gap-4 text-xs mt-1 opacity-50">
                       <span>{{ item.check_type === 'https' ? 'HTTPS' : 'HTTP' }}</span>
-                      <span v-if="item.check_interval">{{ item.check_interval }}s</span>
+                      <span v-if="item.check_interval">{{
+                        formatInterval(item.check_interval)
+                      }}</span>
                       <span v-if="item.last_check_at"
-                        >{{ t('monitor.lastCheck') }}: {{ item.last_check_at }}</span
+                        >{{ t('monitor.lastCheck') }}:
+                        {{ formatRelativeTime(item.last_check_at) }}</span
                       >
                     </div>
                   </div>
@@ -675,7 +679,9 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
                 </div>
                 <div>
                   <p class="opacity-50">{{ t('monitor.lastCheck') }}</p>
-                  <p class="font-medium">{{ item.last_check_at || '—' }}</p>
+                  <p class="font-medium">
+                    {{ item.last_check_at ? formatRelativeTime(item.last_check_at) : '—' }}
+                  </p>
                 </div>
               </div>
 

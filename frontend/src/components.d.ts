@@ -15,7 +15,6 @@ declare module 'vue' {
     CAIcon: typeof import('./components/CAIcon.vue')['default']
     LoginDialog: typeof import('./components/LoginDialog.vue')['default']
     MonitorTrendChart: typeof import('./components/MonitorTrendChart.vue')['default']
-    NAlert: typeof import('naive-ui')['NAlert']
     NCard: typeof import('naive-ui')['NCard']
     NCheckbox: typeof import('naive-ui')['NCheckbox']
     NInputNumber: typeof import('naive-ui')['NInputNumber']

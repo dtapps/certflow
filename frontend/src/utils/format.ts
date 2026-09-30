@@ -66,6 +66,24 @@ function pad2(n: number): string {
  * 统一时间显示格式：YYYY-MM-DD HH:mm（日期用“-”分隔，时间用“:”分隔）。
  * 不使用 toLocaleString 的本地化输出（“/”分隔），避免中英环境下显示不统一、看着奇怪。
  */
+/**
+ * 把秒数转成人性化间隔：<60s 显示「X 秒」、<1h「X 分钟」、<1天「X 小时」(非整数保留 1 位小数)、否则「X 天」。
+ * 用于域名监控的检查间隔展示，避免直接显示裸的 "3600s"。
+ */
+export function formatInterval(sec: number) {
+  const { t } = useI18nStore()
+  if (!sec || sec <= 0) return '—'
+  const fmt = (n: number) => {
+    const r = Math.round(n * 10) / 10
+    return Number.isInteger(r) ? String(r) : r.toFixed(1)
+  }
+  if (sec < 60) return t('common.intervalSeconds').replace('{count}', String(sec))
+  if (sec < 3600)
+    return t('common.intervalMinutes').replace('{count}', String(Math.round(sec / 60)))
+  if (sec < 86400) return t('common.intervalHours').replace('{count}', fmt(sec / 3600))
+  return t('common.intervalDays').replace('{count}', fmt(sec / 86400))
+}
+
 export function formatDateTime(ts: string) {
   const { t } = useI18nStore()
   if (!ts) {

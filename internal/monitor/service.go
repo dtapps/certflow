@@ -323,7 +323,7 @@ type checkResult struct {
 }
 
 func (s *MonitorService) checkDomain(m *ent.MonitoredDomain) checkResult {
-	logging.Info(i18n.T("log.monitor_check_start", "Domain", m.Domain, "Type", m.CheckType))
+	logging.Debug(i18n.T("log.monitor_check_start", "Domain", m.Domain, "Type", m.CheckType))
 	var result checkResult
 	switch m.CheckType {
 	case "http":
@@ -332,7 +332,7 @@ func (s *MonitorService) checkDomain(m *ent.MonitoredDomain) checkResult {
 		result = s.checkHTTPS(m)
 	}
 	if result.status == "ok" {
-		logging.Info(i18n.T("log.monitor_check_ok", "Domain", m.Domain, "Status", result.status, "Time", result.responseTimeMs, "ms"))
+		logging.Debug(i18n.T("log.monitor_check_ok", "Domain", m.Domain, "Status", result.status, "Time", result.responseTimeMs, "ms"))
 	} else {
 		logging.Warn(i18n.T("log.monitor_check_warn", "Domain", m.Domain, "Status", result.status, "Error", result.checkError))
 	}
