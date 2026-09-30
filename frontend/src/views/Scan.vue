@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   NCard,
   NInput,
@@ -30,6 +30,16 @@ const { isDark } = storeToRefs(themeStore)
 const domainInput = ref('')
 const portInput = ref(443)
 const scanType = ref('https')
+
+// 切换 HTTPS/HTTP 时同步默认端口：https→443，http→80。
+// 仅当端口仍是「另一类型的默认值」才自动改，避免覆盖用户手动输入的端口。
+watch(scanType, (val) => {
+  if (val === 'http' && portInput.value === 443) {
+    portInput.value = 80
+  } else if (val === 'https' && portInput.value === 80) {
+    portInput.value = 443
+  }
+})
 const isScanning = ref(false)
 const history = ref<ScanResultItem[]>([])
 const isLoadingHistory = ref(false)
