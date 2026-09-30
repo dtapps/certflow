@@ -166,6 +166,8 @@
   "log.manual_dns_challenge_complete": "Completing manual DNS challenge: domain={{.Domain}}",
   "log.manual_dns_challenge_failed": "Manual DNS challenge failed: domain={{.Domain}}, err={{.Error}}",
   "log.manual_dns_pending_not_found": "Pending challenge not found: domain={{.Domain}}",
+  "log.manual_dns_not_propagated": "Manual DNS challenge TXT record not propagated yet: domain={{.Domain}}",
+  "log.manual_dns_already_completing": "Manual DNS challenge is being completed, ignoring duplicate call: domain={{.Domain}}",
   "log.manual_dns_status_error": "Certificate status is not pending, cannot resume: cert_id={{.ID}}, status={{.Status}}",
   "log.manual_dns_present_call": "DNS Present called: domain={{.Domain}}, fqdn={{.FQDN}}",
   "log.manual_dns_append_record": "Appending DNS record: {{.Count}} existing, new FQDN={{.NewFQDN}}",

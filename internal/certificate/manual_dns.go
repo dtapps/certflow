@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -135,6 +136,34 @@ func (p *ManualDNSProvider) GetDNSProvider() *manualDNSProviderAdapter {
 // Ensure ManualDNSProvider implements challenge.Provider
 var _ challenge.Provider = (*manualDNSProviderAdapter)(nil)
 
+// manualDNSPropagationOption 手动 DNS 模式下的传播等待策略。
+// 不再盲等固定时长（旧实现 time.Sleep(10min)），而是每 10 秒轮询一次 TXT 记录，
+// 一旦生效立即继续签发；同时保留最长 10 分钟宽限，给用户充足时间添加 DNS 记录。
+func manualDNSPropagationOption() dns01.ChallengeOption {
+	const timeout = 10 * time.Minute
+	const interval = 10 * time.Second
+	return dns01.WrapPreCheck(func(ctx context.Context, domain, fqdn, value string, check dns01.PreCheckFunc) (bool, error) {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			ok, err := check(ctx, fqdn, value)
+			if err == nil && ok {
+				return true, nil
+			}
+			select {
+			case <-ctx.Done():
+				return false, ctx.Err()
+			case <-timer.C:
+				// 超时前再做最后一次检查
+				return check(ctx, fqdn, value)
+			case <-ticker.C:
+			}
+		}
+	})
+}
+
 // StartManualDNSChallenge 开始手动 DNS 挑战（第一步）
 // 返回 TXT 记录信息，用户需要添加此记录后调用 CompleteManualDNSChallenge
 func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req CertificateRequest) (*ManualChallengeInfo, error) {
@@ -217,8 +246,8 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 			logging.Debug(i18n.T("log.dns_nameservers_configured", "Servers", nameservers))
 		}
 	}
-	// 手动 DNS 模式下使用较长的传播超时（10分钟），给用户充足时间添加 DNS 记录
-	challengeOpts = append(challengeOpts, dns01.PropagationWait(10*time.Minute, false))
+	// 手动 DNS 模式下使用自适应传播等待：TXT 记录生效即继续，最长宽限 10 分钟
+	challengeOpts = append(challengeOpts, manualDNSPropagationOption())
 	client.Challenge.SetDNS01Provider(manualProvider.GetDNSProvider(), challengeOpts...)
 
 	// 创建订单（这会触发 Present 回调）
@@ -276,14 +305,15 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 
 	// 保存状态供后续完成
 	s.pendingChallenges.Store(req.Domain, &pendingChallenge{
-		client:         client,
-		user:           user,
-		manualProvider: manualProvider,
-		request:        request,
-		caEntity:       caEntity,
-		req:            req,
-		certRecordID:   certRecord.ID,
-		resultChan:     resultChan,
+		client:          client,
+		user:            user,
+		manualProvider:  manualProvider,
+		request:         request,
+		caEntity:        caEntity,
+		req:             req,
+		certRecordID:    certRecord.ID,
+		resultChan:      resultChan,
+		expectedRecords: info.Records,
 	})
 
 	logging.Info(i18n.T("log.manual_dns_challenge_created", "Domain", req.Domain, "ID", certRecord.ID, "Records", info.Records))
@@ -410,8 +440,8 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 			logging.Debug(i18n.T("log.dns_nameservers_configured", "Servers", nameservers))
 		}
 	}
-	// 手动 DNS 模式下使用较长的传播超时（10分钟），给用户充足时间添加 DNS 记录
-	challengeOpts = append(challengeOpts, dns01.PropagationWait(10*time.Minute, false))
+	// 手动 DNS 模式下使用自适应传播等待：TXT 记录生效即继续，最长宽限 10 分钟
+	challengeOpts = append(challengeOpts, manualDNSPropagationOption())
 	client.Challenge.SetDNS01Provider(manualProvider.GetDNSProvider(), challengeOpts...)
 
 	// 创建订单
@@ -461,18 +491,61 @@ func (s *CertificateService) ResumeManualDNSChallenge(ctx context.Context, certI
 
 	// 保存状态供后续完成
 	s.pendingChallenges.Store(req.Domain, &pendingChallenge{
-		client:         client,
-		user:           user,
-		manualProvider: manualProvider,
-		request:        request,
-		caEntity:       caEntity,
-		req:            req,
-		certRecordID:   certID,
-		resultChan:     resultChan,
+		client:          client,
+		user:            user,
+		manualProvider:  manualProvider,
+		request:         request,
+		caEntity:        caEntity,
+		req:             req,
+		certRecordID:    certID,
+		resultChan:      resultChan,
+		expectedRecords: info.Records,
 	})
 
 	logging.Info(i18n.T("log.manual_dns_challenge_resumed", "Domain", req.Domain, "ID", certID, "Records", info.Records))
 	return info, nil
+}
+
+// dnsResolver 根据配置返回用于主动检查 TXT 记录的解析器；未配置时回退系统解析器
+func (s *CertificateService) dnsResolver() *net.Resolver {
+	if s.settingsProvider != nil {
+		cfg := s.settingsProvider()
+		for _, dc := range cfg.DNSConfigs {
+			if dc.Enabled && len(dc.Servers) > 0 {
+				server := dc.Servers[0]
+				return &net.Resolver{
+					Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+						d := net.Dialer{Timeout: 5 * time.Second}
+						return d.DialContext(ctx, "udp", net.JoinHostPort(server, "53"))
+					},
+				}
+			}
+		}
+	}
+	return net.DefaultResolver
+}
+
+// isDNSReady 主动检查挑战 TXT 记录是否已生效（用于「完成」前的即时反馈）。
+// 返回 (ready, err)：ready=false 且 err==nil 表示「明确未生效」；err!=nil 表示无法判定（交给后台流程）。
+func (s *CertificateService) isDNSReady(ctx context.Context, records []TXTRecord) (bool, error) {
+	r := s.dnsResolver()
+	for _, rec := range records {
+		txts, err := r.LookupTXT(ctx, rec.Name)
+		if err != nil {
+			return false, err // 无法判定，交给后台
+		}
+		found := false
+		for _, t := range txts {
+			if strings.TrimSpace(t) == strings.TrimSpace(rec.Value) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, nil // 明确未生效
+		}
+	}
+	return true, nil
 }
 
 // CompleteManualDNSChallenge 完成手动 DNS 挑战（第二步）
@@ -488,7 +561,22 @@ func (s *CertificateService) CompleteManualDNSChallenge(ctx context.Context, dom
 	}
 	pc := val.(*pendingChallenge)
 
-	// 等待后台 Obtain 完成（不要再调 Obtain，会生成新的 challenge token）
+	// DNS 生效即时自检：若 TXT 记录尚未传播，立即返回「未生效」反馈，避免用户盲等
+	if len(pc.expectedRecords) > 0 {
+		if ready, err := s.isDNSReady(ctx, pc.expectedRecords); err == nil && !ready {
+			logging.Warn(i18n.T("log.manual_dns_not_propagated", "Domain", domain))
+			return nil, fmt.Errorf("%s", i18n.T("error.dns_not_propagated", "Domain", domain))
+		}
+	}
+
+	// 并发保护：保证只有一个调用消费 resultChan，其余直接返回，
+	// 避免多个「完成」调用竞争同一 channel、读到已关闭的空 channel 把证书写坏
+	if !pc.consumed.CompareAndSwap(false, true) {
+		logging.Warn(i18n.T("log.manual_dns_already_completing", "Domain", domain))
+		return nil, fmt.Errorf("%s", i18n.T("error.challenge_completing", "Domain", domain))
+	}
+
+	// 等待后台 Obtain 完成（结果已由后台协程算出，不随本次请求 ctx 取消而中止；不要再调 Obtain，会生成新的 challenge token）
 	logging.Debug(i18n.T("log.acme_obtain_verify", "Domain", domain))
 	result := <-pc.resultChan
 	if result.err != nil {

@@ -166,6 +166,8 @@
   "log.manual_dns_challenge_complete": "完成手动 DNS 挑战: domain={{.Domain}}",
   "log.manual_dns_challenge_failed": "手动 DNS 验证失败: domain={{.Domain}}, err={{.Error}}",
   "log.manual_dns_pending_not_found": "未找到待完成的挑战: domain={{.Domain}}",
+  "log.manual_dns_not_propagated": "手动 DNS 挑战 TXT 记录尚未生效: domain={{.Domain}}",
+  "log.manual_dns_already_completing": "手动 DNS 挑战正在完成中，忽略重复调用: domain={{.Domain}}",
   "log.manual_dns_status_error": "证书状态不是 pending，无法恢复: cert_id={{.ID}}, status={{.Status}}",
   "log.manual_dns_present_call": "DNS Present 调用: domain={{.Domain}}, fqdn={{.FQDN}}",
   "log.manual_dns_append_record": "追加 DNS 记录: 已有{{.Count}}条, 新FQDN={{.NewFQDN}}",

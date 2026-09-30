@@ -11,6 +11,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
@@ -30,14 +31,16 @@ import (
 
 // pendingChallenge 存储待完成的手动 DNS 挑战状态
 type pendingChallenge struct {
-	client         *lego.Client
-	user           *acmeUser
-	manualProvider *ManualDNSProvider
-	request        legocert.ObtainRequest
-	caEntity       *ent.CA
-	req            CertificateRequest
-	certRecordID   int               // 预创建的数据库记录 ID
-	resultChan     chan obtainResult // goroutine Obtain 的结果
+	client          *lego.Client
+	user            *acmeUser
+	manualProvider  *ManualDNSProvider
+	request         legocert.ObtainRequest
+	caEntity        *ent.CA
+	req             CertificateRequest
+	certRecordID    int               // 预创建的数据库记录 ID
+	resultChan      chan obtainResult // goroutine Obtain 的结果
+	expectedRecords []TXTRecord       // 预期的 TXT 记录（用于「完成」前即时自检）
+	consumed        atomic.Bool       // 保证 resultChan 只被一个调用消费，避免并发写坏证书
 }
 
 // obtainResult 后台 Obtain 的结果

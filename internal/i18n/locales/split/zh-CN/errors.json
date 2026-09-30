@@ -129,6 +129,8 @@
   "error.dns_update_failed": "更新 DNS 提供商失败: {{.Error}}",
   "error.dns_delete_failed": "删除 DNS 提供商失败: {{.Error}}",
   "error.dns_not_found_with_id": "DNS 提供商不存在: id={{.ID}}",
+  "error.dns_not_propagated": "DNS 记录尚未生效，请确认 TXT 记录已正确添加并等待传播后重试",
+  "error.challenge_completing": "挑战正在完成中，请稍候或刷新状态",
   "error.dns_name_required": "DNS 提供商名称不能为空",
   "error.dns_config_invalid": "DNS 提供商配置无效: {{.Config}}",
   "error.dns_not_found": "DNS 提供商不存在",

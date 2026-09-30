@@ -129,6 +129,8 @@
   "error.dns_update_failed": "Failed to update DNS provider: {{.Error}}",
   "error.dns_delete_failed": "Failed to delete DNS provider: {{.Error}}",
   "error.dns_not_found_with_id": "DNS provider not found: id={{.ID}}",
+  "error.dns_not_propagated": "DNS TXT record has not propagated yet, please verify the record is added correctly and retry after propagation",
+  "error.challenge_completing": "Challenge is being completed, please wait or refresh the status",
   "error.dns_name_required": "DNS provider name is required",
   "error.dns_config_invalid": "Invalid DNS provider config: {{.Config}}",
   "error.dns_not_found": "DNS provider not found",
