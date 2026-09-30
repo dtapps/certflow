@@ -195,13 +195,16 @@ func (s *ScannerService) extractCertInfo(domain string, port int, client *http.C
 
 // saveResult 保存扫描结果到数据库
 func (s *ScannerService) saveResult(ctx context.Context, result *ScanResultItem) (*ScanResultItem, error) {
-	scannedAt, _ := time.Parse(time.DateTime, result.ScannedAt)
+	scannedAt, err := time.Parse(time.RFC3339, result.ScannedAt)
+	if err != nil {
+		scannedAt = time.Now()
+	}
 	var notBefore, notAfter time.Time
 	if result.CertNotBefore != "" {
-		notBefore, _ = time.Parse(time.DateTime, result.CertNotBefore)
+		notBefore, _ = time.Parse(time.RFC3339, result.CertNotBefore)
 	}
 	if result.CertNotAfter != "" {
-		notAfter, _ = time.Parse(time.DateTime, result.CertNotAfter)
+		notAfter, _ = time.Parse(time.RFC3339, result.CertNotAfter)
 	}
 
 	create := s.db.ScanResult.Create().
