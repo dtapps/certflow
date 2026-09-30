@@ -73,6 +73,15 @@ watch(renewalDaysStr, (val) => {
   if (clamped !== n) renewalDaysStr.value = String(clamped)
 })
 
+// 手动 DNS 无法自动续期：切到手动 DNS 时强制关闭自动续期，切回自动 DNS 时恢复开启
+watch(
+  () => formData.value.dnsProviderId,
+  (val) => {
+    formData.value.autoRenew = val !== 0
+  },
+  { immediate: true },
+)
+
 const isSubmitting = ref(false)
 const applyResult = ref<{ success: boolean; message: string } | null>(null)
 const cas = ref<CAListItem[]>([])
@@ -198,6 +207,10 @@ const rootDomain = computed(() => {
   }
   return ''
 })
+
+// 是否选择手动 DNS（dnsProviderId === 0 表示手动 DNS）
+// 手动 DNS 需人工添加 TXT 记录，无法自动续期，故禁用自动续期开关
+const isManualDNS = computed(() => formData.value.dnsProviderId === 0)
 
 // 最终包含的所有域名（主域名 + SANs + 自动添加的根域名）
 const allDomains = computed(() => {
@@ -697,9 +710,12 @@ onUnmounted(() => actionBar.hide())
                 <p class="font-medium">{{ t('apply.autoRenew') }}</p>
                 <p class="text-xs opacity-50">{{ t('apply.autoRenewDesc') }}</p>
               </div>
-              <n-switch v-model:value="formData.autoRenew" />
+              <n-switch v-model:value="formData.autoRenew" :disabled="isManualDNS" />
             </div>
-            <div v-if="formData.autoRenew" class="flex items-center justify-between py-2">
+            <div
+              v-if="formData.autoRenew && !isManualDNS"
+              class="flex items-center justify-between py-2"
+            >
               <span class="opacity-60">{{ t('apply.renewalDays') }}</span>
               <n-input
                 v-model:value="renewalDaysStr"
@@ -707,6 +723,17 @@ onUnmounted(() => actionBar.hide())
                 style="width: 128px"
               />
             </div>
+            <n-alert
+              v-if="isManualDNS"
+              type="warning"
+              :show-icon="false"
+              :title="t('apply.manualNoAutoRenew')"
+              class="mt-2 !p-2 manual-hint"
+            >
+              <span class="text-xs leading-relaxed opacity-80">{{
+                t('apply.manualNoAutoRenewDesc')
+              }}</span>
+            </n-alert>
           </div>
 
           <!-- 手动 DNS TXT 记录信息 -->
@@ -804,3 +831,14 @@ onUnmounted(() => actionBar.hide())
     </n-card>
   </div>
 </template>
+
+<style scoped>
+.manual-hint :deep(.n-alert__title) {
+  font-size: 13px;
+  font-weight: 600;
+}
+.manual-hint :deep(.n-alert__content) {
+  font-size: 12px;
+  margin-top: 2px;
+}
+</style>

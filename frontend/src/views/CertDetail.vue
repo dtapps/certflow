@@ -10,6 +10,7 @@ import {
   NSwitch,
   NInput,
   NSpin,
+  NTooltip,
   NModal,
   NDescriptions,
   NDescriptionsItem,
@@ -43,6 +44,9 @@ const editAutoRenew = ref(false)
 const editRenewalDays = ref(30)
 const copiedField = ref('')
 
+// 手动 DNS 证书未关联 DNS 提供商（dns_provider_name 为空），无法自动续期
+const isManualDNS = computed(() => !certificate.value?.dns_provider_name)
+
 onMounted(async () => {
   try {
     const [cert, logs] = await Promise.all([
@@ -52,6 +56,8 @@ onMounted(async () => {
     if (cert) {
       certificate.value = cert
       editAutoRenew.value = cert.auto_renew
+      // 手动 DNS 证书无法自动续期，强制关闭（兼容旧数据中可能存在的 true）
+      if (!cert.dns_provider_name) editAutoRenew.value = false
       editRenewalDays.value = cert.renewal_days
       console.debug(
         t('log.certDetailLoaded', {
@@ -307,12 +313,34 @@ const loadCertDetails = async () => {
           <p class="text-sm opacity-60">{{ t('cert.autoRenew') }}</p>
           <div v-if="!editingSettings" class="flex items-center gap-2 mt-1">
             <p
+              v-if="!isManualDNS"
               class="text-lg font-semibold"
               :class="certificate.auto_renew ? 'text-green-500' : 'opacity-50'"
             >
               {{ certificate.auto_renew ? t('cert.enabled') : t('cert.disabled') }}
             </p>
-            <n-button text size="tiny" @click="startEditSettings">
+            <p v-else class="text-lg font-semibold opacity-50 flex items-center gap-1">
+              {{ t('cert.notSupported') }}
+              <n-tooltip trigger="hover" placement="top">
+                <template #trigger>
+                  <svg
+                    class="w-4 h-4 opacity-40 cursor-help"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </template>
+                {{ t('cert.manualNoAutoRenewDesc') }}
+              </n-tooltip>
+            </p>
+            <n-button v-if="!isManualDNS" text size="tiny" @click="startEditSettings">
               <template #icon>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -327,10 +355,10 @@ const loadCertDetails = async () => {
           </div>
           <div v-else class="space-y-3 mt-2">
             <div class="flex items-center gap-2">
-              <n-switch v-model:value="editAutoRenew" size="small" />
+              <n-switch v-model:value="editAutoRenew" size="small" :disabled="isManualDNS" />
               <span class="text-sm">{{ t('cert.enableAutoRenew') }}</span>
             </div>
-            <div v-if="editAutoRenew" class="flex items-center gap-2">
+            <div v-if="editAutoRenew && !isManualDNS" class="flex items-center gap-2">
               <span class="text-sm opacity-60">{{ t('cert.renewBeforeDays') }}</span>
               <n-input-number
                 v-model:value="editRenewalDays"
@@ -411,9 +439,11 @@ const loadCertDetails = async () => {
               </n-descriptions-item>
               <n-descriptions-item :label="t('cert.autoRenew')">
                 {{
-                  certificate.auto_renew
-                    ? t('cert.renewalDays').replace('{days}', String(certificate.renewal_days))
-                    : t('cert.disabled')
+                  isManualDNS
+                    ? t('cert.notSupported')
+                    : certificate.auto_renew
+                      ? t('cert.renewalDays').replace('{days}', String(certificate.renewal_days))
+                      : t('cert.disabled')
                 }}
               </n-descriptions-item>
               <n-descriptions-item :label="t('cert.keyType')">
