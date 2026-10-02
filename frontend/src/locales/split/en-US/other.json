@@ -376,6 +376,8 @@
   "deploy.operationSuccess": "Operation succeeded",
   "deploy.deploy": "Deploy",
   "deploy.deploySelected": "Deploy Selected",
+  "deploy.esaSiteDeployHint": "Site-wide deploy",
+  "deploy.esaDomainCertVerify": "Domain Current Cert (SNI match)",
   "deploy.fetchCurrentCert": "Refresh Cloud Cert",
   "deploy.currentCloudCert": "Current Cloud Cert",
   "deploy.cloudCertUnsupported": "This provider does not support querying the current certificate",

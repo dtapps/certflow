@@ -319,8 +319,10 @@ async function loadEditTarget() {
     form.cert_name = cf?.cert_name || ''
     form.zone_id = cf?.zone_id || ''
     form.zone_name = cf?.zone_name || ''
-    form.site_id = cf?.site_id?.[0] || ''
-    form.site_name = cf?.site_name?.[0] || ''
+    // ESA 的 site_id/site_name 存为标量字符串（面板类为数组），统一兼容两种形态，
+    // 避免用 ?.[0] 把字符串当成数组取下标（会把 "1037..." 截断成 "1"）。
+    form.site_id = Array.isArray(cf?.site_id) ? cf.site_id[0] : cf?.site_id || ''
+    form.site_name = Array.isArray(cf?.site_name) ? cf.site_name[0] : cf?.site_name || ''
     form.accelerator_id = cf?.accelerator_id || ''
     form.listener_id = cf?.listener_id || ''
     // EdgeOne / ESA 站点下拉复用 zoneOptions：编辑回填时先放入已存 Id + 名称作为占位，
@@ -369,8 +371,10 @@ function buildConfig(): Record<string, any> {
     if (form.zone_name) cfg.zone_name = form.zone_name
   }
   if (form.deploy_service === 'esa' && form.site_id) {
-    cfg.site_id = form.site_id
-    if (form.site_name) cfg.site_name = form.site_name
+    // 后端 schema.DeployTargetConfig.SiteID 为 []string（与面板类一致），ESA 单站点也须用数组形态存储，
+    // 否则 API 反序列化会因 string→[]string 不匹配报错。
+    cfg.site_id = [form.site_id]
+    if (form.site_name) cfg.site_name = [form.site_name]
   }
   if (form.deploy_service === 'ga') {
     if (form.accelerator_id) cfg.accelerator_id = form.accelerator_id

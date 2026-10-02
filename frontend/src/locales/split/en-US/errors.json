@@ -14,6 +14,7 @@
   "deploy.error.aliyun_esa_invalid_cert_id": "Failed to deploy to Alibaba Cloud ESA: invalid certificate ID {CertID}",
   "deploy.error.aliyun_esa_invalid_site_id": "Failed to deploy to Alibaba Cloud ESA: invalid SiteId {SiteID}",
   "deploy.error.aliyun_esa_invalid_site_id_param": "Invalid ESA SiteId {SiteID}",
+  "deploy.error.site_id_required": "Missing site_id: please re-select and save the ESA site in the deploy target",
   "deploy.error.aliyun_esa_list_domains": "Failed to get Alibaba Cloud ESA domain list",
   "deploy.error.aliyun_esa_list_sites": "Failed to get Alibaba Cloud ESA site list",
   "deploy.error.aliyun_ga_client_create": "Failed to create Alibaba Cloud GA client",

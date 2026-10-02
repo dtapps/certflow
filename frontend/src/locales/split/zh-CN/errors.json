@@ -14,6 +14,7 @@
   "deploy.error.aliyun_esa_invalid_cert_id": "部署证书到阿里云 ESA 失败: 无效的证书 ID {CertID}",
   "deploy.error.aliyun_esa_invalid_site_id": "部署证书到阿里云 ESA 失败: 无效的 SiteId {SiteID}",
   "deploy.error.aliyun_esa_invalid_site_id_param": "无效的 ESA SiteId {SiteID}",
+  "deploy.error.site_id_required": "缺少站点 ID（site_id），请在部署目标中重新选择并保存 ESA 站点",
   "deploy.error.aliyun_esa_list_domains": "获取阿里云 ESA 域名列表失败",
   "deploy.error.aliyun_esa_list_sites": "获取阿里云 ESA 站点列表失败",
   "deploy.error.aliyun_ga_client_create": "创建阿里云 GA 客户端失败",

@@ -336,11 +336,36 @@ interface DeployRow {
   certOptions: { label: string; value: number }[]
   selectedCertId: number | null
 }
+const isESA = computed(() => target.value?.deploy_service === 'esa')
+
 const selectedRowKeys = ref<string[]>([])
 const rowCertSelection = ref<Record<string, number>>({})
 const rowDeploying = ref<Record<string, boolean>>({})
 const deployRows = computed<DeployRow[]>(() => {
   const linkedCertIds: number[] = (target.value as any)?.cert_ids || []
+  // ESA 为站点级证书：SetCertificate 只接受 site_id（无域名参数），证书加入站点证书池后
+  // 由 ESA 按 SNI 自动按域名下发。因此部署行按 site_id 去重为单行，避免每个域名重复调接口。
+  if (isESA.value) {
+    const cf = (target.value?.config || {}) as Record<string, any>
+    const siteId = Array.isArray(cf.site_id) ? cf.site_id[0] : cf.site_id
+    const siteName = Array.isArray(cf.site_name) ? cf.site_name[0] : cf.site_name
+    const siteDomains: string[] = cf.domains || []
+    if (!siteId) return []
+    const matched = (certificates.value || []).filter((c) => domainMatch(c, siteDomains))
+    const certOptions = matched.map((c) => ({ label: renderCertLabel(c), value: c.id }))
+    const preferred = matched.find((c) => linkedCertIds.includes(c.id))
+    const selectedCertId = preferred?.id ?? matched[0]?.id ?? null
+    return [
+      {
+        key: siteId,
+        name: siteName || siteId,
+        siteID: siteId,
+        matched,
+        certOptions,
+        selectedCertId,
+      },
+    ]
+  }
   return domainOptions.value.map((opt) => {
     const key = opt.value
     const meta = domainMeta.value[key] || { name: opt.label, id: '' }
@@ -352,6 +377,13 @@ const deployRows = computed<DeployRow[]>(() => {
     const selectedCertId = rowCertSelection.value[key] ?? preferred?.id ?? matched[0]?.id ?? null
     return { key, name, siteID: meta.id, matched, certOptions, selectedCertId }
   })
+})
+
+// ESA：站点下的加速记录域名，用于「逐域名核对当前证书」面板（与部署行分离，部署只作用于整站一次）。
+const esaVerifyDomains = computed<string[]>(() => {
+  if (!isESA.value) return []
+  const cf = (target.value?.config || {}) as Record<string, any>
+  return cf.domains || []
 })
 
 // 列表行全选 / 清空 / 切换
@@ -495,6 +527,19 @@ function compareStatus(row: DeployRow): 'same' | 'diff' | 'none' {
     }),
   )
   return status
+}
+
+// ESA 逐域名核对：找覆盖该域名的本地证书，按天粒度与云端当前证书比较。
+function compareStatusByDomain(domain: string): 'same' | 'diff' | 'none' {
+  const cloud = currentCerts.value[domain]
+  if (!cloud || !cloud.supported || cloud.error || !cloud.not_after) return 'none'
+  const local = (certificates.value || []).find((c) => domainMatch(c, [domain]) && !!c.not_after)
+  if (!local?.not_after) return 'none'
+  const lt = parseNotAfter(local.not_after)
+  const ct = parseNotAfter(cloud.not_after)
+  if (lt == null || ct == null) return 'none'
+  const dayOf = (ts: number) => Math.floor(ts / 86400000) // UTC 天序号
+  return dayOf(lt) === dayOf(ct) ? 'same' : 'diff'
 }
 
 const historyColumns: DataTableColumns<DeployLogListItem> = [
@@ -948,6 +993,75 @@ onMounted(async () => {
                           >
                             {{
                               compareStatus(row) === 'same'
+                                ? t('deploy.sameAsLocal')
+                                : t('deploy.needUpdate')
+                            }}
+                          </n-tag>
+                        </template>
+                      </template>
+                      <span v-else-if="fetchingCurrentCerts" class="cloud-badge cloud-muted">{{
+                        t('common.loading')
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- ESA：站点级部署后，按 SNI 逐域名核对云端生效证书（与部署行分离） -->
+                <div
+                  v-if="isESA && esaVerifyDomains.length"
+                  class="esa-verify space-y-2 mt-3 pt-3 border-t border-[var(--n-border-color)]"
+                >
+                  <div class="flex items-center gap-2 text-xs opacity-70">
+                    <span>{{ t('deploy.esaDomainCertVerify') }}</span>
+                    <n-tag size="tiny" :bordered="false">{{ t('deploy.esaSiteDeployHint') }}</n-tag>
+                  </div>
+                  <div v-for="d in esaVerifyDomains" :key="d" class="deploy-row">
+                    <div class="row-name" :title="d">{{ d }}</div>
+                    <div class="row-cloud">
+                      <template v-if="currentCerts[d]">
+                        <template v-if="!currentCerts[d].supported">
+                          <span class="cloud-badge cloud-muted">{{
+                            t('deploy.cloudCertUnsupported')
+                          }}</span>
+                        </template>
+                        <template v-else-if="currentCerts[d].error">
+                          <span class="cloud-badge cloud-error">{{
+                            translateBackend(currentCerts[d].error)
+                          }}</span>
+                        </template>
+                        <template v-else>
+                          <span class="cloud-label">{{ t('deploy.currentCloudCert') }}</span>
+                          <span class="cloud-cn" :title="currentCerts[d].common_name">{{
+                            currentCerts[d].common_name || '-'
+                          }}</span>
+                          <n-tag
+                            v-if="(currentCerts[d].sans || []).length"
+                            size="tiny"
+                            :bordered="false"
+                            type="info"
+                            :title="(currentCerts[d].sans || []).join(', ')"
+                          >
+                            {{ (currentCerts[d].sans || []).slice(0, 2).join(', ') }}
+                            <template v-if="(currentCerts[d].sans || []).length > 2">
+                              +{{ (currentCerts[d].sans || []).length - 2 }}</template
+                            >
+                          </n-tag>
+                          <span
+                            class="cloud-after"
+                            :title="formatDateTime(currentCerts[d].not_after)"
+                          >
+                            {{ formatDateTime(currentCerts[d].not_after) }}
+                            <template v-if="remainingDays(currentCerts[d].not_after) !== '-'">
+                              ({{ remainingDays(currentCerts[d].not_after) }})
+                            </template>
+                          </span>
+                          <n-tag
+                            v-if="compareStatusByDomain(d) !== 'none'"
+                            size="tiny"
+                            :bordered="false"
+                            :type="compareStatusByDomain(d) === 'same' ? 'success' : 'warning'"
+                          >
+                            {{
+                              compareStatusByDomain(d) === 'same'
                                 ? t('deploy.sameAsLocal')
                                 : t('deploy.needUpdate')
                             }}

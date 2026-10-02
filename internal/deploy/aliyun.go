@@ -259,9 +259,17 @@ func (d *AliyunDeployer) DeployCert(ctx context.Context, creds Credentials, cert
 	case "esa":
 		// ESA（边缘安全加速）：证书已上传到 CAS，这里用 SetCertificate 以 cas 类型
 		// 引用 CAS 证书 ID（CasId）绑定到站点（SiteId）。SiteId 来自部署目标配置。
-		siteID := svcConfig["site_id"]
+		// ESA 的 site_id 在配置中以 []string 存储（与面板类一致），经 config.AsMap 后表现为数组字符串，
+		// 此处兼容数组/标量两种形态，取首个站点。
+		esaSiteIDs := parseConfigStringSlice(svcConfig["site_id"])
+		siteID := ""
+		if len(esaSiteIDs) > 0 {
+			siteID = esaSiteIDs[0]
+		}
 		if siteID == "" {
-			return &DeployResult{CloudCertID: certID, Message: i18n.T("deploy.message.aliyun_cas_no_esa_site")}, nil
+			// 缺少 site_id 时不再静默返回"成功"（实际未绑定），改为明确报错，
+			// 便于用户在部署目标中重新选择并保存 ESA 站点。
+			return &DeployResult{CloudCertID: certID}, i18n.NewError("deploy.error.site_id_required")
 		}
 		region := aliyunRegion(creds.Region)
 		siteIDInt, serr := strconv.ParseInt(siteID, 10, 64)
@@ -615,7 +623,12 @@ func (d *AliyunDeployer) GetCurrentCert(ctx context.Context, creds Credentials, 
 	case "esa":
 		// ESA 证书按站点（site_id）维度管理，ListCertificates 仅返回证书元数据（不含 PEM），
 		// 故基于元数据直接构造 CurrentCert，并按域名匹配站点下当前覆盖该域名的证书。
-		siteIDStr := svcConfig["site_id"]
+		// ESA 的 site_id 在配置中以 []string 存储，兼容数组/标量两种形态取首个站点。
+		esaSiteIDs := parseConfigStringSlice(svcConfig["site_id"])
+		siteIDStr := ""
+		if len(esaSiteIDs) > 0 {
+			siteIDStr = esaSiteIDs[0]
+		}
 		if siteIDStr == "" {
 			return nil, i18n.NewError("deploy.error.site_id_required")
 		}

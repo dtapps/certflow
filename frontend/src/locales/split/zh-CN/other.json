@@ -376,6 +376,8 @@
   "deploy.operationSuccess": "操作成功",
   "deploy.deploy": "部署",
   "deploy.deploySelected": "批量部署",
+  "deploy.esaSiteDeployHint": "整站部署",
+  "deploy.esaDomainCertVerify": "域名当前证书（按 SNI 匹配）",
   "deploy.fetchCurrentCert": "刷新云端证书",
   "deploy.currentCloudCert": "云端当前证书",
   "deploy.cloudCertUnsupported": "该厂商暂不支持查询当前证书",
