@@ -154,9 +154,9 @@ func (s *DeployService) Update(ctx context.Context, id int, in UpdateDeployTarge
 	if in.DeployService != "" {
 		b = b.SetDeployService(in.DeployService)
 	}
-	if !isTargetConfigEmpty(in.Config) {
-		b = b.SetConfig(in.Config)
-	}
+	// 始终持久化配置：部署目标不再存储站点/域名，表单仅回传凭证/区域等，
+	// 旧的 site_id/domains 等字段需被空配置覆盖清除，故不再跳过空配置。
+	b = b.SetConfig(in.Config)
 	if in.CredentialSource != "" {
 		b = b.SetCredentialSource(deploytarget.CredentialSource(in.CredentialSource))
 	}
@@ -295,11 +295,16 @@ func (s *DeployService) ListCDNDomains(ctx context.Context, targetID int) ([]str
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_target_not_found"))
 	}
-	creds, _, err := s.loadCredsAndConfig(target)
+	creds, svc, err := s.loadCredsAndConfig(target)
 	if err != nil {
 		return nil, err
 	}
-	region := creds.Region
+	// region 优先取部署目标配置里的区域（与 FetchCDNDomains 行为一致）；
+	// 复用的 DNS/部署凭证本身通常不携带 region，此时回退到凭证解析出的 region。
+	region := RegionFromConfig(svc)
+	if region == "" {
+		region = creds.Region
+	}
 	d := registry[target.ProviderType.String()]
 	if d == nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.deploy_unsupported_provider", "Provider", target.ProviderType.String()))
@@ -469,8 +474,21 @@ func (s *DeployService) DeployCertificate(ctx context.Context, targetID, certID 
 				svc["site_id"] = id
 			}
 		}
-	} else if domain != "" {
+	}
+	if !isSite && domain != "" {
 		svc["domain"] = domain
+	}
+	// ESA / EdgeOne 等站点级云服务的「站点 / 区域 ID」由 UI 实时选择后透传（不落库），
+	// 与面板类同模式写入 svc，部署/核对时按真实 ID 定位资源。
+	if target.DeployService == "esa" {
+		if siteID != "" {
+			svc["site_id"] = siteID
+		}
+	}
+	if target.DeployService == "edgeone" {
+		if siteID != "" {
+			svc["zone_id"] = siteID
+		}
 	}
 	// 实际部署的资源名称：面板/防火墙类为站点名，云厂商为 CDN 域名。
 	// 未单独选中时，站点类取配置里的 site_name，域名类取证书的域名。
@@ -782,6 +800,74 @@ func cloneStringMap(m map[string]string) map[string]string {
 	return cp
 }
 
+// buildLiveCertResources 当目标配置未存储站点/域名时，按凭证实时拉取真实列表构造核对资源。
+// - ESA：先列站点，再按站点实时拉加速记录域名，逐域名作为资源（携带 site_id + domain）。
+// - EdgeOne：先列站点（zone），再按站点实时拉加速域名（hosts），逐域名作为资源（携带 zone_id + domain）。
+// - 面板/防火墙：列站点，资源携带站点名 + 站点 ID。
+// - 其余云厂商（CDN/DCDN/GA 等）：直接列域名。
+// 所有额外 ID（site_id / zone_id 等）均由 UI 实时选择后透传，目标配置不再落库。
+func (s *DeployService) buildLiveCertResources(ctx context.Context, target *ent.DeployTarget, creds Credentials, d Deployer, svc map[string]string) []deployResource {
+	items, err := s.ListCDNDomains(ctx, target.ID)
+	if err != nil || len(items) == 0 {
+		return nil
+	}
+	// region 优先取部署目标配置里的区域（与 FetchCDNDomains 一致）；
+	// 复用的凭证本身不携带 region 时回退到凭证解析出的 region。
+	region := aliyunRegion(RegionFromConfig(svc))
+	if region == "" {
+		region = aliyunRegion(creds.Region)
+	}
+	var res []deployResource
+	for _, item := range items {
+		parts := strings.SplitN(item, "||", 2)
+		name := parts[0]
+		id := ""
+		if len(parts) > 1 {
+			id = parts[1]
+		}
+		switch target.DeployService {
+		case "esa":
+			// ESA：按站点实时拉加速记录域名，逐域名作为资源（与存储态一致：site_id + domain）。
+			if id == "" {
+				continue
+			}
+			doms, _ := d.ListDomains(ctx, creds, "esa", region, id)
+			for _, dm := range doms {
+				rc := cloneStringMap(svc)
+				rc["site_id"] = id
+				rc["domain"] = dm
+				res = append(res, deployResource{key: dm, name: dm, siteID: id, svcConfig: rc})
+			}
+		case "edgeone":
+			// EdgeOne：按站点（zone）实时拉加速域名（hosts），逐域名作为资源（携带 zone_id + domain）。
+			if id == "" {
+				continue
+			}
+			hosts, _ := d.ListDomains(ctx, creds, "edgeone", region, id)
+			for _, h := range hosts {
+				rc := cloneStringMap(svc)
+				rc["zone_id"] = id
+				rc["domain"] = h
+				res = append(res, deployResource{key: h, name: h, siteID: id, svcConfig: rc})
+			}
+		default:
+			rc := cloneStringMap(svc)
+			key := name
+			if isPanelProvider(target.ProviderType.String()) {
+				rc["site_name"] = name
+				rc["site_id"] = id
+			} else {
+				rc["domain"] = name
+			}
+			if id != "" {
+				key = id
+			}
+			res = append(res, deployResource{key: key, name: name, siteID: id, svcConfig: rc})
+		}
+	}
+	return res
+}
+
 // GetCurrentCerts 批量查询某部署目标下所有资源当前生效证书。
 // 返回以资源 key 索引的结果；未实现 currentCertGetter 的部署器，资源标记 Supported=false。
 func (s *DeployService) GetCurrentCerts(ctx context.Context, targetID int) (map[string]*CurrentCertResult, error) {
@@ -803,6 +889,12 @@ func (s *DeployService) GetCurrentCerts(ctx context.Context, targetID int) (map[
 	}
 	getter, ok := d.(currentCertGetter)
 	resources := s.buildCurrentCertResources(target, svc)
+	if len(resources) == 0 {
+		// 配置未存储站点/域名时，按凭证实时拉取真实列表构造资源（部署目标不再落库站点/域名）。
+		if live := s.buildLiveCertResources(ctx, target, creds, d, svc); len(live) > 0 {
+			resources = live
+		}
+	}
 	if batcher, ok := getter.(currentCertBatch); ok {
 		batcher.BeforeCurrentCerts(ctx)
 	}
@@ -851,14 +943,6 @@ func (s *DeployService) GetCurrentCerts(ctx context.Context, targetID int) (map[
 		results[r.key] = resSlice[i]
 	}
 	return results, nil
-}
-
-// isTargetConfigEmpty 检查 DeployTargetConfig 是否为空
-func isTargetConfigEmpty(c DeployTargetConfig) bool {
-	return c.Region == "" && c.RegionID == "" && c.CertName == "" &&
-		len(c.Domains) == 0 && c.ZoneID == "" && c.ZoneName == "" &&
-		len(c.SiteID) == 0 && len(c.SiteName) == 0 &&
-		c.AcceleratorID == "" && c.ListenerID == ""
 }
 
 // parseConfigStringSlice 解析 JSON 数组字符串为字符串切片（容错非数组/空值）。
