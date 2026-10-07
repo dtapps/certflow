@@ -480,6 +480,7 @@
   "deploy.nextStep": "Next",
   "deploy.noCertMatched": "No matching certificate",
   "deploy.noDomains": "No domains fetched, check credentials and permissions",
+  "deploy.cloudCertNotFetched": "Cloud certificate not fetched yet. Click \"Refresh Cloud Cert\" above to load.",
   "deploy.noSites": "No sites found, check panel credentials and permissions",
   "deploy.noZones": "No EdgeOne zones found, check credentials and permissions",
   "deploy.none": "None",

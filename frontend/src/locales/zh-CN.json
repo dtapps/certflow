@@ -480,6 +480,7 @@
   "deploy.nextStep": "下一步",
   "deploy.noCertMatched": "暂无匹配的证书",
   "deploy.noDomains": "未获取到域名，请确认凭证与权限",
+  "deploy.cloudCertNotFetched": "尚未获取云端当前证书，请点击「刷新云端证书」",
   "deploy.noSites": "未找到站点，请确认面板凭证与权限",
   "deploy.noZones": "未找到 EdgeOne 站点，请确认凭证与权限",
   "deploy.none": "无",

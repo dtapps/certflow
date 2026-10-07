@@ -62,9 +62,14 @@ const copyToClipboard = async (text: string, field: string) => {
 
 const activeTab = ref<string>('info')
 
-// 进入部署 tab 时实时拉取云端/面板当前生效证书（B 方案：本地 + 云端并排）
+// 进入部署 tab 时实时拉取可部署域名列表（部署目标不再存储站点/域名）
 watch(activeTab, (tab) => {
-  if (tab === 'deploy') loadCurrentCerts()
+  if (tab === 'deploy') {
+    // 实时拉取真实站点/域名（部署目标不再存储站点/域名）
+    fetchDomains()
+    // 云端当前生效证书改为手动点击「刷新」获取（临时调整：进入不再自动拉取）
+    // loadCurrentCerts()
+  }
 })
 
 // ---- JSON 高亮（信息 tab 原始配置）----
@@ -227,6 +232,9 @@ const domainOptions = ref<{ label: string; value: string }[]>([])
 // domainMeta 以选项 value 为键，记录每个站点/域名的 name 与 id，
 // 部署时据此分别传「站点名」与「站点 ID」，避免界面出现「名称||ID」这类拼接串。
 const domainMeta = ref<Record<string, { name: string; id: string }>>({})
+// siteDomains 以站点 ID 为键，记录该 ESA 站点的加速域名列表，
+// 用于部署时按域名过滤候选证书（与后端 buildLiveCertResources 一致）。
+const siteDomains = ref<Record<string, string[]>>({})
 
 // 将后端返回的「网站名||站点ID」拆为独立字段
 function parseSiteEntry(s: string): { name: string; id: string } {
@@ -267,11 +275,118 @@ const fetchDomains = async () => {
   if (!target.value) return
   fetchingDomains.value = true
   try {
-    const list = await DeployService.ListCDNDomains(target.value.id)
+    const item = target.value
+    // EdgeOne：先列站点（zone），再按站点实时拉加速域名（hosts）。每行携带所属 zoneId
+    // （写入 domainMeta.id），部署/核对时透传 zone_id。部署目标不再落库 zone_id。
+    if (item.deploy_service === 'edgeone') {
+      const zones = await DeployService.ListCDNDomains(item.id)
+      if (!zones || zones.length === 0) {
+        domainOptions.value = []
+        domainMeta.value = {}
+        showMessage(t('deploy.noDomains'), 'warning')
+        return
+      }
+      const meta: Record<string, { name: string; id: string }> = {}
+      const hosts: { label: string; value: string }[] = []
+      for (const z of zones) {
+        const idx = z.indexOf('||')
+        const zid = idx >= 0 ? z.slice(idx + 2) : ''
+        if (!zid) continue
+        const cfg: Record<string, string> = {}
+        if (item.provider_type === 'aliyun') cfg.region_id = item.region
+        else cfg.region = item.region
+        cfg.zone_id = zid
+        const hs = await DeployService.FetchCDNDomains({
+          provider_type: item.provider_type,
+          deploy_service: 'edgeone',
+          credential_source: item.credential_source || 'direct',
+          dns_provider_id: item.dns_provider_id || 0,
+          deploy_credential_id: item.deploy_credential_id || 0,
+          region: item.region,
+          config: cfg,
+        })
+        for (const h of hs || []) {
+          if (meta[h]) continue
+          meta[h] = { name: h, id: zid }
+          hosts.push({ label: h, value: h })
+        }
+      }
+      domainMeta.value = meta
+      domainOptions.value = hosts
+      showMessage(t('deploy.fetchDomains') + ': ' + hosts.length, 'success')
+      return
+    }
+    // ESA：站点级部署。先列站点，再按站点（site_id）实时拉加速记录域名，
+    // 每个站点的加速域名存入 siteDomains，供部署时按域名过滤候选证书。
+    if (item.deploy_service === 'esa') {
+      const sites = await DeployService.ListCDNDomains(item.id)
+      if (!sites || sites.length === 0) {
+        domainOptions.value = []
+        domainMeta.value = {}
+        siteDomains.value = {}
+        showMessage(t('deploy.noDomains'), 'warning')
+        return
+      }
+      const meta: Record<string, { name: string; id: string }> = {}
+      const opts: { label: string; value: string }[] = []
+      const doms: Record<string, string[]> = {}
+      for (const s of sites) {
+        const idx = s.indexOf('||')
+        const sid = idx >= 0 ? s.slice(idx + 2) : ''
+        if (!sid) continue
+        const sname = idx >= 0 ? s.slice(0, idx) : s
+        // 后端 FetchCDNDomains 的 config.site_id 为 []string（callListSites 取 SiteID[0]），需传数组
+        const cfg: Record<string, any> = {}
+        if (item.provider_type === 'aliyun') cfg.region_id = item.region
+        else cfg.region = item.region
+        cfg.site_id = [sid]
+        const hs = await DeployService.FetchCDNDomains({
+          provider_type: item.provider_type,
+          deploy_service: 'esa',
+          credential_source: item.credential_source || 'direct',
+          dns_provider_id: item.dns_provider_id || 0,
+          deploy_credential_id: item.deploy_credential_id || 0,
+          region: item.region,
+          config: cfg as any,
+        })
+        doms[sid] = hs || []
+        meta[sid] = { name: sname, id: sid }
+        opts.push({ label: sname, value: sid })
+      }
+      domainMeta.value = meta
+      siteDomains.value = doms
+      domainOptions.value = opts
+      showMessage(t('deploy.fetchDomains') + ': ' + opts.length, 'success')
+      return
+    }
+    const resp = await DeployService.ListCDNDomains(item.id)
+    // Wails 把 []string 从 Go 传到前端时，在不同环境/版本下形态可能不一致，
+    // 这里兼容：裸数组 / { result: [...] } 包装 / JSON 字符串 / null。
+    let list: string[] = []
+    if (Array.isArray(resp)) {
+      list = resp
+    } else if (resp && Array.isArray((resp as any).result)) {
+      list = (resp as any).result as string[]
+    } else if (typeof resp === 'string') {
+      try {
+        const parsed = JSON.parse(resp)
+        if (Array.isArray(parsed)) list = parsed as string[]
+      } catch {
+        // 响应不是 JSON 字符串，忽略
+      }
+    }
+    console.log(
+      '[fetchDomains] ListCDNDomains resp=',
+      resp,
+      'isArray=',
+      Array.isArray(resp),
+      'listLen=',
+      list.length,
+    )
     if (!list || list.length === 0) {
       showMessage(t('deploy.noDomains'), 'warning')
     } else {
-      const isPanel = isPanelProvider(target.value?.provider_type || '')
+      const isPanel = isPanelProvider(item.provider_type || '')
       domainMeta.value = {}
       domainOptions.value = list.map((raw) => {
         if (isPanel) {
@@ -346,25 +461,33 @@ const deployRows = computed<DeployRow[]>(() => {
   // ESA 为站点级证书：SetCertificate 只接受 site_id（无域名参数），证书加入站点证书池后
   // 由 ESA 按 SNI 自动按域名下发。因此部署行按 site_id 去重为单行，避免每个域名重复调接口。
   if (isESA.value) {
-    const cf = (target.value?.config || {}) as Record<string, any>
-    const siteId = Array.isArray(cf.site_id) ? cf.site_id[0] : cf.site_id
-    const siteName = Array.isArray(cf.site_name) ? cf.site_name[0] : cf.site_name
-    const siteDomains: string[] = cf.domains || []
-    if (!siteId) return []
-    const matched = (certificates.value || []).filter((c) => domainMatch(c, siteDomains))
-    const certOptions = matched.map((c) => ({ label: renderCertLabel(c), value: c.id }))
-    const preferred = matched.find((c) => linkedCertIds.includes(c.id))
-    const selectedCertId = preferred?.id ?? matched[0]?.id ?? null
-    return [
-      {
+    // ESA 站点级部署：证书加入站点证书池后由 ESA 按 SNI 自动路由。
+    // 候选证书按该站点的加速域名过滤（domainMatch），避免混入其他域名的证书。
+    const all = (certificates.value || []) as CertificateListItem[]
+    return domainOptions.value.map((opt) => {
+      const siteId = opt.value
+      const siteName = opt.label
+      const doms = siteDomains.value[siteId] || []
+      let matched: CertificateListItem[]
+      if (doms.length > 0) {
+        matched = all.filter((c) => domainMatch(c, doms))
+      } else {
+        // 站点加速域名未拉到时退化：优先已关联证书，否则全量兜底（避免无法部署）
+        const linked = all.filter((c) => linkedCertIds.includes(c.id))
+        matched = linked.length ? linked : all
+      }
+      const certOptions = matched.map((c) => ({ label: renderCertLabel(c), value: c.id }))
+      const preferred = matched.find((c) => linkedCertIds.includes(c.id))
+      const selectedCertId = preferred?.id ?? matched[0]?.id ?? null
+      return {
         key: siteId,
         name: siteName || siteId,
         siteID: siteId,
         matched,
         certOptions,
         selectedCertId,
-      },
-    ]
+      }
+    })
   }
   return domainOptions.value.map((opt) => {
     const key = opt.value
@@ -379,11 +502,11 @@ const deployRows = computed<DeployRow[]>(() => {
   })
 })
 
-// ESA：站点下的加速记录域名，用于「逐域名核对当前证书」面板（与部署行分离，部署只作用于整站一次）。
+// ESA 不存储域名：核对面板直接以实时拉取的当前证书结果（currentCerts）的域名为准，
+// 由 GetCurrentCerts 后端按 site_id 实时列站点加速记录域名得到。
 const esaVerifyDomains = computed<string[]>(() => {
   if (!isESA.value) return []
-  const cf = (target.value?.config || {}) as Record<string, any>
-  return cf.domains || []
+  return Object.keys(currentCerts.value || {})
 })
 
 // 列表行全选 / 清空 / 切换
@@ -631,7 +754,8 @@ onMounted(async () => {
     domainOptions.value = buildInitialDomainOptions()
     if (route.query.tab === 'deploy') {
       activeTab.value = 'deploy'
-      await loadCurrentCerts()
+      // 云端当前生效证书改为手动点击「刷新」获取（临时调整：进入不再自动拉取）
+      // await loadCurrentCerts()
     }
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + translateBackend(e?.message || String(e)), 'error')
@@ -1074,7 +1198,7 @@ onMounted(async () => {
                     </div>
                   </div>
                 </div>
-                <n-empty v-else :description="t('deploy.noDomains')" />
+                <n-empty v-else-if="isESA" :description="t('deploy.cloudCertNotFetched')" />
 
                 <!-- 部署结果 -->
                 <div v-if="deployResults.length > 0">

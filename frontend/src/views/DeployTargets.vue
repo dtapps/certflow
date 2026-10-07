@@ -22,7 +22,7 @@ import { showMessage, translateBackend } from '../utils/message'
 import { regionOf, regionLabel } from '../utils/region'
 import { EventWindowResized, type WindowResizedPayload } from '../utils/events'
 import ProviderIcon from '../components/ProviderIcon.vue'
-import { isPanelProvider, providerLabel, serviceLabel } from '../utils/deploy'
+import { providerLabel, serviceLabel } from '../utils/deploy'
 import { formatDateTime } from '../utils/format'
 
 const router = useRouter()
@@ -68,15 +68,6 @@ function statusType(s?: string) {
   if (s === 'success') return 'success'
   if (s === 'failed') return 'error'
   return 'default'
-}
-function domainList(target: DeployTargetListItem): string[] {
-  const cfg = target.config
-  if (!cfg) return []
-  // 面板/防火墙类：网站名称存在 config.site_name
-  if (isPanelProvider(target.provider_type)) {
-    return cfg.site_name || []
-  }
-  return cfg.domains || []
 }
 
 const filteredTargets = computed(() => {
@@ -139,25 +130,6 @@ const allColumns = computed<DataTableColumns<DeployTargetListItem>>(() => [
           ),
         ],
       ),
-  },
-  {
-    title: t('deploy.domainsOrSites'),
-    key: 'domains',
-    minWidth: 160,
-    render: (row: DeployTargetListItem) => {
-      const doms = domainList(row)
-      if (!doms.length) return h('span', { class: 'opacity-40' }, '-')
-      const shown = doms.slice(0, 2)
-      const rest = doms.length - shown.length
-      return h(
-        'div',
-        { class: 'flex flex-col gap-0.5' },
-        [
-          ...shown.map((d) => h('span', { class: 'text-xs leading-tight' }, d)),
-          rest > 0 ? h('span', { class: 'text-xs opacity-50' }, `+${rest}`) : null,
-        ].filter(Boolean) as any,
-      )
-    },
   },
   {
     title: t('deploy.region'),
@@ -322,7 +294,6 @@ const columns = computed<DataTableColumns<DeployTargetListItem>>(() => {
       ? [
           'name',
           'deploy_service',
-          'domains',
           'region',
           'credential',
           'last_status',
@@ -330,7 +301,7 @@ const columns = computed<DataTableColumns<DeployTargetListItem>>(() => {
           'actions',
         ]
       : winWidth.value >= 1080
-        ? ['name', 'deploy_service', 'domains', 'credential', 'last_status', 'actions']
+        ? ['name', 'deploy_service', 'credential', 'last_status', 'actions']
         : ['name', 'deploy_service', 'last_status', 'actions'],
   )
   return allColumns.value.filter((c) => visible.has((c as any).key as string))

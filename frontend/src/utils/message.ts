@@ -45,7 +45,11 @@ export function translateBackend(text: string | undefined): string {
   })()
   const localized = useI18nStore().t(key, params)
   // t 在缺 key 时返回 key 本身，此时回退到后端翻译文本
-  return localized === key ? translated : localized
+  if (localized === key) return translated
+  // 后端 translated 形如「译文」或「译文: 底层错误」。当存在底层错误（即比前端译文更长）时，
+  // 优先保留它，避免真实报错（如腾讯云 API 错误码）被吞掉，便于排查。
+  if (translated.length > localized.length) return translated
+  return localized
 }
 
 export function showMessage(text: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') {
