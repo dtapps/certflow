@@ -20,4 +20,4 @@ branch:
             description: 是否为预发布版本
             required: false
             type: switch
-            default: "false"
+            default: 'false'

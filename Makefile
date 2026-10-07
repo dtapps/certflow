@@ -48,7 +48,7 @@ dev: i18n ## 运行 Wails 开发模式
 
 # ==================== 格式化 / 修复 ====================
 
-format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix format-i18n ## 格式化和修复（Go + Vue + TypeScript）
+format: format-go-fmt format-go-fix format-frontend-write format-frontend-fix format-i18n format-yaml format-markdown format-shell ## 格式化和修复（Go + Vue + TypeScript）
 
 format-go-fmt: ## 格式化 Go 代码
 	gofmt -w -s .
@@ -75,6 +75,50 @@ format-i18n-frontend: ## 格式化前端 i18n JSON 文件（主文件 + 拆分�
 	pnpm --dir ./frontend exec prettier --config .prettierrc --write \
 		"src/locales/*.json" \
 		"src/locales/split/**/*.json"
+
+# ==================== 其他 格式化 ====================
+
+# 格式化 YAML 文件（.yaml/.yml）
+.PHONY: format-yaml
+format-yaml:
+	@echo "[Format] 格式化配置文件 (YAML)…"
+	@npx --yes prettier@latest \
+		--write \
+		--tab-width 2 \
+		--single-quote true \
+		--trailing-comma all \
+		--print-width 120 \
+		".cnb/**/*.{yaml,yml}" \
+		".cnb.yml" \
+		".github/**/*.{yaml,yml}" \
+		".golangci.yml" \
+		|| echo "⚠️  prettier 格式化失败，请确认 npx 可用"
+	@echo "[Format] YAML 格式化完成。"
+
+# 格式化 Markdown 文件（.md）
+.PHONY: format-markdown
+format-markdown:
+	@echo "[Format] 格式化文档 (Markdown)…"
+	@npx --yes prettier@latest \
+		--write \
+		--tab-width 2 \
+		--print-width 120 \
+		--prose-wrap preserve \
+		"**/*.md" \
+		|| echo "⚠️  prettier 格式化失败，请确认 npx 可用"
+	@echo "[Format] Markdown 格式化完成。"
+
+# 格式化 Shell 脚本（.sh）
+.PHONY: format-shell
+format-shell:
+	@echo "[Format] 格式化脚本 (Shell)…"
+	@command -v shfmt >/dev/null 2>&1 && { \
+		shfmt -w -i 2 -ci -bn -s -ln bash scripts/ pkg/swiftbridge/scripts/ ; \
+		echo "[Format] Shell 格式化完成（shfmt）。" ; \
+	} || { \
+		echo "⚠️  shfmt 未安装，跳过 Shell 格式化。"; \
+		echo "   提示: 可通过运行 'go install mvdan.cc/sh/v3/cmd/shfmt@latest' 安装"; \
+	}
 
 # ==================== 检查 / 测试 ====================
 

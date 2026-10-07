@@ -12,47 +12,47 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 
 ### Backend
 
-| Technology | Purpose |
-|------------|---------|
-| Go 1.26 | Backend language |
-| Wails v3 | Desktop application framework (Go + frontend hybrid) |
-| Ent (entgo.io/ent) | ORM framework (code-generation based) |
-| lego v5 (go-acme/lego) | ACME protocol client (certificate issuance/renewal) |
-| gocron/v2 | Scheduled task scheduler (auto-renewal, expiration checks) |
-| modernc.org/sqlite | Embedded database (pure Go, no CGO required) |
-| golang.org/x/crypto | Cryptography tools (bcrypt, etc.) |
-| go-webauthn/webauthn | Passkey / WebAuthn authentication |
-| pquerna/otp | TOTP two-factor authentication (2FA) |
-| google/uuid | Unique ID generation (v7) |
-| spf13/viper | Configuration management |
-| fsnotify/fsnotify | Filesystem watching |
+| Technology             | Purpose                                                    |
+| ---------------------- | ---------------------------------------------------------- |
+| Go 1.26                | Backend language                                           |
+| Wails v3               | Desktop application framework (Go + frontend hybrid)       |
+| Ent (entgo.io/ent)     | ORM framework (code-generation based)                      |
+| lego v5 (go-acme/lego) | ACME protocol client (certificate issuance/renewal)        |
+| gocron/v2              | Scheduled task scheduler (auto-renewal, expiration checks) |
+| modernc.org/sqlite     | Embedded database (pure Go, no CGO required)               |
+| golang.org/x/crypto    | Cryptography tools (bcrypt, etc.)                          |
+| go-webauthn/webauthn   | Passkey / WebAuthn authentication                          |
+| pquerna/otp            | TOTP two-factor authentication (2FA)                       |
+| google/uuid            | Unique ID generation (v7)                                  |
+| spf13/viper            | Configuration management                                   |
+| fsnotify/fsnotify      | Filesystem watching                                        |
 
 ### Frontend
 
-| Technology | Purpose |
-|------------|---------|
-| Vue 3 | Progressive frontend framework |
-| vue-router | SPA routing |
-| TypeScript | Type-safe language |
-| Vite 8 | Build tool / dev server |
-| Tailwind CSS v4 | Utility-first CSS framework |
-| Naive UI v2 | Vue 3 component library |
-| Pinia | State management |
-| @vicons/ionicons5 | Icon library |
-| @vueuse/core | Vue composition API utilities |
-| @wailsio/runtime | Wails frontend-backend communication runtime |
-| qrcode | TOTP QR code generation |
+| Technology        | Purpose                                      |
+| ----------------- | -------------------------------------------- |
+| Vue 3             | Progressive frontend framework               |
+| vue-router        | SPA routing                                  |
+| TypeScript        | Type-safe language                           |
+| Vite 8            | Build tool / dev server                      |
+| Tailwind CSS v4   | Utility-first CSS framework                  |
+| Naive UI v2       | Vue 3 component library                      |
+| Pinia             | State management                             |
+| @vicons/ionicons5 | Icon library                                 |
+| @vueuse/core      | Vue composition API utilities                |
+| @wailsio/runtime  | Wails frontend-backend communication runtime |
+| qrcode            | TOTP QR code generation                      |
 
 ### Build & Deploy
 
-| Tool | Purpose |
-|------|---------|
-| Makefile | Development command wrapper |
-| Taskfile.yml | Cross-platform build system |
-| golangci-lint v2 | Go code linting |
-| Prettier | Frontend code formatting |
-| pnpm | Frontend package manager |
-| wails3 CLI | Wails build/dev/code generation |
+| Tool             | Purpose                         |
+| ---------------- | ------------------------------- |
+| Makefile         | Development command wrapper     |
+| Taskfile.yml     | Cross-platform build system     |
+| golangci-lint v2 | Go code linting                 |
+| Prettier         | Frontend code formatting        |
+| pnpm             | Frontend package manager        |
+| wails3 CLI       | Wails build/dev/code generation |
 
 ---
 
@@ -210,6 +210,7 @@ make build VERSION=1.0.0
 ```
 
 Injected variables (`main.go`):
+
 - `currentVersion` — Version string (default `dev`)
 - `buildTime` — Build timestamp (UTC)
 - `gitCommit` — Git short commit hash
@@ -219,11 +220,11 @@ Injected variables (`main.go`):
 
 ## Cross-Platform Build
 
-| Platform | Command | Output |
-|----------|---------|--------|
-| macOS | `wails3 task package` | `bin/certflow.app` |
-| Windows | `wails3 task build` | `bin/certflow.exe` |
-| Linux | `wails3 task build` | `bin/certflow` |
+| Platform | Command               | Output             |
+| -------- | --------------------- | ------------------ |
+| macOS    | `wails3 task package` | `bin/certflow.app` |
+| Windows  | `wails3 task build`   | `bin/certflow.exe` |
+| Linux    | `wails3 task build`   | `bin/certflow`     |
 
 ### Release Workflow
 
@@ -267,27 +268,27 @@ Test environment: Apple M1, Go 1.24+, in-memory (`:memory:`), `benchtime=3s`. Be
 
 #### Latency Comparison (ns/op, lower is better)
 
-| Operation | modernc (pure Go) | mattn (CGO) | mattn advantage |
-|------|:---:|:---:|:---:|
-| **Insert** (single row) | 8,603 | 5,095 | 1.69x faster |
-| **InsertBulk** (100 rows/txn) | 382,696 | 194,203 | 1.97x faster |
-| **Select** (by primary key) | 5,024 | 3,343 | 1.50x faster |
-| **SelectRows** (scan 100 rows) | 41,587 | 38,949 | 1.07x faster |
-| **Update** | 4,848 | 3,065 | 1.58x faster |
-| **Delete** | 7,968 | 6,489 | 1.23x faster |
-| **QueryLike** (5K rows LIKE) | 2,415,319 | 1,785,577 | 1.35x faster |
+| Operation                      | modernc (pure Go) | mattn (CGO) | mattn advantage |
+| ------------------------------ | :---------------: | :---------: | :-------------: |
+| **Insert** (single row)        |       8,603       |    5,095    |  1.69x faster   |
+| **InsertBulk** (100 rows/txn)  |      382,696      |   194,203   |  1.97x faster   |
+| **Select** (by primary key)    |       5,024       |    3,343    |  1.50x faster   |
+| **SelectRows** (scan 100 rows) |      41,587       |   38,949    |  1.07x faster   |
+| **Update**                     |       4,848       |    3,065    |  1.58x faster   |
+| **Delete**                     |       7,968       |    6,489    |  1.23x faster   |
+| **QueryLike** (5K rows LIKE)   |     2,415,319     |  1,785,577  |  1.35x faster   |
 
 #### Memory Allocation Comparison (B/op | allocs/op)
 
-| Operation | modernc | mattn |
-|------|:---:|:---:|
-| **Insert** | 344 / 14 | 400 / 14 |
-| **InsertBulk** | 31,886 / 1309 | 30,419 / 1118 |
-| **Select** | 735 / 27 | 798 / 30 |
-| **SelectRows** | 6,952 / 517 | 7,024 / 520 |
-| **Update** | 176 / 7 | 248 / 8 |
-| **Delete** | 184 / 9 | 248 / 10 |
-| **QueryLike** | 397,722 / 29663 | 397,770 / 29664 |
+| Operation      |     modernc     |      mattn      |
+| -------------- | :-------------: | :-------------: |
+| **Insert**     |    344 / 14     |    400 / 14     |
+| **InsertBulk** |  31,886 / 1309  |  30,419 / 1118  |
+| **Select**     |    735 / 27     |    798 / 30     |
+| **SelectRows** |   6,952 / 517   |   7,024 / 520   |
+| **Update**     |     176 / 7     |     248 / 8     |
+| **Delete**     |     184 / 9     |    248 / 10     |
+| **QueryLike**  | 397,722 / 29663 | 397,770 / 29664 |
 
 #### Conclusions
 
@@ -304,14 +305,14 @@ Deploy issued/uploaded certificates to various cloud services. Implemented in `i
 
 Supported providers and services:
 
-| Provider | Supported Services |
-|----------|--------------------|
-| Alibaba Cloud (aliyun) | CDN, DCDN, ESA, GA |
-| Tencent Cloud (tencentcloud) | CDN, EdgeOne, ECDN |
-| Huawei Cloud (huawei) | CDN, WAF, ELB |
-| Baidu Cloud (baiducloud) | CDN, DRCDN |
-| CTYun (ctyun) | CTCDN, ICDN, AccessOne |
-| Volcengine (volcengine) | CDN, DCDN |
+| Provider                     | Supported Services     |
+| ---------------------------- | ---------------------- |
+| Alibaba Cloud (aliyun)       | CDN, DCDN, ESA, GA     |
+| Tencent Cloud (tencentcloud) | CDN, EdgeOne, ECDN     |
+| Huawei Cloud (huawei)        | CDN, WAF, ELB          |
+| Baidu Cloud (baiducloud)     | CDN, DRCDN             |
+| CTYun (ctyun)                | CTCDN, ICDN, AccessOne |
+| Volcengine (volcengine)      | CDN, DCDN              |
 
 - Credential source supports two modes: a standalone **deploy credential** (`internal/deploycredential/`) or **reusing a DNS provider credential** (`credential_source`).
 - Frontend pages: `DeployTargets.vue` (list/execute), `DeployTargetForm.vue` (create/edit), `DeployCredentials.vue` + `CredentialList.vue` (credential management).
@@ -379,16 +380,16 @@ The title bar automatically adapts to macOS / Windows / Linux styles. During dev
 
 ```js
 // Simulate macOS title bar
-localStorage.setItem('debug-platform', 'mac')
+localStorage.setItem("debug-platform", "mac");
 
 // Simulate Windows title bar
-localStorage.setItem('debug-platform', 'win32')
+localStorage.setItem("debug-platform", "win32");
 
 // Simulate Linux title bar
-localStorage.setItem('debug-platform', 'linux')
+localStorage.setItem("debug-platform", "linux");
 
 // Restore auto-detection
-localStorage.removeItem('debug-platform')
+localStorage.removeItem("debug-platform");
 ```
 
 Refresh the page after setting to see the effect.
@@ -400,7 +401,7 @@ Refresh the page after setting to see the effect.
 1. **Ent code generation**: After modifying `internal/ent/schema/`, run `make ent` to regenerate ORM code
 2. **HTTP log code generation**: After modifying `schema.sql` / `query.sql` under `internal/httplog/`, run `make sqlc` to regenerate
 3. **Binding generation**: After modifying Go services, run `make bindings` to regenerate frontend bindings
-3. **Version injection**: `wails3 task build` does not accept a bare `-ldflags` flag; pass `VERSION=` etc. as Task variables, and each platform Taskfile assembles `-ldflags "-X main.currentVersion=..."`
-4. **Linux cross-compilation**: Cannot cross-compile Linux from macOS (requires CGO + webkit2gtk), use GitHub Actions instead
-5. **Naive UI is auto-imported**: Use `<n-xxx>` components directly in templates, no global registration needed
-6. **Pinia state management**: Use `useXxxStore()` to get store, `storeToRefs()` for reactive properties
+4. **Version injection**: `wails3 task build` does not accept a bare `-ldflags` flag; pass `VERSION=` etc. as Task variables, and each platform Taskfile assembles `-ldflags "-X main.currentVersion=..."`
+5. **Linux cross-compilation**: Cannot cross-compile Linux from macOS (requires CGO + webkit2gtk), use GitHub Actions instead
+6. **Naive UI is auto-imported**: Use `<n-xxx>` components directly in templates, no global registration needed
+7. **Pinia state management**: Use `useXxxStore()` to get store, `storeToRefs()` for reactive properties

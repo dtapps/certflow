@@ -68,14 +68,14 @@ make format-frontend   # Format frontend code
 
 ## Repositories
 
-| Platform | URL |
-|----------|-----|
-| CNB | https://cnb.cool/dtapp/certflow |
-| GitHub | https://github.com/dtapps/certflow |
-| Gitea | https://gitea.com/dtapps/certflow |
-| GitLab | https://gitlab.com/dtapps/certflow |
-| Gitee | https://gitee.com/dtapps/certflow |
-| GitCode | https://gitcode.com/dtapp/certflow |
+| Platform | URL                                |
+| -------- | ---------------------------------- |
+| CNB      | https://cnb.cool/dtapp/certflow    |
+| GitHub   | https://github.com/dtapps/certflow |
+| Gitea    | https://gitea.com/dtapps/certflow  |
+| GitLab   | https://gitlab.com/dtapps/certflow |
+| Gitee    | https://gitee.com/dtapps/certflow  |
+| GitCode  | https://gitcode.com/dtapp/certflow |
 
 ## Release
 

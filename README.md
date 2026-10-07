@@ -68,13 +68,13 @@ make format-frontend   # 格式化前端代码
 
 ## 仓库
 
-| 平台 | 地址 |
-|------|------|
-| CNB | https://cnb.cool/dtapp/certflow |
-| GitHub | https://github.com/dtapps/certflow |
-| Gitea | https://gitea.com/dtapps/certflow |
-| GitLab | https://gitlab.com/dtapps/certflow |
-| Gitee | https://gitee.com/dtapps/certflow |
+| 平台    | 地址                               |
+| ------- | ---------------------------------- |
+| CNB     | https://cnb.cool/dtapp/certflow    |
+| GitHub  | https://github.com/dtapps/certflow |
+| Gitea   | https://gitea.com/dtapps/certflow  |
+| GitLab  | https://gitlab.com/dtapps/certflow |
+| Gitee   | https://gitee.com/dtapps/certflow  |
 | GitCode | https://gitcode.com/dtapp/certflow |
 
 ## 发布

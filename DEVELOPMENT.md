@@ -12,47 +12,47 @@ CertFlow 是一个 SSL 证书管理工具，支持证书申请、续期、过期
 
 ### 后端
 
-| 技术 | 用途 |
-|------|------|
-| Go 1.26 | 后端编程语言 |
-| Wails v3 | 桌面应用框架（Go + 前端混合） |
-| Ent (entgo.io/ent) | ORM 框架（代码生成式） |
-| lego v5 (go-acme/lego) | ACME 协议客户端（申请/续期证书） |
-| gocron/v2 | 定时任务调度（自动续期、过期检查） |
-| modernc.org/sqlite | 嵌入式数据库（纯 Go，无需 CGO） |
-| golang.org/x/crypto | 密码学工具（bcrypt 等） |
-| go-webauthn/webauthn | Passkey / WebAuthn 认证 |
-| pquerna/otp | TOTP 双因素认证（2FA） |
-| google/uuid | 唯一标识生成（v7） |
-| spf13/viper | 配置管理 |
-| fsnotify/fsnotify | 文件系统监听 |
+| 技术                   | 用途                               |
+| ---------------------- | ---------------------------------- |
+| Go 1.26                | 后端编程语言                       |
+| Wails v3               | 桌面应用框架（Go + 前端混合）      |
+| Ent (entgo.io/ent)     | ORM 框架（代码生成式）             |
+| lego v5 (go-acme/lego) | ACME 协议客户端（申请/续期证书）   |
+| gocron/v2              | 定时任务调度（自动续期、过期检查） |
+| modernc.org/sqlite     | 嵌入式数据库（纯 Go，无需 CGO）    |
+| golang.org/x/crypto    | 密码学工具（bcrypt 等）            |
+| go-webauthn/webauthn   | Passkey / WebAuthn 认证            |
+| pquerna/otp            | TOTP 双因素认证（2FA）             |
+| google/uuid            | 唯一标识生成（v7）                 |
+| spf13/viper            | 配置管理                           |
+| fsnotify/fsnotify      | 文件系统监听                       |
 
 ### 前端
 
-| 技术 | 用途 |
-|------|------|
-| Vue 3 | 渐进式前端框架 |
-| vue-router | SPA 路由管理 |
-| TypeScript | 类型安全语言 |
-| Vite 8 | 构建工具/开发服务器 |
-| Tailwind CSS v4 | 原子化 CSS 框架 |
-| Naive UI v2 | Vue 3 组件库 |
-| Pinia | 状态管理（替代 Vuex） |
-| @vicons/ionicons5 | 图标库 |
-| @vueuse/core | Vue 组合式 API 工具集 |
-| @wailsio/runtime | Wails 前后端通信运行时 |
-| qrcode | TOTP 二维码生成 |
+| 技术              | 用途                   |
+| ----------------- | ---------------------- |
+| Vue 3             | 渐进式前端框架         |
+| vue-router        | SPA 路由管理           |
+| TypeScript        | 类型安全语言           |
+| Vite 8            | 构建工具/开发服务器    |
+| Tailwind CSS v4   | 原子化 CSS 框架        |
+| Naive UI v2       | Vue 3 组件库           |
+| Pinia             | 状态管理（替代 Vuex）  |
+| @vicons/ionicons5 | 图标库                 |
+| @vueuse/core      | Vue 组合式 API 工具集  |
+| @wailsio/runtime  | Wails 前后端通信运行时 |
+| qrcode            | TOTP 二维码生成        |
 
 ### 构建与部署
 
-| 工具 | 用途 |
-|------|------|
-| Makefile | 开发命令封装 |
-| Taskfile.yml | 跨平台构建系统 |
-| golangci-lint v2 | Go 代码检查 |
-| Prettier | 前端代码格式化 |
-| pnpm | 前端包管理器 |
-| wails3 CLI | Wails 构建/开发/代码生成 |
+| 工具             | 用途                     |
+| ---------------- | ------------------------ |
+| Makefile         | 开发命令封装             |
+| Taskfile.yml     | 跨平台构建系统           |
+| golangci-lint v2 | Go 代码检查              |
+| Prettier         | 前端代码格式化           |
+| pnpm             | 前端包管理器             |
+| wails3 CLI       | Wails 构建/开发/代码生成 |
 
 ---
 
@@ -211,6 +211,7 @@ make build VERSION=1.0.0
 ```
 
 注入的变量（`main.go`）：
+
 - `currentVersion` — 版本号（默认 `dev`）
 - `buildTime` — 构建时间（UTC）
 - `gitCommit` — Git 短提交 ID
@@ -220,11 +221,11 @@ make build VERSION=1.0.0
 
 ## 跨平台构建
 
-| 平台 | 命令 | 产物 |
-|------|------|------|
-| macOS | `wails3 task package` | `bin/certflow.app` |
-| Windows | `wails3 task build` | `bin/certflow.exe` |
-| Linux | `wails3 task build` | `bin/certflow` |
+| 平台    | 命令                  | 产物               |
+| ------- | --------------------- | ------------------ |
+| macOS   | `wails3 task package` | `bin/certflow.app` |
+| Windows | `wails3 task build`   | `bin/certflow.exe` |
+| Linux   | `wails3 task build`   | `bin/certflow`     |
 
 ### 发布工作流
 
@@ -268,27 +269,27 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 #### 耗时对比（ns/op，越小越好）
 
-| 操作 | modernc (纯Go) | mattn (CGO) | mattn 优势 |
-|------|:---:|:---:|:---:|
-| **Insert** (单行) | 8,603 | 5,095 | 快 1.69x |
-| **InsertBulk** (100行/事务) | 382,696 | 194,203 | 快 1.97x |
-| **Select** (主键查询) | 5,024 | 3,343 | 快 1.50x |
-| **SelectRows** (100行扫描) | 41,587 | 38,949 | 快 1.07x |
-| **Update** | 4,848 | 3,065 | 快 1.58x |
-| **Delete** | 7,968 | 6,489 | 快 1.23x |
-| **QueryLike** (5K行LIKE) | 2,415,319 | 1,785,577 | 快 1.35x |
+| 操作                        | modernc (纯Go) | mattn (CGO) | mattn 优势 |
+| --------------------------- | :------------: | :---------: | :--------: |
+| **Insert** (单行)           |     8,603      |    5,095    |  快 1.69x  |
+| **InsertBulk** (100行/事务) |    382,696     |   194,203   |  快 1.97x  |
+| **Select** (主键查询)       |     5,024      |    3,343    |  快 1.50x  |
+| **SelectRows** (100行扫描)  |     41,587     |   38,949    |  快 1.07x  |
+| **Update**                  |     4,848      |    3,065    |  快 1.58x  |
+| **Delete**                  |     7,968      |    6,489    |  快 1.23x  |
+| **QueryLike** (5K行LIKE)    |   2,415,319    |  1,785,577  |  快 1.35x  |
 
 #### 内存分配对比（B/op | allocs/op）
 
-| 操作 | modernc | mattn |
-|------|:---:|:---:|
-| **Insert** | 344 / 14 | 400 / 14 |
-| **InsertBulk** | 31,886 / 1309 | 30,419 / 1118 |
-| **Select** | 735 / 27 | 798 / 30 |
-| **SelectRows** | 6,952 / 517 | 7,024 / 520 |
-| **Update** | 176 / 7 | 248 / 8 |
-| **Delete** | 184 / 9 | 248 / 10 |
-| **QueryLike** | 397,722 / 29663 | 397,770 / 29664 |
+| 操作           |     modernc     |      mattn      |
+| -------------- | :-------------: | :-------------: |
+| **Insert**     |    344 / 14     |    400 / 14     |
+| **InsertBulk** |  31,886 / 1309  |  30,419 / 1118  |
+| **Select**     |    735 / 27     |    798 / 30     |
+| **SelectRows** |   6,952 / 517   |   7,024 / 520   |
+| **Update**     |     176 / 7     |     248 / 8     |
+| **Delete**     |     184 / 9     |    248 / 10     |
+| **QueryLike**  | 397,722 / 29663 | 397,770 / 29664 |
 
 #### 结论
 
@@ -305,14 +306,14 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 支持的厂商与服务：
 
-| 厂商 | 支持服务 |
-|------|----------|
-| 阿里云（aliyun） | CDN、全站加速 DCDN、边缘安全加速 ESA、全球加速 GA |
-| 腾讯云（tencentcloud） | CDN、边缘安全加速平台 EdgeOne、ECDN |
-| 华为云（huawei） | CDN、WAF、负载均衡 ELB |
-| 百度云（baiducloud） | CDN、动态加速 DRCDN |
-| 天翼云（ctyun） | 内容分发 CTCDN、多云 CDN ICDN、边缘安全加速 AccessOne |
-| 火山引擎（volcengine） | CDN、全站加速 DCDN |
+| 厂商                   | 支持服务                                              |
+| ---------------------- | ----------------------------------------------------- |
+| 阿里云（aliyun）       | CDN、全站加速 DCDN、边缘安全加速 ESA、全球加速 GA     |
+| 腾讯云（tencentcloud） | CDN、边缘安全加速平台 EdgeOne、ECDN                   |
+| 华为云（huawei）       | CDN、WAF、负载均衡 ELB                                |
+| 百度云（baiducloud）   | CDN、动态加速 DRCDN                                   |
+| 天翼云（ctyun）        | 内容分发 CTCDN、多云 CDN ICDN、边缘安全加速 AccessOne |
+| 火山引擎（volcengine） | CDN、全站加速 DCDN                                    |
 
 - 凭证来源支持两种：独立的**部署凭证**（`internal/deploycredential/`）或**复用 DNS 提供商凭证**（`credential_source`）。
 - 前端页面：`DeployTargets.vue`（列表/执行）、`DeployTargetForm.vue`（新建/编辑）、`DeployCredentials.vue` + `CredentialList.vue`（凭证管理）。
@@ -380,16 +381,16 @@ make test              # 运行所有测试
 
 ```js
 // 模拟 macOS 标题栏
-localStorage.setItem('debug-platform', 'mac')
+localStorage.setItem("debug-platform", "mac");
 
 // 模拟 Windows 标题栏
-localStorage.setItem('debug-platform', 'win32')
+localStorage.setItem("debug-platform", "win32");
 
 // 模拟 Linux 标题栏
-localStorage.setItem('debug-platform', 'linux')
+localStorage.setItem("debug-platform", "linux");
 
 // 恢复自动检测
-localStorage.removeItem('debug-platform')
+localStorage.removeItem("debug-platform");
 ```
 
 设置后刷新页面即可看到效果。
@@ -401,7 +402,7 @@ localStorage.removeItem('debug-platform')
 1. **Ent 代码生成**：修改 `internal/ent/schema/` 后需要运行 `make ent` 重新生成 ORM 代码
 2. **HTTP 日志代码生成**：修改 `internal/httplog/` 下 `schema.sql` / `query.sql` 后需要运行 `make sqlc` 重新生成
 3. **绑定生成**：修改 Go 服务后需要运行 `make bindings` 重新生成前端绑定代码
-3. **版本号注入方式**：`wails3 task build` 不接受裸 `-ldflags` 参数，需通过 `VERSION=` 等 Task 变量传入，由各平台 Taskfile 自动拼接成 `-ldflags "-X main.currentVersion=..."`
-4. **Linux 交叉编译**：从 macOS 无法交叉编译 Linux（需要 CGO + webkit2gtk），使用 GitHub Actions 构建
-5. **Naive UI 按需引入**：直接在模板中使用 `<n-xxx>` 组件，无需全局注册
-6. **Pinia 状态管理**：使用 `useXxxStore()` 获取 store，`storeToRefs()` 解构响应式属性
+4. **版本号注入方式**：`wails3 task build` 不接受裸 `-ldflags` 参数，需通过 `VERSION=` 等 Task 变量传入，由各平台 Taskfile 自动拼接成 `-ldflags "-X main.currentVersion=..."`
+5. **Linux 交叉编译**：从 macOS 无法交叉编译 Linux（需要 CGO + webkit2gtk），使用 GitHub Actions 构建
+6. **Naive UI 按需引入**：直接在模板中使用 `<n-xxx>` 组件，无需全局注册
+7. **Pinia 状态管理**：使用 `useXxxStore()` 获取 store，`storeToRefs()` 解构响应式属性
