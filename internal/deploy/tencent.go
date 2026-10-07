@@ -327,6 +327,12 @@ func (d *TencentDeployer) listEdgeOneZones(ctx context.Context, creds Credential
 				if z.ZoneName != nil {
 					name = *z.ZoneName
 				}
+				// 跳过 EdgeOne 的 Makers 默认站点（ZoneName 固定为 default-pages-zone）。
+				// 它是 EdgeOne 内置的占位站点，不属于用户的真实站点，
+				// 对其调用 DescribeAccelerationDomains 会返回 UnauthorizedOperation。
+				if name == "default-pages-zone" {
+					continue
+				}
 				zones = append(zones, name+"||"+*z.ZoneId)
 			}
 		}

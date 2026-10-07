@@ -26,12 +26,12 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/spf13/viper v1.21.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.173
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.190
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.191
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.186
 	github.com/volcengine/volc-sdk-golang v1.0.257
-	github.com/wailsapp/wails/v3 v3.0.0-beta.27
+	github.com/wailsapp/wails/v3 v3.0.0-beta.28
 	go.dtapp.net/library/contrib/http_log v1.0.13
 	golang.org/x/crypto v0.57.0
 	golang.org/x/text v0.42.0
@@ -41,7 +41,7 @@ require (
 require (
 	ariga.io/atlas v1.3.0 // indirect
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.2 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.13.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns v1.2.0 // indirect
@@ -59,20 +59,20 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.1 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.33.6 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.6 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.7 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/route53 v1.70.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.10.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.38.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.51.1 // indirect
-	github.com/aws/smithy-go v1.28.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/route53 v1.70.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.10.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.38.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.2 // indirect
+	github.com/aws/smithy-go v1.28.4 // indirect
 	github.com/basgys/goxml2json v1.1.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/boombuler/barcode v1.1.0 // indirect
@@ -84,7 +84,7 @@ require (
 	github.com/dnsimple/dnsimple-go/v9 v9.2.0 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.9.4 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.6 // indirect
 	github.com/go-acme/alidns-20150109/v5 v5.6.1 // indirect
 	github.com/go-acme/esa-20240910/v3 v3.13.1 // indirect
 	github.com/go-acme/jdcloud-sdk-go v1.64.0 // indirect
@@ -110,7 +110,7 @@ require (
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/linode/linodego v1.69.1 // indirect
-	github.com/mattn/go-colorable v0.1.15 // indirect
+	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/miekg/dns v1.1.73 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -127,7 +127,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
-	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/shopspring/decimal v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/tinylib/msgp v1.6.5 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ucloud/ucloud-sdk-go v0.22.134 // indirect
-	github.com/vultr/govultr/v3 v3.33.0 // indirect
+	github.com/vultr/govultr/v3 v3.33.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
@@ -148,7 +148,7 @@ require (
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/tools v0.50.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	gopkg.in/ns1/ns1-go.v2 v2.18.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

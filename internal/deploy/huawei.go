@@ -104,6 +104,53 @@ func (d *HuaweiDeployer) newScmClient(creds Credentials) (*scm.ScmClient, error)
 	return scm.NewScmClient(hc), nil
 }
 
+// huaweiCertName 计算华为云 SCM 证书名，必须遵循 SCM 命名约束：
+// 仅允许字母、数字、连字符(-)、下划线(_)，长度 1-63，且账号内唯一。
+// 优先使用用户配置的 cert_name；否则用证书主域名，并把通配符 *、点 .、空格等替换为合法字符。
+// 注意：华为 SCM 证书名不允许 . 与 *，原始域名（如 *.example.com）直接传会报
+// SCM.0032 invalid cert name，因此导入前必须净化。
+func huaweiCertName(cert CertContent, cfg map[string]string) string {
+	raw := strings.TrimSpace(cfg["cert_name"])
+	if raw == "" {
+		raw = cert.Domain
+	}
+	clean := sanitizeHuaweiName(raw)
+	if clean == "" {
+		// 兜底：域名/覆盖名全是非法的极端情况，用证书指纹保证非空且唯一
+		clean = "cert-" + shortCertHash(cert.CertPEM)
+	}
+	return clean
+}
+
+// isHuaweiNameRune 判断字符是否允许出现在华为云 SCM 证书名中（仅字母、数字、连字符、下划线）。
+func isHuaweiNameRune(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+		(r >= '0' && r <= '9') || r == '-' || r == '_'
+}
+
+// sanitizeHuaweiName 把任意字符串净化为华为云 SCM 合法证书名：
+// 非法字符（如 * . 空格及其他符号）替换为 -，折叠连续 - 并去掉首尾 -，限长 63。
+func sanitizeHuaweiName(s string) string {
+	s = strings.NewReplacer("*", "wildcard", ".", "-", " ", "-").Replace(strings.TrimSpace(s))
+	var b strings.Builder
+	for _, r := range s {
+		if isHuaweiNameRune(r) {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('-')
+		}
+	}
+	out := b.String()
+	for strings.Contains(out, "--") {
+		out = strings.ReplaceAll(out, "--", "-")
+	}
+	out = strings.Trim(out, "-")
+	if len(out) > 63 {
+		out = out[:63]
+	}
+	return strings.Trim(out, "-")
+}
+
 // UploadCert 导入证书到华为云 SCM，返回证书 ID。
 // 华为云 ImportCertificate 不保证按内容去重，跨进程/跨重启可能重复建证书。
 // 因此上传前先按证书名关键字列出候选，再逐个导出比对 DER 指纹，命中则直接复用已有证书 ID，
@@ -113,7 +160,7 @@ func (d *HuaweiDeployer) UploadCert(ctx context.Context, creds Credentials, cert
 	if err != nil {
 		return "", "", i18n.Wrap(err, "deploy.error.huawei_scm_client_create")
 	}
-	name := certName(cert.Domain, svcConfig)
+	name := huaweiCertName(cert, svcConfig)
 	logging.Debug(i18n.T("log.deploy.huawei_upload_start", "Domain", cert.Domain, "Name", name))
 
 	// 1) 先查云端是否已有相同证书（按名关键字过滤 + DER 指纹精确比对）
@@ -324,7 +371,7 @@ func (d *HuaweiDeployer) certNameByID(client *scm.ScmClient, certID string, svcC
 	if resp.Name != nil && *resp.Name != "" {
 		return *resp.Name, nil
 	}
-	return certName(svcConfig["cert_domain"], svcConfig), nil
+	return sanitizeHuaweiName(svcConfig["cert_domain"]), nil
 }
 
 // ListDomains 列出华为云 CDN 加速域名

@@ -125,7 +125,7 @@ jobs:
           cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || ver 2>/dev/null || true
 
       # 缓存 apt 已下载的 .deb 包，避免每次 apt-get install 重新从源拉取
-      # libgtk-4-dev / libwebkitgtk-6.0-dev 等大依赖（ubuntu runner 有效）。
+      # libgtk-4-dev / libwebkitgtk-6.0-dev / libgdk-pixbuf-2.0-0 等大依赖（ubuntu runner 有效）。
       - name: 缓存 apt 包
         if: ${{ runner.os == 'Linux' }}
         uses: actions/cache@v6
@@ -139,7 +139,44 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev libgdk-pixbuf-2.0-0
+          # linuxdeploy 的 gtk 插件按 /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0 查找 loaders 目录，
+          # 部分发行版下该目录缺失或位于非标准路径，导致 AppImage 打包时
+          # `cp: cannot stat 'gdk-pixbuf-2.0/2.10.0'`。这里用 pkg-config / find 定位真实 binarydir 并软链过去；
+          # 若都找不到则创建空目录兜底，确保 cp 不失败。
+          MULTILIB="/usr/lib/x86_64-linux-gnu"
+          case "$(uname -m)" in
+            aarch64) MULTILIB="/usr/lib/aarch64-linux-gnu" ;;
+            armv7l)  MULTILIB="/usr/lib/arm-linux-gnueabihf" ;;
+          esac
+          # 定位真实 gdk-pixbuf loaders 目录：
+          # 优先找含 libpixbufloader-*.so 的目录（实际 loader 所在），
+          # 其次用 pkg-config 的 binarydir，再退而求其次搜任意 gdk-pixbuf-2.0/<ver> 目录。
+          REAL_BASE=""
+          LOADER_SO="$(find /usr/lib -maxdepth 6 -type f -name 'libpixbufloader-*.so' 2>/dev/null | head -n1)"
+          if [ -n "$LOADER_SO" ]; then
+            REAL_BASE="$(dirname "$(dirname "$LOADER_SO")")"
+          fi
+          if [ -z "$REAL_BASE" ]; then
+            GDK_DIR="$(pkg-config --variable=gdk_pixbuf_binarydir gdk-pixbuf-2.0 2>/dev/null)"
+            [ -d "$GDK_DIR" ] && REAL_BASE="$GDK_DIR"
+          fi
+          if [ -z "$REAL_BASE" ]; then
+            REAL_BASE="$(find /usr/lib -maxdepth 6 -type d -path '*gdk-pixbuf-2.0*' -name '2.10.0' 2>/dev/null | head -n1)"
+          fi
+          if [ -n "$REAL_BASE" ] && [ ! -e "$MULTILIB/gdk-pixbuf-2.0/2.10.0" ]; then
+            sudo mkdir -p "$MULTILIB/gdk-pixbuf-2.0"
+            sudo ln -sfn "$REAL_BASE" "$MULTILIB/gdk-pixbuf-2.0/2.10.0"
+            echo "Linked gdk-pixbuf loaders: $REAL_BASE -> $MULTILIB/gdk-pixbuf-2.0/2.10.0"
+          fi
+          if [ ! -e "$MULTILIB/gdk-pixbuf-2.0/2.10.0" ]; then
+            sudo mkdir -p "$MULTILIB/gdk-pixbuf-2.0/2.10.0/loaders"
+            echo "WARNING: created empty gdk-pixbuf loaders dir as fallback"
+          fi
+          echo "--- gdk-pixbuf diagnostics ---"
+          pkg-config --variable=gdk_pixbuf_binarydir gdk-pixbuf-2.0 2>/dev/null || echo "pkg-config: no gdk-pixbuf-2.0"
+          ls -la "$MULTILIB/gdk-pixbuf-2.0/" 2>/dev/null || echo "no $MULTILIB/gdk-pixbuf-2.0/"
+          dpkg -L libgdk-pixbuf-2.0-0 2>/dev/null | grep -i gdk-pixbuf-2.0 || echo "no libgdk-pixbuf-2.0-0 files"
 
       - name: 安装 Go
         uses: actions/setup-go@v7

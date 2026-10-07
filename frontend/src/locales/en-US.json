@@ -322,6 +322,7 @@
   "deploy.clearSelection": "Clear",
   "deploy.close": "Close",
   "deploy.cloudCertId": "Cloud Cert ID",
+  "deploy.cloudCertNotFetched": "Cloud certificate not fetched yet. Click \"Refresh Cloud Cert\" above to load.",
   "deploy.cloudCertUnsupported": "This provider does not support querying the current certificate",
   "deploy.collapse": "Collapse",
   "deploy.comment": "Comment",

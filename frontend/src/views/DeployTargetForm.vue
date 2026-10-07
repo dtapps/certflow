@@ -48,12 +48,8 @@ const actionBar = useActionBarStore()
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 const loading = ref(false)
-const fetchingDomains = ref(false)
-const fetchingZones = ref(false)
 const dnsProviders = ref<{ id: number; name: string; provider_type: string }[]>([])
 const deployCredentials = ref<{ id: number; name: string; provider_type: string }[]>([])
-const domainOptions = ref<{ label: string; value: string }[]>([])
-const zoneOptions = ref<{ label: string; value: string }[]>([])
 
 const form = reactive({
   name: '',
@@ -65,16 +61,6 @@ const form = reactive({
   access_key: '',
   secret_key: '',
   region: '',
-  domains: [] as string[],
-  cert_name: '',
-  zone_id: '',
-  zone_name: '',
-  site_id: '',
-  site_name: '',
-  accelerator_id: '',
-  listener_id: '',
-  site_ids: [] as string[], // 面板/防火墙多选站点 ID 列表
-  site_names: [] as string[], // 面板/防火墙多选站点名称列表
   comment: '',
 })
 
@@ -97,14 +83,8 @@ const credentialLabel = computed(() => {
     deployCredentialOptions.value.find((o) => o.value === form.deploy_credential_id)?.label || '-'
   )
 })
-const domainStepVisible = computed(() =>
-  ['cdn', 'dcdn', 'drcdn', 'edgeone', 'ecdn', 'ga', 'esa', 'ctcdn', 'icdn', 'accessone'].includes(
-    form.deploy_service,
-  ),
-)
-
 // ---- 分步向导 ----
-const totalSteps = 4
+const totalSteps = 3
 const currentStep = ref(1)
 
 const canNext = computed(() => {
@@ -116,10 +96,6 @@ const canNext = computed(() => {
       if (form.credential_source === 'deploy_credential') return !!form.deploy_credential_id
       return false
     case 3:
-      if (isPanelProvider(form.provider_type)) return form.site_ids.length > 0
-      if (form.deploy_service === 'edgeone') return !!form.zone_id
-      if (form.deploy_service === 'esa') return !!form.site_id && !!form.region
-      if (form.deploy_service === 'ga') return !!form.accelerator_id
       return true
     default:
       return true
@@ -188,24 +164,6 @@ function onServiceChange() {
   if (!valid) form.region = defaultRegionFor(form.provider_type, form.deploy_service)
 }
 
-// onZoneChange / onSiteChange：用户从站点下拉选中后，把对应站点名一并写入表单，
-// 供保存时持久化（config 里 zone_name / site_name），编辑回填即可看到名字而非纯 ID。
-function onZoneChange(val: string | null) {
-  const opt = zoneOptions.value.find((o) => o.value === val)
-  form.zone_name = opt ? opt.label : ''
-}
-function onSiteChange(val: string | null) {
-  const opt = zoneOptions.value.find((o) => o.value === val)
-  form.site_name = opt ? opt.label : ''
-}
-
-// onSitesChange 面板/防火墙多选站点时同步：派生 site_ids / site_names（驱动 UI），
-// 保存时 JSON 序列化进 config.site_id / config.site_name（与 domains 格式一致）。
-function onSitesChange(vals: string[]) {
-  form.site_ids = vals
-  form.site_names = vals.map((v) => zoneOptions.value.find((o) => o.value === v)?.label || v)
-}
-
 // 部署厂商类型 → DNS 提供商枚举值的映射。
 // 注意 DNS 提供商的「百度云」枚举值为 baiducloud，而部署目标使用 baidu，二者不同，
 // 直接按 provider_type 相等过滤会导致百度部署目标复用时找不到 DNS 提供商。
@@ -240,30 +198,12 @@ function onProviderChange() {
     form.credential_source = 'deploy_credential'
     form.deploy_service = 'site'
     form.region = ''
-    form.zone_id = ''
-    form.zone_name = ''
-    form.site_id = ''
-    form.site_name = ''
-    form.site_ids = []
-    form.site_names = []
-    form.accelerator_id = ''
-    form.listener_id = ''
-    zoneOptions.value = []
     return
   }
   const opts = servicesByProvider(form.provider_type)
   if (!opts.find((o) => o.value === form.deploy_service)) {
     form.deploy_service = opts.length ? opts[0].value : 'cdn'
   }
-  form.zone_id = ''
-  form.zone_name = ''
-  form.site_id = ''
-  form.site_name = ''
-  form.site_ids = []
-  form.site_names = []
-  form.accelerator_id = ''
-  form.listener_id = ''
-  zoneOptions.value = []
   // 切换厂商后按新厂商 + 服务带出默认 region，避免残留旧厂商的 region。
   form.region = defaultRegionFor(form.provider_type, form.deploy_service)
 }
@@ -304,8 +244,6 @@ async function loadEditTarget() {
       return
     }
     const cf = target.config
-    const doms = cf?.domains || []
-    domainOptions.value = doms.map((d) => ({ label: d, value: d }))
     form.name = target.name
     form.provider_type = target.provider_type
     form.deploy_service = target.deploy_service
@@ -314,41 +252,9 @@ async function loadEditTarget() {
     form.deploy_credential_id = target.deploy_credential_id
     form.access_key = ''
     form.secret_key = ''
+    // 部署目标不再记录站点/域名/证书名称，仅回显区域（部署参数）。
+    // 站点/域名与证书在部署与核对时按凭证实时拉取，见 DeployTargetDetail。
     form.region = cf?.region || cf?.region_id || ''
-    form.domains = doms
-    form.cert_name = cf?.cert_name || ''
-    form.zone_id = cf?.zone_id || ''
-    form.zone_name = cf?.zone_name || ''
-    // ESA 的 site_id/site_name 存为标量字符串（面板类为数组），统一兼容两种形态，
-    // 避免用 ?.[0] 把字符串当成数组取下标（会把 "1037..." 截断成 "1"）。
-    form.site_id = Array.isArray(cf?.site_id) ? cf.site_id[0] : cf?.site_id || ''
-    form.site_name = Array.isArray(cf?.site_name) ? cf.site_name[0] : cf?.site_name || ''
-    form.accelerator_id = cf?.accelerator_id || ''
-    form.listener_id = cf?.listener_id || ''
-    // EdgeOne / ESA 站点下拉复用 zoneOptions：编辑回填时先放入已存 Id + 名称作为占位，
-    // 待用户点"获取站点"后再替换为真实列表，避免下拉无显示且能直接看到站点名。
-    if (form.deploy_service === 'edgeone' && form.zone_id) {
-      zoneOptions.value = [{ label: form.zone_name || form.zone_id, value: form.zone_id }]
-    }
-    if (form.deploy_service === 'esa' && form.site_id) {
-      zoneOptions.value = [{ label: form.site_name || form.site_id, value: form.site_id }]
-    }
-    // 面板/防火墙：编辑回显站点（点"获取网站"可刷新为完整列表）。
-    // 多选站点以数组存于 site_id / site_name，直接回填 site_ids / site_names。
-    if (
-      isPanelProvider(form.provider_type) &&
-      form.deploy_service === 'site' &&
-      cf?.site_id?.length
-    ) {
-      const ids = cf.site_id || []
-      const names = cf.site_name || []
-      form.site_ids = ids
-      form.site_names = names
-      zoneOptions.value = ids.map((id, i) => ({
-        label: names[i] || id,
-        value: id,
-      }))
-    }
     form.comment = target.comment || ''
   } catch (e: any) {
     showMessage(t('deploy.loadFailed') + ': ' + (e?.message || String(e)), 'error')
@@ -364,142 +270,9 @@ function buildConfig(): Record<string, any> {
   } else if (!isPanelProvider(form.provider_type)) {
     cfg.region = form.region
   }
-  if (form.domains.length) cfg.domains = form.domains
-  if (form.cert_name) cfg.cert_name = form.cert_name
-  if (form.deploy_service === 'edgeone' && form.zone_id) {
-    cfg.zone_id = form.zone_id
-    if (form.zone_name) cfg.zone_name = form.zone_name
-  }
-  if (form.deploy_service === 'esa' && form.site_id) {
-    // 后端 schema.DeployTargetConfig.SiteID 为 []string（与面板类一致），ESA 单站点也须用数组形态存储，
-    // 否则 API 反序列化会因 string→[]string 不匹配报错。
-    cfg.site_id = [form.site_id]
-    if (form.site_name) cfg.site_name = [form.site_name]
-  }
-  if (form.deploy_service === 'ga') {
-    if (form.accelerator_id) cfg.accelerator_id = form.accelerator_id
-    if (form.listener_id) cfg.listener_id = form.listener_id
-  }
-  if (isPanelProvider(form.provider_type) && form.site_ids.length) {
-    cfg.site_id = form.site_ids
-    cfg.site_name = form.site_names
-  }
+  // 部署目标不再落库站点/域名/zone/加速器、也不记录证书名称等标识，
+  // 部署与核对时按凭证实时拉取真实列表（证书名由后端按域名+指纹自动生成）。
   return cfg
-}
-
-// fetchDomains 调用云接口获取该账号下的可部署域名，用于下拉选择。
-// - cdn：拉取 CDN 加速域名
-// - edgeone：需在选好 ZoneId 后，按站点拉取 EdgeOne 加速域名（hosts），zone_id 通过 config 传入
-async function fetchDomains() {
-  fetchingDomains.value = true
-  try {
-    const cfg: Record<string, string> = {}
-    if (form.provider_type === 'aliyun') cfg.region_id = form.region
-    else cfg.region = form.region
-    if (form.deploy_service === 'edgeone' && form.zone_id) cfg.zone_id = form.zone_id
-    if (form.deploy_service === 'esa' && form.site_id) cfg.site_id = form.site_id
-    const list = await DeployService.FetchCDNDomains({
-      provider_type: form.provider_type,
-      deploy_service: form.deploy_service,
-      credential_source: form.credential_source,
-      dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
-      deploy_credential_id:
-        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
-      region: form.region,
-      config: cfg,
-    })
-    if (!list || list.length === 0) {
-      // 百度云 CDN 与全站加速（DRCDN）域名共用同一列表但类型不同：选了 CDN 服务却拉不到域名，
-      // 极可能是域名实为 DRCDN 类型。给出针对性提示，引导用户切换部署服务。
-      if (form.provider_type === 'baiducloud' && form.deploy_service === 'cdn') {
-        showMessage(t('deploy.baidu.cdnNoDomainsHint'), 'warning')
-      } else {
-        showMessage(t('deploy.noDomains'), 'warning')
-      }
-    } else {
-      domainOptions.value = list.map((d) => ({ label: d, value: d }))
-      showMessage(t('deploy.fetchDomains') + ': ' + list.length, 'success')
-    }
-  } catch (e: any) {
-    showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
-  } finally {
-    fetchingDomains.value = false
-  }
-}
-
-// fetchZones 拉取站点列表（EdgeOne 站点 / ESA 站点），结果形如 "站点名||ID"，
-// 按 "||" 拆分后填充站点下拉，避免用户手填 ZoneId / SiteId。
-// 不传站点 ID（zone_id/site_id）时，后端返回站点列表。
-async function fetchZones() {
-  fetchingZones.value = true
-  try {
-    const cfg: Record<string, string> = {}
-    if (form.provider_type === 'aliyun') cfg.region_id = form.region
-    else cfg.region = form.region
-    const list = await DeployService.FetchCDNDomains({
-      provider_type: form.provider_type,
-      deploy_service: form.deploy_service,
-      credential_source: form.credential_source,
-      dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
-      deploy_credential_id:
-        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
-      region: form.region,
-      config: cfg,
-    })
-    if (!list || list.length === 0) {
-      showMessage(t('deploy.noZones'), 'warning')
-    } else {
-      zoneOptions.value = list.map((z) => {
-        const idx = z.indexOf('||')
-        const id = idx >= 0 ? z.slice(idx + 2) : z
-        const name = idx >= 0 ? z.slice(0, idx) : z
-        return { label: name || id, value: id }
-      })
-      showMessage(t('deploy.fetchZones') + ': ' + list.length, 'success')
-    }
-  } catch (e: any) {
-    showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
-  } finally {
-    fetchingZones.value = false
-  }
-}
-
-// fetchSites 拉取面板/防火墙网站列表（如宝塔 /data?action=getData&table=sites），
-// 结果形如 "域名||站点ID"，按 "||" 拆分后填充站点下拉，避免用户手填 site_id。
-// 不传站点 ID（site_id）时，后端返回网站列表。
-async function fetchSites() {
-  if (!form.deploy_credential_id) {
-    showMessage(t('deploy.credentialRequired'), 'warning')
-    return
-  }
-  fetchingZones.value = true
-  try {
-    const list = await DeployService.FetchCDNDomains({
-      provider_type: form.provider_type,
-      deploy_service: form.deploy_service,
-      credential_source: form.credential_source,
-      dns_provider_id: form.credential_source === 'dns_provider' ? form.dns_provider_id : null,
-      deploy_credential_id:
-        form.credential_source === 'deploy_credential' ? form.deploy_credential_id : null,
-      region: form.region,
-      config: {},
-    })
-    if (!list || list.length === 0) {
-      showMessage(t('deploy.noSites'), 'warning')
-    } else {
-      zoneOptions.value = list.map((z) => {
-        const idx = z.indexOf('||')
-        const id = idx >= 0 ? z.slice(idx + 2) : z
-        const name = idx >= 0 ? z.slice(0, idx) : z
-        return { label: name || id, value: id }
-      })
-      showMessage(t('deploy.fetchSites') + ': ' + list.length, 'success')
-    }
-  } catch (e: any) {
-    showMessage(t('deploy.operationFailed') + ': ' + (e?.message || String(e)), 'error')
-  } finally {
-    fetchingZones.value = false
-  }
 }
 
 async function save() {
@@ -577,7 +350,6 @@ onUnmounted(() => {
           <n-steps :current="currentStep" :status="'process'">
             <n-step :title="t('deploy.step.basic')" />
             <n-step :title="t('deploy.step.credential')" />
-            <n-step :title="t('deploy.step.target')" />
             <n-step :title="t('deploy.step.confirm')" />
           </n-steps>
         </n-card>
@@ -662,167 +434,7 @@ onUnmounted(() => {
               </n-form-item>
             </template>
 
-            <!-- 步骤 3：部署目标 -->
-            <template v-else-if="currentStep === 3">
-              <n-form-item
-                v-if="form.deploy_service === 'edgeone'"
-                :label="t('deploy.config.zoneId')"
-              >
-                <div class="w-full">
-                  <n-space :size="8" class="mb-2">
-                    <n-button size="small" :loading="fetchingZones" @click="fetchZones">
-                      {{ fetchingZones ? t('deploy.fetchingZones') : t('deploy.fetchZones') }}
-                    </n-button>
-                  </n-space>
-                  <n-select
-                    v-model:value="form.zone_id"
-                    :options="zoneOptions"
-                    filterable
-                    clearable
-                    @update:value="onZoneChange"
-                    :placeholder="t('deploy.config.zoneIdHint')"
-                  />
-                </div>
-              </n-form-item>
-              <n-form-item v-if="form.deploy_service === 'esa'" :label="t('deploy.config.siteId')">
-                <div class="w-full">
-                  <n-space :size="8" class="mb-2">
-                    <n-button
-                      size="small"
-                      :loading="fetchingZones"
-                      :disabled="!form.region"
-                      @click="fetchZones"
-                    >
-                      {{ fetchingZones ? t('deploy.fetchingZones') : t('deploy.fetchESASites') }}
-                    </n-button>
-                    <span v-if="!form.region" class="text-sm text-gray-400">
-                      {{ t('deploy.needRegionFirst') }}
-                    </span>
-                  </n-space>
-                  <n-select
-                    v-model:value="form.site_id"
-                    :options="zoneOptions"
-                    filterable
-                    clearable
-                    @update:value="onSiteChange"
-                    :placeholder="t('deploy.config.siteIdHint')"
-                  />
-                </div>
-              </n-form-item>
-              <n-form-item
-                v-if="isPanelProvider(form.provider_type) && form.deploy_service === 'site'"
-                :label="t('deploy.config.panelSiteId')"
-              >
-                <div class="w-full">
-                  <n-space :size="8" class="mb-2">
-                    <n-button
-                      size="small"
-                      :loading="fetchingZones"
-                      :disabled="!form.deploy_credential_id"
-                      @click="fetchSites"
-                    >
-                      {{ fetchingZones ? t('deploy.fetchingZones') : t('deploy.fetchSites') }}
-                    </n-button>
-                  </n-space>
-                  <n-select
-                    v-model:value="form.site_ids"
-                    :options="zoneOptions"
-                    multiple
-                    filterable
-                    clearable
-                    @update:value="onSitesChange"
-                    :placeholder="t('deploy.config.panelSiteIdHint')"
-                  />
-                </div>
-              </n-form-item>
-              <n-form-item
-                v-if="form.deploy_service === 'ga'"
-                :label="t('deploy.config.acceleratorId')"
-              >
-                <n-input
-                  v-model:value="form.accelerator_id"
-                  :placeholder="t('deploy.config.acceleratorIdHint')"
-                />
-              </n-form-item>
-              <n-form-item
-                v-if="form.deploy_service === 'ga'"
-                :label="t('deploy.config.listenerId')"
-              >
-                <n-input
-                  v-model:value="form.listener_id"
-                  :placeholder="t('deploy.config.listenerIdHint')"
-                />
-              </n-form-item>
-              <n-form-item v-if="domainStepVisible" :label="t('deploy.domains')">
-                <div class="w-full">
-                  <n-space
-                    v-if="
-                      form.deploy_service === 'cdn' ||
-                      form.deploy_service === 'dcdn' ||
-                      form.deploy_service === 'drcdn' ||
-                      form.deploy_service === 'edgeone' ||
-                      form.deploy_service === 'ecdn' ||
-                      form.deploy_service === 'esa' ||
-                      form.deploy_service === 'ctcdn' ||
-                      form.deploy_service === 'icdn' ||
-                      form.deploy_service === 'accessone'
-                    "
-                    :size="8"
-                    class="mb-2"
-                  >
-                    <n-button
-                      size="small"
-                      :loading="fetchingDomains"
-                      :disabled="
-                        (form.deploy_service === 'edgeone' && !form.zone_id) ||
-                        (form.deploy_service === 'esa' && (!form.site_id || !form.region))
-                      "
-                      @click="fetchDomains"
-                    >
-                      {{ fetchingDomains ? t('deploy.fetchingDomains') : t('deploy.fetchDomains') }}
-                    </n-button>
-                    <span
-                      v-if="
-                        (form.deploy_service === 'edgeone' && !form.zone_id) ||
-                        (form.deploy_service === 'esa' && !form.site_id)
-                      "
-                      class="text-sm text-gray-400"
-                    >
-                      {{ t('deploy.needZoneFirst') }}
-                    </span>
-                    <span
-                      v-if="form.deploy_service === 'esa' && form.site_id && !form.region"
-                      class="text-sm text-gray-400"
-                    >
-                      {{ t('deploy.needRegionFirst') }}
-                    </span>
-                  </n-space>
-                  <n-select
-                    v-model:value="form.domains"
-                    :options="domainOptions"
-                    multiple
-                    filterable
-                    :tag="
-                      form.deploy_service === 'edgeone' ||
-                      form.deploy_service === 'dcdn' ||
-                      form.deploy_service === 'drcdn' ||
-                      form.deploy_service === 'ctcdn' ||
-                      form.deploy_service === 'icdn' ||
-                      form.deploy_service === 'accessone'
-                    "
-                    :placeholder="t('deploy.selectDomain')"
-                  />
-                </div>
-              </n-form-item>
-              <n-form-item :label="t('deploy.config.certName')">
-                <n-input
-                  v-model:value="form.cert_name"
-                  :placeholder="t('deploy.config.certNameHint')"
-                />
-              </n-form-item>
-            </template>
-
-            <!-- 步骤 4：确认 -->
+            <!-- 步骤 3：确认（站点/域名/证书名称均不在表单记录，部署时按凭证实时拉取） -->
             <template v-else>
               <n-descriptions :column="1" bordered size="small" label-placement="left">
                 <n-descriptions-item :label="t('deploy.name')">{{ form.name }}</n-descriptions-item>
@@ -843,34 +455,6 @@ onUnmounted(() => {
                 <n-descriptions-item v-if="form.region" :label="t('deploy.config.region')">{{
                   form.region
                 }}</n-descriptions-item>
-                <n-descriptions-item v-if="form.zone_id" :label="t('deploy.config.zoneId')">{{
-                  form.zone_name || form.zone_id
-                }}</n-descriptions-item>
-                <n-descriptions-item
-                  v-if="form.site_id"
-                  :label="
-                    isPanelProvider(form.provider_type)
-                      ? t('deploy.config.panelSiteId')
-                      : t('deploy.config.siteId')
-                  "
-                  >{{ form.site_name || form.site_id }}</n-descriptions-item
-                >
-                <n-descriptions-item
-                  v-if="form.accelerator_id"
-                  :label="t('deploy.config.acceleratorId')"
-                  >{{ form.accelerator_id }}</n-descriptions-item
-                >
-                <n-descriptions-item
-                  v-if="form.listener_id"
-                  :label="t('deploy.config.listenerId')"
-                  >{{ form.listener_id }}</n-descriptions-item
-                >
-                <n-descriptions-item :label="t('deploy.domains')">{{
-                  form.domains.join(', ') || '-'
-                }}</n-descriptions-item>
-                <n-descriptions-item :label="t('deploy.config.certName')">{{
-                  form.cert_name || '-'
-                }}</n-descriptions-item>
               </n-descriptions>
               <n-form-item :label="t('deploy.comment')" class="mt-4">
                 <n-input v-model:value="form.comment" type="textarea" />
@@ -884,6 +468,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 步骤条：naive-ui 默认每个 n-step 为 flex:1，末步 splitor 被隐藏，
+   导致末步只占其槽位左侧、右侧残留空白（看着像被删步骤留下的空位）。
+   让末步按内容宽度收缩并贴右，便均分整行、无残留空位。 */
+:deep(.n-steps .n-step:last-child) {
+  flex: 0 0 auto;
+}
 .brandcard {
   cursor: pointer;
   border: 1px solid var(--border-color, rgba(128, 128, 128, 0.25));

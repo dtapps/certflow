@@ -322,6 +322,7 @@
   "deploy.clearSelection": "清空",
   "deploy.close": "关闭",
   "deploy.cloudCertId": "云证书 ID",
+  "deploy.cloudCertNotFetched": "尚未获取云端当前证书，请点击「刷新云端证书」",
   "deploy.cloudCertUnsupported": "该厂商暂不支持查询当前证书",
   "deploy.collapse": "收起",
   "deploy.comment": "备注",
