@@ -257,6 +257,7 @@
   "common.enableTitle": "Enable",
   "common.enabled": "Enabled",
   "common.enabledSuccess": "Enabled",
+  "common.expiredDays": "Expired {count} days ago",
   "common.intervalDays": "{count} days",
   "common.intervalHours": "{count}h",
   "common.intervalMinutes": "{count}m",

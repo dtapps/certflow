@@ -256,6 +256,7 @@
   "common.dashboard": "Dashboard",
   "common.days": "days",
   "common.daysLeft": "Days Left",
+  "common.expiredDays": "Expired {count} days ago",
   "common.intervalSeconds": "{count}s",
   "common.intervalMinutes": "{count}m",
   "common.intervalHours": "{count}h",

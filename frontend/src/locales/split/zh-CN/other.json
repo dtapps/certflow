@@ -256,6 +256,7 @@
   "common.dashboard": "仪表板",
   "common.days": "天",
   "common.daysLeft": "剩余天数",
+  "common.expiredDays": "已过期 {count} 天",
   "common.intervalSeconds": "{count} 秒",
   "common.intervalMinutes": "{count} 分钟",
   "common.intervalHours": "{count} 小时",

@@ -150,6 +150,7 @@
   "log.dns_provider_using": "使用自动 DNS 提供商: {{.Name}}",
   "log.renew_dns_provider_none": "证书未关联 DNS 提供商: cert_id={{.ID}}",
   "log.manual_dns_mode": "使用手动 DNS 模式",
+  "log.manual_dns_auto_renew_disabled": "手动 DNS 证书不支持自动续期，已强制关闭: domain={{.Domain}}",
   "log.cert_record_created": "证书记录已创建: cert_id={{.ID}}, domain={{.Domain}}",
   "log.cert_record_create_failed": "创建证书记录失败: {{.Error}}",
   "log.cert_record_updated": "证书记录已更新: cert_id={{.ID}}, status={{.Status}}",

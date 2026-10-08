@@ -284,6 +284,14 @@ func (s *CertificateService) StartManualDNSChallenge(ctx context.Context, req Ce
 	}
 	logging.Debug(i18n.T("log.dns_challenge_ready", "Records", info.Records))
 
+	// 手动 DNS 需人工添加 TXT 记录，无法自动续期；创建时若传入了自动续期，强制关闭
+	if req.DNSProviderID == nil || *req.DNSProviderID == 0 {
+		if req.AutoRenew {
+			logging.Debug(i18n.T("log.manual_dns_auto_renew_disabled", "Domain", req.Domain))
+		}
+		req.AutoRenew = false
+	}
+
 	// 先创建数据库记录，状态为 pending，同时保存 TXT 挑战信息
 	challengeRecords := make([]schema.TXTRecord, len(info.Records))
 	for i, r := range info.Records {

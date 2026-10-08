@@ -257,6 +257,7 @@
   "common.enableTitle": "启用",
   "common.enabled": "已启用",
   "common.enabledSuccess": "已启用",
+  "common.expiredDays": "已过期 {count} 天",
   "common.intervalDays": "{count} 天",
   "common.intervalHours": "{count} 小时",
   "common.intervalMinutes": "{count} 分钟",

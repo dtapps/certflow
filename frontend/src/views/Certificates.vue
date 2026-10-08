@@ -114,6 +114,8 @@ const handleRetry = (cert: CertificateListItem) => {
 }
 
 const toggleAutoRenew = async (cert: CertificateListItem, val: boolean) => {
+  // 手动 DNS 证书不支持自动续期，开关应处于禁用态，这里再做一次防御性拦截
+  if (cert.dns_provider_name === '') return
   if (switchingId.value !== null) return
   switchingId.value = cert.id
   const prev = cert.auto_renew
@@ -211,6 +213,12 @@ const columns: DataTableColumns<CertificateListItem> = [
         }),
       )
       if (days === null) return h('span', { class: 'opacity-50' }, '—')
+      if (days < 0)
+        return h(
+          'span',
+          { class: 'font-medium text-red-500' },
+          t('common.expiredDays').replace('{count}', String(-days)),
+        )
       return h('span', { class: `font-medium ${getDaysLeftClass(days)}` }, String(days))
     },
   },
@@ -225,6 +233,8 @@ const columns: DataTableColumns<CertificateListItem> = [
             value: row.auto_renew,
             size: 'small',
             loading: switchingId.value === row.id,
+            disabled: row.dns_provider_name === '',
+            title: row.dns_provider_name === '' ? t('apply.manualNoAutoRenew') : undefined,
             'onUpdate:value': (val: boolean) => toggleAutoRenew(row, val),
           }),
         ]),

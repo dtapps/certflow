@@ -150,6 +150,7 @@
   "log.dns_provider_using": "Using auto DNS provider: {{.Name}}",
   "log.renew_dns_provider_none": "Certificate has no associated DNS provider: cert_id={{.ID}}",
   "log.manual_dns_mode": "Using manual DNS mode",
+  "log.manual_dns_auto_renew_disabled": "Manual DNS certificate does not support auto-renewal, forced off: domain={{.Domain}}",
   "log.cert_record_created": "Certificate record created: cert_id={{.ID}}, domain={{.Domain}}",
   "log.cert_record_create_failed": "Failed to create certificate record: {{.Error}}",
   "log.cert_record_updated": "Certificate record updated: cert_id={{.ID}}, status={{.Status}}",

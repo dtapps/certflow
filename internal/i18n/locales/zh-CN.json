@@ -524,6 +524,7 @@
   "log.main_window_nil": "主窗口引用为空",
   "log.manual_dns_already_completing": "手动 DNS 挑战正在完成中，忽略重复调用: domain={{.Domain}}",
   "log.manual_dns_append_record": "追加 DNS 记录: 已有{{.Count}}条, 新FQDN={{.NewFQDN}}",
+  "log.manual_dns_auto_renew_disabled": "手动 DNS 证书不支持自动续期，已强制关闭: domain={{.Domain}}",
   "log.manual_dns_cert_apply_success": "手动 DNS 证书申请成功: domain={{.Domain}}, issuer={{.Issuer}}, not_after={{.NotAfter}}",
   "log.manual_dns_challenge_complete": "完成手动 DNS 挑战: domain={{.Domain}}",
   "log.manual_dns_challenge_created": "手动 DNS 挑战已创建: domain={{.Domain}}, cert_id={{.ID}}, records={{.Records}}",

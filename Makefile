@@ -113,7 +113,7 @@ format-markdown:
 format-shell:
 	@echo "[Format] 格式化脚本 (Shell)…"
 	@command -v shfmt >/dev/null 2>&1 && { \
-		shfmt -w -i 2 -ci -bn -s -ln bash scripts/ pkg/swiftbridge/scripts/ ; \
+		shfmt -w -i 2 -ci -bn -s -ln bash scripts/ ; \
 		echo "[Format] Shell 格式化完成（shfmt）。" ; \
 	} || { \
 		echo "⚠️  shfmt 未安装，跳过 Shell 格式化。"; \

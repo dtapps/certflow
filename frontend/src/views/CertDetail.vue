@@ -298,7 +298,11 @@ const loadCertDetails = async () => {
             class="text-2xl font-bold mt-1"
             :class="getDaysLeftClass(daysLeft)"
           >
-            {{ daysLeft }}
+            {{
+              daysLeft < 0
+                ? t('common.expiredDays').replace('{count}', String(-daysLeft))
+                : daysLeft
+            }}
           </p>
           <p v-else class="text-2xl font-bold mt-1 opacity-50">--</p>
         </n-card>

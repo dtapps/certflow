@@ -208,7 +208,9 @@ const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info
                   {{
                     cert.daysLeft === null
                       ? '—'
-                      : t('dashboard.daysLeft').replace('{count}', String(cert.daysLeft))
+                      : cert.daysLeft < 0
+                        ? t('common.expiredDays').replace('{count}', String(-cert.daysLeft))
+                        : t('dashboard.daysLeft').replace('{count}', String(cert.daysLeft))
                   }}
                 </n-tag>
               </div>

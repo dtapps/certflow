@@ -511,6 +511,7 @@ func (s *CertificateService) ListExpiring(ctx context.Context, days int) ([]*ent
 	threshold := time.Now().AddDate(0, 0, days)
 	results, err := s.db.Certificate.Query().
 		Where(certificate.NotAfterLTE(threshold)).
+		Where(certificate.NotAfterGT(time.Now())).
 		Where(certificate.StatusEQ(certificate.StatusActive)).
 		All(ctx)
 	if err != nil {
