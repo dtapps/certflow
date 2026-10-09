@@ -2,8 +2,10 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { darkTheme, lightTheme } from 'naive-ui'
 import type { GlobalThemeOverrides } from 'naive-ui'
+import { Events } from '@wailsio/runtime'
 import * as SystemService from '@bindings/cnb.cool/dtapp/certflow/systemservicewrapper'
 import { useI18nStore } from './i18n'
+import { EventThemeChanged, type ThemeChangedPayload } from '../utils/events'
 
 export type ThemeMode = 'dark' | 'light' | 'auto'
 
@@ -73,6 +75,13 @@ export const useThemeStore = defineStore('theme', () => {
     if (e.key === STORAGE_KEY && e.newValue) {
       theme.value = e.newValue as ThemeMode
     }
+  })
+
+  // 订阅后端转发的系统主题变化事件：Go 端监听 wails events.Common.ThemeChanged
+  // 后通过 EventThemeChanged 通知前端。系统切换深/浅色时实时更新 systemDark，
+  // 使"自动"模式跟随系统变化，而非仅在初始化时读取一次。
+  Events.On(EventThemeChanged, (ev: { data: ThemeChangedPayload }) => {
+    systemDark.value = ev.data.dark
   })
 
   // 初始化

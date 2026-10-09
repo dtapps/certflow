@@ -30,7 +30,7 @@ on:
         type: boolean
         default: false
       nsis_version:
-        description: 'NSIS 版本号（例如 3.12，留空用默认 3.12）'
+        description: 'NSIS 版本号（例如 3.13，留空用默认 3.13）'
         required: false
         type: string
 
@@ -87,8 +87,9 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
       CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
-      # NSIS 官方便携版版本号：引用 input，留空兜底默认 3.12；脚本只读此 env，单一真值来源。
-      NSIS_VERSION: ${{ inputs.nsis_version || '3.12' }}
+      # NSIS 官方便携版版本号：引用 input，留空兜底默认 3.13；脚本只读此 env，单一真值来源。
+      # https://nsis.sourceforge.io/Download
+      NSIS_VERSION: ${{ inputs.nsis_version || '3.13' }}
       # Windows Authenticode 签名所需的证书（未配置对应 secret 时签名步骤自动跳过）
       SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
       SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
@@ -429,7 +430,7 @@ jobs:
           echo "BUILD_ARGS=$BUILD_ARGS"
 
       # 构建和打包（BUILD_TIME 由上面的步骤统一生成，确保打印和实际使用一致）
-      # - name: 构建（go-task / {{ matrix.goos }}）
+      # - name: 构建（go-task / ${{ matrix.goos }}）
       #   shell: bash
       #   env:
       #     GOPATH: ${{ env.GO_PATH_DIR }}
@@ -437,7 +438,7 @@ jobs:
       #   run: |
       #     wails3 task ${{ matrix.goos }}:build ARCH=${{ matrix.goarch }} $BUILD_ARGS
 
-      - name: 打包（go-task / {{ matrix.goos }}）
+      - name: 打包（go-task / ${{ matrix.goos }}）
         shell: bash
         env:
           GOPATH: ${{ env.GO_PATH_DIR }}

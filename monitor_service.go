@@ -93,13 +93,15 @@ func (s *MonitorServiceWrapper) ListHistory(id int, days int) ([]*monitor.Monito
 	return items, err
 }
 
-// ServiceStartup 实现 Wails 服务接口
+// ServiceStartup 实现 Wails 服务接口：随应用启动后台监控循环
 func (s *MonitorServiceWrapper) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	s.monitorService.Start()
 	return nil
 }
 
-// ServiceShutdown 实现 Wails 服务接口
+// ServiceShutdown 实现 Wails 服务接口：随应用关闭停止后台监控循环
 func (s *MonitorServiceWrapper) ServiceShutdown() error {
+	s.monitorService.Stop()
 	return nil
 }
 
