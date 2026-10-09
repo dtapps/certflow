@@ -37,10 +37,29 @@ func (s *SysTrayService) setMainWindow(window application.Window) {
 	s.mainWindow = window
 }
 
-// Init 初始化系统托盘
-func (s *SysTrayService) Init() {
-	if s.app == nil || s.mainWindow == nil {
+// ShowWindow 显示窗口
+func (s *SysTrayService) ShowWindow() {
+	if s.mainWindow == nil {
 		return
+	}
+	s.mainWindow.Show()
+	s.mainWindow.Focus()
+}
+
+// HideWindow 隐藏窗口
+func (s *SysTrayService) HideWindow() {
+	if s.mainWindow == nil {
+		return
+	}
+	s.mainWindow.Hide()
+}
+
+// ServiceStartup 实现 Wails 服务接口：按 v3 生命周期最佳实践，将托盘初始化
+// （创建托盘、图标、右键菜单、窗口关闭隐藏到托盘的钩子）放进启动阶段，
+// 而不再于 main.go 手动调用 Init()。app 与 mainWindow 在 Run 前已注入，此处必然就绪。
+func (s *SysTrayService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	if s.app == nil || s.mainWindow == nil {
+		return nil
 	}
 
 	// 创建系统托盘
@@ -87,7 +106,6 @@ func (s *SysTrayService) Init() {
 		OnClick(func(ctx *application.Context) {
 			// 显示窗口
 			s.ShowWindow()
-			// 通知前端导航到申请证书页面
 			if ok := s.app.Event.Emit(events.EventNavigate, events.NavigatePayload{
 				Path: "/certificates/apply",
 			}); !ok {
@@ -125,27 +143,6 @@ func (s *SysTrayService) Init() {
 		s.mainWindow.Hide()
 		e.Cancel()
 	})
-}
-
-// ShowWindow 显示窗口
-func (s *SysTrayService) ShowWindow() {
-	if s.mainWindow == nil {
-		return
-	}
-	s.mainWindow.Show()
-	s.mainWindow.Focus()
-}
-
-// HideWindow 隐藏窗口
-func (s *SysTrayService) HideWindow() {
-	if s.mainWindow == nil {
-		return
-	}
-	s.mainWindow.Hide()
-}
-
-// ServiceStartup 实现 Wails 服务接口
-func (s *SysTrayService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil
 }
 

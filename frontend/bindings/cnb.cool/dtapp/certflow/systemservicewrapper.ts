@@ -15,6 +15,16 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
+ * GetEnvironmentInfo 获取系统环境信息（OS/Arch/Debug/OSInfo/PlatformInfo）。
+ * 按 Wails v3 官方最佳实践缓存到 envInfo：首次调用 app.Env.Info() 并缓存，
+ * 之后直接返回，因为环境信息在运行时极少发生变化（避免每次 RPC 都重算）。
+ * 若 app 尚未初始化则返回零值。
+ */
+export function GetEnvironmentInfo(): $CancellablePromise<application$0.EnvironmentInfo> {
+    return $Call.ByID(1535997196);
+}
+
+/**
  * GetVersion 获取应用版本号
  */
 export function GetVersion(): $CancellablePromise<string> {

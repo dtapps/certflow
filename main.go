@@ -270,7 +270,6 @@ func main() {
 	systraySvc.SetApp(app)
 	dockSvc.SetApp(app)
 	dataSvc.SetApp(app)
-	dockSvc.SetApp(app)
 	autostartSvc.SetApp(app)
 	// 业务服务包装器：注入 app 以使用应用生命周期 context（替代 context.Background()）
 	caSvc.SetApp(app)
@@ -388,9 +387,8 @@ func main() {
 		})
 	})
 
-	// 初始化系统托盘
+	// 注入主窗口引用；系统托盘的创建与菜单初始化已移入 SysTrayService.ServiceStartup（随应用生命周期启动）
 	systraySvc.setMainWindow(mainWindow)
-	systraySvc.Init()
 
 	// 设置系统服务的主窗口引用
 	systemSvc.setMainWindow(mainWindow)
@@ -469,10 +467,6 @@ func main() {
 		})
 	app.Menu.SetApplicationMenu(appMenu)
 
-	// 启动域名监控后台任务
-	monitorService.Start()
-	defer monitorService.Stop()
-
 	// 启动定时任务调度器
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -503,10 +497,13 @@ func main() {
 	})
 
 	// 监听系统主题变化，通知前端
+	// 注意：Wails v3 的 Event.Emit 返回值是「事件是否被取消(cancelled)」，
+	// 而非「是否发送成功」；事件会无条件经 frontendEvents 发往前端。
+	// 故仅当 ok==true（被取消，即未能送达）时才告警，正常送达时 ok==false，不应告警。
 	app.Event.OnApplicationEvent(wailsEvents.Common.ThemeChanged, func(event *application.ApplicationEvent) {
 		if ok := app.Event.Emit(events.EventThemeChanged, events.ThemeChangedPayload{
 			Dark: app.Env.IsDarkMode(),
-		}); !ok {
+		}); ok {
 			logging.Warn("%s", i18n.T("error.theme_notify_failed"))
 		}
 	})

@@ -1,16 +1,16 @@
 {
-  "notification.cert_applied": "Applied",
-  "notification.cert_expiring": "Expiring",
-  "notification.cert_failed": "Failed",
-  "notification.cert_renewed": "Renewed",
-  "notification.cert_revoked": "Revoked",
   "notification.category.cert": "Certificate",
   "notification.category.deploy": "Deployment",
   "notification.category.dns": "DNS",
   "notification.category.monitor": "Monitor",
   "notification.category.system": "System",
-  "notification.level.success": "Success",
+  "notification.cert_applied": "Applied",
+  "notification.cert_expiring": "Expiring",
+  "notification.cert_failed": "Failed",
+  "notification.cert_renewed": "Renewed",
+  "notification.cert_revoked": "Revoked",
   "notification.level.error": "Error",
-  "notification.level.warning": "Warning",
-  "notification.level.info": "Info"
+  "notification.level.info": "Info",
+  "notification.level.success": "Success",
+  "notification.level.warning": "Warning"
 }
