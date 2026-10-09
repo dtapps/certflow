@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as operatingsystem$0 from "../../internal/operatingsystem/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as updater$0 from "../updater/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -72,6 +75,23 @@ export interface ContextMenuManager {
  * DialogManager manages dialog-related operations
  */
 export interface DialogManager {
+}
+
+/**
+ * EnvironmentInfo represents information about the current environment.
+ * 
+ * Fields:
+ * - OS: the operating system that the program is running on.
+ * - Arch: the architecture of the operating system.
+ * - Debug: indicates whether debug mode is enabled.
+ * - OSInfo: information about the operating system.
+ */
+export interface EnvironmentInfo {
+    "OS": string;
+    "Arch": string;
+    "Debug": boolean;
+    "OSInfo": operatingsystem$0.OS | null;
+    "PlatformInfo": { [_ in string]?: any } | null;
 }
 
 /**

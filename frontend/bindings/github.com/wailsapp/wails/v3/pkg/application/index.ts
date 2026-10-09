@@ -8,6 +8,7 @@ export type {
     ClipboardManager,
     ContextMenuManager,
     DialogManager,
+    EnvironmentInfo,
     EnvironmentManager,
     EventManager,
     GlobalShortcutManager,

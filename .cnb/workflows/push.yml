@@ -9,11 +9,8 @@
         volumes:
           - /root/.cache/go-build:copy-on-write # Go 构建缓存 - 加速编译
           - /root/.local/share/pnpm/store:copy-on-write # pnpm 全局存储 - 加速前端依赖安装
-          - /go:copy-on-write # 缓存整个 GOPATH（包含 mod、bin 等）
+          - /go/pkg/mod:copy-on-write # 仅缓存 Go 模块下载，避免覆盖镜像内预装的 /go/bin 工具
       stages:
-        - name: 安装必要的工具
-          script: make tool-deps
-
         - name: 安装所有依赖
           script: make deps
 

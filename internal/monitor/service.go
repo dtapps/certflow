@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/ent"
@@ -26,6 +27,7 @@ import (
 type MonitorService struct {
 	db               *ent.Client
 	stopChan         chan struct{}
+	stopOnce         sync.Once
 	settingsProvider func() settings.Settings
 	notifService     interface {
 		SendNotification(opts notification.NotificationOption) error
@@ -481,10 +483,12 @@ func (s *MonitorService) Start() {
 	go s.monitorLoop()
 }
 
-// Stop 停止后台监控
+// Stop 停止后台监控。幂等：重复调用安全（如 updater 提前清理与 ServiceShutdown 各调一次）。
 func (s *MonitorService) Stop() {
 	logging.Info(i18n.T("log.monitor_stopped"))
-	close(s.stopChan)
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
 }
 
 func (s *MonitorService) monitorLoop() {

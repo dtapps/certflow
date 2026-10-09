@@ -14,6 +14,8 @@ import (
 type SystemServiceWrapper struct {
 	app        *application.App
 	mainWindow application.Window
+	// envInfo 缓存环境信息（运行期极少变化），避免每次 RPC 重算 EnvironmentInfo。
+	envInfo *application.EnvironmentInfo
 }
 
 // NewSystemServiceWrapper 创建系统服务
@@ -37,6 +39,21 @@ func (s *SystemServiceWrapper) IsDarkMode() bool {
 		return false
 	}
 	return s.app.Env.IsDarkMode()
+}
+
+// GetEnvironmentInfo 获取系统环境信息（OS/Arch/Debug/OSInfo/PlatformInfo）。
+// 按 Wails v3 官方最佳实践缓存到 envInfo：首次调用 app.Env.Info() 并缓存，
+// 之后直接返回，因为环境信息在运行时极少发生变化（避免每次 RPC 都重算）。
+// 若 app 尚未初始化则返回零值。
+func (s *SystemServiceWrapper) GetEnvironmentInfo() application.EnvironmentInfo {
+	if s.envInfo == nil {
+		if s.app == nil {
+			return application.EnvironmentInfo{}
+		}
+		info := s.app.Env.Info()
+		s.envInfo = &info
+	}
+	return *s.envInfo
 }
 
 // GetVersion 获取应用版本号

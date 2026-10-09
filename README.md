@@ -6,6 +6,25 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 
 采用 Go + Vue 3 跨平台桌面应用架构，基于 Wails v3 框架。
 
+<div align="center">
+
+[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases)
+[![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases)
+[![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers)
+[![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members)
+[![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow)
+[![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml)
+![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+
+[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link)
+[![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow)
+[![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow)
+[![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow)
+![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+
+</div>
+
 ## 功能特性
 
 - **证书管理** — 申请、续期、撤销、上传 SSL 证书，支持 30+ DNS 提供商自动验证
@@ -86,3 +105,13 @@ make format-frontend   # 格式化前端代码
 ## 开发文档
 
 详见 [DEVELOPMENT.md](DEVELOPMENT.md)
+
+## 许可
+
+详见仓库 `LICENSE` 文件。
+
+## 致谢
+
+<a href="https://wails.io">
+  <img src="https://wails.io/img/wails-button-light.svg" width="90" height="24" alt="Built with Wails">
+</a>
