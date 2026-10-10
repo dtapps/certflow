@@ -30,6 +30,14 @@ const (
 	// cnbAPIBase：CNB OpenAPI 基地址（鉴权后按 tag 拉 release 元数据）。
 	// 匿名访问返回 401，必须带 cnbToken（Authorization: Bearer）。仓库固定 dtapp/certflow。
 	cnbAPIBase = "https://api.cnb.cool"
+
+	// dlStatsGitHubProxy：英文（GitHub）下载中转前缀（自建 dl-stats 服务）。
+	// 规则：原始下载链接原样拼接其后（中间一个斜杠），GET 会被计数并跳转源站；
+	// HEAD 与直接访问源站不计数。中转失败即回退到未拼接前缀的原始源站地址。
+	dlStatsGitHubProxy = "https://dl-stats.dtapp.top/"
+
+	// dlStatsCNBProxy：中文（CNB）下载中转前缀，规则同 dlStatsGitHubProxy。
+	dlStatsCNBProxy = "https://dl-stats.dtapp.net/"
 )
 
 // mirrorProvider 包装 github.Provider，仅重写下载地址。
@@ -452,26 +460,43 @@ func ftypeOfLocal(name string) string {
 }
 
 // Download 实现 updater.Provider：中文走 CNB，英文走 GitHub。
+// 两者下载前均先尝试自建 dl-stats 下载中转（GET 会被计数并跳转源站），
+// 中转失败立即去掉前缀、用未拼接的原始源站地址重试——保证中转挂了也不影响更新。
 func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst io.Writer, onProgress func(written, total int64)) error {
 	if rel == nil || rel.Metadata == nil {
 		return fmt.Errorf("%s", i18n.T("log.updater_release_missing_metadata"))
-	}
-	// 英文用户：直接使用官方 GitHub 下载（原始行为）。
-	if i18n.GetLocale() == string(i18n.EN_US) {
-		return m.Provider.Download(ctx, rel, dst, onProgress)
 	}
 
 	tag, _ := rel.Metadata["github.release.tag"].(string)
 	file := rel.Artifact.Filename
 
-	// 中文：走 CNB 下载。
+	// 候选下载地址：先试 dl-stats 中转（计数），失败回退未拼接前缀的原始源站。
 	type candidate struct {
 		source string
 		url    string
 	}
 	var candidates []candidate
-	if u := m.buildURL(cnbDownloadTpl, tag, file); u != "" {
-		candidates = append(candidates, candidate{"cnb", u})
+
+	if i18n.GetLocale() == string(i18n.EN_US) {
+		// 英文用户：原始 GitHub 资产地址。
+		ghURL, _ := rel.Metadata["github.asset.url"].(string)
+		if ghURL == "" && tag != "" && m.repo != "" {
+			ghURL = fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.repo, tag, file)
+		}
+		if ghURL != "" {
+			candidates = append(candidates,
+				candidate{"dl-stats(github)", dlStatsGitHubProxy + ghURL},
+				candidate{"github", ghURL},
+			)
+		}
+	} else {
+		// 中文用户：原始 CNB 资产地址。
+		if u := m.buildURL(cnbDownloadTpl, tag, file); u != "" {
+			candidates = append(candidates,
+				candidate{"dl-stats(cnb)", dlStatsCNBProxy + u},
+				candidate{"cnb", u},
+			)
+		}
 	}
 
 	for _, c := range candidates {
