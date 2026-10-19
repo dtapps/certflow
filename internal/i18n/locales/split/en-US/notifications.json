@@ -26,6 +26,8 @@
   "notification.monitor_expiring.title": "SSL Certificate Expiring",
   "notification.monitor_http_error.body": "Domain {{.Domain}} returned HTTP {{.Code}}",
   "notification.monitor_http_error.title": "HTTP Endpoint Error",
+  "notification.monitor_recovered.body": "Domain {{.Domain}} has recovered",
+  "notification.monitor_recovered.title": "Domain Monitor Recovered",
   "notification.test.body": "This is a test notification. If you can see it, notifications are working correctly.",
   "notification.test.title": "Test Notification",
   "notification.update_available_subtitle": "Version {{.version}} is available, click to view",

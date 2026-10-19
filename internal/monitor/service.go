@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"sync"
 	"time"
@@ -16,12 +17,30 @@ import (
 	"cnb.cool/dtapp/certflow/internal/ent/monitorchecklog"
 	"cnb.cool/dtapp/certflow/internal/ent/monitoreddomain"
 	entnotification "cnb.cool/dtapp/certflow/internal/ent/notification"
+	"cnb.cool/dtapp/certflow/internal/events"
 	"cnb.cool/dtapp/certflow/internal/i18n"
 	"cnb.cool/dtapp/certflow/internal/logging"
 	"cnb.cool/dtapp/certflow/internal/network"
 	"cnb.cool/dtapp/certflow/internal/notification"
 	"cnb.cool/dtapp/certflow/internal/settings"
 )
+
+// maxConcurrentChecks 单轮域名检查的最大并发数。
+// 单个检查最坏耗时等于 HTTP 客户端超时（默认 10s），串行执行时单轮耗时随域名数线性放大：
+// 域名较多时一个 tick 做不完，检查间隔失真、后续轮次顺延。有界并发将最坏单轮耗时
+// 控制在「域名数 / 并发数」个超时以内，同时避免瞬间打过量的并发请求。
+const maxConcurrentChecks = 5
+
+// checkJitterMax 单个检查启动前的最大随机抖动。
+// 同一 tick 内到期的域名（尤其是检查间隔相同的域名）会同时发起请求，
+// 抖动用于错开请求时刻，避免对本地网络与被监控服务造成瞬时拥塞。
+const checkJitterMax = 2 * time.Second
+
+// EventEmitter 监控更新事件发射器。
+// 由 main.go 以 Wails app.Event 适配注入，避免 monitor 包直接依赖 Wails application 包（便于单测）。
+type EventEmitter interface {
+	EmitMonitorUpdated(payload events.MonitorUpdatedPayload)
+}
 
 // MonitorService 域名监控服务
 type MonitorService struct {
@@ -32,13 +51,24 @@ type MonitorService struct {
 	notifService     interface {
 		SendNotification(opts notification.NotificationOption) error
 	}
+	// notifMu 保护 lastNotified 并发读写（后台循环与 CheckNow 可能并发）
+	notifMu sync.RWMutex
+	// lastNotified 记录各域名上次已通知的状态，作为告警去重基线：
+	// 只有状态发生变化（如 ok→error、error→ok）才发送通知，避免同一异常每轮检查重复告警
+	lastNotified map[int]string
+	// notifySendMu 串行化通知发送：后台检查并发执行时，保证通知服务的副作用
+	// （系统通知/事件发射/落库）有序进行，避免多 goroutine 并发调用通知服务
+	notifySendMu sync.Mutex
+	// eventEmitter 监控更新事件发射器（可选），用于向前端推送实时刷新事件
+	eventEmitter EventEmitter
 }
 
 // NewMonitorService 创建监控服务
 func NewMonitorService(client *ent.Client) *MonitorService {
 	return &MonitorService{
-		db:       client,
-		stopChan: make(chan struct{}),
+		db:           client,
+		stopChan:     make(chan struct{}),
+		lastNotified: make(map[int]string),
 	}
 }
 
@@ -52,6 +82,25 @@ func (s *MonitorService) SetNotificationService(ns interface {
 	SendNotification(opts notification.NotificationOption) error
 }) {
 	s.notifService = ns
+}
+
+// SetEventEmitter 设置监控更新事件发射器（由 main.go 注入 Wails app.Event 适配器）
+func (s *MonitorService) SetEventEmitter(em EventEmitter) {
+	s.eventEmitter = em
+}
+
+// emitUpdated 发送监控数据更新事件给前端（触发界面实时刷新）。
+// id 为发生更新的域名 ID，传 0 表示批量更新（前端刷新全部列表）。
+func (s *MonitorService) emitUpdated(id int, domain, status string) {
+	if s.eventEmitter == nil {
+		return
+	}
+	s.eventEmitter.EmitMonitorUpdated(events.MonitorUpdatedPayload{
+		DomainID:  id,
+		Domain:    domain,
+		Status:    status,
+		CheckedAt: time.Now().Format(time.RFC3339),
+	})
 }
 
 // MonitoredDomainItem 监控域名条目（前端展示用）
@@ -258,6 +307,12 @@ func (s *MonitorService) SetActive(ctx context.Context, id int, active bool) (*M
 	if err != nil {
 		return nil, err
 	}
+	// 重新启用时清除该域名的告警基线，使下次检查若异常可重新通知（重新布防）
+	if active {
+		s.notifMu.Lock()
+		delete(s.lastNotified, id)
+		s.notifMu.Unlock()
+	}
 	return toItem(updated), nil
 }
 
@@ -303,7 +358,9 @@ func (s *MonitorService) CheckNow(ctx context.Context, id int) (*MonitoredDomain
 	if err != nil {
 		return nil, err
 	}
-	s.notifyIfProblem(m.Domain, result)
+	s.notifyIfProblem(m, result)
+	// 手动检查完成：发射单域名更新事件，前端实时刷新该域名数据与趋势图
+	s.emitUpdated(m.ID, m.Domain, result.status)
 	return toItem(updated), nil
 }
 
@@ -355,7 +412,12 @@ func (s *MonitorService) checkHTTPS(m *ent.MonitoredDomain) checkResult {
 
 	url := m.URL
 	if url == "" {
-		url = fmt.Sprintf("https://%s", m.Domain)
+		// 未指定 URL 时按域名+端口拼接（端口为默认 443 时省略，保持 URL 简洁）
+		if m.Port > 0 && m.Port != 443 {
+			url = fmt.Sprintf("https://%s:%d", m.Domain, m.Port)
+		} else {
+			url = fmt.Sprintf("https://%s", m.Domain)
+		}
 	}
 
 	client := s.getHTTPClient()
@@ -402,9 +464,9 @@ func (s *MonitorService) checkHTTPS(m *ent.MonitoredDomain) checkResult {
 		result.certSANs = leaf.DNSNames
 		result.certRemainingDays = int(time.Until(leaf.NotAfter).Hours() / 24)
 
-		// SSL 证书过期也会降级状态
+		// SSL 证书过期降级为 expired 状态（启用 expired 枚举，与通知分支对应）
 		if result.certRemainingDays <= 0 {
-			result.status = "error"
+			result.status = "expired"
 		} else if result.certRemainingDays <= 30 && result.status == "ok" {
 			result.status = "warning"
 		}
@@ -426,7 +488,14 @@ func (s *MonitorService) checkHTTP(m *ent.MonitoredDomain) checkResult {
 
 	url := m.URL
 	if url == "" {
-		url = fmt.Sprintf("http://%s", m.Domain)
+		// 未指定 URL 时按域名+端口拼接。
+		// 80 为 HTTP 默认端口省略；443 为旧版遗留默认值（旧版端口不可配、统一存 443），
+		// 同样按默认端口处理，避免旧 HTTP 监控被误拼成 :443 导致检查失败。
+		if m.Port > 0 && m.Port != 80 && m.Port != 443 {
+			url = fmt.Sprintf("http://%s:%d", m.Domain, m.Port)
+		} else {
+			url = fmt.Sprintf("http://%s", m.Domain)
+		}
 	}
 
 	client := s.getHTTPClient()
@@ -472,6 +541,13 @@ func (s *MonitorService) checkHTTP(m *ent.MonitoredDomain) checkResult {
 		result.certSubject = leaf.Subject.CommonName
 		result.certSANs = leaf.DNSNames
 		result.certRemainingDays = int(time.Until(leaf.NotAfter).Hours() / 24)
+
+		// 与 HTTPS 检查保持一致：重定向到 HTTPS 场景下证书过期/临期同样降级状态
+		if result.certRemainingDays <= 0 {
+			result.status = "expired"
+		} else if result.certRemainingDays <= 30 && result.status == "ok" {
+			result.status = "warning"
+		}
 	}
 
 	return result
@@ -480,7 +556,23 @@ func (s *MonitorService) checkHTTP(m *ent.MonitoredDomain) checkResult {
 // Start 启动后台监控循环
 func (s *MonitorService) Start() {
 	logging.Info(i18n.T("log.monitor_started"))
+	s.loadNotifyBaseline()
 	go s.monitorLoop()
+}
+
+// loadNotifyBaseline 从数据库加载各域名当前状态作为告警去重基线，
+// 避免应用重启后对重启前已通知过的异常状态重复告警。
+func (s *MonitorService) loadNotifyBaseline() {
+	domains, err := s.db.MonitoredDomain.Query().All(context.Background())
+	if err != nil {
+		logging.Error("%s", i18n.T("log.monitor_query_failed", "Error", err))
+		return
+	}
+	s.notifMu.Lock()
+	defer s.notifMu.Unlock()
+	for _, m := range domains {
+		s.lastNotified[m.ID] = m.Status.String()
+	}
 }
 
 // Stop 停止后台监控。幂等：重复调用安全（如 updater 提前清理与 ServiceShutdown 各调一次）。
@@ -547,11 +639,13 @@ func (s *MonitorService) runChecks() {
 		Where(monitoreddomain.Enabled(true)).
 		All(ctx)
 	if err != nil {
-		logging.Error(i18n.T("log.monitor_query_failed", "Error", err))
+		logging.Error("%s", i18n.T("log.monitor_query_failed", "Error", err))
 		return
 	}
 
+	// 先筛选出本轮到期待检查的域名，再交给并发执行，避免逐个串行等待 HTTP 超时
 	now := time.Now()
+	due := make([]*ent.MonitoredDomain, 0, len(domains))
 	for _, m := range domains {
 		if m.CheckInterval <= 0 {
 			continue
@@ -560,47 +654,122 @@ func (s *MonitorService) runChecks() {
 		if now.Before(nextCheck) {
 			continue
 		}
-
-		result := s.checkDomain(m)
-
-		_, err := s.db.MonitoredDomain.UpdateOneID(m.ID).
-			SetStatus(monitoreddomain.Status(result.status)).
-			SetCertIssuer(result.certIssuer).
-			SetCertNotBefore(result.certNotBefore).
-			SetCertNotAfter(result.certNotAfter).
-			SetCertFingerprint(result.certFingerprint).
-			SetCertSubject(result.certSubject).
-			SetCertSignatureAlgo(result.certSignatureAlgo).
-			SetCertPublicKeyAlgo(result.certPublicKeyAlgo).
-			SetCertPublicKeyBits(result.certPublicKeyBits).
-			SetCertSans(result.certSANs).
-			SetCertRemainingDays(result.certRemainingDays).
-			SetLastCheckAt(now).
-			SetLastCheckError(result.checkError).
-			SetHTTPStatusCode(result.httpStatusCode).
-			SetResponseTimeMs(result.responseTimeMs).
-			Save(ctx)
-		if err != nil {
-			logging.Error(i18n.T("log.monitor_update_failed", "Domain", m.Domain, "Error", err))
-		}
-		s.createCheckLog(ctx, m, result)
-
-		s.notifyIfProblem(m.Domain, result)
+		due = append(due, m)
 	}
-	if len(domains) > 0 {
-		logging.Debug(i18n.T("log.monitor_check_done", "Count", len(domains)))
+	if len(due) == 0 {
+		return
 	}
+
+	s.checkDomains(due, now)
+	logging.Debug(i18n.T("log.monitor_check_done", "Count", len(due)))
+	// 发射批量更新事件，通知前端实时刷新
+	s.emitUpdated(0, "", "")
 }
 
-// notifyIfProblem 检查结果异常时发送通知
-func (s *MonitorService) notifyIfProblem(domain string, result checkResult) {
+// checkDomains 以有界并发执行一批域名的检查（信号量 worker pool + 启动抖动）。
+// ent Client 可安全并发使用；通知发送在 notifyIfProblem 内经 notifySendMu 串行化。
+func (s *MonitorService) checkDomains(domains []*ent.MonitoredDomain, now time.Time) {
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentChecks)
+	for _, m := range domains {
+		wg.Add(1)
+		go func(m *ent.MonitoredDomain) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// 启动抖动：错开同一 tick 内各检查的发起时刻。
+			// 选型 math/rand/v2：非安全随机的现代 API，用户态 PRNG 无系统调用，
+			// 纳秒级、并发安全；抖动不涉及令牌/密钥，无需 crypto/rand 的不可预测性。
+			//nolint:gosec // G404：请求抖动无安全敏感性；生产代码非安全随机需显式声明理由
+			if jitter := time.Duration(rand.Int64N(int64(checkJitterMax))); jitter > 0 {
+				time.Sleep(jitter)
+			}
+
+			result := s.checkDomain(m)
+
+			if _, err := s.db.MonitoredDomain.UpdateOneID(m.ID).
+				SetStatus(monitoreddomain.Status(result.status)).
+				SetCertIssuer(result.certIssuer).
+				SetCertNotBefore(result.certNotBefore).
+				SetCertNotAfter(result.certNotAfter).
+				SetCertFingerprint(result.certFingerprint).
+				SetCertSubject(result.certSubject).
+				SetCertSignatureAlgo(result.certSignatureAlgo).
+				SetCertPublicKeyAlgo(result.certPublicKeyAlgo).
+				SetCertPublicKeyBits(result.certPublicKeyBits).
+				SetCertSans(result.certSANs).
+				SetCertRemainingDays(result.certRemainingDays).
+				SetLastCheckAt(now).
+				SetLastCheckError(result.checkError).
+				SetHTTPStatusCode(result.httpStatusCode).
+				SetResponseTimeMs(result.responseTimeMs).
+				Save(ctx); err != nil {
+				logging.Error("%s", i18n.T("log.monitor_update_failed", "Domain", m.Domain, "Error", err))
+			}
+			s.createCheckLog(ctx, m, result)
+
+			s.notifyIfProblem(m, result)
+		}(m)
+	}
+	wg.Wait()
+}
+
+// notifyIfProblem 在状态发生变化时发送通知（异常/过期/警告 + 恢复通知）。
+// 通过 lastNotified 基线去重：同一异常状态每轮检查只通知一次，
+// 从异常恢复为正常时发送恢复通知，避免告警风暴。
+func (s *MonitorService) notifyIfProblem(m *ent.MonitoredDomain, result checkResult) {
 	if s.notifService == nil {
 		return
 	}
 
-	var title string
-	var body string
+	s.notifMu.RLock()
+	prev, loaded := s.lastNotified[m.ID]
+	s.notifMu.RUnlock()
 
+	// 状态未变化：抑制重复告警（告警风暴修复的核心判断）
+	if loaded && prev == result.status {
+		return
+	}
+
+	title, body, notify := buildMonitorNotification(m.Domain, result, prev, loaded)
+
+	// 无论本次是否发送通知，都更新基线为当前状态
+	s.notifMu.Lock()
+	s.lastNotified[m.ID] = result.status
+	s.notifMu.Unlock()
+
+	if !notify {
+		return
+	}
+
+	level := entnotification.LevelInfo.String()
+	switch result.status {
+	case "error", "expired":
+		level = entnotification.LevelError.String()
+	case "warning":
+		level = entnotification.LevelWarning.String()
+	case "ok":
+		level = entnotification.LevelSuccess.String()
+	}
+
+	// 串行化发送：后台检查并发执行时，避免多 goroutine 并发调用通知服务
+	s.notifySendMu.Lock()
+	err := s.notifService.SendNotification(notification.NotificationOption{
+		Title:    title,
+		Body:     body,
+		Category: "monitor",
+		Level:    level,
+	})
+	s.notifySendMu.Unlock()
+	_ = err
+}
+
+// buildMonitorNotification 根据检查结果与上次通知状态构造通知内容。
+// 返回值 notify 为 false 表示本次不需要发送通知（如首次检查即正常、未知状态）。
+// prev/loaded 为上次已通知的状态及是否存在基线。
+func buildMonitorNotification(domain string, result checkResult, prev string, loaded bool) (title, body string, notify bool) {
 	switch result.status {
 	case "error":
 		title = i18n.T("notification.monitor_error.title")
@@ -611,12 +780,14 @@ func (s *MonitorService) notifyIfProblem(domain string, result checkResult) {
 		if result.httpStatusCode > 0 {
 			body += fmt.Sprintf(" (HTTP %d)", result.httpStatusCode)
 		}
+		return title, body, true
 	case "expired":
 		title = i18n.T("notification.monitor_expired.title")
 		body = i18n.T("notification.monitor_expired.body", "Domain", domain)
 		if result.certIssuer != "" {
 			body += fmt.Sprintf(" (%s)", result.certIssuer)
 		}
+		return title, body, true
 	case "warning":
 		if result.certRemainingDays > 0 && result.certRemainingDays <= 30 {
 			title = i18n.T("notification.monitor_expiring.title")
@@ -624,28 +795,25 @@ func (s *MonitorService) notifyIfProblem(domain string, result checkResult) {
 			if result.certIssuer != "" {
 				body += fmt.Sprintf(" (%s)", result.certIssuer)
 			}
-		} else if result.httpStatusCode >= 400 {
+			return title, body, true
+		}
+		if result.httpStatusCode >= 400 {
 			title = i18n.T("notification.monitor_http_error.title")
 			body = i18n.T("notification.monitor_http_error.body", "Domain", domain, "Code", result.httpStatusCode)
+			return title, body, true
 		}
+		return "", "", false
+	case "ok":
+		// 恢复通知：此前处于异常状态，本次恢复正常才通知；首次检查即正常不打扰
+		if loaded && (prev == "error" || prev == "warning" || prev == "expired") {
+			title = i18n.T("notification.monitor_recovered.title")
+			body = i18n.T("notification.monitor_recovered.body", "Domain", domain)
+			return title, body, true
+		}
+		return "", "", false
 	default:
-		return
+		return "", "", false
 	}
-
-	level := entnotification.LevelInfo.String()
-	switch result.status {
-	case "error", "expired":
-		level = entnotification.LevelError.String()
-	case "warning":
-		level = entnotification.LevelWarning.String()
-	}
-
-	_ = s.notifService.SendNotification(notification.NotificationOption{
-		Title:    title,
-		Body:     body,
-		Category: "monitor",
-		Level:    level,
-	})
 }
 
 // getPubKeyBits 获取公钥位数

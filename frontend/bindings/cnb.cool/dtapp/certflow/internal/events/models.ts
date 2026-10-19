@@ -12,6 +12,31 @@ export interface LocaleChangedPayload {
 }
 
 /**
+ * MonitorUpdatedPayload 域名监控数据更新事件参数
+ */
+export interface MonitorUpdatedPayload {
+    /**
+     * 发生更新的域名 ID；0 表示批量更新（前端刷新全部）
+     */
+    "domain_id": number;
+
+    /**
+     * 发生更新的域名（批量更新时为空）
+     */
+    "domain": string;
+
+    /**
+     * 最新状态（批量更新时为空）
+     */
+    "status": string;
+
+    /**
+     * 检查时间（RFC3339 格式）
+     */
+    "checked_at": string;
+}
+
+/**
  * NavigatePayload 导航事件参数
  */
 export interface NavigatePayload {

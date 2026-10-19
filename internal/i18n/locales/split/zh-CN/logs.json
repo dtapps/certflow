@@ -292,6 +292,7 @@
   "log.monitor_create_start": "创建监控: domain={{.Domain}}, type={{.Type}}",
   "log.monitor_delete": "删除监控: ID={{.ID}}",
   "log.monitor_delete_failed": "删除监控失败 id={{.ID}} error={{.Error}}",
+  "log.monitor_event_cancelled": "监控更新事件被取消，未送达前端",
   "log.monitor_get_failed": "获取监控失败 id={{.ID}} error={{.Error}}",
   "log.monitor_http_info": "HTTP 检查: domain={{.Domain}}, url={{.URL}}, statusCode={{.StatusCode}}, time={{.ResponseTime}}ms",
   "log.monitor_list_failed": "获取监控列表失败 error={{.Error}}",

@@ -28,6 +28,8 @@ use([
 
 const props = defineProps<{
   domainId: number
+  // 刷新键：父域收到监控更新事件时自增，触发重新加载历史数据
+  refreshKey?: number
 }>()
 
 const { isDark } = storeToRefs(useThemeStore())
@@ -60,7 +62,7 @@ async function loadHistory() {
 }
 
 onMounted(loadHistory)
-watch([() => props.domainId, range], loadHistory)
+watch([() => props.domainId, () => props.refreshKey, range], loadHistory)
 
 const xData = computed(() => history.value.map((h) => h.checked_at))
 const noData = computed(() => !loading.value && history.value.length === 0)

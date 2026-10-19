@@ -14,6 +14,7 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "auth_verified": {};
             "locale_changed": events$0.LocaleChangedPayload;
+            "monitor_updated": events$0.MonitorUpdatedPayload;
             "navigate": events$0.NavigatePayload;
             "notification": events$0.NotificationPayload;
             "theme_changed": events$0.ThemeChangedPayload;

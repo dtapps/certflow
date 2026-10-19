@@ -3,6 +3,7 @@
 
 export type {
     LocaleChangedPayload,
+    MonitorUpdatedPayload,
     NavigatePayload,
     NotificationPayload,
     ThemeChangedPayload,

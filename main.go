@@ -73,6 +73,22 @@ func init() {
 	application.RegisterEvent[events.LocaleChangedPayload](events.EventLocaleChanged)
 	application.RegisterEvent[events.NavigatePayload](events.EventNavigate)
 	application.RegisterEvent[events.WindowResizedPayload](events.EventWindowResized)
+	application.RegisterEvent[events.MonitorUpdatedPayload](events.EventMonitorUpdated)
+}
+
+// monitorEventEmitter 将域名监控的数据更新事件通过 Wails app.Event 转发给前端，
+// 实现 monitor.EventEmitter 接口（后台检查/手动检查完成后触发前端实时刷新）。
+type monitorEventEmitter struct {
+	app *application.App
+}
+
+// EmitMonitorUpdated 发射监控更新事件。
+// 注意：app.Event.Emit 返回 event.IsCancelled()——true 表示事件被取消（未送达），
+// 正常送达返回 false，因此仅在被取消时告警，避免误报（与 EventThemeChanged 修复保持一致）。
+func (e *monitorEventEmitter) EmitMonitorUpdated(payload events.MonitorUpdatedPayload) {
+	if e.app.Event.Emit(events.EventMonitorUpdated, payload) {
+		logging.Warn("%s", i18n.T("log.monitor_event_cancelled"))
+	}
 }
 
 func main() {
@@ -279,6 +295,8 @@ func main() {
 	deployCredSvc.SetApp(app)
 	schedulerSvc.SetApp(app)
 	monitorSvc.SetApp(app)
+	// 注入监控更新事件发射器：后台/手动检查完成后经 app.Event 推送前端实时刷新
+	monitorService.SetEventEmitter(&monitorEventEmitter{app: app})
 	scannerSvc.SetApp(app)
 	notifSvc.SetApp(app)
 

@@ -292,6 +292,7 @@
   "log.monitor_create_start": "Creating monitor: domain={{.Domain}}, type={{.Type}}",
   "log.monitor_delete": "Deleting monitor: ID={{.ID}}",
   "log.monitor_delete_failed": "Failed to delete monitor id={{.ID}} error={{.Error}}",
+  "log.monitor_event_cancelled": "Monitor update event cancelled, not delivered to frontend",
   "log.monitor_get_failed": "Failed to get monitor id={{.ID}} error={{.Error}}",
   "log.monitor_http_info": "HTTP check: domain={{.Domain}}, url={{.URL}}, statusCode={{.StatusCode}}, time={{.ResponseTime}}ms",
   "log.monitor_list_failed": "Failed to list monitors error={{.Error}}",

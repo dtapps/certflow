@@ -16,6 +16,8 @@ const (
 	EventNavigate = "navigate"
 	// EventWindowResized 窗口尺寸变化事件
 	EventWindowResized = "window_resized"
+	// EventMonitorUpdated 域名监控数据更新事件（后台检查/手动检查完成后发射，前端实时刷新）
+	EventMonitorUpdated = "monitor_updated"
 )
 
 // ---- 事件 Payload 结构体 ----
@@ -53,4 +55,12 @@ type NavigatePayload struct {
 type WindowResizedPayload struct {
 	Width  int `json:"width"`  // 窗口宽度（像素）
 	Height int `json:"height"` // 窗口高度（像素）
+}
+
+// MonitorUpdatedPayload 域名监控数据更新事件参数
+type MonitorUpdatedPayload struct {
+	DomainID  int    `json:"domain_id"`  // 发生更新的域名 ID；0 表示批量更新（前端刷新全部）
+	Domain    string `json:"domain"`     // 发生更新的域名（批量更新时为空）
+	Status    string `json:"status"`     // 最新状态（批量更新时为空）
+	CheckedAt string `json:"checked_at"` // 检查时间（RFC3339 格式）
 }

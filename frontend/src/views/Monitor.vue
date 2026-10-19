@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import {
   NCard,
   NButton,
@@ -21,6 +21,8 @@ import type { MonitoredDomainItem } from '@bindings/cnb.cool/dtapp/certflow/inte
 import { useI18nStore } from '../stores/i18n'
 import { initMessage, showMessage } from '../utils/message'
 import { formatInterval, formatRelativeTime } from '../utils/format'
+import { Events } from '@wailsio/runtime'
+import { EventMonitorUpdated, type MonitorUpdatedPayload } from '../utils/events'
 import MonitorTrendChart from '../components/MonitorTrendChart.vue'
 
 const i18nStore = useI18nStore()
@@ -40,13 +42,14 @@ const checkingId = ref<number | null>(null)
 const formData = ref({
   domain: '',
   port: 443,
-  check_type: 'ssl',
+  check_type: 'https',
   url: '',
   check_interval: 3600,
 })
 
-const loadDomains = async () => {
-  isLoading.value = true
+// silent 为 true 时不显示加载 spinner（用于后台事件/轮询触发的静默刷新，避免列表闪烁）
+const loadDomains = async (silent = false) => {
+  if (!silent) isLoading.value = true
   try {
     domains.value = ((await MonitorService.List()) ?? []).filter(
       (item): item is MonitoredDomainItem => item !== null,
@@ -68,7 +71,7 @@ const loadDomains = async () => {
   } catch (e) {
     console.error(t('monitor.loadDomainsFailed'), e)
   } finally {
-    isLoading.value = false
+    if (!silent) isLoading.value = false
   }
 }
 
@@ -95,7 +98,17 @@ const openEdit = (item: MonitoredDomainItem) => {
     url: item.url,
     check_interval: item.check_interval,
   }
+  // 旧版端口不可配，HTTP 监控的端口被统一存为 443；编辑时规范为 HTTP 默认端口 80
+  if (item.check_type === 'http' && item.port === 443) {
+    formData.value.port = 80
+  }
   showEditModal.value = true
+}
+
+// 切换检查类型时重置为该类型默认端口（HTTP 80 / HTTPS 443），避免类型与端口不匹配
+const handleCheckTypeChange = (type: string) => {
+  formData.value.check_type = type
+  formData.value.port = type === 'http' ? 80 : 443
 }
 
 const handleSave = async () => {
@@ -184,6 +197,8 @@ const getStatusLabel = (status: string) => {
       return t('monitor.statusWarning')
     case 'error':
       return t('monitor.statusError')
+    case 'expired':
+      return t('monitor.statusExpired')
     default:
       return t('monitor.statusUnknown')
   }
@@ -211,6 +226,37 @@ const expandedId = ref<number | null>(null)
 const toggleExpand = (id: number) => {
   expandedId.value = expandedId.value === id ? null : id
 }
+
+// ===== 实时刷新（事件推送 + 轮询兜底）=====
+// 后台监控循环检查完成后由后端发射 EventMonitorUpdated，事件驱动保证检查完成即刻刷新；
+// 轮询兜底覆盖事件丢失场景（如应用挂起期间错过事件）。轮询间隔与后端检查节拍一致（60s）。
+const POLL_INTERVAL_MS = 60000
+let pollTimer: number | undefined
+// 趋势图刷新键：自增触发 MonitorTrendChart 重新加载历史数据
+const trendRefreshKey = ref(0)
+
+const handleMonitorUpdated = (ev: { data: MonitorUpdatedPayload }) => {
+  loadDomains(true)
+  // 展开域名的趋势图联动刷新：
+  // 单域名更新（domain_id>0）需匹配当前展开项；批量更新（domain_id=0）只要有展开项就刷新
+  const id = ev.data?.domain_id ?? 0
+  if (expandedId.value !== null && (id === 0 || id === expandedId.value)) {
+    trendRefreshKey.value++
+  }
+}
+
+onMounted(() => {
+  Events.On(EventMonitorUpdated, handleMonitorUpdated)
+  pollTimer = window.setInterval(() => loadDomains(true), POLL_INTERVAL_MS)
+})
+
+onBeforeUnmount(() => {
+  Events.Off(EventMonitorUpdated)
+  if (pollTimer !== undefined) {
+    window.clearInterval(pollTimer)
+    pollTimer = undefined
+  }
+})
 
 // ===== 批量选择 =====
 const selectedIds = ref<number[]>([])
@@ -315,10 +361,10 @@ const warnCount = computed(
 )
 const errorCount = computed(() => domains.value.filter((d) => d.status === 'error').length)
 
-const checkTypeOptions = [
-  { label: 'HTTPS 健康检查', value: 'https' },
-  { label: 'HTTP 健康检查', value: 'http' },
-]
+const checkTypeOptions = computed(() => [
+  { label: t('monitor.checkTypeHttps'), value: 'https' },
+  { label: t('monitor.checkTypeHttp'), value: 'http' },
+])
 
 const togglingId = ref<number | null>(null)
 const handleToggleEnabled = async (item: any, value: boolean) => {
@@ -694,7 +740,12 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
                   {{ t('monitor.error') }}: {{ item.last_check_error }}
                 </p>
               </div>
-              <MonitorTrendChart v-if="expandedId === item.id" :domain-id="item.id" @click.stop />
+              <MonitorTrendChart
+                v-if="expandedId === item.id"
+                :domain-id="item.id"
+                :refresh-key="trendRefreshKey"
+                @click.stop
+              />
             </div>
           </div>
         </template>
@@ -713,15 +764,16 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
           <n-input v-model:value="formData.domain" :placeholder="t('monitor.domainPlaceholder')" />
         </n-form-item>
         <n-form-item :label="t('monitor.checkType')">
-          <n-select v-model:value="formData.check_type" :options="checkTypeOptions" />
+          <n-select
+            :value="formData.check_type"
+            :options="checkTypeOptions"
+            @update:value="handleCheckTypeChange"
+          />
         </n-form-item>
-        <n-form-item
-          v-if="formData.check_type === 'ssl'"
-          :label="t('monitor.domain') + ' ' + t('monitor.statusCode')"
-        >
+        <n-form-item :label="t('monitor.port')">
           <n-input-number v-model:value="formData.port" :min="1" :max="65535" style="width: 100%" />
         </n-form-item>
-        <n-form-item v-if="formData.check_type === 'http'" label="URL">
+        <n-form-item :label="t('monitor.url')">
           <n-input v-model:value="formData.url" :placeholder="t('monitor.urlPlaceholder')" />
         </n-form-item>
         <n-form-item :label="t('monitor.checkInterval') + ' (' + t('monitor.intervalHint') + ')'">
@@ -750,12 +802,16 @@ const handleToggleEnabled = async (item: any, value: boolean) => {
           <n-input v-model:value="formData.domain" />
         </n-form-item>
         <n-form-item :label="t('monitor.checkType')">
-          <n-select v-model:value="formData.check_type" :options="checkTypeOptions" />
+          <n-select
+            :value="formData.check_type"
+            :options="checkTypeOptions"
+            @update:value="handleCheckTypeChange"
+          />
         </n-form-item>
-        <n-form-item v-if="formData.check_type === 'ssl'" label="Port">
+        <n-form-item :label="t('monitor.port')">
           <n-input-number v-model:value="formData.port" :min="1" :max="65535" style="width: 100%" />
         </n-form-item>
-        <n-form-item v-if="formData.check_type === 'http'" label="URL">
+        <n-form-item :label="t('monitor.url')">
           <n-input v-model:value="formData.url" :placeholder="t('monitor.urlPlaceholder')" />
         </n-form-item>
         <n-form-item :label="t('monitor.checkInterval') + ' (' + t('monitor.intervalHint') + ')'">

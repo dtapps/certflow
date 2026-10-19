@@ -26,6 +26,8 @@
   "notification.monitor_expiring.title": "SSL 证书即将过期",
   "notification.monitor_http_error.body": "域名 {{.Domain}} 返回 HTTP {{.Code}}",
   "notification.monitor_http_error.title": "HTTP 接口异常",
+  "notification.monitor_recovered.body": "域名 {{.Domain}} 已恢复正常",
+  "notification.monitor_recovered.title": "域名监控已恢复",
   "notification.test.body": "这是一条测试通知，如果您能看到它，说明通知功能正常工作。",
   "notification.test.title": "测试通知",
   "notification.update_available_subtitle": "版本 {{.version}} 可用，点击查看详情",

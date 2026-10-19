@@ -6,6 +6,7 @@ export const EventThemeChanged = 'theme_changed'
 export const EventLocaleChanged = 'locale_changed'
 export const EventNavigate = 'navigate'
 export const EventWindowResized = 'window_resized'
+export const EventMonitorUpdated = 'monitor_updated'
 
 // 事件 Payload 类型（由 Wails 绑定生成器从 Go 结构体自动生成）
 export type {
@@ -15,4 +16,5 @@ export type {
   LocaleChangedPayload,
   NavigatePayload,
   WindowResizedPayload,
+  MonitorUpdatedPayload,
 } from '../../bindings/cnb.cool/dtapp/certflow/internal/events/models'
