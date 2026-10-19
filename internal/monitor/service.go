@@ -48,7 +48,10 @@ type MonitorService struct {
 	stopChan         chan struct{}
 	stopOnce         sync.Once
 	settingsProvider func() settings.Settings
-	notifService     interface {
+	// clientCache 缓存按设置构建的 HTTP 客户端：避免每次检查都新建 Transport
+	// （无连接池复用、每次完整 TCP+TLS 握手），设置变化时自动重建
+	clientCache  *network.ClientCache
+	notifService interface {
 		SendNotification(opts notification.NotificationOption) error
 	}
 	// notifMu 保护 lastNotified 并发读写（后台循环与 CheckNow 可能并发）
@@ -75,6 +78,8 @@ func NewMonitorService(client *ent.Client) *MonitorService {
 // SetSettingsProvider 设置设置提供者
 func (s *MonitorService) SetSettingsProvider(fn func() settings.Settings) {
 	s.settingsProvider = fn
+	// 客户端缓存与设置提供者同生命周期：provider 变更（代理/DNS）时按指纹重建客户端
+	s.clientCache = network.NewClientCache(fn)
 }
 
 // SetNotificationService 设置通知服务
@@ -398,10 +403,10 @@ func (s *MonitorService) checkDomain(m *ent.MonitoredDomain) checkResult {
 	return result
 }
 
-// getHTTPClient 获取配置了 DNS 和代理的 HTTP 客户端
+// getHTTPClient 获取配置了 DNS 和代理的 HTTP 客户端（按设置缓存，复用连接池）
 func (s *MonitorService) getHTTPClient() *http.Client {
-	if s.settingsProvider != nil {
-		return network.BuildHTTPClient(s.settingsProvider())
+	if s.clientCache != nil {
+		return s.clientCache.Get()
 	}
 	return &http.Client{Timeout: 10 * time.Second}
 }

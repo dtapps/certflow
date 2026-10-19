@@ -23,6 +23,9 @@ import (
 type ScannerService struct {
 	db               *ent.Client
 	settingsProvider func() settings.Settings
+	// clientCache 缓存按设置构建的 HTTP 客户端：避免每次扫描都新建 Transport
+	// （无连接池复用、每次完整 TCP+TLS 握手），设置变化时自动重建
+	clientCache *network.ClientCache
 }
 
 // NewScannerService 创建扫描服务
@@ -33,6 +36,8 @@ func NewScannerService(client *ent.Client) *ScannerService {
 // SetSettingsProvider 注入设置提供者（用于 DNS/代理配置）
 func (s *ScannerService) SetSettingsProvider(fn func() settings.Settings) {
 	s.settingsProvider = fn
+	// 客户端缓存与设置提供者同生命周期：provider 变更（代理/DNS）时按指纹重建客户端
+	s.clientCache = network.NewClientCache(fn)
 }
 
 // ScanInput 扫描请求
@@ -95,10 +100,10 @@ func (s *ScannerService) Scan(ctx context.Context, input ScanInput) (*ScanResult
 		ScannedAt: time.Now().Format(time.RFC3339),
 	}
 
-	// 使用带 DNS/代理支持的 HTTP 客户端
+	// 使用带 DNS/代理支持的 HTTP 客户端（按设置缓存，复用连接池）
 	var client *http.Client
-	if s.settingsProvider != nil {
-		client = network.BuildHTTPClient(s.settingsProvider())
+	if s.clientCache != nil {
+		client = s.clientCache.Get()
 	} else {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
