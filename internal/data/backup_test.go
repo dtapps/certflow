@@ -1,6 +1,7 @@
 package data
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"database/sql"
@@ -85,7 +86,7 @@ func TestExportImportRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir, tables); err != nil {
+	if err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -158,7 +159,7 @@ func TestImportNullVsEmptyString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir, tables); err != nil {
+	if err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -221,7 +222,7 @@ func TestImportTimeColumnRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir, tables); err != nil {
+	if err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -276,7 +277,7 @@ func TestImportFailureRollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, tmpDir, tables); err != nil {
+	if err := exportTablesToCSV(conn, tmpDir); err != nil {
 		t.Fatalf("export failed: %v", err)
 	}
 	// 篡改 certificates.csv 的时间列
@@ -353,7 +354,8 @@ func TestListBusinessTablesExcludesInternals(t *testing.T) {
 // TestImportRejectsInjectedTableName 验证备份中被篡改的表名（CSV 文件名）会在执行 SQL 前被白名单拦截：
 // 表名随后会被拼进 DELETE/INSERT/PRAGMA，不校验即可注入任意语句。
 func TestImportRejectsInjectedTableName(t *testing.T) {
-	_, dbPath := newTestDB(t)
+	client, dbPath := newTestDB(t)
+	client.CA.Create().SetName("ca-keep").SetDirectoryURL("https://acme.example.com/dir").SaveX(context.Background())
 	conn := openConn(t, sqlite.BuildDSN(dbPath))
 
 	dir := t.TempDir()
@@ -374,6 +376,52 @@ func TestImportRejectsInjectedTableName(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatal("cas table dropped: injected table name was executed")
+	}
+}
+
+// TestExportIgnoresInjectedTableNameFile 验证导出侧的表名来源唯一：仅从 sqlite_master 取，
+// 目录内伪造的表名文件既不会被拼进 SELECT，也不会被打进 zip；非 CSV 文件同理不入包。
+func TestExportIgnoresInjectedTableNameFile(t *testing.T) {
+	ctx := context.Background()
+	client, dbPath := newTestDB(t)
+	client.CA.Create().SetName("ca-export").SetDirectoryURL("https://acme.example.com/dir").SaveX(ctx)
+	conn := openConn(t, sqlite.BuildDSN(dbPath))
+
+	dir := t.TempDir()
+	// 目录内放一个 `<注入载荷>.csv`：导出只从 sqlite_master 取表名，不会读它
+	payload := `certificates" (id) VALUES ('x'); DROP TABLE cas; --`
+	fakeName := payload + ".csv"
+	//nolint:gosec // 本测试临时目录内构造的假文件，非外部输入
+	if err := os.WriteFile(filepath.Join(dir, fakeName), []byte("id\n1\n"), 0644); err != nil {
+		t.Fatalf("write fake csv failed: %v", err)
+	}
+	//nolint:gosec // 本测试临时目录内构造的假文件，非外部输入
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("keep out"), 0644); err != nil {
+		t.Fatalf("write non-csv failed: %v", err)
+	}
+
+	if err := exportTablesToCSV(conn, dir); err != nil {
+		t.Fatalf("exportTablesToCSV failed: %v", err)
+	}
+	zipPath := filepath.Join(dir, "certflow-backup.zip")
+	if err := zipDirTables(zipPath, dir); err != nil {
+		t.Fatalf("zipDirTables failed: %v", err)
+	}
+
+	zr, err := zip.OpenReader(zipPath)
+	if err != nil {
+		t.Fatalf("open zip failed: %v", err)
+	}
+	defer zr.Close()
+	names := map[string]bool{}
+	for _, f := range zr.File {
+		names[f.Name] = true
+	}
+	if !names["cas.csv"] {
+		t.Fatal("expected cas.csv in archive")
+	}
+	if names[fakeName] || names["notes.txt"] || names["certflow-backup.zip"] {
+		t.Fatalf("archive contains unexpected entry: %v", names)
 	}
 }
 
