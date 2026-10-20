@@ -349,3 +349,40 @@ func TestListBusinessTablesExcludesInternals(t *testing.T) {
 	}
 	_ = os.Getenv
 }
+
+// TestImportRejectsInjectedTableName 验证备份中被篡改的表名（CSV 文件名）会在执行 SQL 前被白名单拦截：
+// 表名随后会被拼进 DELETE/INSERT/PRAGMA，不校验即可注入任意语句。
+func TestImportRejectsInjectedTableName(t *testing.T) {
+	_, dbPath := newTestDB(t)
+	conn := openConn(t, sqlite.BuildDSN(dbPath))
+
+	dir := t.TempDir()
+	injected := `certificates" (id) VALUES ('x'); DROP TABLE cas; --`
+	if err := os.WriteFile(filepath.Join(dir, injected+".csv"), []byte("id\n1\n"), 0644); err != nil {
+		t.Fatalf("write fake csv failed: %v", err)
+	}
+
+	if err := importTablesFromCSV(conn, dir, []string{injected}); err == nil {
+		t.Fatal("expected injected table name to be rejected, got nil")
+	}
+
+	// 库结构未被破坏
+	var n int
+	if err := conn.QueryRowContext(context.Background(),
+		"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='cas'").Scan(&n); err != nil {
+		t.Fatalf("check cas table failed: %v", err)
+	}
+	if n != 1 {
+		t.Fatal("cas table dropped: injected table name was executed")
+	}
+}
+
+// TestSQLIdentAndStringEscaping 覆盖转义边界：双引号与单引号分别加倍。
+func TestSQLIdentAndStringEscaping(t *testing.T) {
+	if got, want := sqlIdent(`a"b`), `"a""b"`; got != want {
+		t.Fatalf("sqlIdent: got %s want %s", got, want)
+	}
+	if got, want := sqlString(`a'b`), `'a''b'`; got != want {
+		t.Fatalf("sqlString: got %s want %s", got, want)
+	}
+}

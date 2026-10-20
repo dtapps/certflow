@@ -261,7 +261,7 @@ func (s *Service) runImport(tmpDir string, tables []string) {
 func exportTablesToCSV(conn *sql.DB, dir string, tables []string) error {
 	ctx := context.Background()
 	for _, table := range tables {
-		rows, err := conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM %q", table))
+		rows, err := conn.QueryContext(ctx, "SELECT * FROM "+sqlIdent(table))
 		if err != nil {
 			return err
 		}
@@ -344,18 +344,30 @@ func importTablesFromCSV(conn *sql.DB, dir string, tables []string) error {
 		}
 	}()
 
+	// 表名来自备份 zip 中的 CSV 文件名（外部不可信输入），执行前必须校验为本库真实业务表，
+	// 否则拼接进 SQL 的表名/列名可被构造为注入载荷（如 `t" (x) VALUES ('a'); DROP ...--`）。
+	allowed, err := businessTableSet(ctx, tx)
+	if err != nil {
+		return err
+	}
+	for _, table := range tables {
+		if !allowed[table] {
+			return fmt.Errorf("%s", i18n.T("error.import_invalid_file"))
+		}
+	}
+
 	// 清空所有待导入表（OFF 下顺序无关，无需拓扑排序）
 	for _, table := range tables {
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %q", table)); err != nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM "+sqlIdent(table)); err != nil {
 			return err
 		}
 	}
 	// 重置这些表的自增序列，使新插入从 1 开始（备份保留原 ID，此处仅清理，避免与导入 ID 冲突告警）
 	qs := make([]string, len(tables))
 	for i, t := range tables {
-		qs[i] = fmt.Sprintf("%q", t)
+		qs[i] = sqlString(t)
 	}
-	//nolint:gosec // 表名来自 listBusinessTables 读 sqlite_master 的白名单，且经 %q 反引号包裹，无注入风险
+	//nolint:gosec // 表名已按 businessTableSet 白名单校验，且经 sqlString 转义为字面量，无注入风险
 	if _, err := tx.ExecContext(ctx, "DELETE FROM sqlite_sequence WHERE name IN ("+strings.Join(qs, ",")+")"); err != nil {
 		return err
 	}
@@ -405,8 +417,7 @@ func insertTableFromCSV(tx *sql.Tx, ctx context.Context, table, csvPath string) 
 		return err
 	}
 	ph := strings.TrimSuffix(strings.Repeat("?,", len(header)), ",")
-	stmt, err := tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q (%s) VALUES (%s)",
-		table, strings.Join(quoteAll(header), ","), ph))
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO "+sqlIdent(table)+" ("+strings.Join(quoteAll(header), ",")+") VALUES ("+ph+")")
 	if err != nil {
 		return err
 	}
@@ -457,7 +468,8 @@ type columnTypeInfo struct {
 // columnTypes 通过 PRAGMA table_info 读取每列的声明类型，标记时间列。
 // 列顺序与传入 header 对齐（header 来自 CSV，理论上与表列顺序一致）。
 func columnTypes(tx *sql.Tx, ctx context.Context, table string, header []string) ([]columnTypeInfo, error) {
-	rows, err := tx.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%q)", table))
+	// PRAGMA 不能绑定占位符，故以转义后的字符串字面量传入表名（不拼接裸表名）。
+	rows, err := tx.QueryContext(ctx, "PRAGMA table_info("+sqlString(table)+")")
 	if err != nil {
 		return nil, err
 	}
@@ -546,13 +558,50 @@ func parseCell(s string) any {
 	return s
 }
 
-// quoteAll 对每列名加双引号（SQLite 标识符引用）。
+// quoteAll 对每列名做 SQL 标识符转义。
 func quoteAll(cols []string) []string {
 	out := make([]string, len(cols))
 	for i, c := range cols {
-		out[i] = fmt.Sprintf("%q", c)
+		out[i] = sqlIdent(c)
 	}
 	return out
+}
+
+// sqlIdent 把标识符（表名/列名）转义为 SQLite 双引号标识符：内部双引号加倍。
+// 表名、列名无法用占位符绑定只能拼接，故必须先转义；表名还需配合 businessTableSet 白名单。
+func sqlIdent(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
+// sqlString 把值转义为 SQLite 单引号字符串字面量：内部单引号加倍（用于 PRAGMA 等不可绑定参数的语句）。
+func sqlString(v string) string {
+	return `'` + strings.ReplaceAll(v, `'`, `''`) + `'`
+}
+
+// queryConner 抽象 *sql.DB / *sql.Tx 共有的查询方法（两者签名一致但无公共接口）。
+type queryConner interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+// businessTableSet 返回当前库中真实存在的业务表名集合（白名单）。
+// 备份包内的表名取自 CSV 文件名，属外部输入，拼进 SQL 前必须以此校验，
+// 防止伪造表名注入（表名会被拼进 DELETE / INSERT / PRAGMA 等语句）。
+func businessTableSet(ctx context.Context, q queryConner) (map[string]bool, error) {
+	rows, err := q.QueryContext(ctx,
+		`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('ent_migration_lock')`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	set := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		set[name] = true
+	}
+	return set, rows.Err()
 }
 
 // zipDirTables 将 dir 下各表 CSV 打包为 zip（仅指定表）。
