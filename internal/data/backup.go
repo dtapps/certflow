@@ -147,13 +147,15 @@ func (s *Service) ExportData() (string, error) {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 	defer conn.Close()
-	if err := exportTablesToCSV(conn, tmpDir); err != nil {
+	tables, err := exportTablesToCSV(conn, tmpDir)
+	if err != nil {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 
-	// 打包为 zip（只打包实际导出的 CSV，避免把 zip 自身或临时文件带进去）
+	// 打包为 zip（只打包实际导出的 CSV：按 sqlite_master 清单收窄，
+	// 避免把 zip 自身、临时文件或目录中其他来源的 .csv 带进去）
 	zipPath := filepath.Join(tmpDir, "certflow-backup.zip")
-	if err := zipDirTables(zipPath, tmpDir); err != nil {
+	if err := zipDirTables(zipPath, tmpDir, tables); err != nil {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 
@@ -261,34 +263,36 @@ func (s *Service) runImport(tmpDir string, tables []string) {
 // exportTablesToCSV 将每张业务表导出为 <表名>.csv（含表头），写入 dir。
 // 表名不接受外部传入：直接从当前库的 sqlite_master 读取（见 businessTables），
 // 与导入侧的白名单同源，保证拼进 SQL 的表名只可能是本库真实存在的表。
-func exportTablesToCSV(conn *sql.DB, dir string) error {
+// 返回实际导出的表名清单：打包侧必须按此清单收窄，避免目录中其他来源的
+// .csv（残留临时文件等）混入备份。
+func exportTablesToCSV(conn *sql.DB, dir string) ([]string, error) {
 	ctx := context.Background()
 	// 表名只来自本库 sqlite_master，不接受调用方传入：这是 SELECT 能安全拼接的前提。
 	tables, err := businessTables(ctx, conn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, table := range tables {
 		//nolint:gosec // 表名来自上面的 sqlite_master 清单，且经 sqlIdent 转义
 		rows, err := conn.QueryContext(ctx, "SELECT * FROM "+sqlIdent(table))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		cols, err := rows.Columns()
 		if err != nil {
 			rows.Close()
-			return err
+			return nil, err
 		}
 		f, err := os.Create(filepath.Join(dir, table+".csv"))
 		if err != nil {
 			rows.Close()
-			return err
+			return nil, err
 		}
 		w := csv.NewWriter(f)
 		if err := w.Write(cols); err != nil {
 			rows.Close()
 			f.Close()
-			return err
+			return nil, err
 		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -299,7 +303,7 @@ func exportTablesToCSV(conn *sql.DB, dir string) error {
 			if err := rows.Scan(ptrs...); err != nil {
 				rows.Close()
 				f.Close()
-				return err
+				return nil, err
 			}
 			rec := make([]string, len(cols))
 			for i, v := range vals {
@@ -308,23 +312,23 @@ func exportTablesToCSV(conn *sql.DB, dir string) error {
 			if err := w.Write(rec); err != nil {
 				rows.Close()
 				f.Close()
-				return err
+				return nil, err
 			}
 		}
 		if err := rows.Err(); err != nil {
 			rows.Close()
 			f.Close()
-			return err
+			return nil, err
 		}
 		rows.Close()
 		w.Flush()
 		if err := w.Error(); err != nil {
 			f.Close()
-			return err
+			return nil, err
 		}
 		f.Close()
 	}
-	return nil
+	return tables, nil
 }
 
 // importTablesFromCSV 在单个事务内清空并重新插入各表，CSV 表头驱动列名（保留原 ID）。
@@ -608,13 +612,10 @@ func businessTableSet(ctx context.Context, q queryConner) (map[string]bool, erro
 	return set, nil
 }
 
-// zipDirTables 将 dir 下所有 CSV（即各表导出文件）打包为 zip。
-// 仅收 <表名>.csv 形式的文件名，zip 自身与其临时文件天然被排除，无需外部传表清单。
-func zipDirTables(outPath, dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return err
-	}
+// zipDirTables 将 dir 下指定表的 CSV 打包为 zip（仅 <表名>.csv）。
+// 表清单必须来自 exportTablesToCSV 的返回值（sqlite_master 白名单）：
+// 不按目录枚举打包，否则目录中任何其他来源的 .csv（残留临时文件等）都会混入备份。
+func zipDirTables(outPath, dir string, tables []string) error {
 	out, err := os.Create(outPath)
 	if err != nil {
 		return err
@@ -622,11 +623,8 @@ func zipDirTables(outPath, dir string) error {
 	defer out.Close()
 	zw := zip.NewWriter(out)
 	defer zw.Close()
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".csv") {
-			continue
-		}
-		if err := addFileToZip(zw, filepath.Join(dir, e.Name())); err != nil {
+	for _, t := range tables {
+		if err := addFileToZip(zw, filepath.Join(dir, t+".csv")); err != nil {
 			return err
 		}
 	}

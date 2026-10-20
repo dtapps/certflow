@@ -86,7 +86,7 @@ func TestExportImportRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir); err != nil {
+	if _, err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -159,7 +159,7 @@ func TestImportNullVsEmptyString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir); err != nil {
+	if _, err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -222,7 +222,7 @@ func TestImportTimeColumnRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, exportDir); err != nil {
+	if _, err := exportTablesToCSV(conn, exportDir); err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 
@@ -277,7 +277,7 @@ func TestImportFailureRollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listBusinessTables failed: %v", err)
 	}
-	if err := exportTablesToCSV(conn, tmpDir); err != nil {
+	if _, err := exportTablesToCSV(conn, tmpDir); err != nil {
 		t.Fatalf("export failed: %v", err)
 	}
 	// 篡改 certificates.csv 的时间列
@@ -400,11 +400,12 @@ func TestExportIgnoresInjectedTableNameFile(t *testing.T) {
 		t.Fatalf("write non-csv failed: %v", err)
 	}
 
-	if err := exportTablesToCSV(conn, dir); err != nil {
+	tables, err := exportTablesToCSV(conn, dir)
+	if err != nil {
 		t.Fatalf("exportTablesToCSV failed: %v", err)
 	}
 	zipPath := filepath.Join(dir, "certflow-backup.zip")
-	if err := zipDirTables(zipPath, dir); err != nil {
+	if err := zipDirTables(zipPath, dir, tables); err != nil {
 		t.Fatalf("zipDirTables failed: %v", err)
 	}
 
