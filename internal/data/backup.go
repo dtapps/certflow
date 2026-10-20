@@ -31,9 +31,14 @@ var errUserCancel = fmt.Errorf("user cancelled file selection")
 
 // listBusinessTables 返回当前库中实际存在的业务表（排除 SQLite 内部表与 ent 辅助表）。
 // 表清单直接从 sqlite_master 读取，避免手写表名与 ent 生成的真实表名（复数形式）不一致。
+// 该清单同时是导出/导入时拼接表名的唯一来源（白名单），调用方不得传入外部表名。
 func listBusinessTables(conn *sql.DB) ([]string, error) {
-	ctx := context.Background()
-	rows, err := conn.QueryContext(ctx,
+	return businessTables(context.Background(), conn)
+}
+
+// businessTables 从 sqlite_master 读取业务表名清单，按名称排序。
+func businessTables(ctx context.Context, q queryConner) ([]string, error) {
+	rows, err := q.QueryContext(ctx,
 		`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('ent_migration_lock') ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -142,17 +147,13 @@ func (s *Service) ExportData() (string, error) {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 	defer conn.Close()
-	tables, err := listBusinessTables(conn)
-	if err != nil {
-		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
-	}
-	if err := exportTablesToCSV(conn, tmpDir, tables); err != nil {
+	if err := exportTablesToCSV(conn, tmpDir); err != nil {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 
-	// 打包为 zip
+	// 打包为 zip（只打包实际导出的 CSV，避免把 zip 自身或临时文件带进去）
 	zipPath := filepath.Join(tmpDir, "certflow-backup.zip")
-	if err := zipDirTables(zipPath, tmpDir, tables); err != nil {
+	if err := zipDirTables(zipPath, tmpDir); err != nil {
 		return "", fmt.Errorf("%s", i18n.T("error.backup_failed", "Error", err))
 	}
 
@@ -257,10 +258,18 @@ func (s *Service) runImport(tmpDir string, tables []string) {
 	s.finishImportStatus(false, "")
 }
 
-// exportTablesToCSV 将每张表导出为 <表名>.csv（含表头），写入 dir。
-func exportTablesToCSV(conn *sql.DB, dir string, tables []string) error {
+// exportTablesToCSV 将每张业务表导出为 <表名>.csv（含表头），写入 dir。
+// 表名不接受外部传入：直接从当前库的 sqlite_master 读取（见 businessTables），
+// 与导入侧的白名单同源，保证拼进 SQL 的表名只可能是本库真实存在的表。
+func exportTablesToCSV(conn *sql.DB, dir string) error {
 	ctx := context.Background()
+	// 表名只来自本库 sqlite_master，不接受调用方传入：这是 SELECT 能安全拼接的前提。
+	tables, err := businessTables(ctx, conn)
+	if err != nil {
+		return err
+	}
 	for _, table := range tables {
+		//nolint:gosec // 表名来自上面的 sqlite_master 清单，且经 sqlIdent 转义
 		rows, err := conn.QueryContext(ctx, "SELECT * FROM "+sqlIdent(table))
 		if err != nil {
 			return err
@@ -586,26 +595,26 @@ type queryConner interface {
 // businessTableSet 返回当前库中真实存在的业务表名集合（白名单）。
 // 备份包内的表名取自 CSV 文件名，属外部输入，拼进 SQL 前必须以此校验，
 // 防止伪造表名注入（表名会被拼进 DELETE / INSERT / PRAGMA 等语句）。
+// 导出侧不接收外部表名，直接使用同一份清单，两边的可拼接表名来源因此完全一致。
 func businessTableSet(ctx context.Context, q queryConner) (map[string]bool, error) {
-	rows, err := q.QueryContext(ctx,
-		`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('ent_migration_lock')`)
+	tables, err := businessTables(ctx, q)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	set := make(map[string]bool)
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
-		}
+	set := make(map[string]bool, len(tables))
+	for _, name := range tables {
 		set[name] = true
 	}
-	return set, rows.Err()
+	return set, nil
 }
 
-// zipDirTables 将 dir 下各表 CSV 打包为 zip（仅指定表）。
-func zipDirTables(outPath, dir string, tables []string) error {
+// zipDirTables 将 dir 下所有 CSV（即各表导出文件）打包为 zip。
+// 仅收 <表名>.csv 形式的文件名，zip 自身与其临时文件天然被排除，无需外部传表清单。
+func zipDirTables(outPath, dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
 	out, err := os.Create(outPath)
 	if err != nil {
 		return err
@@ -613,9 +622,11 @@ func zipDirTables(outPath, dir string, tables []string) error {
 	defer out.Close()
 	zw := zip.NewWriter(out)
 	defer zw.Close()
-	for _, t := range tables {
-		p := filepath.Join(dir, t+".csv")
-		if err := addFileToZip(zw, p); err != nil {
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".csv") {
+			continue
+		}
+		if err := addFileToZip(zw, filepath.Join(dir, e.Name())); err != nil {
 			return err
 		}
 	}
