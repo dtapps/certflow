@@ -18,3 +18,4 @@ image/systray*
 docs/*-*-*.md
 coverage.out
 coverage.html
+frontend/coverage

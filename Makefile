@@ -324,3 +324,19 @@ push-force: ## 强制推送到所有远程仓库（忽略冲突）
 coverage: ## 生成 Go 测试覆盖率报告（排除 ent 生成代码）
 	go test -vet=off -coverpkg=$$(go list ./internal/... | grep -v '/internal/ent' | paste -sd, -) -coverprofile=coverage.out ./internal/...
 	go tool cover -func=coverage.out
+
+# ==================== 前端测试覆盖率 ====================
+# 本区块自包含，可整段复制到其他 Vite + Vue + pnpm 项目使用（前提是目标项目已有
+# vitest 配置与 test:coverage 脚本，见 frontend/vitest.config.ts 与 package.json）。
+# 复制到其他项目时按需调整：
+#   1. 包管理器（下方为 pnpm；npm 项目改为 npm --prefix ./frontend run test:coverage）；
+#   2. 前端目录名（下方为 ./frontend；前端在仓库根目录的项目直接 pnpm test:coverage）。
+# CI 接入：产出 frontend/coverage/lcov.info 后，用 CNB testing:coverage 内置任务上报
+# （options: pattern=frontend/coverage/lcov.info, lines=全量红线, diffLines=增量红线）。
+
+.PHONY: test-frontend coverage-frontend
+test-frontend: ## 运行前端单元测试（vitest，失败即停止）
+	pnpm --dir ./frontend test
+
+coverage-frontend: ## 生成前端测试覆盖率报告（lcov，排除入口与测试自身）
+	pnpm --dir ./frontend test:coverage

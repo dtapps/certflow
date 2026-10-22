@@ -24,6 +24,10 @@ export function parseDateTime(ts: string | undefined | null): Date | null {
   // 归一多余空格（不影响时区偏移符号）
   s = s.replace(/\s+/g, ' ')
 
+  // 时区偏移前的空格同样会破坏 ISO 解析：剥离时区名（CST 等）后会残留
+  // "2026-08-03 16:02:31.918573 +0800"，须去掉偏移量前的空格再转 ISO。
+  s = s.replace(/\s+([+-]\d{2}:?\d{2})$/, '$1')
+
   // 空格分隔转 ISO：仅替换第一个空格（日期与时间之间），保留时区偏移里的符号
   const normalized = s.includes(' ') ? s.replace(' ', 'T') : s
   const d = new Date(normalized)
