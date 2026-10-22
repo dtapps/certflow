@@ -1,0 +1,55 @@
+# Codecov 配置文件（放在 .github/ 下，Codecov 会自动读取）
+# 官方文档：https://docs.codecov.com/docs/codecov-yaml
+#
+# 本仓库有 Go 后端与 Node(Vue) 前端两套覆盖率，用 flags 区分。
+# 覆盖率数据由 CNB 流水线运行测试后，通过 codecov bash 上传器上传
+# （需在 CNB 项目里配置 CODECOV_TOKEN 密钥）；本文件只负责解析与展示规则。
+
+coverage:
+  # 覆盖率色阶范围（仅影响徽章颜色，不影响门禁）
+  range: '2...80'
+  round: down
+  precision: 2
+
+  status:
+    # 总覆盖率状态检查（go+node 合并）。默认 informational 不阻断——
+    # 真正的红线门禁在 CNB testing:coverage（go 20% / node 2%）执行，避免双重门禁。
+    # 若希望 Codecov 在 GitHub 侧也拦截，把 informational 改为 false 即可。
+    project:
+      default:
+        target: auto # 与上次相比不降（棘轮）
+        threshold: 2% # 允许下降 2%
+        informational: true
+    # 增量（patch）状态检查：本次 PR 新增代码的覆盖率
+    patch:
+      default:
+        target: 50% # 新增代码至少 50% 覆盖
+        informational: true
+
+  ignore:
+    # Go：ent 生成代码（占 73% 语句块，计入会把总覆盖率从 27% 稀释到 5%）、测试、入口
+    - 'internal/ent/**'
+    - '**/*_test.go'
+    - 'main.go'
+    # Node：测试自身、入口、构建配置、依赖
+    - 'frontend/src/test/**'
+    - 'frontend/src/main.ts'
+    - 'frontend/src/logviewer/main.ts'
+    - 'frontend/vite.config.ts'
+    - 'frontend/vitest.config.ts'
+    - '**/node_modules/**'
+
+comment:
+  layout: 'reach, diff, flags, files'
+  behavior: default
+  require_changes: false
+
+flags:
+  go:
+    paths:
+      - 'internal/**'
+    carryforward: true
+  node:
+    paths:
+      - 'frontend/src/**'
+    carryforward: true

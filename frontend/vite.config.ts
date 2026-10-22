@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import wails from "@wailsio/runtime/plugins/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { codecovVitePlugin } from "@codecov/vite-plugin";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
@@ -37,6 +38,17 @@ export default defineConfig({
       resolvers: [NaiveUiResolver()],
       dts: "src/components.d.ts",
     }),
+    // Codecov Bundle Analysis：仅在 CI 提供 CODECOV_TOKEN 时才实例化插件，
+    // 本地 / CNB 生产构建（无 token）完全不加载，避免 Vite 8 与插件 peer(4/5/6) 不兼容影响主构建。
+    ...(process.env.CODECOV_TOKEN
+      ? [
+          codecovVitePlugin({
+            enableBundleAnalysis: true,
+            bundleName: "certflow-frontend",
+            uploadToken: process.env.CODECOV_TOKEN,
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {

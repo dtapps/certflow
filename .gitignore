@@ -15,7 +15,10 @@ AGENTS.md
 image/systray*
 .vscode/
 # Dev logs (per-session notes, not committed)
-docs/*-*-*.md
+/docs/*-*-*.md
+/docs/*.png
+/docs/*.jpg
+/docs/*.gif
 coverage.out
 coverage.html
 frontend/coverage
