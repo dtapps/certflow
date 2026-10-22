@@ -91,14 +91,22 @@
           - /go/pkg/mod:copy-on-write # 仅缓存 Go 模块下载，避免覆盖镜像内预装的 /go/bin 工具
       stages:
         - name: 生成测试覆盖率
+          # 命令直接内联于 CI（不经 Makefile）：覆盖率是 CI 质量门禁，非日常开发命令。
+          # -vet=off：i18n.T() 作 printf 参数会触发 vet non-constant format 报错。
+          # -coverpkg 排除 internal/ent：ent 为生成代码，占全树语句块约 73%，
+          # 计入会把总覆盖率从约 27% 稀释到约 5%，指标失去意义（与排除 vendor 同理）。
           script:
             - go mod download
-            - make coverage # 产出 coverage.out（已排除 ent 生成代码）
+            - go test -vet=off -coverpkg=$(go list ./internal/... | grep -v '/internal/ent' | paste -sd, -) -coverprofile=coverage.out
+              ./internal/...
+            - go tool cover -func=coverage.out # 产出 coverage.out + 终端按函数摘要
 
         - name: 上报覆盖率（增量红线）
           # https://docs.cnb.cool/zh/build/internal-steps/testing/coverage.html
           type: testing:coverage
           options:
+            key: go # 多报告数据键：与 Node 侧（key: node）区分，各自写入 meta map 互不覆盖
+            name: Go Coverage # 徽章显示名，与 key 一对一对应
             diffLines: 50 # 增量覆盖率红线（%）：本次 PR 变更代码的覆盖率，低于此值阻断流水线
             lines: 20 # 全量覆盖率底线，与 push 流水线一致，防止总量被单个 PR 拉低
             lang: go # golang 格式的覆盖率报告必须指定，否则计算有误差
@@ -131,6 +139,8 @@
           # https://docs.cnb.cool/zh/build/internal-steps/testing/coverage.html
           type: testing:coverage
           options:
+            key: node # 多报告数据键：与 Go 侧（key: go）区分，各自写入 meta map 互不覆盖
+            name: Node Coverage # 徽章显示名，与 key 一对一对应
             diffLines: 50 # 增量覆盖率红线（%）：本次 PR 变更代码的覆盖率，低于此值阻断流水线
             lines: 2 # 全量覆盖率底线，与 push 流水线一致，防止总量被单个 PR 拉低
             pattern: 'frontend/coverage/lcov.info'
