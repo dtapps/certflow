@@ -16,3 +16,5 @@ image/systray*
 .vscode/
 # Dev logs (per-session notes, not committed)
 docs/*-*-*.md
+coverage.out
+coverage.html
