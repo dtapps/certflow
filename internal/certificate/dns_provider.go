@@ -136,7 +136,8 @@ func isConfigEmpty(c dnsprovider.DNSProviderConfig) bool {
 		c.SubscriptionID == "" && c.ResourceGroup == "" && c.ClientID == "" &&
 		c.TenantID == "" && c.PublicKey == "" && c.PrivateKey == "" &&
 		c.Username == "" && c.AgentID == "" && c.AuthUserID == "" &&
-		c.APIID == "" && c.ClientIP == ""
+		c.APIID == "" && c.ClientIP == "" && c.APIUser == "" &&
+		c.SecretAPIKey == "" && c.Secret == ""
 }
 
 // createCloudflareProvider 创建 Cloudflare DNS provider，用于 ACME DNS 验证

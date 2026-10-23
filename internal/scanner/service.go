@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -183,8 +184,8 @@ func (s *ScannerService) extractCertInfo(domain string, port int, client *http.C
 		leaf := resp.TLS.PeerCertificates[0]
 		fp := sha256.Sum256(leaf.Raw)
 
-		result.CertIssuer = leaf.Issuer.CommonName
-		result.CertSubject = leaf.Subject.CommonName
+		result.CertIssuer = issuerName(leaf)
+		result.CertSubject = subjectName(leaf)
 		result.CertNotBefore = leaf.NotBefore.Format(time.RFC3339)
 		result.CertNotAfter = leaf.NotAfter.Format(time.RFC3339)
 		result.CertRemainingDays = int(time.Until(leaf.NotAfter).Hours() / 24)
@@ -196,6 +197,33 @@ func (s *ScannerService) extractCertInfo(domain string, port int, client *http.C
 		result.CertSerialNumber = fmt.Sprintf("%x", leaf.SerialNumber)
 		result.ErrorMessage = ""
 	}
+}
+
+// issuerName 取证书颁发者展示名。
+// 现代 CA（如 Let's Encrypt 2024 起）签发的证书 Subject CN 普遍为空，
+// 只认 CommonName 会让「颁发者」一列在大面积常见证书上显示空白。
+func issuerName(cert *x509.Certificate) string {
+	if cn := cert.Issuer.CommonName; cn != "" {
+		return cn
+	}
+	if len(cert.Issuer.Organization) > 0 {
+		return cert.Issuer.Organization[0]
+	}
+	return ""
+}
+
+// subjectName 取证书主题展示名，CN 为空时退回「首个 SAN → Organization」。
+func subjectName(cert *x509.Certificate) string {
+	if cn := cert.Subject.CommonName; cn != "" {
+		return cn
+	}
+	if len(cert.DNSNames) > 0 {
+		return cert.DNSNames[0]
+	}
+	if len(cert.Subject.Organization) > 0 {
+		return cert.Subject.Organization[0]
+	}
+	return ""
 }
 
 // saveResult 保存扫描结果到数据库
@@ -324,7 +352,10 @@ func getPubKeyBits(cert *x509.Certificate) int {
 		return k.N.BitLen()
 	case *ecdsa.PublicKey:
 		return k.Curve.Params().BitSize
+	case ed25519.PublicKey:
+		return 256 // Ed25519 固定 32 字节
 	default:
-		return 256
+		// 未知算法返回 0：瞎填一个数字会让用户误判证书强度
+		return 0
 	}
 }

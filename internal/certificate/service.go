@@ -575,7 +575,7 @@ func (s *CertificateService) RevokeCertificate(ctx context.Context, certID int) 
 	}
 
 	// 创建 lego 客户端
-	privateKey, err := loadPrivateKeyFromContent([]byte(certEntity.KeyContent))
+	privateKey, err := loadSignerFromContent([]byte(certEntity.KeyContent))
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("error.load_private_key_failed", "Error", err))
 	}
@@ -658,13 +658,40 @@ func parseCertificate(certBytes []byte) (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-// 从内容加载私钥
+// 从内容加载私钥（仅 EC，供需要 *ecdsa.PrivateKey 的调用方使用）
 func loadPrivateKeyFromContent(keyBytes []byte) (*ecdsa.PrivateKey, error) {
+	signer, err := loadSignerFromContent(keyBytes)
+	if err != nil {
+		return nil, err
+	}
+	key, ok := signer.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("error.parse_pem_key_failed"))
+	}
+	return key, nil
+}
+
+// loadSignerFromContent 从 PEM 内容加载任意类型的私钥。
+// 证书密钥类型可选 EC256/EC384/RSA2048/RSA4096/RSA8192，而这几个格式的 PEM block 类型不同
+// （EC PRIVATE KEY / RSA PRIVATE KEY / PRIVATE KEY），只认 EC 会让选 RSA 的证书撤销失败。
+func loadSignerFromContent(keyBytes []byte) (crypto.Signer, error) {
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
 		return nil, fmt.Errorf("%s", i18n.T("error.parse_pem_key_failed"))
 	}
-	return x509.ParseECPrivateKey(block.Bytes)
+
+	if key, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
+		return key, nil
+	}
+	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+		return key, nil
+	}
+	if key, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
+		if signer, ok := key.(crypto.Signer); ok {
+			return signer, nil
+		}
+	}
+	return nil, fmt.Errorf("%s", i18n.T("error.parse_pem_key_failed"))
 }
 
 // acmeUser 实现 lego 的 registration.User 接口

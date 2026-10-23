@@ -18,11 +18,12 @@
         - name: 生成测试覆盖率
           # 命令直接内联于 CI（不经 Makefile）：覆盖率是 CI 质量门禁，非日常开发命令。
           # -vet=off：i18n.T() 作 printf 参数会触发 vet non-constant format 报错。
-          # -coverpkg 排除 internal/ent：ent 为生成代码，占全树语句块约 73%，
-          # 计入会把总覆盖率从约 27% 稀释到约 5%，指标失去意义（与排除 vendor 同理）。
+          # -coverpkg 排除生成代码：internal/ent（ent 生成，占全树语句块约 73%，
+          # 计入会把总覆盖率从约 27% 稀释到约 5%，指标失去意义，与排除 vendor 同理）、
+          # internal/httplog/db（sqlc 生成，同样不写测试）。
           script:
-            - go test -vet=off -coverpkg=$(go list ./internal/... | grep -v '/internal/ent' | paste -sd, -) -coverprofile=coverage.out
-              ./internal/...
+            - go test -vet=off -coverpkg=$(go list ./internal/... | grep -vE '/internal/ent|/internal/httplog/db' | paste
+              -sd, -) -coverprofile=coverage.out ./internal/...
             - go tool cover -func=coverage.out # 产出 coverage.out + 终端按函数摘要
 
         - name: 上报覆盖率（全量红线）

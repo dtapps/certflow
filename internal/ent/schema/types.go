@@ -80,6 +80,11 @@ type DNSProviderConfig struct {
 	PrivateKey string `json:"private_key,omitempty" secret:"true"`
 	Username   string `json:"username,omitempty" secret:"true"`
 
+	// 各家专有字段名（名字不统一，但必须是本结构体的字段，否则会静默丢失）
+	APIUser      string `json:"api_user,omitempty" secret:"true"`       // Namecheap
+	SecretAPIKey string `json:"secret_api_key,omitempty" secret:"true"` // Porkbun
+	Secret       string `json:"secret,omitempty" secret:"true"`         // 新网 Xinnet
+
 	// 其他
 	AgentID    string `json:"agent_id,omitempty" secret:"true"`
 	AuthUserID string `json:"auth_user_id,omitempty" secret:"true"`

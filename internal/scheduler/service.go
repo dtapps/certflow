@@ -45,6 +45,11 @@ func (s *Scheduler) GetJob(jobID string) (gocron.Job, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid job id %s: %w", jobID, err)
 	}
+	// 调度器尚未 Start（或已 Stop）时 s.scheduler 是 nil 接口，
+	// 直接调 Jobs() 会 panic —— 启动早期/关闭后期的日志埋点会踩到。
+	if s.scheduler == nil {
+		return nil, fmt.Errorf("scheduler not started")
+	}
 	for _, job := range s.scheduler.Jobs() {
 		if job.ID() == id {
 			return job, nil

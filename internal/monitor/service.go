@@ -458,11 +458,11 @@ func (s *MonitorService) checkHTTPS(m *ent.MonitoredDomain) checkResult {
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 		leaf := resp.TLS.PeerCertificates[0]
 		fp := sha256.Sum256(leaf.Raw)
-		result.certIssuer = leaf.Issuer.CommonName
+		result.certIssuer = certIssuerName(leaf)
 		result.certNotBefore = leaf.NotBefore
 		result.certNotAfter = leaf.NotAfter
 		result.certFingerprint = fmt.Sprintf("%x", fp)
-		result.certSubject = leaf.Subject.CommonName
+		result.certSubject = certSubjectName(leaf)
 		result.certSignatureAlgo = leaf.SignatureAlgorithm.String()
 		result.certPublicKeyAlgo = leaf.PublicKeyAlgorithm.String()
 		result.certPublicKeyBits = getPubKeyBits(leaf)
@@ -539,11 +539,11 @@ func (s *MonitorService) checkHTTP(m *ent.MonitoredDomain) checkResult {
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 		leaf := resp.TLS.PeerCertificates[0]
 		fp := sha256.Sum256(leaf.Raw)
-		result.certIssuer = leaf.Issuer.CommonName
+		result.certIssuer = certIssuerName(leaf)
 		result.certNotBefore = leaf.NotBefore
 		result.certNotAfter = leaf.NotAfter
 		result.certFingerprint = fmt.Sprintf("%x", fp)
-		result.certSubject = leaf.Subject.CommonName
+		result.certSubject = certSubjectName(leaf)
 		result.certSANs = leaf.DNSNames
 		result.certRemainingDays = int(time.Until(leaf.NotAfter).Hours() / 24)
 
@@ -838,4 +838,38 @@ func getPubKeyBits(cert *x509.Certificate) int {
 		return pk.Size() * 8
 	}
 	return 0
+}
+
+// certIssuerName 提取证书颁发者展示名：CN → Organization → 空串。
+// 现代 CA（如 Let's Encrypt）签发的证书普遍不再写 CommonName，
+// 只取 CN 会让监控列表的「颁发者」整列空白，因此需要按字段依次兜底。
+func certIssuerName(cert *x509.Certificate) string {
+	if cert.Issuer.CommonName != "" {
+		return cert.Issuer.CommonName
+	}
+	for _, o := range cert.Issuer.Organization {
+		if o != "" {
+			return o
+		}
+	}
+	return ""
+}
+
+// certSubjectName 提取证书主体展示名：CN → 首个 SAN → Organization → 空串。
+// 对证书主体而言，域名（SAN）比组织名更有辨识度，故 SAN 优先于 Organization。
+func certSubjectName(cert *x509.Certificate) string {
+	if cert.Subject.CommonName != "" {
+		return cert.Subject.CommonName
+	}
+	for _, d := range cert.DNSNames {
+		if d != "" {
+			return d
+		}
+	}
+	for _, o := range cert.Subject.Organization {
+		if o != "" {
+			return o
+		}
+	}
+	return ""
 }

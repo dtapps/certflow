@@ -55,6 +55,10 @@ linters:
       - linters: [gosec]
         path: '_test\.go$'
         text: 'G404'
+      # gosec G101 硬编码凭证 / G402 跳过 TLS 校验：测试里放固定假枚举值与自签证书是刻意的
+      - linters: [gosec]
+        path: '_test\.go$'
+        text: 'G101|G402'
       # errcheck: defer Close / 文件操作 / 日志写入忽略错误是常见写法
       - linters: [errcheck]
         text: 'Error return value of'

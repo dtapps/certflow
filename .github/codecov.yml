@@ -29,6 +29,8 @@ coverage:
   ignore:
     # Go：ent 生成代码（占 73% 语句块，计入会把总覆盖率从 27% 稀释到 5%）、测试、入口
     - 'internal/ent/**'
+    # Go：sqlc 生成代码（internal/httplog/db，同属生成物，不写测试也不计入分母）
+    - 'internal/httplog/db/**'
     - '**/*_test.go'
     - 'main.go'
     # Node：测试自身、入口、构建配置、依赖

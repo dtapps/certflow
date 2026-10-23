@@ -355,7 +355,9 @@ func (s *CAService) TestConnection(ctx context.Context, id int) (string, error) 
 	}
 
 	// TODO: 实现 ACME 目录 URL 验证
-	return fmt.Sprintf(i18n.T("error.ca_test_connection_success", "Name", caEntity.Name, "URL", caEntity.DirectoryURL)), nil
+	// 注意：i18n.T 已返回渲染后的字符串，不能再交给 fmt.Sprintf 当格式化模板
+	// （译文若含 % 会被当成动词，导致输出出现 %!x(MISSING)）。
+	return i18n.T("error.ca_test_connection_success", "Name", caEntity.Name, "URL", caEntity.DirectoryURL), nil
 }
 
 // CheckDirectoryURL 验证 ACME 目录 URL 是否可访问且为有效的 ACME 目录
