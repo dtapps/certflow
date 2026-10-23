@@ -4,6 +4,7 @@ FROM golang:1.27.3-trixie
 # ==========================================
 # 定义版本变量
 # https://github.com/nodejs/node/releases
+# https://github.com/pnpm/pnpm/releases
 # https://github.com/wailsapp/wails/releases
 # https://github.com/ent/ent/releases
 # https://github.com/sqlc-dev/sqlc/releases
@@ -13,8 +14,10 @@ FROM golang:1.27.3-trixie
 # https://github.com/reteps/dockerfmt/releases
 # https://github.com/google/yamlfmt/releases
 # https://github.com/itchyny/gojq/releases
+# https://github.com/gotestyourself/gotestsum/releases
 # ==========================================
 ARG NODE_VERSION=26.12.1
+ARG PNPM_VERSION=12.15.0
 ARG WAILS3_VERSION=v3.0.0-beta.34
 ARG ENT_VERSION=v0.14.6
 ARG SQLC_VERSION=v1.31.1
@@ -24,19 +27,14 @@ ARG SHFMT_VERSION=v3.14.1
 ARG DOCKERFMT_VERSION=v0.5.4
 ARG YAMLFMT_VERSION=v0.21.0
 ARG GOJQ_VERSION=v0.12.19
+ARG GOTESTSUM_VERSION=v1.13.0
 
 # 1. 设置 Go 环境变量
-ENV GO111MODULE=on
-ENV GOPROXY=https://mirrors.cloud.tencent.com/go/,direct
 ENV GOINSECURE=go.dtapp.net
 ENV GOPATH=/go
 ENV PATH="$GOPATH/bin:$PATH"
 
-# 2. 替换 Debian APT 加速源
-RUN sed -i 's|deb.debian.org|mirrors.cloud.tencent.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null \
-    || sed -i 's|deb.debian.org|mirrors.cloud.tencent.com|g' /etc/apt/sources.list
-
-# 3. 安装基础构建工具
+# 2. 安装基础构建工具
 # 注意：libgtk-4-dev / libwebkitgtk-6.0-dev 是 wails3 CLI 从源码 `go install` 及
 # 后续 go build/test 编译 webview 所必须的（提供 gtk4.pc / webkitgtk-6.0.pc），
 # 否则 make tool-deps / make check 会因 pkg-config 找不到头文件而失败。
@@ -49,6 +47,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     unzip \
     pkg-config \
+    git \
+    make \
     libgtk-4-dev \
     libwebkitgtk-6.0-dev \
     jq
@@ -67,11 +67,8 @@ RUN ARCH=$(uname -m) && \
     wget -q -O node.tar.xz "${NODE_URL}" && \
     tar -xJf node.tar.xz -C /usr/local --strip-components=1 && \
     \
-    # 配置 npm/pnpm 使用腾讯云源
-    npm config set registry https://mirrors.cloud.tencent.com/npm/ && \
-    npm install -g pnpm && \
-    pnpm config set registry https://mirrors.cloud.tencent.com/npm/ && \
-    pnpm config set ignore-scripts false && \
+    # 配置 npm/pnpm
+    npm install -g pnpm@${PNPM_VERSION} && \
     \
     # 清理
     rm -rf node.tar.xz && \
@@ -99,6 +96,8 @@ RUN echo "==> 预安装 Go 工具链（版本已锁定）..." \
     && echo "==> yamlfmt 安装完成 (${YAMLFMT_VERSION})" \
     && go install github.com/itchyny/gojq/cmd/gojq@${GOJQ_VERSION} \
     && echo "==> gojq 安装完成 (${GOJQ_VERSION})" \
+    && go install gotest.tools/gotestsum@${GOTESTSUM_VERSION} \
+    && echo "==> gotestsum 安装完成 (${GOTESTSUM_VERSION})" \
     && echo "--- Go 工具链安装完成 ---" \
     && ls -l $GOPATH/bin
 
