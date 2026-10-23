@@ -14,13 +14,13 @@
 
 ## 2. 涉及文件清单
 
-| 文件                                        | 作用                                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `.github/codecov.yml`                       | Codecov 规则：忽略 `internal/ent` 等生成代码、`flags`（go / node）、`status: informational` |
-| `.github/workflows/codecov.yml`             | GitHub Actions 流水线：装依赖 → 跑 Go/前端测试 → 构建前端 → 上传覆盖率 / 测试结果           |
-| `frontend/vite.config.ts`                   | 条件加载 `@codecov/vite-plugin`（仅当 `CODECOV_TOKEN` 存在时实例化）                        |
-| `frontend/scripts/vitest-json-to-junit.mjs` | 零依赖脚本：Vitest JSON → JUnit XML                                                         |
-| `frontend/package.json`                     | `devDependencies`：`@codecov/vite-plugin`、`@vitest/...` 等                                 |
+| 文件                                        | 作用                                                                                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/codecov.yml`                       | Codecov 规则：忽略 `internal/ent` 等生成代码、`flags`（go / node）、`component_management`（Go/Vue 组件）、`status: informational` |
+| `.github/workflows/codecov.yml`             | GitHub Actions 流水线：装依赖 → 跑 Go/前端测试 → 构建前端 → 上传覆盖率 / 测试结果                                                  |
+| `frontend/vite.config.ts`                   | 条件加载 `@codecov/vite-plugin`（仅当 `CODECOV_TOKEN` 存在时实例化）                                                               |
+| `frontend/scripts/vitest-json-to-junit.mjs` | 零依赖脚本：Vitest JSON → JUnit XML                                                                                                |
+| `frontend/package.json`                     | `devDependencies`：`@codecov/vite-plugin`、`@vitest/...` 等                                                                        |
 
 ## 3. 各功能详解
 
@@ -68,6 +68,28 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
   - 上传步骤的 `files` 已合并两份报告：`frontend/test-report.xml,./go-test-report.xml`。
 - 最终 Codecov 的 **Tests** 面板同时包含 Go 与 Vue 的测试结果。
 
+### 3.4 组件（Components）
+
+把整仓覆盖率拆成 **Go 后端 / Vue 前端** 两个逻辑单元，在 Codecov 的 **Components** 面板分别看各自的覆盖率与趋势。
+
+- 配置在 `.github/codecov.yml` 的 `component_management`（**不是**根目录 `codecov.yaml`）：
+  ```yaml
+  component_management:
+    default_selection: 2 # 面板默认同时展示 2 个组件
+    individual_components:
+      - component_id: "go-backend"
+        name: "Go 后端"
+        paths: ["internal/**"]
+      - component_id: "vue-frontend"
+        name: "Vue 前端"
+        paths: ["frontend/src/**"]
+  ```
+- 组件 `paths` 与上面的 `flags`（go / node）划分一致；全局 `ignore`（ent 生成代码 / 测试 / 入口）仍生效，
+  这些文件不计入组件覆盖率。
+- ⚠️ **配置文件位置**：Codecov 搜索顺序为「**仓库根目录 → `.github/`**」。**不要把 `codecov.yaml` 放根目录**——
+  若根目录存在，它会优先于 `.github/codecov.yml` 生效并**完全覆盖**后者（丢失门禁 / 忽略 / flags 规则）。
+  本仓库统一放在 `.github/codecov.yml`。
+
 ## 4. 必需的密钥
 
 - `CODECOV_TOKEN`：在 GitHub 仓库 **Settings → Secrets → Actions** 中配置（Codecov 项目页获取）。覆盖率、Bundle、测试结果三个动作共用此 token。
@@ -91,3 +113,5 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
 - GA 与 CNB 都跑一遍测试，各管各的、互不依赖（GA 生成产物并上报 Codecov，CNB 负责门禁）。
 - `frontend/package.json` 的 `packageManager` 为 `pnpm@12.14.0`，`frontend/.nvmrc` 为 `25.9.0`——工作流用 `node-version-file` / `go-version-file` 动态读取，不要写死版本号。
 - 文档命名注意 `docs/*-*-*.md`（双横线）被 `.gitignore` 忽略，本文档用单横线命名（`docs/codecov.md`）。
+- **Codecov 配置文件位置**：统一放 `.github/codecov.yml`。不要新增根目录 `codecov.yaml`——Codecov 先搜根目录，
+  会覆盖 `.github` 下的配置并丢掉既有门禁 / 忽略 / flags 规则。

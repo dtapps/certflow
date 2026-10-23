@@ -53,3 +53,108 @@ flags:
     paths:
       - 'frontend/src/**'
     carryforward: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Components（组件）：按业务域把整仓覆盖率拆成 9 个逻辑单元
+# ─────────────────────────────────────────────────────────────────────────────
+# 作用：Codecov 为每个组件单独统计覆盖率，在网页 Components 面板 / PR 评论里分别展示，
+# 便于定位是哪一块（部署、证书、存储、前端视图…）拉低或提升了覆盖率。
+#
+# 与上面 flags 的关系：
+#   flags      —— 数据归类（go / node），决定某份上传数据归属；
+#   components —— 统计/展示分组，决定哪些文件算进哪个组件。
+#   两者独立；各组件 paths 合起来覆盖 flags 的全部「非忽略」文件，只是切得更细。
+#
+# 拆分原则（按业务域聚合，而非每个 internal 包单列，避免面板碎片化）：
+#   Go   : 部署域 / 证书域 / 核心基础 / 存储层 / 运行时 / 服务层（6 个）
+#   前端 : 视图层 / 组件层 / 核心（3 个）
+#
+# 关键语义：
+#   1. paths 相对仓库根目录，支持 glob：** = 任意层级，* = 单层（不跨目录）。
+#   2. 全局 coverage.ignore 仍生效——internal/ent（80 个生成文件）、**/*_test.go、main.go、
+#      vite.config.ts 等不计入任何组件分母。
+#   3. 一个文件命中多个组件的 paths 会被重复计入各自组件；本文件各组件路径互不重叠。
+#   4. 根目录 Wails 服务层用 "*.go" 匹配（只命中仓库根，不含 internal 子目录）。
+#   5. 可在任意组件下追加 statuses（该组件独立的 PR 状态检查），默认继承全局 informational。
+#
+component_management:
+  # 面板默认展示的组件数量（9 = 全部展示，便于总览）。
+  default_selection: 9
+
+  individual_components:
+    # ── Go：部署域（部署流程 + 部署凭证 + DNS + 调度）──
+    - component_id: 'go-deploy'
+      name: 'Go 部署域'
+      paths:
+        - 'internal/deploy/**'
+        - 'internal/deploycredential/**'
+        - 'internal/dnsprovider/**'
+        - 'internal/scheduler/**'
+
+    # ── Go：证书 / PKI 域（CA、证书、云凭证）──
+    - component_id: 'go-crypto'
+      name: 'Go 证书域'
+      paths:
+        - 'internal/ca/**'
+        - 'internal/certificate/**'
+        - 'internal/cloudcred/**'
+
+    # ── Go：核心基础（鉴权 / 配置 / 设置 / 事件 / 日志 / 国际化 / UA / 生物识别）──
+    - component_id: 'go-core'
+      name: 'Go 核心基础'
+      paths:
+        - 'internal/auth/**'
+        - 'internal/config/**'
+        - 'internal/settings/**'
+        - 'internal/events/**'
+        - 'internal/logging/**'
+        - 'internal/i18n/**'
+        - 'internal/useragent/**'
+        - 'internal/biometric/**'
+
+    # ── Go：存储层（数据备份 / db / sqlite）──
+    - component_id: 'go-storage'
+      name: 'Go 存储层'
+      paths:
+        - 'internal/data/**'
+        - 'internal/db/**'
+        - 'internal/sqlite/**'
+        - 'internal/sqlitetest/**'
+
+    # ── Go：运行时（监控 / 扫描 / 通知 / 请求日志 / 网络）──
+    - component_id: 'go-runtime'
+      name: 'Go 运行时'
+      paths:
+        - 'internal/monitor/**'
+        - 'internal/scanner/**'
+        - 'internal/notification/**'
+        - 'internal/httplog/**'
+        - 'internal/network/**'
+
+    # ── Go：Wails 服务层（仓库根的 *_service.go 等；main.go 已被全局 ignore）──
+    - component_id: 'go-services'
+      name: 'Go 服务层'
+      paths:
+        - '*.go'
+
+    # ── Vue：视图层（页面）──
+    - component_id: 'vue-views'
+      name: 'Vue 视图层'
+      paths:
+        - 'frontend/src/views/**'
+
+    # ── Vue：组件层（可复用组件）──
+    - component_id: 'vue-components'
+      name: 'Vue 组件层'
+      paths:
+        - 'frontend/src/components/**'
+
+    # ── Vue：核心（状态 / 路由 / 工具 / 国际化 / App 根组件）──
+    - component_id: 'vue-core'
+      name: 'Vue 核心'
+      paths:
+        - 'frontend/src/stores/**'
+        - 'frontend/src/router/**'
+        - 'frontend/src/utils/**'
+        - 'frontend/src/locales/**'
+        - 'frontend/src/App.vue'
