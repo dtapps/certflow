@@ -112,7 +112,8 @@ format-yaml:
 		".cnb" \
 		".github" \
 		".cnb.yml" \
-		".golangci.yml" || { echo "❌ yamlfmt 格式化失败"; exit 1; }
+		".golangci.yml" \
+		".gitlab-ci.yml" || { echo "❌ yamlfmt 格式化失败"; exit 1; }
 	@echo "[Format] YAML 格式化完成（yamlfmt）。"
 
 # 格式化 Markdown 文件
