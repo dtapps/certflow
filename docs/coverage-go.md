@@ -14,9 +14,7 @@
 
 ### 第 1 步：先测量当前覆盖率基线（定红线前必须做）
 
-在本地运行并记录 total 覆盖率。**测试范围按项目实际写**（本项目测试全部位于
-`./internal/...`；根目录 main 包带 `//go:embed all:frontend/dist` 嵌入依赖、
-该目录不进仓库，用 `./...` 会在本地直接编译失败）：
+在本地运行并记录 total 覆盖率。**测试范围按项目实际写**（本项目测试全部位于 `./internal/...`；根目录 main 包带 `//go:embed all:frontend/dist` 嵌入依赖、 该目录不进仓库，用 `./...` 会在本地直接编译失败）：
 
 ```bash
 go test -vet=off -coverprofile=/tmp/cov.out ./internal/... && go tool cover -func=/tmp/cov.out | tail -1

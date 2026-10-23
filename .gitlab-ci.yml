@@ -19,7 +19,7 @@
 #   1. GitLab 项目要开 CI/CD。pull mirror 仓库默认可能没开：
 #      Settings → CI/CD → General pipelines；镜像仓库还需勾 "Run pipelines for mirrored repositories"。
 #   2. GitLab 项目要开 Container Registry：CI 镜像由本流水线自己构建（check-image 判断 →
-#      build-image-<arch> 构建 → merge-image 合并，见文件下半部分），源文件是本平台专用的
+#      build-image 构建 → merge-image 指向 latest，见文件下半部分），源文件是本平台专用的
 #      .gitlab/ci/Dockerfile。镜像不在 registry 里时下一条流水线会自动补建，不用人工干预。
 #
 # 代价：测试会再跑一遍（各平台各一次）。这是「多平台各自出数」的固定成本，
@@ -39,10 +39,9 @@ variables:
   # 平时留空：重建与否由 check-image 按「Dockerfile 内容哈希对应的 tag 在不在 registry 里」判断
   CI_FORCE_REBUILD_IMAGE: ''
   # CI 镜像：GitLab 自己构建、存在 GitLab 自己的 registry 里
-  #   - 构建：check-image 判断要不要建 → build-image-amd64 / build-image-arm64（各自原生构建）
-  #           → merge-image（合并成多架构 index）
-  #   - 消费：go-coverage / node-coverage 直接拉这个地址，runner 是什么架构就自动选哪个
-  #   - 是 manifest list，不是单平台镜像
+  #   - 构建：check-image 判断要不要建 → build-image（amd64 原生构建）→ merge-image（指向 ci:latest）
+  #   - 只出 amd64：流水线全部跑在 amd64 runner 上，arm64 镜像没有消费方
+  #   - 消费：go-coverage / node-coverage 直接拉这个地址
   #   - 换 registry 不必改代码：用项目级变量覆盖本变量即可
   CI_IMAGE: $CI_REGISTRY_IMAGE/ci:latest
   # 覆盖率采集不该被超时掐断，但也不该无限跑
@@ -50,8 +49,8 @@ variables:
 
 default:
   image:
-    # 本仓库 registry 里的多架构镜像，由下面的 build-image-* + merge-image 构建
-    # （同实例 registry，Runner 用 CI_JOB_TOKEN 拉；manifest list 会按 runner 架构自动选）
+    # 本仓库 registry 里自己构建的镜像（amd64 单平台），由下面的 check-image → build-image →
+    # merge-image 产出（同实例 registry，Runner 用 CI_JOB_TOKEN 拉）
     name: $CI_IMAGE
     # 镜像的 CMD 是 bash；不覆盖 entrypoint 时 runner 起的 shell 会被它接管
     entrypoint: ['']
@@ -69,17 +68,21 @@ default:
       - .cache/
 
 # ---------------------------------------------------------------------------
-# CI 镜像：GitLab 侧自己构建（amd64 + arm64 各自原生构建 → 合并成 manifest list）
+# CI 镜像：GitLab 侧自己构建（只出 amd64，单平台）
 # ---------------------------------------------------------------------------
 # 三步：
-#   check-image         算 .gitlab/ci/Dockerfile 的内容哈希，查 registry 里有没有对应 tag
-#   build-image-<arch>  缺哪个架构建哪个（各用自己架构的原生 runner，不用 QEMU）
-#   merge-image         把可用的单平台镜像合成 ci:latest（manifest list）
+#   check-image   算 .gitlab/ci/Dockerfile 的内容哈希，查 registry 里有没有对应 tag
+#   build-image   缺就构建（跑在 amd64 原生 runner 上，不用 QEMU、不做交叉构建）
+#   merge-image   把该镜像挂到 ci:latest（消费方 default.image 只用这个）
+#
+# 为什么只出 amd64：本项目 GitLab 流水线全部跑在 amd64 runner 上，arm64 镜像没有任何消费方，
+# 多建一份只是白烧一倍构建时间。真要 arm64（例如在 Apple Silicon 上本地 docker 跑这个镜像调试），
+# 见 docs/gitlab-ci.md §4.1「需要 arm64 时怎么加回来」。
 #
 # tag 规则（内容寻址，不靠 commit 差分）：
-#   ci:sha-<Dockerfile 内容 sha256 前 12 位>-amd64 / -arm64   单平台镜像
-#   ci:latest                                                manifest list，消费方（default.image）只用这个
-#   ci:buildcache-amd64 / -arm64                             buildkit registry cache，分架构
+#   ci:sha-<Dockerfile 内容 sha256 前 12 位>   Dockerfile 对应的那份镜像
+#   ci:latest                                 消费方（default.image）只用这个
+#   ci:buildcache                             buildkit registry cache
 #
 # ⚠️ 为什么不用 rules:changes 判断「要不要重建」（本项目真实踩过）：
 #   rules:changes 比的是「这次 commit 相对上一次有没有改 Dockerfile」，不是「registry 里有没有
@@ -88,8 +91,6 @@ default:
 #   还是同样结果，死循环，只能人工 Run pipeline 才跳得出来。
 #   改成内容哈希 + 存在性检查后，判断依据变成「这份 Dockerfile 对应的 tag 在不在」：缺了就自动补建
 #   （自愈），有就十几秒跳过（不白烧 10 分钟）。
-#
-# 为什么不用官方那条 `--opt platform=linux/amd64,linux/arm64`：见 docs/gitlab-ci.md §4.1
 check-image:
   stage: image
   image:
@@ -106,18 +107,18 @@ check-image:
       repo="$CI_REGISTRY_IMAGE/ci"
       # 内容哈希：Dockerfile 一个字没改 → tag 一样 → 下面查到就整体跳过
       tag=$(sha256sum .gitlab/ci/Dockerfile | cut -c1-12)
-      echo "IMAGE_TAG=$tag" > build-image.env
-      for arch in amd64 arm64; do
-        ref="$repo:sha-$tag-$arch"
-        if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
-          needed=false
-        else
-          needed=true
-        fi
-        if [ "$CI_FORCE_REBUILD_IMAGE" = "true" ]; then needed=true; fi
-        echo "$ref 需要构建: $needed"
-        echo "IMAGE_$(echo "$arch" | tr 'a-z' 'A-Z')_NEEDED=$needed" >> build-image.env
-      done
+      ref="$repo:sha-$tag"
+      needed=true
+      if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+        needed=false
+      fi
+      if [ "$CI_FORCE_REBUILD_IMAGE" = "true" ]; then needed=true; fi
+      echo "$ref 需要构建: $needed"
+      {
+        echo "IMAGE_TAG=$tag"
+        echo "IMAGE_REF=$ref"
+        echo "IMAGE_NEEDED=$needed"
+      } > build-image.env
       cat build-image.env
   artifacts:
     reports:
@@ -133,11 +134,8 @@ check-image:
 
 # 用 GitLab 官方文档推荐的 **rootless BuildKit**（Use BuildKit to build Docker images）：
 #   - 不需要 privileged、不需要 docker:dind，GitLab.com 的 hosted runner 开箱可用
-#   - Dockerfile 走本平台自己那份 .gitlab/ci/Dockerfile（它本来就支持 aarch64，见其中 ARCH 分支）
-# 架构 → runner（GitLab.com 免费层就有 arm64：2 vCPU / 8 GB，机房 us-central1）
-#   amd64 → tags: [saas-linux-small-amd64]
-#   arm64 → tags: [saas-linux-small-arm64]
-.build-image:
+#   - Dockerfile 走本平台自己那份 .gitlab/ci/Dockerfile
+build-image:
   stage: image
   needs:
     - job: check-image
@@ -155,60 +153,43 @@ check-image:
   script:
     - |
       set -e
-      case "$CI_IMAGE_ARCH" in
-        amd64) needed="$IMAGE_AMD64_NEEDED" ;;
-        arm64) needed="$IMAGE_ARM64_NEEDED" ;;
-      esac
-      ref="$CI_REGISTRY_IMAGE/ci:sha-$IMAGE_TAG-$CI_IMAGE_ARCH"
       # Dockerfile 内容没变且 tag 已在 registry 里 → 直接跳过（几十秒）
-      if [ "$needed" != "true" ]; then
-        echo "$ref 已存在，跳过构建"
+      if [ "$IMAGE_NEEDED" != "true" ]; then
+        echo "$IMAGE_REF 已存在，跳过构建"
         exit 0
       fi
       # ⚠️ --output 只写一个 tag：它的值按逗号切成多段 key=value，写成 name=repo:a,repo:b
       #   时第二段不是 key=value → `error: invalid value ...`（实测在 GitLab runner 上就是这么挂的）。
-      #   想要额外可读 tag 不要紧，交给 merge-image 的 imagetools 补。
+      #   可读的 ci:latest 交给 merge-image 用 imagetools 补。
+      # 不给 --opt platform：buildkit 默认按 runner 自身架构（amd64）原生构建；
+      # 显式写死反而会在别的架构 runner 上退化成 QEMU 模拟。
       buildctl-daemonless.sh build \
         --frontend dockerfile.v0 \
         --local context=. \
         --local dockerfile=.gitlab/ci \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache-$CI_IMAGE_ARCH \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache-$CI_IMAGE_ARCH \
-        --output type=image,name=$ref,push=true
-      echo "已推送 $ref"
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache \
+        --output type=image,name=$IMAGE_REF,push=true
+      echo "已推送 $IMAGE_REF"
   cache: {}
   # 首次构建要装 GTK/WebKit + wails + golangci-lint，留足余量；有 cache 时几分钟
   timeout: 1h
-  rules: *image-rules
-
-build-image-amd64:
-  extends: .build-image
-  variables:
-    CI_IMAGE_ARCH: amd64
+  # 只用 amd64 原生 runner（GitLab.com 免费层标签）
   tags:
     - saas-linux-small-amd64
-
-build-image-arm64:
-  extends: .build-image
-  variables:
-    CI_IMAGE_ARCH: arm64
-  tags:
-    - saas-linux-small-arm64
+  rules: *image-rules
 
 # ---------------------------------------------------------------------------
-# 合并：可用的单平台镜像 → ci:latest（manifest list）
+# 指到 ci:latest
 # ---------------------------------------------------------------------------
 # `docker buildx imagetools create` 是纯 registry API 操作，不需要 daemon / dind（docker:cli 是
 # alpine，自带 sh 与 buildx 插件）。它会**新建** index 覆盖目标 tag，反复跑不会把旧 manifest 叠加
-# 进去；两个架构都没重建时它也只是把 latest 重新指一遍（几十秒，顺带修好被误删的 latest）。
+# 进去；本次没重建时它也只是把 latest 重新指一遍（十几秒，顺带修好被误删的 latest）。
 merge-image:
   stage: image
   needs:
     - job: check-image
-    - job: build-image-amd64
-    # 没有 arm64 runner 权限时把 build-image-arm64 的 rules 设成 when: never，这里不阻塞
-    - job: build-image-arm64
-      optional: true
+    - job: build-image
   image:
     name: docker:cli
     entrypoint: ['']
@@ -219,24 +200,14 @@ merge-image:
   script:
     - |
       set -e
-      repo="$CI_REGISTRY_IMAGE/ci"
-      refs=""
-      for arch in amd64 arm64; do
-        ref="$repo:sha-$IMAGE_TAG-$arch"
-        if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
-          refs="$refs $ref"
-        else
-          echo "跳过 $ref（registry 里没有）"
-        fi
-      done
-      if [ -z "$refs" ]; then
-        echo "没有任何可用架构的镜像，无法生成 latest"
+      if ! docker buildx imagetools inspect "$IMAGE_REF" >/dev/null 2>&1; then
+        echo "registry 里没有 $IMAGE_REF，无法生成 latest"
         exit 1
       fi
-      echo "合并 → $repo:latest ←$refs"
-      docker buildx imagetools create -t "$repo:latest" $refs
-      # 打印 index 里的平台，日志里能直接看出这次有哪些架构
-      docker buildx imagetools inspect "$repo:latest"
+      echo "指向 → $CI_REGISTRY_IMAGE/ci:latest ← $IMAGE_REF"
+      docker buildx imagetools create -t "$CI_REGISTRY_IMAGE/ci:latest" "$IMAGE_REF"
+      # 打印 index 里的平台，日志里能直接看出这份 latest 是什么架构
+      docker buildx imagetools inspect "$CI_REGISTRY_IMAGE/ci:latest"
   cache: {}
   timeout: 10m
   rules: *image-rules

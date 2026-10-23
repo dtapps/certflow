@@ -22,3 +22,4 @@ image/systray*
 coverage.out
 coverage.html
 frontend/coverage
+coverage-go.xml

@@ -8,20 +8,9 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases)
-[![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases)
-[![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers)
-[![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members)
-[![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow)
-[![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml)
-![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) ![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
 
-[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link)
-[![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow)
-[![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow)
-[![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow)
-![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) ![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
 
 </div>
 
@@ -88,7 +77,7 @@ make format-frontend   # Format frontend code
 ## Repositories
 
 | Platform | URL                                |
-| -------- | ---------------------------------- |
+|----------|------------------------------------|
 | CNB      | https://cnb.cool/dtapp/certflow    |
 | GitHub   | https://github.com/dtapps/certflow |
 | Gitea    | https://gitea.com/dtapps/certflow  |

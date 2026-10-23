@@ -13,7 +13,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 ### Backend
 
 | Technology             | Purpose                                                    |
-| ---------------------- | ---------------------------------------------------------- |
+|------------------------|------------------------------------------------------------|
 | Go 1.26                | Backend language                                           |
 | Wails v3               | Desktop application framework (Go + frontend hybrid)       |
 | Ent (entgo.io/ent)     | ORM framework (code-generation based)                      |
@@ -30,7 +30,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 ### Frontend
 
 | Technology        | Purpose                                      |
-| ----------------- | -------------------------------------------- |
+|-------------------|----------------------------------------------|
 | Vue 3             | Progressive frontend framework               |
 | vue-router        | SPA routing                                  |
 | TypeScript        | Type-safe language                           |
@@ -46,7 +46,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 ### Build & Deploy
 
 | Tool             | Purpose                         |
-| ---------------- | ------------------------------- |
+|------------------|---------------------------------|
 | Makefile         | Development command wrapper     |
 | Taskfile.yml     | Cross-platform build system     |
 | golangci-lint v2 | Go code linting                 |
@@ -221,7 +221,7 @@ Injected variables (`main.go`):
 ## Cross-Platform Build
 
 | Platform | Command               | Output             |
-| -------- | --------------------- | ------------------ |
+|----------|-----------------------|--------------------|
 | macOS    | `wails3 task package` | `bin/certflow.app` |
 | Windows  | `wails3 task build`   | `bin/certflow.exe` |
 | Linux    | `wails3 task build`   | `bin/certflow`     |
@@ -269,7 +269,7 @@ Test environment: Apple M1, Go 1.24+, in-memory (`:memory:`), `benchtime=3s`. Be
 #### Latency Comparison (ns/op, lower is better)
 
 | Operation                      | modernc (pure Go) | mattn (CGO) | mattn advantage |
-| ------------------------------ | :---------------: | :---------: | :-------------: |
+|--------------------------------|:-----------------:|:-----------:|:---------------:|
 | **Insert** (single row)        |       8,603       |    5,095    |  1.69x faster   |
 | **InsertBulk** (100 rows/txn)  |      382,696      |   194,203   |  1.97x faster   |
 | **Select** (by primary key)    |       5,024       |    3,343    |  1.50x faster   |
@@ -280,8 +280,8 @@ Test environment: Apple M1, Go 1.24+, in-memory (`:memory:`), `benchtime=3s`. Be
 
 #### Memory Allocation Comparison (B/op | allocs/op)
 
-| Operation      |     modernc     |      mattn      |
-| -------------- | :-------------: | :-------------: |
+| Operation      | modernc         | mattn           |
+|----------------|:---------------:|:---------------:|
 | **Insert**     |    344 / 14     |    400 / 14     |
 | **InsertBulk** |  31,886 / 1309  |  30,419 / 1118  |
 | **Select**     |    735 / 27     |    798 / 30     |
@@ -306,7 +306,7 @@ Deploy issued/uploaded certificates to various cloud services. Implemented in `i
 Supported providers and services:
 
 | Provider                     | Supported Services     |
-| ---------------------------- | ---------------------- |
+|------------------------------|------------------------|
 | Alibaba Cloud (aliyun)       | CDN, DCDN, ESA, GA     |
 | Tencent Cloud (tencentcloud) | CDN, EdgeOne, ECDN     |
 | Huawei Cloud (huawei)        | CDN, WAF, ELB          |

@@ -16,6 +16,7 @@ FROM golang:1.27.3-trixie
 # https://github.com/itchyny/gojq/releases
 # https://github.com/gotestyourself/gotestsum/releases
 # https://github.com/boumenot/gocover-cobertura/releases
+# https://github.com/Kunde21/markdownfmt/releases
 # ==========================================
 ARG NODE_VERSION=26.12.1
 ARG PNPM_VERSION=12.15.0
@@ -30,6 +31,7 @@ ARG YAMLFMT_VERSION=v0.21.0
 ARG GOJQ_VERSION=v0.12.19
 ARG GOTESTSUM_VERSION=v1.13.0
 ARG GOCOVER_COBERTURA_VERSION=v1.5.0
+ARG MARKDOWNFMT_VERSION=v3.1.0
 
 # 1. 设置 Go 环境变量
 ENV GOINSECURE=go.dtapp.net
@@ -102,6 +104,8 @@ RUN echo "==> 预安装 Go 工具链（版本已锁定）..." \
     && echo "==> gotestsum 安装完成 (${GOTESTSUM_VERSION})" \
     && go install github.com/boumenot/gocover-cobertura@${GOCOVER_COBERTURA_VERSION} \
     && echo "==> gocover-cobertura 安装完成 (${GOCOVER_COBERTURA_VERSION})" \
+    && go install github.com/Kunde21/markdownfmt/v3/cmd/markdownfmt@${MARKDOWNFMT_VERSION} \
+    && echo "==> markdownfmt 安装完成 (${MARKDOWNFMT_VERSION})" \
     && echo "--- Go 工具链安装完成 ---" \
     && ls -l $GOPATH/bin
 

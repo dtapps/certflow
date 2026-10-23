@@ -5,7 +5,7 @@
 ## 1. 总览：三个支柱 + 职责分离
 
 | 支柱                     | 内容            | 本仓库实现                                                                                                | Codecov 里看什么                      |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+|--------------------------|-----------------|-----------------------------------------------------------------------------------------------------------|---------------------------------------|
 | 覆盖率 Coverage          | 代码行覆盖率    | `codecov/codecov-action` 上传 Go `coverage.out` 与前端 `lcov.info`                                        | Coverage 面板、PR 评论、patch 状态    |
 | 打包体积 Bundle Analysis | 前端 chunk 体积 | `@codecov/vite-plugin`（构建时上传）                                                                      | Bundle 面板（体积趋势 / 回归）        |
 | 测试结果 Test Analytics  | 单测运行结果    | Go：`gotestsum --junitfile`；Vue：Vitest `json` → 脚本转 JUnit；合并由 `codecov/test-results-action` 上传 | Tests 面板（时长 / flaky / 失败分析） |
@@ -15,7 +15,7 @@
 ## 2. 涉及文件清单
 
 | 文件                                        | 作用                                                                                                                               |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+|---------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | `.github/codecov.yml`                       | Codecov 规则：忽略 `internal/ent` 等生成代码、`flags`（go / node）、`component_management`（Go/Vue 组件）、`status: informational` |
 | `.github/workflows/codecov.yml`             | GitHub Actions 流水线：装依赖 → 跑 Go/前端测试 → 构建前端 → 上传覆盖率 / 测试结果                                                  |
 | `frontend/vite.config.ts`                   | 条件加载 `@codecov/vite-plugin`（仅当 `CODECOV_TOKEN` 存在时实例化）                                                               |
@@ -27,9 +27,11 @@
 ### 3.1 覆盖率（Coverage）
 
 - Go：复用 CNB 的同款口径
+
   ```
   go test -vet=off -coverpkg=$(go list ./internal/... | grep -v '/internal/ent' | paste -sd, -) -coverprofile=coverage.out ./internal/...
   ```
+
   排除 `internal/ent`（Ent 生成代码，占比极大，避免稀释指标）。
 - 前端：`pnpm test:coverage`（Vitest 5.0.5 覆盖率，产出 `frontend/coverage/lcov.info`）。
 - 上传：`codecov/codecov-action@v5`，分别带 `flags: go` / `flags: node`。
@@ -37,6 +39,7 @@
 ### 3.2 打包体积（Bundle Analysis）
 
 - 插件 `@codecov/vite-plugin@2.0.1` 在 `frontend/vite.config.ts` 中**条件加载**：
+
   ```ts
   ...(process.env.CODECOV_TOKEN
     ? [codecovVitePlugin({ enableBundleAnalysis: true, bundleName: "certflow-frontend", uploadToken: process.env.CODECOV_TOKEN })]
@@ -52,13 +55,16 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
 
 - **Vue（Vitest 5.0.5）**：无内置 junit reporter（社区 `@vitest/junit` 包在 npm 也已不可得），改用内置 `json` reporter 产出 `test-results.json`，再由零依赖脚本转 JUnit：
   1. 测试步骤额外挂内置 `json` reporter 产出 `test-results.json`：
+
      ```
      pnpm test:coverage --reporter=default --reporter=json --outputFile=test-results.json
      ```
+
      （`coverage/lcov.info` 仍正常产出，不受影响。）
   2. 转换步骤用 `node scripts/vitest-json-to-junit.mjs` 把 JSON 转成 `test-report.xml`（JUnit 格式）。
   3. 上传步骤用 `codecov/test-results-action@v1` 上传 `frontend/test-report.xml`。
 - **Go**：`go test` 也不原生产 JUnit，用 `gotestsum` 包裹（参数原样透传，`coverage.out` 照常产出），额外生成 `go-test-report.xml`：
+
   ```
   go install gotest.tools/gotestsum@v1.13.0
   export PATH="$(go env GOPATH)/bin:$PATH"
@@ -73,6 +79,7 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
 把整仓覆盖率拆成 **Go 后端 / Vue 前端** 两个逻辑单元，在 Codecov 的 **Components** 面板分别看各自的覆盖率与趋势。
 
 - 配置在 `.github/codecov.yml` 的 `component_management`（**不是**根目录 `codecov.yaml`）：
+
   ```yaml
   component_management:
     default_selection: 2 # 面板默认同时展示 2 个组件
@@ -84,11 +91,8 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
         name: "Vue 前端"
         paths: ["frontend/src/**"]
   ```
-- 组件 `paths` 与上面的 `flags`（go / node）划分一致；全局 `ignore`（ent 生成代码 / 测试 / 入口）仍生效，
-  这些文件不计入组件覆盖率。
-- ⚠️ **配置文件位置**：Codecov 搜索顺序为「**仓库根目录 → `.github/`**」。**不要把 `codecov.yaml` 放根目录**——
-  若根目录存在，它会优先于 `.github/codecov.yml` 生效并**完全覆盖**后者（丢失门禁 / 忽略 / flags 规则）。
-  本仓库统一放在 `.github/codecov.yml`。
+- 组件 `paths` 与上面的 `flags`（go / node）划分一致；全局 `ignore`（ent 生成代码 / 测试 / 入口）仍生效， 这些文件不计入组件覆盖率。
+- ⚠️ **配置文件位置**：Codecov 搜索顺序为「**仓库根目录 → `.github/`**」。**不要把 `codecov.yaml` 放根目录**—— 若根目录存在，它会优先于 `.github/codecov.yml` 生效并**完全覆盖**后者（丢失门禁 / 忽略 / flags 规则）。 本仓库统一放在 `.github/codecov.yml`。
 
 ## 4. 必需的密钥
 
@@ -113,5 +117,4 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
 - GA 与 CNB 都跑一遍测试，各管各的、互不依赖（GA 生成产物并上报 Codecov，CNB 负责门禁）。
 - `frontend/package.json` 的 `packageManager` 为 `pnpm@12.14.0`，`frontend/.nvmrc` 为 `25.9.0`——工作流用 `node-version-file` / `go-version-file` 动态读取，不要写死版本号。
 - 文档命名注意 `docs/*-*-*.md`（双横线）被 `.gitignore` 忽略，本文档用单横线命名（`docs/codecov.md`）。
-- **Codecov 配置文件位置**：统一放 `.github/codecov.yml`。不要新增根目录 `codecov.yaml`——Codecov 先搜根目录，
-  会覆盖 `.github` 下的配置并丢掉既有门禁 / 忽略 / flags 规则。
+- **Codecov 配置文件位置**：统一放 `.github/codecov.yml`。不要新增根目录 `codecov.yaml`——Codecov 先搜根目录， 会覆盖 `.github` 下的配置并丢掉既有门禁 / 忽略 / flags 规则。
