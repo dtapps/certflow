@@ -112,6 +112,8 @@ format-yaml:
 		".cnb" \
 		".github" \
 		".gitlab" \
+		".gitcode" \
+		".workflow" \
 		".cnb.yml" \
 		".nfpm.yaml" \
 		".golangci.yml" \

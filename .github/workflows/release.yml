@@ -740,24 +740,24 @@ jobs:
 
   # GitHub Release 发布成功后，触发 CNB 同步构建（把 GitHub Release 镜像到 CNB）。
   # 独立成 job：便于在其后追加 webhook 通知（notify job），也让「同步」与「发布」解耦。
-  # 延迟 1 分钟：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
-  # 注意：使用独立的 SYNC_CNB_TOKEN（仅 repo-cnb-trigger:rw 权限），
-  # 与给软件升级下载用的 CNB_TOKEN（repo-release:rw）区分，互不干扰。
+  # 延迟 8 秒：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
+  # 令牌：cnb.cool → 个人设置 → 访问令牌 → 添加访问令牌（https://cnb.cool/profile/token/create），
+  # 授权范围勾 repo-cnb-trigger:rw。与给软件升级下载用的 CNB_TOKEN（repo-release:rw）分开建，互不干扰；
+  # 创建后填到 GitHub 仓库 secret SYNC_CNB_TOKEN。
   sync-cnb:
     needs: [release, prepare]
     runs-on: ubuntu-latest
+    env:
+      SYNC_CNB_TOKEN: ${{ secrets.SYNC_CNB_TOKEN }}
     steps:
       - name: 触发 CNB 同步构建
         if: ${{ env.SYNC_CNB_TOKEN != '' }}
-        env:
-          SYNC_CNB_TOKEN: ${{ secrets.SYNC_CNB_TOKEN }}
-          CNB_API_ENDPOINT: ${{ secrets.CNB_API_ENDPOINT || 'https://api.cnb.cool' }}
         shell: bash
         run: |
           echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
           sleep 8
 
-          API="${CNB_API_ENDPOINT%/}"
+          API="https://api.cnb.cool"  # 私有化 / 自建端点改这里
           REPO="dtapp/certflow"
           EVENT="api_trigger_release"
           PRERELEASE="${{ inputs.prerelease }}"
@@ -789,13 +789,98 @@ jobs:
             echo "✓ 已成功请求 CNB 执行同步构建"
           fi
 
-  # 构建 / 发布 / CNB 同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
+  # Release 发布成功后触发 GitLab 的 release job（.gitlab-ci.yml，只在 trigger 源下跑：
+  # 下载 GitHub 资产 → 传 Generic Package → 建 GitLab Release）。用项目级 trigger token，只触发不绑用户。
+  # secret 只有 GITLAB_TRIGGER_TOKEN；仓库/端点/ref 见下方常量（仓库地址取自 README 镜像表）。
+  # 令牌：GitLab 项目 → Settings → CI/CD → Pipeline trigger tokens → Add new token（形如 glptt-xxx），
+  # 只触发流水线、不绑用户；创建后填到 GitHub 仓库 secret GITLAB_TRIGGER_TOKEN。
+  sync-gitlab:
+    needs: [release, prepare]
+    runs-on: ubuntu-latest
+    # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
+    env:
+      GITLAB_TRIGGER_TOKEN: ${{ secrets.GITLAB_TRIGGER_TOKEN }}
+    steps:
+      - name: 触发 GitLab 同步流水线
+        if: ${{ env.GITLAB_TRIGGER_TOKEN != '' }}
+        shell: bash
+        run: |
+          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 8
+
+          API="https://gitlab.com/api/v4"   # 自建 GitLab 实例改这里
+          PROJECT="dtapps/certflow"         # README 镜像地址表；dtapps 带 s，GitCode 那边是 dtapp
+          REF="master"                      # 镜像仓库要构建的分支
+          # 路径形式必须 URL 编码（/ → %2F）。
+          PROJ=$(printf '%s' "$PROJECT" | jq -sRr @uri)
+
+          echo "触发 GitLab 流水线: ${API}/projects/${PROJ}/trigger/pipeline (ref=${REF})"
+          HTTP=$(curl -s -o /tmp/gitlab_trigger.json -w "%{http_code}" -X POST \
+            --form "token=${GITLAB_TRIGGER_TOKEN}" \
+            --form "ref=${REF}" \
+            --form "variables[EVENT]=api_trigger_release" \
+            --form "variables[VERSION]=v${{ inputs.version }}" \
+            --form "variables[PRERELEASE]=${{ inputs.prerelease }}" \
+            "${API}/projects/${PROJ}/trigger/pipeline")
+
+          echo "GitLab trigger/pipeline 响应 HTTP=${HTTP}"
+          cat /tmp/gitlab_trigger.json
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+            echo "::warning::触发 GitLab 同步流水线失败（HTTP=${HTTP}），不影响 GitHub Release"
+          else
+            echo "✓ 已成功请求 GitLab 执行同步流水线"
+          fi
+
+  # Release 发布成功后 dispatch GitCode 的 release.yml（即 .gitcode/workflows/release.yml，
+  # 逻辑：下载 GitHub 资产 → 建 GitCode Release → 逐个上传附件），须声明 on: workflow_dispatch。
+  # secret 只有 GITCODE_TOKEN（个人令牌）；仓库/端点/workflow/ref 见下方常量（仓库地址取自 README 镜像表）。
+  # 令牌：GitCode → 头像 → 个人设置 → 访问令牌 → 新建访问令牌（勾 repo 读写，令牌只显示一次），
+  # 创建后填到 GitHub 仓库 secret GITCODE_TOKEN。
+  # access_token 按官方要求走 query，故日志不打印完整 URL。
+  sync-gitcode:
+    needs: [release, prepare]
+    runs-on: ubuntu-latest
+    # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
+    env:
+      GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
+    steps:
+      - name: 触发 GitCode 同步流水线
+        if: ${{ env.GITCODE_TOKEN != '' }}
+        shell: bash
+        run: |
+          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 8
+
+          API="https://api.gitcode.com/api/v8"  # 私有化部署改这里
+          REPO="dtapp/certflow"                 # README 镜像地址表；dtapp 不带 s，GitLab 那边是 dtapps
+          WORKFLOW="release.yml"                # .gitcode/workflows/ 下的文件名，也可填 workflow id
+          REF="main"                            # 镜像仓库主分支
+          echo "触发 GitCode workflow: ${REPO} / ${WORKFLOW} (ref=${REF})"
+          HTTP=$(curl -s -o /tmp/gitcode_dispatch.json -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg ref "$REF" \
+              --arg version "v${{ inputs.version }}" \
+              --arg prerelease "${{ inputs.prerelease }}" \
+              '{ref: $ref, inputs: {version: $version, prerelease: $prerelease}}')" \
+            "${API}/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches?access_token=${GITCODE_TOKEN}")
+
+          echo "GitCode dispatches 响应 HTTP=${HTTP}"
+          cat /tmp/gitcode_dispatch.json
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+            echo "::warning::触发 GitCode 同步流水线失败（HTTP=${HTTP}），不影响 GitHub Release"
+          else
+            echo "✓ 已成功请求 GitCode 执行同步流水线"
+          fi
+
+  # 构建 / 发布 / 各镜像平台同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
   # 需配置 secret SERVERCHAN_SENDKEY（形如 SCTxxxx 或 sctp{uid}t...）；未配置则跳过通知。
   # API 文档：https://doc.sc3.ft07.com/zh/serverchan3/server/api
   # 推送地址：SCT 转发 key → https://sctapi.ftqq.com/<sendkey>.send
   #          带 uid 的 sendkey（sctp 开头）→ https://<uid>.push.ft07.com/send/<sendkey>.send
   notify:
-    needs: [sync-cnb, release, prepare]
+    # 等所有镜像同步 job 结束（未配置 secret 时它们只是跳过，不影响 success 判定）。
+    needs: [sync-cnb, sync-gitlab, sync-gitcode, release, prepare]
     runs-on: ubuntu-latest
     if: ${{ needs.release.result == 'success' }}
     env:

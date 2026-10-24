@@ -28,6 +28,7 @@
 stages:
   - image
   - coverage
+  - release
 
 variables:
   # 缓存目录全部收进项目内：GitLab 的 cache 只能存取项目目录下的路径
@@ -246,6 +247,11 @@ go-coverage:
         coverage_format: cobertura
         path: coverage-go.xml
   rules:
+    # 发版流水线（trigger token，或网页手动填了 VERSION）只做发布，不重跑一遍测试
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -285,5 +291,155 @@ node-coverage:
         coverage_format: cobertura
         path: frontend/coverage/cobertura-coverage.xml
   rules:
+    # 发版流水线（trigger token，或网页手动填了 VERSION）只做发布，不重跑一遍测试
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ---------------------------------------------------------------------------
+# 发布同步：从 GitHub Release 下载产物，发布到 GitLab Release
+# ---------------------------------------------------------------------------
+# 只在 trigger 源流水线跑（GitHub 侧 release.yml 的 sync-gitlab job 触发）：
+#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3 variables[PRERELEASE]=false
+#
+# 附件存放：GitLab 没有「Release 二进制附件」API，所以走 **Generic Package Registry**，
+# Release 的 assets link 指向 package 地址，并用 direct_asset_path 生成直链
+# （/-/releases/<tag>/downloads/<file>），对外表现与 GitHub 的 release 资产一致。
+#
+# 认证：优先 CI_JOB_TOKEN（Releases API 与 Package Registry 均支持）；
+# 若项目禁用了 job token 权限，配一个 GL_RELEASE_TOKEN（PAT，api scope）即自动切换。
+# GitHub 令牌：项目 → Settings → CI/CD → Variables 加 CERTFLOW_GITHUB_TOKEN（Masked，不要勾 Protected，
+# 否则 trigger 流水线的 ref 不是保护分支时取不到值）。与 .cnb.yml 用的同一个只读令牌，
+# 只为绕开 api.github.com 的 60 次/小时匿名限额（按 IP 限，共享 runner 很容易撞上）。
+release:
+  stage: release
+  # 复用 default 的自建 CI 镜像：已含 curl / jq / git，无需再拉 Docker Hub
+  variables:
+    GIT_STRATEGY: none # 不检出代码，全部在临时目录完成
+  cache: {}
+  timeout: 30m
+  rules:
+    # 主路径：GitHub Actions 用 trigger token 自动触发
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+    # 手动路径：CI/CD → Pipelines → Run pipeline，在「变量」区填 VERSION（可加 PRERELEASE）
+    # 要求 VERSION 非空，没填就不创建这个 job，避免空跑一次必然失败的发布
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION
+  script:
+    - |
+      set -euo pipefail
+
+      TAG="${VERSION:?未传入 VERSION —— 网页手动执行时请在 Run pipeline 的变量区填写（如 VERSION=v0.2.19）}"
+      case "$TAG" in v*) ;; *) TAG="v${TAG}" ;; esac
+      PRE="${PRERELEASE:-false}"
+      [ "$PRE" = "true" ] || PRE="false"
+      echo "版本号: ${TAG}  预发布: ${PRE}"
+
+      GH_API="https://api.github.com/repos/dtapps/certflow"
+      API="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}"
+
+      if [ -n "${GL_RELEASE_TOKEN:-}" ]; then
+        AUTH=(-H "PRIVATE-TOKEN: ${GL_RELEASE_TOKEN}")
+      else
+        AUTH=(-H "JOB-TOKEN: ${CI_JOB_TOKEN}")
+      fi
+
+      # GitHub 公开仓库匿名也能下，但 API 只有 60 次/小时；没配 token 时回落到匿名，不报错。
+      gh_get() {
+        if [ -n "${CERTFLOW_GITHUB_TOKEN:-}" ]; then
+          curl -fsSL -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" "$1" -o "$2"
+        else
+          curl -fsSL "$1" -o "$2"
+        fi
+      }
+
+      WORK=$(mktemp -d)
+      cd "$WORK"
+      mkdir dist
+
+      echo "读取 GitHub Release: ${TAG}"
+      gh_get "${GH_API}/releases/tags/${TAG}" release.json
+      COUNT=$(jq '.assets | length' release.json)
+      if [ "$COUNT" -le 0 ]; then
+        echo "错误：GitHub Release ${TAG} 没有附件"
+        exit 1
+      fi
+      echo "共 ${COUNT} 个附件"
+
+      for i in $(seq 0 $((COUNT - 1))); do
+        NAME=$(jq -r ".assets[$i].name" release.json)
+        URL=$(jq -r ".assets[$i].browser_download_url" release.json)
+        echo "下载 ${NAME} ..."
+        gh_get "$URL" "dist/${NAME}"
+      done
+      ls -lh dist
+
+      # 复用 GitHub 正文，把仓库链接替换为 GitLab。
+      #
+      # 顺序不能颠倒：GitHub 的下载地址是 /releases/download/<tag>/<file>，
+      # GitLab 的直链是 /-/releases/<tag>/downloads/<file>（多一个 /-，download 变 downloads）。
+      # 如果只换域名，会得到 https://gitlab.com/dtapps/certflow/releases/download/...
+      # —— GitLab 没有这条路由，表格里点下载必然 404。
+      GH_BASE="https://github.com/dtapps/certflow"
+      jq -r '.body // ""' release.json \
+        | sed -E \
+            -e "s#${GH_BASE}/releases/download/([^/ )]+)/([^ )]+)#${CI_PROJECT_URL}/-/releases/\1/downloads/\2#g" \
+            -e "s#${GH_BASE}/releases/tag/([^/ )]+)#${CI_PROJECT_URL}/-/releases/\1#g" \
+            -e "s#${GH_BASE}/releases([^A-Za-z0-9/]|$)#${CI_PROJECT_URL}/-/releases\1#g" \
+            -e "s#${GH_BASE}#${CI_PROJECT_URL}#g" \
+        > body.md
+
+      # 兜底：正文里只要还残留指向 GitHub 的链接，说明上面的规则没覆盖到，
+      # 宁可让 job 失败，也别发出一个点进去 404 的 release 页面。
+      if grep -n "github.com/dtapps/certflow" body.md; then
+        echo "错误：Release 正文仍含指向 GitHub 的链接，中止发布"
+        exit 1
+      fi
+
+      # 上传到 Generic Package Registry（同版本重发会 403，视为已存在）
+      LINKS='[]'
+      for f in dist/*; do
+        NAME=$(basename "$f")
+        # 文件名可能含空格/中文（如 macOS 的「安装包.dmg」），路径段必须 URL 编码，
+        # 否则 curl 直接报 URL malformed（exit 3，且 -s 下不打日志，很难查）。
+        ENC=$(printf '%s' "$NAME" | jq -sRr @uri)
+        UP_URL="${API}/packages/generic/certflow/${TAG}/${ENC}"
+        HTTP=$(curl -s -o /tmp/pkg.out -w "%{http_code}" -X PUT "${AUTH[@]}" --upload-file "$f" "$UP_URL")
+        case "$HTTP" in
+          200|201) echo "  ✓ 已上传 ${NAME}" ;;
+          403|409) echo "  ⚠ ${NAME} 已存在（同版本重发），复用已有文件" ;;
+          *) echo "  ✗ 上传 ${NAME} 失败 HTTP=${HTTP}"; cat /tmp/pkg.out; exit 1 ;;
+        esac
+        LINKS=$(echo "$LINKS" | jq --arg n "$NAME" --arg u "$UP_URL" --arg d "/${NAME}" \
+          '. + [{name: $n, url: $u, direct_asset_path: $d, link_type: "package"}]')
+      done
+
+      # 幂等：删同 tag 的旧 release（tag 保留，下面创建时复用）
+      HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH[@]}" "${API}/releases/${TAG}")
+      case "$HTTP" in
+        200|204) echo "已删除旧 release ${TAG}" ;;
+        404) echo "无旧 release，直接创建" ;;
+        *) echo "⚠ 删除旧 release 返回 HTTP=${HTTP}（继续）" ;;
+      esac
+
+      # tag 不存在时由 ref 自动创建，指向默认分支最新提交
+      PAYLOAD=$(jq -n \
+        --arg name "$TAG" \
+        --arg tag "$TAG" \
+        --arg desc "$(cat body.md)" \
+        --arg ref "$CI_DEFAULT_BRANCH" \
+        --argjson links "$LINKS" \
+        '{name: $name, tag_name: $tag, description: $desc, ref: $ref, assets: {links: $links}}')
+
+      HTTP=$(curl -s -o /tmp/rel.json -w "%{http_code}" -X POST "${AUTH[@]}" \
+        -H "Content-Type: application/json" -d "$PAYLOAD" "${API}/releases")
+      if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+        echo "创建 release 失败 HTTP=${HTTP}"
+        cat /tmp/rel.json
+        exit 1
+      fi
+
+      echo ""
+      echo "完成：${CI_PROJECT_URL}/-/releases/${TAG}"
