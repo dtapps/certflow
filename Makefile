@@ -111,7 +111,6 @@ format-yaml:
 	@yamlfmt -conf .yamlfmt \
 		".cnb" \
 		".github" \
-		".gitlab" \
 		".gitcode" \
 		".workflow" \
 		".cnb.yml" \
@@ -168,7 +167,6 @@ format-docker:
 	@echo "[Format] 使用 dockerfmt 格式化 Dockerfile..."
 	@find .cnb -type f -name "Dockerfile*" -exec dockerfmt -w {} + || { echo "❌ dockerfmt 格式化失败"; exit 1; }
 	@find .github -type f -name "Dockerfile*" -exec dockerfmt -w {} + || { echo "❌ dockerfmt 格式化失败"; exit 1; }
-	@find .gitlab -type f -name "Dockerfile*" -exec dockerfmt -w {} + || { echo "❌ dockerfmt 格式化失败"; exit 1; }
 	@echo "[Format] Dockerfile 格式化完成（dockerfmt）。"
 
 # ==================== 检查 / 测试 ====================
@@ -259,6 +257,11 @@ tool-deps: ## 安装必要的工具
 	go install github.com/reteps/dockerfmt@latest
 	-dockerfmt version
 	@echo "==> dockerfmt 工具安装或更新完成"
+
+	markdownfmt -version || true
+	go install github.com/Kunde21/markdownfmt/v3/cmd/markdownfmt@latest
+	-markdownfmt -version
+	@echo "==> markdownfmt 工具安装或更新完成"
 
 deps: ## 安装所有依赖
 	@echo "==> 安装所有依赖..."
