@@ -789,6 +789,57 @@ jobs:
             echo "✓ 已成功请求 CNB 执行同步构建"
           fi
 
+  # GitHub Release 发布成功后，触发 Gitee Go 流水线（.workflow/release.yml），
+  # 由它把 GitHub 资产搬到 Gitee Release 并把正文渲染成 HTML。
+  # Gitee Go 没有「调 API 建 Release」的接口，但有 Webhook 触发：
+  #   POST <触发地址>，Authorization: Bearer <个人令牌>，
+  #   请求体 {"eventType": "...", "payload": {"params": {...}}}
+  # eventType 必须逐字等于 .workflow/release.yml 里 triggers.webhook 配的名字
+  # （certflow-release），两边改名要一起改。
+  # secret：
+  #   GITEE_WEBHOOK_URL —— Gitee 流水线详情页给出的 Webhook 触发地址
+  #   GITEE_TOKEN       —— Gitee → 个人中心 → 私人令牌
+  # 不配也不影响发版，只是 Gitee 那边需要手动点执行。
+  sync-gitee:
+    needs: [release, prepare]
+    runs-on: ubuntu-latest
+    env:
+      GITEE_WEBHOOK_URL: ${{ secrets.GITEE_WEBHOOK_URL }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+    steps:
+      - name: 触发 Gitee 发布流水线
+        if: ${{ env.GITEE_WEBHOOK_URL != '' && env.GITEE_TOKEN != '' }}
+        shell: bash
+        run: |
+          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
+          sleep 8
+
+          # VERSION 显式传过去，Gitee 端就不用再靠「取最新 Release」猜；
+          # 万一 payload.params 不生效，那边的脚本会自己回落到 latest。
+          #
+          # PRERELEASE 也传：它就是下面 release job 建 Release 时用的同一个
+          # inputs.prerelease（boolean，渲染成 true/false），值天然一致。
+          # Gitee 端把 PRERELEASE 当「调用方指定」的最高优先级，拿到就直接用，
+          # 省掉再查一次 GitHub API；这条不生效时它仍会读 Release 的 prerelease 字段，
+          # 两条路结果相同。
+          VERSION="v${{ inputs.version }}"
+          PRERELEASE="${{ inputs.prerelease }}"
+          echo "触发 Gitee 流水线: ${VERSION}（prerelease=${PRERELEASE}）"
+
+          HTTP=$(curl -s -o /tmp/gitee.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GITEE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"eventType\":\"certflow-release\",\"payload\":{\"params\":{\"VERSION\":\"${VERSION}\",\"PRERELEASE\":\"${PRERELEASE}\"}}}" \
+            "${GITEE_WEBHOOK_URL}")
+
+          echo "Gitee webhook 响应 HTTP=${HTTP}"
+          cat /tmp/gitee.json || true
+          if [ "${HTTP}" -lt 200 ] || [ "${HTTP}" -ge 300 ]; then
+            echo "::warning::触发 Gitee 流水线失败（HTTP=${HTTP}），不影响 GitHub Release"
+          else
+            echo "✓ 已请求 Gitee 执行发布流水线（异步执行，进度看 Gitee 流水线页面）"
+          fi
+
   # Release 发布成功后触发 GitLab 的 release job（.gitlab-ci.yml，只在 trigger 源下跑：
   # 下载 GitHub 资产 → 传 Generic Package → 建 GitLab Release）。用项目级 trigger token，只触发不绑用户。
   # secret 只有 GITLAB_TRIGGER_TOKEN；仓库/端点/ref 见下方常量（仓库地址取自 README 镜像表）。
@@ -880,7 +931,7 @@ jobs:
   #          带 uid 的 sendkey（sctp 开头）→ https://<uid>.push.ft07.com/send/<sendkey>.send
   notify:
     # 等所有镜像同步 job 结束（未配置 secret 时它们只是跳过，不影响 success 判定）。
-    needs: [sync-cnb, sync-gitlab, sync-gitcode, release, prepare]
+    needs: [sync-cnb, sync-gitee, sync-gitlab, sync-gitcode, release, prepare]
     runs-on: ubuntu-latest
     if: ${{ needs.release.result == 'success' }}
     env:
