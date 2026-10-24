@@ -123,6 +123,8 @@ jobs:
 
       - name: 转换 Vitest JSON 为 JUnit XML
         # Vitest 5.0.5 无内置 junit reporter，用内置 json reporter 产出 test-results.json 后再转 JUnit（零依赖脚本）。
+        # 脚本会把 testResults[].name 的绝对路径归一化成仓库相对路径再写入 classname，
+        # 否则 Codecov 上会出现 /__w/certflow/certflow/frontend/... 这类 runner 专属路径（详见 docs/codecov.md 3.3.1）。
         working-directory: frontend
         run: node scripts/vitest-json-to-junit.mjs
 

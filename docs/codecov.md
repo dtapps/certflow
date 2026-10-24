@@ -74,6 +74,58 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
   - 上传步骤的 `files` 已合并两份报告：`frontend/test-report.xml,./go-test-report.xml`。
 - 最终 Codecov 的 **Tests** 面板同时包含 Go 与 Vue 的测试结果。
 
+#### 3.3.1 为什么必须把 `classname` 归一化成仓库相对路径
+
+Codecov Test Analytics 只认 JUnit 的 **`classname`** 作为用例的归属文件（官方给的 Jest 示例就是 `JEST_JUNIT_CLASSNAME="{filepath}"`），并用它做三件事：文件分组、跨 run 关联（flaky 判定）、失败位置的仓库内跳转。**`classname` 一旦是绝对路径，这三件事全部失效**：
+
+| 侧                      | `classname` 实际值                                        | 结果                                                                                                                                                        |
+|-------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Go（gotestsum）         | `cnb.cool/dtapp/certflow/internal/auth`                   | 包导入路径，天然稳定、无 runner 前缀，跨环境一致 → 正常                                                                                                     |
+| Vue（Vitest json 原生） | `/__w/certflow/certflow/frontend/src/test/format.test.ts` | 带 GitHub Actions 容器前缀 `/__w/certflow/certflow`，UI 上显示成一条怪路径，且换到 CNB（`/workspace/...`）或本地（`/Users/...`）就变成另一条记录 → 无法关联 |
+
+根因在 Vitest 的 json reporter：`testResults[].name` 是**测试文件的绝对路径**（实测值 `suite keys: assertionResults,startTime,endTime,status,message,name`，`name` 为绝对路径），而转换脚本早期把这个值直接写进了 `classname`。
+
+修复：`frontend/scripts/vitest-json-to-junit.mjs` 新增 `toRepoRelative()`——以脚本自身位置（`import.meta.url`）上溯两级得到仓库根，把绝对路径转成「相对仓库根 + POSIX 分隔」，例如 `frontend/src/test/format.test.ts`。这样 GitHub Actions、CNB、本地三处产出的 `classname` 完全一致。
+
+**前缀换来换去是常态，不是偶发**。本仓库同一份测试在 Codecov 里已经裂成两条记录，原因就是 CI 执行形态变过：
+
+| 提交                        | 执行形态                           | checkout 路径                              | 产生的记录                                         |
+|-----------------------------|------------------------------------|--------------------------------------------|----------------------------------------------------|
+| `d8302f4`（初版）           | 裸 runner `runs-on: ubuntu-24.04`  | `/home/runner/work/certflow/certflow`      | `/home/runner/work/certflow/certflow/frontend/...` |
+| `2138b5f`（改用预构建镜像） | `container: ghcr.io/.../ci:latest` | `/__w/certflow/certflow`（容器内工作目录） | `/__w/certflow/certflow/frontend/...`              |
+
+即 **host runner 与容器两种形态前缀不同，且同一次 PR 的前后两次 run 都会各记一条**。归一化对前缀是"无感"的：实测把同一份 JSON 的 `name` 分别改成五种前缀，输出完全一致：
+
+```
+local      /Users/<me>/certflow/frontend/src/test/format.test.ts  → classname="frontend/src/test/format.test.ts"
+host       /home/runner/work/certflow/certflow/frontend/src/test/format.test.ts → 同上
+container  /__w/certflow/certflow/frontend/src/test/format.test.ts → 同上
+cnb        /workspace/certflow/frontend/src/test/format.test.ts    → 同上
+gitlab     /builds/group/certflow/frontend/src/test/format.test.ts → 同上
+```
+
+### 两层归一化逻辑（为什么能吃掉任意前缀）
+
+1. **常规：直接相减**。JSON 与脚本在同一份 checkout 树内（所有 CI 都是这种），`path.relative(repoRoot, abs)` 一步到位，与绝对前缀具体是什么无关。
+2. **兜底：反向匹配**。若测试在容器里跑、归一化在宿主上跑（或本机复现别的 CI 产出的 JSON），路径不在这棵树里，`relative` 会得到一串 `../..`。此时从路径**尾部**往回找最长的「在仓库中真实存在」的后缀：
+
+   ```js
+   const segs = abs.split(/[\\/]+/).filter(Boolean);
+   for (let i = segs.length; i >= 2; i--) {
+     const candidate = segs.slice(segs.length - i).join("/");
+     if (existsSync(path.join(repoRoot, candidate))) return candidate; // frontend/src/test/x.test.ts
+   }
+   ```
+
+   循环要求至少 2 段，避免误命中仓库里同名的单文件（如 `package.json`）；认不出来则原样返回，不凭空编造路径。
+
+注意点：
+
+- **不要用 `process.cwd()` 推根目录**：CI 里转换步骤的 `working-directory: frontend`，cwd 不是仓库根。
+- 相对路径在 Windows 上会是 `frontend\src\...`，统一 `split(path.sep).join("/")` 换成 `/`。
+- `.github/codecov.yml` 的 `fixes:` 是**覆盖率侧**的路径修补，官方文档未声明作用于 Test Analytics，故不依赖它（真正的约束在生成端）。
+- ⚠️ **修复不会清理历史数据**：UI 里已有的 `/home/runner/work/...`、`/__w/...` 两条旧记录会一直留到 Codecov 的 60 天保留期满自然淘汰；它们不代表修复失效，判断修复是否生效要看**最新一次 run** 生成的 `classname`（或本地跑 `grep -o 'classname="[^"]*"' test-report.xml`）。
+
 ### 3.4 组件（Components）
 
 把整仓覆盖率拆成 **Go 后端 / Vue 前端** 两个逻辑单元，在 Codecov 的 **Components** 面板分别看各自的覆盖率与趋势。
