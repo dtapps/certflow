@@ -1,18 +1,28 @@
-# 从 GitHub Release 下载产物并发布到 Gitee Release —— 全程在 Gitee 网页上点「执行」完成
+# 从 GitHub Release 下载产物并发布到 Gitee Release
 #
-# 用法：Gitee → 仓库 → 流水线 → 选「发布版本」→ 改全局参数 VERSION → 执行
+# 两种触发方式：
+#   1) 外部系统 POST Webhook（GitHub Actions 发完 Release 直接调），见下方 triggers 段；
+#   2) Gitee → 仓库 → 流水线 → 选「发布版本」→ 点「执行」（补发时可手填 VERSION）。
 #
 # 前置条件（Gitee Go → 该仓库流水线 → 设置 → 全局参数）：
-#   - VERSION               必填，每次发版在页面上改，**带不带 v 都行**（v1.2.3 / 1.2.3），脚本自己归一化
+#   - VERSION               可选。不填就按 GitHub 最新的 Release 自动判定（常态）；
+#                           只有补发历史版本才需要填，**带不带 v 都行**（v1.2.3 / 1.2.3），脚本自己归一化
 #   - CERTFLOW_GITHUB_TOKEN 可选，GitHub 只读令牌，仅用于避开 api.github.com 60 次/小时匿名限额
-#   - RELEASE_BODY          可选，仅兜底（GitHub 正文为空时才会用到）
+#   - PRERELEASE            可选，填 true / false 强制指定预发布；不建则自动判断
 #
-# 正文怎么传进去：download-stage 请求 GitHub API 拿到 release.body，把
-# 'RELEASE_BODY=<正文>' 追加到 GITEE_PARAMS —— 这是官方支持的运行期改参数方式
-# （echo 'Key=Value' >> GITEE_PARAMS）。流水线级参数在整个流水线内可见，
-# 所以 release-stage 的 description: ${RELEASE_BODY} 就取到了真实正文。
-# 插件本身不读文件、也没有 descriptionFromFile（那是 CNB 的插件），但 ${参数} 插值是支持的。
-# 参数文件一行一个 KEY=VALUE，正文里的换行因此写成 <br>。
+# 正文：download-stage 请求 GitHub API 拿到 release.body（markdown 原文），
+# 写进 assets/release-notes.md，随 GH_ASSETS 传到 release-stage；
+# 插件的 description 只写这个相对路径（不能带任何前缀文案）。
+#
+# description 的解析规则（由三次实测反推）：
+#   值是「相对路径」，插件 open 它，成功则正文 = 文件内容；
+#   open 返回 ENOENT → 降级把这串当纯文本显示（加前缀文案时看到的就是这个）；
+#   open 返回 ENAMETOOLONG（直接把正文塞进去）→ 直接报错退出。
+# 所以：值必须短、且文件必须真实存在。文件没有长度限制，markdown 原样渲染。
+#
+# 预发布：默认按 GitHub 的 prerelease 字段判断，并用 tag 后缀（-rc/-beta/-alpha）
+# 和正文里的「预发布 / Pre-release」等字样兜底；结果写入 GITEE_PARAMS，
+# 由 release-stage 的 prerelease: ${PRERELEASE} 取用。
 #
 # 两个 stage 的职责（stage 之间串行；同一 stage 内的 step 是并行的）：
 #   1) download-stage  build@nodejs —— 云端容器（ubuntu:plugin-24，没有 python3，脚本只用 node 内置模块），
@@ -23,20 +33,40 @@
 # assets.tar.gz 去上传，然后 400 失败。GitHub 增减资产时要同步改那份清单。
 # VERSION 带不带 v 由脚本归一化（VER 去掉 v），填 v1.2.3 或 1.2.3 都能跑通。
 #
-# 不配 triggers：本仓库是 GitHub 的镜像，push 由镜像同步产生，不该连带发版。
+# 触发方式：只认 Webhook 自定义事件，不响应 push / PR。
+# 本仓库是 GitHub 的镜像，push 由镜像同步自动产生，若配 push 触发就会每次同步都发一版。
+# Webhook 触发不依赖代码变动，正好用来承接「GitHub 那边发了 Release」这个外部事件。
+#
+# 外部系统（GitHub Actions 等）调用方式：
+#   POST <流水线页面给出的 Webhook 触发地址>
+#   Authorization: Bearer <个人令牌>（个人中心获取）
+#   {"eventType": "certflow-release", "payload": {"params": {"VERSION": "v0.2.19"}}}
+# payload.params 里的键会作为流水线参数注入，所以 VERSION 可以由调用方直接给，
+# 不必每次回 Gitee 手改全局参数。
 version: '1.0'
 name: release
 displayName: 发布版本
+
+triggers:
+  # auto = 允许自动触发；下面没有配 push / pr，所以只有 Webhook 事件能自动拉起流水线。
+  trigger: auto
+  # 自定义事件名，调用方 eventType 必须与之一致（可写多个）。
+  webhook:
+    - 'certflow-release'
+
+# 阻塞构建：同一条流水线同时只跑一个，后来的排队等前一个结束。
+# 发版涉及建 Release、传附件、覆盖同名 tag，并发跑会互相踩（allowUpdate 覆盖到一半）。
+strategy:
+  blocking: true
 
 # 引用仓库级「全局参数」。缺了这段，VERSION / CERTFLOW_GITHUB_TOKEN 不会进到任务里，
 # 脚本拿到的就是空值（实测日志里 RELEASE_VERSION= 为空）。
 ref_variable:
   - VERSION
   - CERTFLOW_GITHUB_TOKEN
-  # Release 正文。download-stage 会把 GitHub 的 body 追加进 GITEE_PARAMS，
-  # 下游 description: ${RELEASE_BODY} 就能取到，不用手工填。
-  # 这一项留着只作兜底：GitHub 正文为空时才会用到它的值。
-  - RELEASE_BODY
+  # 预发布开关，可选。填 true / false 就强制指定；不建这个参数也没关系，
+  # 脚本会按 GitHub 的 prerelease 字段自动判断。
+  - PRERELEASE
 
 stages:
   # 必须分成两个 stage：Gitee Go 同一个 stage 内的 step 默认**并行**执行（官方文档：
@@ -64,22 +94,18 @@ stages:
             export CERTFLOW_GITHUB_TOKEN="${CERTFLOW_GITHUB_TOKEN}"
             set -u
 
+            # VERSION 不是必填：Webhook 触发时可以从 payload.params 带过来；
+            # 完全没带就按 GitHub 最新的 Release 自动判定，省掉每次回 Gitee 改全局参数。
             if [ -z "$RELEASE_VERSION" ]; then
-              echo "错误：VERSION 为空 —— 通用变量未创建，或该流水线没有引用它"
-              echo "      Gitee → 仓库 → 流水线 → 设置 → 全局参数，新建 VERSION（文本，如 v0.2.19，带不带 v 均可）"
-              exit 1
+              echo "VERSION 为空：按 GitHub 最新 Release 自动判定"
+              echo "     想指定版本：全局参数 VERSION 填 v0.2.19，或 Webhook 的 payload.params 里带 VERSION"
             fi
 
-            # 正文靠全局参数 RELEASE_BODY 传。没配时平台不做插值，占位符会原样留下，
-            # 发布仍会成功但正文是一个占位符，所以这里提示一句（不中断）。
-            # 注意用 printenv + 前缀匹配：写成完整的变量形式会被平台插值成正文原文。
-            RB="$(printenv RELEASE_BODY 2>/dev/null || true)"
-            case "$RB" in
-              '' | '${'*)
-                echo "提示：全局参数 RELEASE_BODY 未配置 —— Release 正文会显示占位符"
-                echo "      Gitee → 流水线 → 设置 → 全局参数，新建 RELEASE_BODY（文本），发版前粘贴 GitHub Release 正文"
-                ;;
-            esac
+            # 预发布开关：全局参数 PRERELEASE 可选，填 true / false 则强制指定，
+            # 不配（或值不是这两种）就由脚本按 GitHub 的 prerelease 字段自动判断。
+            # 用 printenv 而不是直接展开：参数没建时平台不做插值，留下的是字面 ${...}，
+            # 直接展开会把占位符塞进脚本，这里读出来再在 node 里判掉。
+            export PRERELEASE_MANUAL="$(printenv PRERELEASE 2>/dev/null || true)"
 
             node - <<'JS'
             'use strict';
@@ -95,24 +121,22 @@ stages:
 
             const GH_API = 'https://api.github.com/repos/dtapps/certflow';
             const GH_TOKEN = (process.env.CERTFLOW_GITHUB_TOKEN || '').trim();
-            const RAW = (process.env.RELEASE_VERSION || '').trim();
+            let RAW = (process.env.RELEASE_VERSION || '').trim();
 
             // VERSION 带不带 v 都能跑，脚本自己归一化：GitHub 资产名里的版本段永远不带 v
             // （CertFlow-0.2.19-darwin-arm64.zip），所以查 Release 用 VER。
-            const VER = RAW.replace(/^v/i, '');
+            // 三个都用 let：VERSION 缺省时由 GitHub 最新 Release 的 tag_name 回填。
+            let VER = RAW.replace(/^v/i, '');
 
             function fail(msg) {
               console.error('错误：' + msg);
               process.exit(1);
             }
 
-            if (!RAW) {
-              fail('缺少版本号 VERSION（Gitee → 流水线 → 设置 → 全局参数）');
-            }
-
             // tag 一律补 v（GitHub 侧的惯用形式是 v0.2.19）。查 GitHub Release 用它，
             // 与附件名用的 VER 完全独立，所以 VERSION 填哪种格式都能对上。
-            const TAG = 'v' + VER;
+            // VERSION 没给时留空，由 main() 取 /releases/latest 后回填。
+            let TAG = VER ? 'v' + VER : '';
 
             // 断点续传要带 Range 头，重定向到签名地址时也得一路带着，否则续传变成从头下
             function request(url, redirects, withAuth, rangeFrom) {
@@ -289,33 +313,74 @@ stages:
                 fs.mkdirSync(OUT_DIR, { recursive: true });
               }
 
-              console.log('版本号: ' + TAG);
+              // 参数文件：下游 description / prerelease / tagName 等全靠它插值。
+              const pf = process.env.GITEE_PARAMS || 'GITEE_PARAMS';
 
-              return readText(GH_API + '/releases/tags/' + encodeURIComponent(TAG)).then(function (raw) {
+              // 指定了版本就按 tag 精确取（补发历史版本）；没指定就取最新，
+              // 这样 Webhook 只带事件不带参数也能发版。
+              const relUrl = TAG
+                ? GH_API + '/releases/tags/' + encodeURIComponent(TAG)
+                : GH_API + '/releases/latest';
+              console.log('版本号: ' + (TAG || '未指定，取 GitHub 最新 Release'));
+
+              return readText(relUrl).then(async function (raw) {
                 const rel = JSON.parse(raw);
+                // 未指定版本时用 tag_name 回填，并写回 GITEE_PARAMS 的 VERSION ——
+                // 下游 releaseName / tagName / assertFiles 都是 VERSION 插值，
+                // 不回填的话文件名会变成 CertFlow--darwin-amd64.zip。
+                if (!TAG) {
+                  TAG = String(rel.tag_name || '').trim();
+                  if (!TAG) {
+                    fail('GitHub 最新 Release 没有 tag_name，无法判定版本');
+                  }
+                  VER = TAG.replace(/^v/i, '');
+                  RAW = TAG;
+                  fs.appendFileSync(pf, 'VERSION=' + TAG + '\n', 'utf8');
+                  console.log('自动判定版本：' + TAG + '（已写入 ' + pf + ' 的 VERSION）');
+                }
                 const assets = rel.assets || [];
                 if (!assets.length) {
                   fail('GitHub Release ' + TAG + ' 没有附件');
                 }
                 console.log('共 ' + assets.length + ' 个附件');
 
-                // Release 正文：把 GitHub 的 body 写进 GITEE_PARAMS，下游 release-stage 的
-                // description: ${RELEASE_BODY} 就能取到（流水线级参数运行期可改，官方机制：
-                //   echo 'Key=Value' >> GITEE_PARAMS）。
-                // 参数文件是一行一个 KEY=VALUE，而正文是多行 markdown，所以把换行压成 <br>，
-                // markdown 渲染时仍是换行。链接顺带换成 Gitee 域名（两边下载路径结构一致）。
-                const pf = process.env.GITEE_PARAMS || 'GITEE_PARAMS';
+                // 正文：GitHub 的 body 原文（markdown，含表格 / 链接 / 代码块）写进
+                // assets/release-notes.md。
+                //
+                // 为什么不能走 GITEE_PARAMS（两次实测都失败）：
+                //   - 短了会被截断：平台按 = 切 KEY=VALUE，正文断在 <a href 的 = 上；
+                //   - 长了会崩：插件把 description 的值当相对路径 open，几百 KB 的
+                //     正文直接 ENAMETOOLONG（error: read file error: ... file name too long）。
+                // 所以正文只能走文件：插件读 <工作目录>/<description 里的文件名>，
+                // 而 artifact 解开就是工作目录（日志里 assets/ 里的附件上传成功可证）。
                 const body = String(rel.body || '')
                   .replace(/\r\n/g, '\n')
                   .split('https://github.com/dtapps/certflow').join('https://gitee.com/dtapps/certflow')
                   .trim();
-                if (body) {
-                  const oneLine = body.replace(/\n/g, '<br>');
-                  fs.appendFileSync(pf, 'RELEASE_BODY=' + oneLine + '\n', 'utf8');
-                  console.log('正文已写入 ' + pf + '：' + oneLine.length + ' 字符');
+                const notes = body || ('CertFlow ' + TAG);
+                fs.mkdirSync(OUT_DIR, { recursive: true });
+                fs.writeFileSync(OUT_DIR + '/release-notes.md', notes + '\n', 'utf8');
+                console.log('正文：markdown ' + notes.split('\n').length + ' 行 / ' +
+                  notes.length + ' 字符 → ' + OUT_DIR + '/release-notes.md');
+                // 打出目录内容，确认正文和附件一起进了 artifact
+                console.log(OUT_DIR + ' 目录：' + fs.readdirSync(OUT_DIR).join(', '));
+
+                // 预发布标记：全局参数 PRERELEASE 显式指定时最优先；否则
+                // GitHub 的 prerelease 字段最权威，再叠加 tag 后缀和正文关键词兜底。
+                // 结果写进 GITEE_PARAMS，供下游 prerelease 字段插值（布尔）。
+                const manual = (process.env.PRERELEASE_MANUAL || '').trim().toLowerCase();
+                const preByTag = /[-.](rc|beta|alpha|pre|preview)\d*(\.|\b)/i.test(VER);
+                const preByBody = /(预发布|测试版|抢先版|pre-?release|release candidate)/i.test(body);
+                let PRE;
+                if (manual === 'true' || manual === 'false') {
+                  PRE = manual === 'true';
+                  console.log('预发布：按全局参数 PRERELEASE=' + manual + ' 指定');
                 } else {
-                  console.log('GitHub 正文为空，正文留给手工配置的 RELEASE_BODY');
+                  PRE = rel.prerelease === true || preByTag || preByBody;
+                  console.log('预发布：' + PRE + '（GitHub prerelease=' + rel.prerelease +
+                    '，tag 后缀=' + preByTag + '，正文关键词=' + preByBody + '）');
                 }
+                fs.appendFileSync(pf, 'PRERELEASE=' + (PRE ? 'true' : 'false') + '\n', 'utf8');
 
                 // 落盘名直接用 GitHub 资产原名，目录上传不看名字，
                 // 所以附件名能和 GitHub / CNB / GitLab 逐字一致。
@@ -327,7 +392,7 @@ stages:
                 let seq = 0;
 
                 // GitHub 资产名里的版本段不带 v（CertFlow-0.2.19-darwin-amd64.zip），
-                // 而下游 assertFiles 用 ${VERSION} 拼文件名。两者必须一致，
+                // 而下游 assertFiles 用 VERSION 参数拼文件名。两者必须一致，
                 // 所以落盘时把版本段统一替换成 VERSION 原文（带 v 就带 v）。
                 function localName(name) {
                   return name.split('CertFlow-' + VER).join('CertFlow-' + RAW);
@@ -352,10 +417,6 @@ stages:
                 }
 
                 return Promise.all(pool).then(function () {
-                  // 正文不在这里处理：实测 release@gitee 插件不会读文件，
-                  // 它把 description 的值原样当正文发出去（日志里 body: release-notes.md）。
-                  // 正文改用 YAML 里的固定文案。
-
                   // 以目录里的实际内容为准：GitHub 有什么就传什么，不补也不减
                   const all = fs.readdirSync(OUT_DIR);
                   console.log('准备就绪：' + OUT_DIR + '/ 下 ' + all.length + ' 个附件');
@@ -368,8 +429,16 @@ stages:
               fail(err && err.message ? err.message : String(err));
             });
             JS
+
+            # 落盘自检：正文没写出来就直接红在这一步，不要等到发布阶段才发现
+            echo "---- assets 目录 ----"
+            ls -lh assets/
+            echo "---- 正文字节数 ----"
+            wc -c assets/release-notes.md
         # 声明产物，供下游 release@gitee 的 upstreamArtifact 取用。
-        # 只声明目录 assets/，不列文件名：目录里有什么就传什么。
+        # 必须写目录名 assets，不能写 assets/*：实测通配符会把匹配到的文件
+        # 平铺到工作目录根下（assets/ 前缀丢失），插件的 assertFiles 逐条找
+        # assets/xxx.zip 就会 file not exists。目录名则保留层级。
         artifacts:
           - name: GH_ASSETS
             path:
@@ -388,10 +457,13 @@ stages:
         # 这里不能写 v${VERSION}：VERSION 已带 v 时会拼成 vv0.2.19。
         releaseName: ${VERSION}
         tagName: ${VERSION}
-        # 正文取自全局参数 RELEASE_BODY。
-        # 插件不读文件（填路径会把路径本身当正文发出去，日志里是 body: release-notes.md），
-        # 但会做 ${参数} 插值 —— 和上面 tagName 一样，所以走全局参数这条路是通的。
-        description: ${RELEASE_BODY}
+        # 正文只写「相对路径」，不要加任何前缀文案。
+        # 插件的逻辑是把这个值当相对路径去 open（cwd = /root/workspace/dtapps/certflow）：
+        #   - open 成功 → 正文 = 文件内容；
+        #   - ENOENT    → 降级成文本，页面上就显示这串字面量（加「文案 | 」前缀时就是这个下场）；
+        #   - ENAMETOOLONG（直接塞正文，几百 KB）→ 直接报错退出。
+        # 文件必须真的在 artifact 里：下载阶段写完会打印 assets 目录清单，可据此核对。
+        description: assets/release-notes.md
         upstreamArtifact:
           - GH_ASSETS
         # 必须逐个列文件名。插件不支持目录：填 assets 会把整个目录压成
@@ -419,7 +491,10 @@ stages:
           - assets/BUILD_TIME
           - assets/GIT_COMMIT
           - assets/SHA256SUMS
-        # 预发布要发测试版时，把这里改成 true 再执行
-        prerelease: false
+        # 预发布：download-stage 判定后写入 GITEE_PARAMS，这里插值取 true / false。
+        # 判定优先级：GitHub 的 prerelease 字段 > tag 后缀（-rc/-beta/-alpha）> 正文关键词。
+        # 想强制指定，就在流水线全局参数里新建 PRERELEASE（值为 true 或 false），
+        # 脚本会优先用它（见下方 download-stage 的 preManual 判断）。
+        prerelease: ${PRERELEASE}
         # 同 tag 已存在时覆盖，代替之前手写的「先删旧 Release」
         allowUpdate: true
