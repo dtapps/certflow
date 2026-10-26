@@ -14,7 +14,7 @@ CertFlow is an SSL certificate management tool supporting certificate issuance, 
 
 | Technology             | Purpose                                                    |
 |------------------------|------------------------------------------------------------|
-| Go 1.26                | Backend language                                           |
+| Go 1.27                | Backend language                                           |
 | Wails v3               | Desktop application framework (Go + frontend hybrid)       |
 | Ent (entgo.io/ent)     | ORM framework (code-generation based)                      |
 | lego v5 (go-acme/lego) | ACME protocol client (certificate issuance/renewal)        |
@@ -92,7 +92,9 @@ certflow/
 │   │   │   ├── deploy_target.go # Deploy target entity (provider/service/region config)
 │   │   │   ├── deploy_credential.go # Deploy credential entity
 │   │   │   ├── deploy_log.go  # Deploy log entity
-│   │   │   ├── provider_types.go # Provider/service type enum definitions
+│   │   │   ├── monitor_check_log.go # Monitor check history entity
+│   │   │   ├── types.go       # Provider/service enums and config structs
+│   │   │   ├── types_verify_test.go # Config field completeness test
 │   │   │   ├── monitored_domain.go # Monitored domain entity
 │   │   │   ├── notification.go # Notification entity
 │   │   │   ├── renewal_log.go # Renewal log entity
@@ -105,8 +107,11 @@ certflow/
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
 │   ├── ca/                    # CA management
 │   ├── certificate/           # Certificate issuance/renewal/revocation/upload
-│   ├── db/                    # Database initialization
-│   ├── deploy/                # Certificate deployment (per-provider: aliyun/tencent/huawei/baidu/ctyun/volcengine)
+│   ├── cloudcred/             # Cloud credential types (neutral package, avoids import cycles)
+│   ├── config/                # Generic JSON config parsing
+│   ├── data/                  # Data export/import (per-table CSV zip)
+│   ├── db/                    # Database initialization and migration
+│   ├── deploy/                # Certificate deployment (cloud providers + panels/firewalls)
 │   ├── deploycredential/      # Deployment credential management
 │   ├── dnsprovider/           # DNS provider management
 │   ├── events/                # Frontend-backend event definitions
@@ -117,7 +122,10 @@ certflow/
 │   ├── notification/          # Notification service
 │   ├── scanner/               # Certificate scanning
 │   ├── scheduler/             # Scheduled task scheduler
-│   └── settings/              # Application settings
+│   ├── settings/              # Application settings
+│   ├── sqlite/                # SQLite DSN and dual-driver selection
+│   ├── sqlitetest/            # SQLite driver benchmarks
+│   └── useragent/             # Global User-Agent injection
 ├── frontend/                  # Frontend application
 │   ├── src/
 │   │   ├── views/             # Page views
@@ -130,6 +138,7 @@ certflow/
 │   │   │   ├── DNSProviders.vue        # DNS providers (credentials/verification)
 │   │   │   ├── DeployTargets.vue       # Deploy target list (manage/execute deployment)
 │   │   │   ├── DeployTargetForm.vue    # Deploy target create/edit form
+│   │   │   ├── DeployTargetDetail.vue  # Deploy target detail (local vs cloud cert)
 │   │   │   ├── DeployCredentials.vue   # Deploy credentials entry
 │   │   │   ├── CredentialList.vue      # Deploy credential list (management)
 │   │   │   ├── Monitor.vue             # Domain monitoring (health/expiry alerts)
@@ -141,12 +150,17 @@ certflow/
 │   │   │   ├── TitleBar.vue   # Custom title bar (window controls)
 │   │   │   ├── Sidebar.vue    # Sidebar navigation
 │   │   │   ├── TopBar.vue     # Top toolbar
-│   │   │   └── LoginDialog.vue # Login dialog
+│   │   │   ├── ActionBar.vue  # Global action bar / hints
+│   │   │   ├── LoginDialog.vue # Login dialog
+│   │   │   ├── ProviderIcon.vue # Provider icons
+│   │   │   ├── CAIcon.vue     # CA icons
+│   │   │   └── MonitorTrendChart.vue # Monitoring trend chart
 │   │   ├── router/            # Route configuration
 │   │   ├── stores/            # Pinia state management
 │   │   │   ├── i18n.ts        # Internationalization
 │   │   │   ├── theme.ts       # Theme management
-│   │   │   └── notifications.ts # Notification management
+│   │   │   ├── notifications.ts # Notification management
+│   │   │   └── actionBar.ts   # Global action bar state
 │   │   ├── utils/             # Utility functions
 │   │   ├── style.css          # Global styles
 │   │   └── main.ts            # Entry point
@@ -160,10 +174,16 @@ certflow/
 │   ├── windows/               # Windows build/sign
 │   └── linux/                 # Linux build/sign
 ├── .github/workflows/         # GitHub Actions workflows
-│   ├── release.yml            # Stable release (six platforms)
-│   └── nightly.yml            # Daily build (nightly pre-release)
-├── .cnb/workflows/            # CNB workflows
-│   └── release.yml            # Download artifacts from GitHub Release and publish to CNB
+│   ├── release.yml            # Stable release (six platforms) / pre-release
+│   ├── push.yml               # push / PR checks
+│   ├── codecov.yml            # Codecov upload (coverage / bundle / tests)
+│   ├── coveralls.yml          # Coveralls upload
+│   └── ci-image.yml           # CI base image build (GHCR)
+├── .cnb/workflows/            # CNB workflows (checks, coverage, security scans)
+├── .cnb.yml                   # CNB entry: includes workflows + release pipeline
+├── .gitlab-ci.yml             # GitLab: release sync only
+├── .gitcode/workflows/        # GitCode: releases not published for now (config kept)
+├── .workflow/                 # Gitee pipeline (manual release)
 ├── .golangci.yml              # Go linting configuration
 ├── Makefile                   # Make commands
 ├── Taskfile.yml               # Task build entry point
@@ -184,14 +204,14 @@ make go-build          # Quick compile (Go backend only)
 make lint-go           # Go code linting (golangci-lint)
 make lint-go-fix       # Go code linting (auto-fix)
 make lint-frontend     # Frontend TypeScript type checking (vue-tsc)
-make check             # Lint and test (lint-go + lint-frontend + test-go)
-make test              # Go backend tests
+make check             # Lint + unit tests + fuzz tests + vulnerability scan
+make test-go           # Go backend tests (go test -vet=off ./internal/...)
 make bindings          # Generate Wails TypeScript bindings
 make ent               # Generate Ent ORM code
 make sqlc              # Generate sqlc code (internal/httplog)
-make format            # Format all code (Go + Vue/TS)
-make format-go         # Format Go code
-make format-frontend   # Format frontend code (Prettier)
+make format            # Format all code (Go + Vue/TS + JSON/YAML/Markdown)
+make format-go-fmt     # Format Go code (gofmt)
+make format-frontend-write # Format frontend code (Prettier)
 make clean             # Clean build artifacts
 ```
 
@@ -228,9 +248,10 @@ Injected variables (`main.go`):
 
 ### Release Workflow
 
-- **GitHub Actions (Release)**: Manual trigger with version input, six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes GitHub Release
-- **GitHub Actions (Nightly)**: Automatic daily build of `X.Y.Z-nightly` pre-release at UTC 00:00 (tag `nightly`)
-- **CNB**: Manual trigger, downloads artifacts from GitHub Release and publishes locally
+- **GitHub Actions (Release)**: Manual trigger with version input, six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes a GitHub Release; tick `prerelease` to publish a pre-release
+- **CNB**: Manual trigger with version (optional `pre_release=true`), downloads artifacts from GitHub Release and publishes locally
+- **Release platforms**: only GitHub / CNB / GitLab / Gitee publish releases; other platforms do not
+- **Mirror sync**: A successful GitHub release triggers CNB / GitLab sync automatically; Gitee uses the manual `.workflow/release.yml` pipeline (no API trigger); GitCode does not publish releases for now (`.gitcode/workflows/release.yml` and `sync-gitcode` are kept but not used as a release platform)
 
 ### Code Signing
 
@@ -256,9 +277,13 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 - **DeployCredential** — Deploy credentials
 - **DeployLog** — Deployment execution logs
 - **MonitoredDomain** — Monitored domains
+- **MonitorCheckLog** — Monitor check history
 - **Notification** — Notification records
 - **RenewalLog** — Certificate renewal logs
 - **ScanResult** — Certificate scan results
+- **AuthMethod** — Login method (password)
+- **TOTPCredential** — TOTP 2FA credential
+- **PasskeyCredential** — Passkey / WebAuthn credential
 
 > HTTP request logs use a standalone sqlc-implemented `internal/httplog/` (single `http_log` table) stored in a separate database `dataDir/data/httplog.db`, enabled only at DEBUG level.
 
@@ -342,9 +367,9 @@ All user-visible text must use `i18n.T()` (Go) or `t()` (Vue).
 ## Code Formatting
 
 ```bash
-make format            # Format all code
-make format-go         # Format Go code (gofmt)
-make format-frontend   # Format frontend code (Prettier)
+make format            # Format all code (Go + Vue/TS + JSON/YAML/Markdown/Shell/Dockerfile)
+make format-go-fmt     # Format Go code (gofmt)
+make format-frontend-write # Format frontend code (Prettier)
 ```
 
 Frontend code uses Prettier for formatting, config at `frontend/.prettierrc`.
@@ -365,10 +390,13 @@ Enabled linters: errcheck, govet, staticcheck, ineffassign, misspell, unconvert,
 ## Testing
 
 ```bash
-make test              # Run all tests
+make test-go           # Go backend tests (go test -vet=off -v ./internal/... -count=1)
+make check             # Lint + unit tests + fuzz tests + vulnerability scan
 ```
 
-14 packages with test coverage: auth, ca, certificate, db, deploy, dnsprovider, i18n, logging, monitor, network, notification, scanner, scheduler, settings.
+22 packages have test files (including benchmarks): auth, ca, certificate, config, data, db, deploy, deploycredential, dnsprovider, httplog, i18n, logging, monitor, network, notification, scanner, scheduler, settings, sqlite, sqlitetest, useragent, plus `internal/ent/schema`.
+
+> `-vet=off` is required: legacy `fmt.Sprintf(translatedText)` calls trigger `non-constant format string`. `internal/ent` and `internal/httplog/db` are generated code and excluded from coverage (see `.cnb/workflows/push-coverage.yml`).
 
 ---
 

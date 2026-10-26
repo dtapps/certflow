@@ -17,7 +17,7 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 ## Features
 
 - **Certificate Management** — Issue, renew, revoke, and upload SSL certificates with 30+ DNS provider auto-verification
-- **Certificate Deployment** — One-click deploy certificates to cloud CDN / WAF / load balancer / edge acceleration, supporting Alibaba Cloud, Tencent Cloud, Huawei Cloud, Baidu Cloud, CTYun, and Volcengine
+- **Certificate Deployment** — One-click deploy certificates to cloud CDN / WAF / load balancer / edge acceleration, supporting Alibaba Cloud, Tencent Cloud, Huawei Cloud, Baidu Cloud, CTYun, Volcengine, plus panels and WAFs such as BaoTa / 1Panel / aaPanel / AcePanel / SafeLine
 - **Domain Monitoring** — HTTPS/HTTP health checks and certificate expiration alerts
 - **Auto Renewal** — Scheduled tasks to automatically renew expiring certificates
 - **Certificate Scanning** — Scan and aggregate certificates, view validity and expiration warnings in one place
@@ -60,18 +60,19 @@ make package VERSION=1.0.0
 make help              # View all commands
 make lint-go           # Go code linting (golangci-lint)
 make lint-go-fix       # Go code linting (auto-fix)
-make check             # Lint and test (golangci-lint + frontend type check + unit tests)
-make test              # Go backend tests
+make check             # Lint + unit tests + fuzz tests + vulnerability scan
+make test-go           # Go backend tests (go test -vet=off ./internal/...)
 make bindings          # Generate Wails TypeScript bindings
 make ent               # Generate Ent ORM code
-make format            # Format all code (Go + Vue/TS)
-make format-go         # Format Go code
-make format-frontend   # Format frontend code
+make sqlc              # Generate sqlc code (internal/httplog)
+make format            # Format all code (Go + Vue/TS + JSON/YAML/Markdown)
+make format-go-fmt     # Format Go code (gofmt)
+make format-frontend-write # Format frontend code (Prettier)
 ```
 
 ## Tech Stack
 
-- **Backend**: Go 1.26 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite; auth uses go-webauthn + pquerna/otp (2FA); certificate deployment integrates Alibaba Cloud / Tencent Cloud / Huawei Cloud / Baidu Cloud / CTYun / Volcengine SDKs
+- **Backend**: Go 1.27 + Wails v3 + Ent ORM + lego v5 (ACME) + SQLite; auth uses go-webauthn + pquerna/otp (2FA); certificate deployment integrates Alibaba Cloud / Tencent Cloud / Huawei Cloud / Baidu Cloud / CTYun / Volcengine SDKs
 - **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## Repositories
@@ -88,12 +89,13 @@ make format-frontend   # Format frontend code
 ## Release
 
 - **Stable Release**: Trigger the GitHub Actions Release workflow manually with a version number; six platforms build in parallel and publish a GitHub Release
-- **Nightly Build**: GitHub Actions automatically builds a `X.Y.Z-nightly` pre-release every day at UTC 00:00
-- Build artifacts are also downloaded from GitHub Release for publishing on platforms like CNB
+- **Pre-release**: Tick `prerelease` in the same workflow (pass `pre_release=true` on the CNB side) to publish a pre-release; there is no separate daily build
+- **Release platforms**: only GitHub / CNB / GitLab / Gitee publish releases; other platforms do not
+- **Mirror sync**: After a successful release, artifacts sync automatically to CNB / GitLab; Gitee uses the manual `.workflow/release.yml` pipeline
 
 ## Development Documentation
 
-See [DEVELOPMENT_EN.md](DEVELOPMENT_EN.md)
+See [DEVELOPMENT_EN.md](DEVELOPMENT_EN.md); CI, coverage, release-sync and handoff notes live in [`docs/`](docs/).
 
 ## License
 

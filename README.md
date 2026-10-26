@@ -17,7 +17,7 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 ## 功能特性
 
 - **证书管理** — 申请、续期、撤销、上传 SSL 证书，支持 30+ DNS 提供商自动验证
-- **证书部署** — 一键将证书部署到云厂商 CDN / WAF / 负载均衡 / 边缘加速等，支持阿里云、腾讯云、华为云、百度云、天翼云、火山引擎
+- **证书部署** — 一键将证书部署到云厂商 CDN / WAF / 负载均衡 / 边缘加速等，支持阿里云、腾讯云、华为云、百度云、天翼云、火山引擎，以及宝塔 / 1Panel / aaPanel / AcePanel / 雷池等面板与 WAF
 - **域名监控** — HTTPS/HTTP 健康检查，证书过期预警
 - **自动续期** — 定时任务自动续期即将过期的证书
 - **证书扫描** — 扫描并归集证书，统一查看有效期与到期预警
@@ -60,18 +60,19 @@ make package VERSION=1.0.0
 make help              # 查看所有命令
 make lint-go           # Go 代码检查（golangci-lint）
 make lint-go-fix       # Go 代码检查（自动修复）
-make check             # 代码检查与测试（golangci-lint + 前端类型检查 + 单测）
-make test              # Go 后端测试
+make check             # 检查 + 单测 + 模糊测试 + 漏洞检查
+make test-go           # Go 后端测试（go test -vet=off ./internal/...）
 make bindings          # 生成 Wails TypeScript 绑定
 make ent               # 生成 Ent ORM 代码
-make format            # 格式化所有代码（Go + Vue/TS）
-make format-go         # 格式化 Go 代码
-make format-frontend   # 格式化前端代码
+make sqlc              # 生成 sqlc 代码（internal/httplog）
+make format            # 格式化所有代码（Go + Vue/TS + JSON/YAML/Markdown）
+make format-go-fmt     # 格式化 Go 代码（gofmt）
+make format-frontend-write # 格式化前端代码（Prettier）
 ```
 
 ## 技术栈
 
-- **后端**：Go 1.26 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite；认证使用 go-webauthn + pquerna/otp（2FA）；证书部署对接阿里云 / 腾讯云 / 华为云 / 百度云 / 天翼云 / 火山引擎云 SDK
+- **后端**：Go 1.27 + Wails v3 + Ent ORM + lego v5（ACME）+ SQLite；认证使用 go-webauthn + pquerna/otp（2FA）；证书部署对接阿里云 / 腾讯云 / 华为云 / 百度云 / 天翼云 / 火山引擎云 SDK
 - **前端**：Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4 + Naive UI v2 + Pinia
 
 ## 仓库
@@ -88,12 +89,13 @@ make format-frontend   # 格式化前端代码
 ## 发布
 
 - **正式发布**：在 GitHub Actions 的 Release 工作流中手动输入版本号，六个平台并行构建并发布 GitHub Release
-- **每日构建（Nightly）**：GitHub Actions 每日 UTC 00:00 自动构建 `X.Y.Z-nightly` 预发布版本
-- 构建产物也从 GitHub Release 下载，供 CNB 等平台发布
+- **预发布**：同一工作流勾选 `prerelease`（CNB 侧传 `pre_release=true`）即发布为预发布版本，不再单独跑每日构建
+- **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
+- **镜像同步**：发布成功后自动同步到 CNB / GitLab；Gitee 走 `.workflow/release.yml` 手动流水线
 
 ## 开发文档
 
-详见 [DEVELOPMENT.md](DEVELOPMENT.md)
+详见 [DEVELOPMENT.md](DEVELOPMENT.md)；CI / 覆盖率 / 发布同步 / 交接记录等专题见 [`docs/`](docs/)。
 
 ## 许可
 

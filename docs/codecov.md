@@ -11,6 +11,8 @@
 | 测试结果 Test Analytics  | 单测运行结果    | Go：`gotestsum --junitfile`；Vue：Vitest `json` → 脚本转 JUnit；合并由 `codecov/test-results-action` 上传 | Tests 面板（时长 / flaky / 失败分析） |
 
 > **职责分离（重要）**：CNB 流水线（`testing:coverage`）负责**硬性红线门禁**（`lines` / `diffLines`），会阻断低覆盖率合并；GitHub Actions 只负责**把数据上报到 Codecov** 做可视化（PR 评论、徽章、patch 状态）。因此 `.github/codecov.yml` 里的 `status` 全部设为 `informational`，避免与 CNB 双重门禁。
+>
+> ⚠️ **当前状态（2026-10-26）**：CNB 侧的阈值已在 5903820 中注释暂停，暂时只上报数据、不阻断合并；Codecov 侧行为不变。恢复阈值后本节的硬门禁结论自动生效。
 
 ## 2. 涉及文件清单
 
@@ -26,13 +28,13 @@
 
 ### 3.1 覆盖率（Coverage）
 
-- Go：复用 CNB 的同款口径
+- Go：GitHub 侧命令如下
 
   ```
   go test -vet=off -coverpkg=$(go list ./internal/... | grep -v '/internal/ent' | paste -sd, -) -coverprofile=coverage.out ./internal/...
   ```
 
-  排除 `internal/ent`（Ent 生成代码，占比极大，避免稀释指标）。
+  排除 `internal/ent`（Ent 生成代码，占比极大，避免稀释指标）。 ⚠️ 与 CNB 口径的差别：CNB 还额外排除 `internal/httplog/db`（sqlc 生成）， 所以 Codecov / Coveralls 的百分比会比 CNB 徽章略低，两边不要直接对数。
 - 前端：`pnpm test:coverage`（Vitest 5.0.5 覆盖率，产出 `frontend/coverage/lcov.info`）。
 - 上传：`codecov/codecov-action@v5`，分别带 `flags: go` / `flags: node`。
 

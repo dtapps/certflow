@@ -14,7 +14,7 @@ CertFlow 是一个 SSL 证书管理工具，支持证书申请、续期、过期
 
 | 技术                   | 用途                               |
 |------------------------|------------------------------------|
-| Go 1.26                | 后端编程语言                       |
+| Go 1.27                | 后端编程语言                       |
 | Wails v3               | 桌面应用框架（Go + 前端混合）      |
 | Ent (entgo.io/ent)     | ORM 框架（代码生成式）             |
 | lego v5 (go-acme/lego) | ACME 协议客户端（申请/续期证书）   |
@@ -92,7 +92,9 @@ certflow/
 │   │   │   ├── deploy_target.go # 部署目标实体（云厂商/服务/区域配置）
 │   │   │   ├── deploy_credential.go # 部署凭证实体
 │   │   │   ├── deploy_log.go  # 部署日志实体
-│   │   │   ├── provider_types.go # 厂商/服务类型枚举定义
+│   │   │   ├── monitor_check_log.go # 监控检查历史实体
+│   │   │   ├── types.go       # 厂商/服务类型枚举与配置结构体
+│   │   │   ├── types_verify_test.go # 配置字段完整性校验测试
 │   │   │   ├── monitored_domain.go # 监控域名实体
 │   │   │   ├── notification.go # 通知实体
 │   │   │   ├── renewal_log.go # 续期日志实体
@@ -105,8 +107,11 @@ certflow/
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
 │   ├── ca/                    # CA 管理
 │   ├── certificate/           # 证书申请/续期/撤销/上传
-│   ├── db/                    # 数据库初始化
-│   ├── deploy/                # 证书部署（各云厂商实现：aliyun/tencent/huawei/baidu/ctyun/volcengine）
+│   ├── cloudcred/             # 云厂商凭证类型（中性包，避免循环依赖）
+│   ├── config/                # 配置 JSON 的泛型解析
+│   ├── data/                  # 数据导入导出（按表 CSV 打包 zip）
+│   ├── db/                    # 数据库初始化与迁移
+│   ├── deploy/                # 证书部署（云厂商 + 面板/防火墙实现）
 │   ├── deploycredential/      # 部署凭证管理
 │   ├── dnsprovider/           # DNS 提供商管理
 │   ├── events/                # 前后端事件定义
@@ -117,7 +122,10 @@ certflow/
 │   ├── notification/          # 通知服务
 │   ├── scanner/               # 证书扫描
 │   ├── scheduler/             # 定时任务调度
-│   └── settings/              # 应用设置
+│   ├── settings/              # 应用设置
+│   ├── sqlite/                # SQLite DSN 与双驱动选择
+│   ├── sqlitetest/            # SQLite 驱动基准测试
+│   └── useragent/             # 全局 User-Agent 注入
 ├── frontend/                  # 前端应用
 │   ├── src/
 │   │   ├── views/             # 页面视图
@@ -130,6 +138,7 @@ certflow/
 │   │   │   ├── DNSProviders.vue        # DNS 提供商（凭证管理/验证）
 │   │   │   ├── DeployTargets.vue       # 部署目标列表（管理/执行部署）
 │   │   │   ├── DeployTargetForm.vue    # 部署目标新建/编辑表单
+│   │   │   ├── DeployTargetDetail.vue  # 部署目标详情（本地/云端证书对比）
 │   │   │   ├── DeployCredentials.vue   # 部署凭证入口
 │   │   │   ├── CredentialList.vue      # 部署凭证列表（管理）
 │   │   │   ├── Monitor.vue             # 域名监控（健康检查/过期预警）
@@ -141,12 +150,17 @@ certflow/
 │   │   │   ├── TitleBar.vue   # 自定义标题栏（窗口控制）
 │   │   │   ├── Sidebar.vue    # 侧边栏导航
 │   │   │   ├── TopBar.vue     # 顶部工具栏
-│   │   │   └── LoginDialog.vue # 登录弹窗
+│   │   │   ├── ActionBar.vue  # 全局操作栏/提示
+│   │   │   ├── LoginDialog.vue # 登录弹窗
+│   │   │   ├── ProviderIcon.vue # 厂商图标
+│   │   │   ├── CAIcon.vue     # CA 图标
+│   │   │   └── MonitorTrendChart.vue # 监控趋势图
 │   │   ├── router/            # 路由配置
 │   │   ├── stores/            # Pinia 状态管理
 │   │   │   ├── i18n.ts        # 国际化
 │   │   │   ├── theme.ts       # 主题管理
-│   │   │   └── notifications.ts # 通知管理
+│   │   │   ├── notifications.ts # 通知管理
+│   │   │   └── actionBar.ts   # 全局操作栏状态
 │   │   ├── utils/             # 工具函数
 │   │   ├── style.css          # 全局样式
 │   │   └── main.ts            # 入口文件
@@ -160,10 +174,16 @@ certflow/
 │   ├── windows/               # Windows 构建/签名
 │   └── linux/                 # Linux 构建/签名
 ├── .github/workflows/         # GitHub Actions 工作流
-│   ├── release.yml            # 正式发布（六平台）
-│   └── nightly.yml            # 每日构建（nightly 预发布）
-├── .cnb/workflows/            # CNB 工作流
-│   └── release.yml            # 从 GitHub Release 下载产物并发布到 CNB
+│   ├── release.yml            # 正式发布（六平台）/ 预发布
+│   ├── push.yml               # push / PR 检查
+│   ├── codecov.yml            # Codecov 上报（覆盖率 / bundle / tests）
+│   ├── coveralls.yml          # Coveralls 上报
+│   └── ci-image.yml           # CI 基础镜像构建（GHCR）
+├── .cnb/workflows/            # CNB 工作流（检查、覆盖率、安全扫描等）
+├── .cnb.yml                   # CNB 入口：include 各工作流 + Release 发布
+├── .gitlab-ci.yml             # GitLab：仅发布同步
+├── .gitcode/workflows/        # GitCode：当前不发布版本（配置保留）
+├── .workflow/                 # Gitee 流水线（手动发布）
 ├── .golangci.yml              # Go 代码检查配置
 ├── Makefile                   # Make 命令
 ├── Taskfile.yml               # Task 构建入口
@@ -184,14 +204,14 @@ make go-build          # 快速编译（仅 Go 后端）
 make lint-go           # Go 代码检查（golangci-lint）
 make lint-go-fix       # Go 代码检查（自动修复）
 make lint-frontend     # 前端 TypeScript 类型检查（vue-tsc）
-make check             # 代码检查与测试（lint-go + lint-frontend + test-go）
-make test              # Go 后端测试
+make check             # 检查 + 单测 + 模糊测试 + 漏洞检查
+make test-go           # Go 后端测试（go test -vet=off ./internal/...）
 make bindings          # 生成 Wails TypeScript 绑定
 make ent               # 生成 Ent ORM 代码
 make sqlc              # 生成 sqlc 代码（internal/httplog）
-make format            # 格式化所有代码（Go + Vue/TS）
-make format-go         # 格式化 Go 代码
-make format-frontend   # 格式化前端代码（Prettier）
+make format            # 格式化所有代码（Go + Vue/TS + JSON/YAML/Markdown）
+make format-go-fmt     # 格式化 Go 代码（gofmt）
+make format-frontend-write # 格式化前端代码（Prettier）
 make clean             # 清理构建产物
 make push              # 推送到所有远程仓库
 ```
@@ -229,9 +249,10 @@ make build VERSION=1.0.0
 
 ### 发布工作流
 
-- **GitHub Actions（Release）**：手动输入版本号，六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release
-- **GitHub Actions（Nightly）**：每日 UTC 00:00 自动构建 `X.Y.Z-nightly` 预发布版本（tag 为 `nightly`）
-- **CNB**：手动输入版本号，从 GitHub Release 下载产物并发布
+- **GitHub Actions（Release）**：手动输入版本号，六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；勾选 `prerelease` 即发布为预发布版本
+- **CNB**：手动输入版本号（可传 `pre_release=true`），从 GitHub Release 下载产物并发布
+- **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
+- **镜像同步**：GitHub 发布成功后自动触发 CNB / GitLab 同步；Gitee 走 `.workflow/release.yml` 手动流水线（平台不支持 API 触发）；GitCode 当前不发布版本（`.gitcode/workflows/release.yml` 与 `sync-gitcode` 配置保留，未作为发布平台）
 
 ### 代码签名
 
@@ -257,9 +278,13 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 - **DeployCredential** — 部署凭证
 - **DeployLog** — 部署执行日志
 - **MonitoredDomain** — 监控域名
+- **MonitorCheckLog** — 监控检查历史
 - **Notification** — 通知记录
 - **RenewalLog** — 证书续期日志
 - **ScanResult** — 证书扫描结果
+- **AuthMethod** — 登录方式（口令）
+- **TOTPCredential** — TOTP 双因素凭据
+- **PasskeyCredential** — Passkey / WebAuthn 凭据
 
 > HTTP 请求日志使用独立的 sqlc 实现的 `internal/httplog/`（单表 `http_log`），落在独立数据库 `dataDir/data/httplog.db`，仅 DEBUG 级别启用。
 
@@ -343,9 +368,9 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 ## 代码格式化
 
 ```bash
-make format            # 格式化所有代码
-make format-go         # 格式化 Go 代码（gofmt）
-make format-frontend   # 格式化前端代码（Prettier）
+make format            # 格式化所有代码（Go + Vue/TS + JSON/YAML/Markdown/Shell/Dockerfile）
+make format-go-fmt     # 格式化 Go 代码（gofmt）
+make format-frontend-write # 格式化前端代码（Prettier）
 ```
 
 前端代码使用 Prettier 格式化，配置文件位于 `frontend/.prettierrc`。
@@ -366,10 +391,13 @@ make lint-go-fix       # 自动修复
 ## 测试
 
 ```bash
-make test              # 运行所有测试
+make test-go           # Go 后端测试（go test -vet=off -v ./internal/... -count=1）
+make check             # 检查 + 单测 + 模糊测试 + 漏洞检查
 ```
 
-14 个包均有测试覆盖：auth、ca、certificate、db、deploy、dnsprovider、i18n、logging、monitor、network、notification、scanner、scheduler、settings。
+22 个包有测试文件（含基准测试）：`internal/` 下的 auth、ca、certificate、config、data、db、deploy、deploycredential、dnsprovider、httplog、i18n、logging、monitor、network、notification、scanner、scheduler、settings、sqlite、sqlitetest、useragent，以及 `internal/ent/schema`。
+
+> `-vet=off` 是必须的：包内历史遗留的 `fmt.Sprintf(译文)` 会触发 `non-constant format string`。 `internal/ent`、`internal/httplog/db` 是生成代码，不计入覆盖率统计（口径见 `.cnb/workflows/push-coverage.yml`）。
 
 ---
 

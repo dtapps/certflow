@@ -14,12 +14,13 @@
 | 构建方式 | `ci-image.yml` 用 docker/buildx 构建（只 linux/amd64），**推到 GHCR** | `push.yml` 里 `docker.build:` 每次流水线**现场构建**，不推仓库      |
 | 镜像地址 | `ghcr.io/<owner>/<repo>/ci:latest`（另带 `sha-` 短标签）              | 仅当前流水线内使用（CNB 的 `docker.build` 产物）                    |
 | 下载加速 | 直连官方源                                                            | 全套国内镜像：APT/Go 模块/npm/pnpm 走腾讯云，Node 下载预留 daocloud |
-| 额外工具 | 多装 `gotestsum` / `gojq` / `goveralls`                               | 不装这三个                                                          |
+| 额外工具 | 装 `gotestsum` / `gojq`                                               | 只装 `gojq`                                                         |
 
 ### 1.1 为什么工具集不一样
 
-- `gotestsum` / `gojq`：GitHub 侧 `push.yml` / `codecov.yml` / `coveralls.yml` 用； CNB 侧直接跑 `go test`，不用这两个。
-- `goveralls`：只有 GitHub 侧 `coveralls.yml` 用；CNB 的覆盖率走内置 `testing:coverage` 任务（`.cnb/workflows/push-coverage.yml`），不经过 Coveralls。
+- `gotestsum`：只有 GitHub 侧 `codecov.yml` / `coveralls.yml` 用（把 `go test` 包成 JUnit）；CNB 侧直接跑 `go test`，不需要。
+- `gojq`：两侧都装（GitHub 侧供 workflow 解析 JSON，CNB 侧供脚本/排查使用）。
+- `goveralls`：**两侧都不装**。Coveralls 现在由 `coverallsapp/github-action@v2` 自带 `coverage-reporter` 上传， 不再需要命令行版 goveralls。
 - 两边改工具版本时**记得对照改另一份**，只改一边会让两个平台的工具链悄悄分叉。
 
 ## 2. 镜像内容（两份共有）
@@ -36,20 +37,21 @@
 
 预装的 Go 工具链（两份共有部分）：
 
-| 工具          | ARG                     | 版本                                                                          |
-|---------------|-------------------------|-------------------------------------------------------------------------------|
-| wails3        | `WAILS3_VERSION`        | v3.0.0-beta.34                                                                |
-| ent / entc    | `ENT_VERSION`           | v0.14.6                                                                       |
-| sqlc          | `SQLC_VERSION`          | v1.31.1                                                                       |
-| golangci-lint | `GOLANGCI_LINT_VERSION` | v2.15.0                                                                       |
-| govulncheck   | `GOVULNCHECK_VERSION`   | v1.9.0                                                                        |
-| shfmt         | `SHFMT_VERSION`         | v3.14.1                                                                       |
-| dockerfmt     | `DOCKERFMT_VERSION`     | v0.5.4                                                                        |
-| yamlfmt       | `YAMLFMT_VERSION`       | v0.21.0                                                                       |
-| gojq          | `GOJQ_VERSION`          | v0.12.19（**仅 GitHub 侧**）                                                  |
-| markdownfmt   | `MARKDOWNFMT_VERSION`   | v3.1.0                                                                        |
-| gotestsum     | `GOTESTSUM_VERSION`     | v1.13.0（**仅 GitHub 侧**）                                                   |
-| goveralls     | `GOVERALLS_VERSION`     | v0.0.12（**仅 GitHub 侧**，`coveralls.yml` 直接调用，勿在工作流里再 install） |
+| 工具          | ARG                     | 版本                        |
+|---------------|-------------------------|-----------------------------|
+| wails3        | `WAILS3_VERSION`        | v3.0.0-beta.34              |
+| ent / entc    | `ENT_VERSION`           | v0.14.6                     |
+| sqlc          | `SQLC_VERSION`          | v1.31.1                     |
+| golangci-lint | `GOLANGCI_LINT_VERSION` | v2.15.0                     |
+| govulncheck   | `GOVULNCHECK_VERSION`   | v1.9.0                      |
+| shfmt         | `SHFMT_VERSION`         | v3.14.1                     |
+| dockerfmt     | `DOCKERFMT_VERSION`     | v0.5.4                      |
+| yamlfmt       | `YAMLFMT_VERSION`       | v0.21.0                     |
+| gojq          | `GOJQ_VERSION`          | v0.12.19                    |
+| markdownfmt   | `MARKDOWNFMT_VERSION`   | v3.1.0                      |
+| gotestsum     | `GOTESTSUM_VERSION`     | v1.13.0（**仅 GitHub 侧**） |
+
+> `goveralls` 已不再预装（Coveralls 改由 `coverallsapp/github-action@v2` 自带的 `coverage-reporter` 上传）。
 
 ## 3. GitHub 侧：GHCR 镜像（`.github/ci/Dockerfile` + `ci-image.yml`）
 
@@ -107,7 +109,7 @@ docker:
 - **每次流水线现场构建镜像**，不推远端仓库——没有 latest/sha 标签、没有清理问题， 代价是改动 Dockerfile 后每个 job 都要重新 build（有 Docker 层缓存时增量很快）。
 - **三个卷都是 `copy-on-write`**：CI 在容器内对缓存目录的写入不回写宿主，下次构建 仍能复用宿主缓存。`/go/pkg/mod` 单独列一条的原因写在注释里：只缓存模块下载， **不要覆盖镜像内预装的 `/go/bin` 工具**。
 - **全套国内加速**：APT 源与 Go 模块/npm/pnpm 走 `mirrors.cloud.tencent.com`； 顶部 `GITHUB_MIRROR`（daocloud）ARG 目前预留未用，Node 直连官方下载。
-- **不装** gotestsum / gojq / goveralls（原因见 1.1），覆盖率与报告由 CNB 内置任务处理。
+- **不装** gotestsum / goveralls（原因见 1.1）；`gojq` 与其它工具一样预装。覆盖率与报告由 CNB 内置任务处理。
 
 ## 5. 改版本的步骤
 

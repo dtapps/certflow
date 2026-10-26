@@ -1,200 +1,89 @@
-# Node 单元测试覆盖率实现文案（可复制到其他项目交给 AI 实现）
+# Node / Vue 单元测试覆盖率（CNB 流水线）
 
-> 来源：CertFlow 项目实战方案（CNB 云原生构建 + testing:coverage 内置任务 + vitest）。
+本文说明 CertFlow 前端的覆盖率如何生成、上报、做门禁。Go 侧见 [coverage-go.md](coverage-go.md)， 覆盖率可视化见 [codecov.md](codecov.md)。
 
-# 任务：为 Node/Vite/Vue 项目实现单元测试覆盖率上报与红线门禁（CNB 云原生构建）
+## 1. 当前状态
 
-## 背景与目标
+| 项         | 值                                                                                        |
+|------------|-------------------------------------------------------------------------------------------|
+| 上报       | ✅ 开启（CNB 内置任务 `testing:coverage`）                                                |
+| 红线门禁   | ⏸ 暂停（提交 5903820 将 `lines` / `diffLines` 注释掉，只上报数据、不阻断流水线）          |
+| 前端覆盖率 | **2.14% statements / 2.05% lines**（2026-10-26 实测：3 个测试文件、32 个用例）            |
+| 流水线     | `.cnb/workflows/push-coverage.yml`（全量）、`.cnb/workflows/pull-coverage.yml`（PR 增量） |
+| 覆盖率 key | `node`（Go 侧为 `go`）                                                                    |
+| 报告文件   | `frontend/coverage/lcov.info`（`frontend/coverage` 已在 `.gitignore`）                    |
 
-- 构建平台是 CNB（cnb.cool），流水线配置在 `.cnb.yml`（或 `.cnb/workflows/*.yml`）。
-- 使用 CNB 内置任务 `type: testing:coverage` 上报覆盖率：push 全量红线（lines），PR 增量红线（diffLines，仅 PR 类事件计算）。
-- 技术栈：Vite + Vue 3 + TypeScript + pnpm。测试框架选 **vitest**（不用 jest：jest 配 ESM+Vue SFC 需要 babel/ts-jest 全套改造，vitest 与 Vite 原生集成、零 transform 配置）。
+数字低是预期的：目前只覆盖了 3 个纯函数 / store 模块，17 个视图组件尚无测试； 配置开了 `all: true`，未测试文件按 0% 计入分母，所以指标不虚高。
 
-## 实现步骤
+## 2. 测试与覆盖率配置
 
-### 第 1 步：安装依赖
+- 框架：**Vitest 5.0.5** + `@vitest/coverage-v8` 5.0.5。不用 jest：Vite / Vue SFC / TS 原生集成， 不需要 babel / ts-jest 改造。
+- 配置文件：[frontend/vitest.config.ts](../frontend/vitest.config.ts)
+  - `environment: 'node'`：当前只测纯函数与 Pinia store，不需要 DOM；组件测试再切 jsdom / happy-dom。
+  - `setupFiles: ['./src/test/setup.ts']`：给 node 环境补 `localStorage` / `navigator.language` 桩，并屏蔽 `console.debug` 噪音。
+  - coverage：`provider: 'v8'`、`reporter: ['lcov','text']`、`reportsDirectory: './coverage'`、 `include: ['src/**/*.{ts,vue}']`、`all: true`。
+  - 排除：`src/test/**`、两个入口 `src/main.ts` 与 `src/logviewer/main.ts`、`src/**/*.d.ts`。
+- 脚本（[frontend/package.json](../frontend/package.json)）：`pnpm test`（`vitest run`）、 `pnpm test:coverage`（`vitest run --coverage`）。
+- 现有测试：`frontend/src/test/{format,i18n,region}.test.ts`，共 32 个用例。
+
+本地复现：
 
 ```bash
-pnpm add -D vitest @vitest/coverage-v8
+cd frontend
+pnpm test:coverage          # 或 ./node_modules/.bin/vitest run --coverage
 ```
 
-### 第 2 步：创建 vitest.config.ts（放在前端目录根）
+2026-10-26 实测：3 个测试文件 / 32 个用例全绿，statements 2.14%、lines 2.05%。
 
-```ts
-import { defineConfig, mergeConfig } from "vitest/config";
-import viteConfig from "./vite.config";
+## 3. 流水线实现
 
-// 复用 vite.config 的插件与别名，仅额外声明测试环境与覆盖率。
-export default mergeConfig(
-  viteConfig,
-  defineConfig({
-    test: {
-      environment: "node", // 纯函数/store 测试无需 DOM；后续组件测试再切 jsdom
-      setupFiles: ["./src/test/setup.ts"],
-      coverage: {
-        provider: "v8",
-        reporter: ["lcov", "text"], // lcov 供 CI 插件解析，text 供本地阅读
-        reportsDirectory: "./coverage",
-        include: ["src/**/*.{ts,vue}"],
-        exclude: [
-          "src/test/**", // 测试自身不计入
-          "src/main.ts", // 入口：导入期即挂载 DOM/读 navigator，node 下会崩
-          "src/logviewer/main.ts", // 其他入口同理，按项目实际增删
-          "src/**/*.d.ts",
-        ],
-        all: true, // 全量度量：未测试文件按 0% 计入分母，指标不虚高
-      },
-    },
-  }),
-);
-```
+Node 覆盖率与 Go 覆盖率是两条**独立并行**流水线，复用同一个 `.cnb/ci/Dockerfile`（已预装 Node + pnpm + 腾讯云源）：
 
-### 第 3 步：创建测试环境桩 src/test/setup.ts
+stage 顺序：`make deps` → `pnpm --dir ./frontend test:coverage` → `testing:coverage` 上报 → 打印 `node coverage: lines=... diff=...`。
 
-node 环境没有 localStorage/navigator，而 store 常在导入期读取它们，不补桩会加载即崩：
-
-```ts
-const memory = new Map<string, string>();
-
-const localStorageStub: Storage = {
-  get length() {
-    return memory.size;
-  },
-  clear() {
-    memory.clear();
-  },
-  getItem(key: string) {
-    return memory.get(key) ?? null;
-  },
-  key(index: number) {
-    return Array.from(memory.keys())[index] ?? null;
-  },
-  removeItem(key: string) {
-    memory.delete(key);
-  },
-  setItem(key: string, value: string) {
-    memory.set(key, value);
-  },
-};
-
-Object.defineProperty(globalThis, "localStorage", {
-  value: localStorageStub,
-  configurable: true,
-  writable: true,
-});
-
-// navigator.language：node 无此属性；i18n 'auto' 模式解析系统语言时需要
-Object.defineProperty(globalThis, "navigator", {
-  value: { language: "zh-CN" },
-  configurable: true,
-  writable: true,
-});
-
-// 屏蔽 debug 噪音；console.error 保留可见，避免掩盖真实问题
-console.debug = () => {};
-```
-
-### 第 4 步：编写测试（从纯函数与 store 入手，不要一上来写组件测试）
-
-每个测试文件头部：
-
-```ts
-import { describe, it, expect, beforeEach } from "vitest";
-import { createPinia, setActivePinia } from "pinia";
-
-beforeEach(() => {
-  localStorage.clear();
-  setActivePinia(createPinia());
-});
-```
-
-优先覆盖：工具函数（时间/格式化/配置映射）、Pinia store（t() 翻译/参数替换/语言切换/持久化）、纯逻辑模块。
-
-### 第 5 步：package.json 增加脚本
-
-```json
-"scripts": {
-  "test": "vitest run",
-  "test:coverage": "vitest run --coverage"
-}
-```
-
-### 第 6 步：.gitignore 增加 `frontend/coverage`（或项目对应路径）
-
-### 第 7 步：流水线配置（push 与 PR 各用独立并行流水线）
-
-CNB 语义：事件键下的值是 Pipeline 数组，同事件多个条目 = 多流水线并行；并入同一 pipeline 的 stages 会串行，不要这样做。
+关键配置（摘自 `.cnb/workflows/push-coverage.yml`）：
 
 ```yaml
-"**":
-  push:
-    - runner:
-        tags: cnb:arch:amd64
-      docker:
-        build: .cnb/Dockerfile # 复用已预装 Node + pnpm 的构建环境
-        volumes:
-          - /root/.local/share/pnpm/store:copy-on-write # pnpm 存储缓存
-      stages:
-        - name: 安装前端依赖
-          script: pnpm --dir ./frontend install --frozen-lockfile
-        - name: 生成前端测试覆盖率
-          script: pnpm --dir ./frontend test:coverage # 产出 frontend/coverage/lcov.info
-        - name: 上报覆盖率（全量红线）
-          type: testing:coverage
-          options:
-            key:
-              node # 多报告数据键：仓库内有多份覆盖率报告（如同时有 Go 后端）时必须指定，
-              # 否则各报告都写顶层默认字段，后跑完的覆盖先跑完的
-            name: Node Coverage # 徽章显示名，与 key 一对一对应
-            lines: 2 # 初始值=当前基线往下留余量（本项目基线 2.14%，视图组件尚未建测试）
-            pattern: "frontend/coverage/lcov.info"
-            breakIfNoCoverage: true
-          exports:
-            lines: NODE_COVERAGE_LINES
-            diff_pct: NODE_COVERAGE_DIFF_PCT
-        - name: 输出覆盖率
-          script: 'echo "node coverage: lines=$NODE_COVERAGE_LINES diff=$NODE_COVERAGE_DIFF_PCT"'
-  pull_request:
-    - runner:
-        tags: cnb:arch:amd64
-      docker:
-        build: .cnb/Dockerfile
-        volumes:
-          - /root/.local/share/pnpm/store:copy-on-write
-      stages:
-        - name: 安装前端依赖
-          script: pnpm --dir ./frontend install --frozen-lockfile
-        - name: 生成前端测试覆盖率
-          script: pnpm --dir ./frontend test:coverage
-        - name: 上报覆盖率（增量红线）
-          type: testing:coverage
-          options:
-            key: node # 与 push 侧保持同一个 key，数据才落在同一槽位
-            name: Node Coverage
-            diffLines: 50 # 本 PR 变更代码覆盖率，低于此值阻断
-            lines: 2 # 全量底线与 push 一致
-            pattern: "frontend/coverage/lcov.info"
-            breakIfNoCoverage: true
-          exports:
-            lines: NODE_COVERAGE_LINES
-            diff_pct: NODE_COVERAGE_DIFF_PCT
-        - name: 输出覆盖率
-          script: 'echo "node coverage: lines=$NODE_COVERAGE_LINES diff=$NODE_COVERAGE_DIFF_PCT"'
+- name: 上报覆盖率（Node 全量红线）
+  type: testing:coverage
+  options:
+    key: node # 与 Go 侧（key: go）区分，各自写入 meta map
+    name: Node Coverage
+    # lines: 90 # ⏸ 当前暂停；注释里的「基线 97.43%」是过期数据，恢复前按实测值重设
+    pattern: 'frontend/coverage/lcov.info'
+    breakIfNoCoverage: true # 找不到 lcov 直接失败，避免测试挂了却静默通过
+  exports:
+    lines: NODE_COVERAGE_LINES
+    diff_pct: NODE_COVERAGE_DIFF_PCT
 ```
 
-## 关键决策（实现时遵循）
+PR 侧额外计算增量覆盖率（`# diffLines: 80`），`diffLines` 与 `lines` 同样已注释。
 
-1. **vitest 而非 jest**：Vite/Vue/TS 原生集成；mergeConfig 复用 vite.config，别名与插件不丢。
-2. **`all: true` 全量度量**：未测试文件按 0% 计入分母。初始数字会很低（视图组件没测试时本项目仅 2.14%），但诚实；真正驱动质量的是 PR 增量红线。
-3. **排除入口文件**（main.ts 等）：导入期即 `app.mount()`/读 `navigator`，node 环境导入即崩。
-4. **不设 `lang`**：lang=go 仅 golang 格式报告需要；lcov 由插件自动识别。
-5. **红线棘轮**：lines 初始贴基线下沿；diffLines: 50（变更代码过半覆盖）长期不动或逐步上调。
-6. **测试从纯函数/store 开始**：组件测试需要 @vue/test-utils + jsdom/happy-dom，作为第二步。
-7. **YAML 细节**：script 含 `": "` 等特殊字符时整体单引号包裹；独立并行流水线，勿并入既有 stages。
-8. **多报告必须用 `key` 隔离**：若仓库内还有其他语言的覆盖率报告（如 Go 后端），每份报告的 `testing:coverage` 都必须指定不同的 `key`（如 node / go）与对应 `name`。不指定 `key` 时所有报告都写顶层默认字段，**后跑完的会覆盖先跑完的**（徽章只显示最后一份）。指定 `key` 后数据各自写入 meta map 互不冲突；单仓库 key 上限 30 个。
+## 4. 阈值恢复与调整
 
-## 验收标准
+1. 先测基线：本地跑 `pnpm test:coverage`，或看 CI 日志里 `node coverage: lines=`。
+2. 恢复顺序建议：**先补测试再开门禁**。当前行覆盖只有 2.05%，此时设 `lines` 只能取 1~2， 几乎没有门禁意义；至少把 `src/utils/`、`src/stores/` 补到可用水平后再恢复。
+3. 恢复时：
+   - push：`lines` = 当前基线 − 6（按当时实测值算）；
+   - pull：`diffLines: 50`（变更代码过半覆盖）比历史注释里的 80 更现实。
+4. 同步修正 `.cnb/workflows/*-coverage.yml` 里「当前基线 97.43%」「lines: 90」这类过期注释。
 
-- `pnpm test` 全绿；`pnpm test:coverage` 产出 `frontend/coverage/lcov.info`，total 与预期一致。
-- `vue-tsc --noEmit` 与 eslint 对新测试文件零报错（测试文件也在类型检查范围内）。
-- YAML 解析正确；首次推送后确认徽章生成、pattern 解析正常、多流水线并行启动。
+## 5. 关键决策
+
+- **vitest 而非 jest**：与 Vite 原生集成，`mergeConfig` 复用 `vite.config`，别名与插件不丢。
+- **`all: true`**：未测试文件按 0% 计入分母，指标诚实；真正驱动质量的是 PR 增量覆盖率。
+- **排除入口文件**：`main.ts` 导入期就挂载 DOM / 读 `navigator.userAgent`，node 环境导入即崩。
+- **不设 `lang`**：`lang: go` 只用于 golang 格式报告；lcov 由插件按扩展名识别。
+- **key 隔离**：Node 用 `key: node`、Go 用 `key: go`，否则徽章互相覆盖。
+- **组件测试是下一步**：需要 `@vue/test-utils` + jsdom / happy-dom，并把 `environment` 切过去； 在那之前视图层覆盖率保持 0 是已知状态。
+
+## 6. 排错
+
+| 现象               | 处理                                                                        |
+|--------------------|-----------------------------------------------------------------------------|
+| 找不到 `lcov.info` | 确认 `pnpm test:coverage` 成功、`reportsDirectory` 仍是 `frontend/coverage` |
+| 报告路径解析失败   | `pattern` 必须相对仓库根：`frontend/coverage/lcov.info`                     |
+| 流水线直接失败     | `breakIfNoCoverage: true`：先修测试；测试挂了不会有覆盖率报告               |
+| 覆盖率异常低       | 看 `all: true` 是否把大量未测文件计入；新增目录是否漏了测试                 |
+| `vue-tsc` 报错     | 测试文件也在类型检查范围，先跑 `pnpm exec vue-tsc --noEmit`                 |
+| 徽章不更新         | 确认 `testing:coverage` stage 执行、`key` 未被其他报告覆盖                  |

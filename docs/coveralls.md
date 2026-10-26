@@ -5,18 +5,18 @@
 - 上报入口：`.github/workflows/coveralls.yml`，独立工作流，不依赖其他流程。
 - 上报内容：Go 与前端两条覆盖率，分别打 `go` / `node` 两个 flag，合并为一个 build。
 - 仓库内**没有** `.coveralls.yml`：阈值、PR 注释、徽章都在 Coveralls 后台仓库设置里配。
-- **Go 侧也用官方 action**：`coverallsapp/github-action@v2` + `file: coverage.out` + `format: golang`， 不需要任何格式转换，工作流里也不装 goveralls（镜像里的 `GOVERALLS_VERSION=v0.0.12` 只供本地手测）。
+- **Go 侧也用官方 action**：`coverallsapp/github-action@v2` + `file: coverage.out` + `format: golang`， 不需要任何格式转换，工作流里也不安装 goveralls（上传器由 action 运行时下载）。
 - **Go 的 coverprofile 原样交给 action**：不剥模块前缀、不做 sed（见 3.3 ①）。
 
 ## 1. 涉及文件
 
-| 文件                              | 作用                                                                                                |
-|-----------------------------------|-----------------------------------------------------------------------------------------------------|
-| `.github/workflows/coveralls.yml` | 唯一入口：装依赖 → 跑 Go/前端测试 → 分别上报 `flag=go` / `flag=node`                                |
-| `.github/ci/Dockerfile`           | 提供 `ghcr.io/<repo>/ci:latest` 镜像（Go/Node/pnpm/GTK/WebKit，含 goveralls v0.0.12，仅本地手测用） |
-| `Makefile`（`deps` 目标）         | `go mod download` + `pnpm --dir ./frontend install`                                                 |
-| `coverage.out`                    | Go 覆盖率产物，**原样**以 `format: golang` 交给 action（路径带模块前缀，不要处理）                  |
-| `frontend/coverage/lcov.info`     | 前端覆盖率产物（`pnpm test:coverage` 生成）                                                         |
+| 文件                              | 作用                                                                                 |
+|-----------------------------------|--------------------------------------------------------------------------------------|
+| `.github/workflows/coveralls.yml` | 唯一入口：装依赖 → 跑 Go/前端测试 → 分别上报 `flag=go` / `flag=node`                 |
+| `.github/ci/Dockerfile`           | 提供 `ghcr.io/<repo>/ci:latest` 镜像（Go/Node/pnpm/GTK/WebKit + 钉版本的 Go 工具链） |
+| `Makefile`（`deps` 目标）         | `go mod download` + `pnpm --dir ./frontend install`                                  |
+| `coverage.out`                    | Go 覆盖率产物，**原样**以 `format: golang` 交给 action（路径带模块前缀，不要处理）   |
+| `frontend/coverage/lcov.info`     | 前端覆盖率产物（`pnpm test:coverage` 生成）                                          |
 
 ## 2. 工作流结构
 
@@ -63,13 +63,12 @@ container:
 
 镜像里已有 Go / Node / pnpm / GTK4 / WebKit6，以及钉好版本的 Go 工具链：
 
-| 工具      | 版本                        | 来源                                            |
-|-----------|-----------------------------|-------------------------------------------------|
-| gotestsum | `GOTESTSUM_VERSION=v1.13.0` | `go install ...@版本`                           |
-| gojq      | `GOJQ_VERSION=v0.12.19`     | 同上                                            |
-| goveralls | `GOVERALLS_VERSION=v0.0.12` | 同上，装到 `$GOPATH/bin`（仅本地手测，CI 不用） |
+| 工具      | 版本                        | 来源                  |
+|-----------|-----------------------------|-----------------------|
+| gotestsum | `GOTESTSUM_VERSION=v1.13.0` | `go install ...@版本` |
+| gojq      | `GOJQ_VERSION=v0.12.19`     | 同上                  |
 
-`ENV PATH="$GOPATH/bin:$PATH"` 已经包含 `/go/bin`，所以本地手测时可以直接调 `goveralls`。 CI 里**不需要** `setup-go`、`setup-node`、`apt-get install`——Wails 的 CGO 链接依赖也齐了。 镜像由 `ci-image.yml` 推送，**首次运行前必须已存在**，否则容器起不来。
+`ENV PATH="$GOPATH/bin:$PATH"` 已经包含 `/go/bin`，所以镜像里预装的 gotestsum / gojq 可以直接调用。 CI 里**不需要** `setup-go`、`setup-node`、`apt-get install`——Wails 的 CGO 链接依赖也齐了。 镜像由 `ci-image.yml` 推送，**首次运行前必须已存在**，否则容器起不来。
 
 ### 2.4 缓存
 
@@ -118,9 +117,9 @@ Go 与前端现在是**同一个上传器**，差异只剩 format 一项：
     flag-name: go
 ```
 
-**Go 步骤没有 `if: env.COVERALLS_REPO_TOKEN != ''` 门禁**：Go 侧凭据是 `GITHUB_TOKEN`，不再依赖 那个 secret，所以不拿它决定是否跳过（前端那步的门禁保持原样，要删可一起删）。
+**两个上传步骤都以 `if: env.COVERALLS_REPO_TOKEN != ''` 作为跳过条件**（token 定义在 job 级 `env`）。 上传本身用的是 `GITHUB_TOKEN`，所以这个 secret 只决定「跑不跑」，不参与鉴权。
 
-**工作流里不装 goveralls。** 上传器由 action 自带（运行时下载 `coverage-reporter` 二进制）； 镜像里的 `GOVERALLS_VERSION` 只服务于 §6 的本地手测，两条链路互不影响。
+**工作流里不安装 goveralls。** 上传器由 action 自带（运行时下载 `coverage-reporter` 二进制），镜像也不再预装 goveralls。
 
 ### 3.3 三个必须知道的细节
 
@@ -200,7 +199,7 @@ echo "token len=${#COVERALLS_REPO_TOKEN} sha=$(printf %s "$COVERALLS_REPO_TOKEN"
 
 **当时的修复**：Coveralls → `dtapps/certflow` → Settings 复制 repo token → 更新 GitHub 仓库的 `COVERALLS_REPO_TOKEN` secret → 重跑。
 
-**最终采用的方案（见 §3）**：Go 侧改用 `coverallsapp/github-action@v2` + `format: golang`， 与 node 走**同一个上传器、同一个 `GITHUB_TOKEN`**，从根上消除"两条链路、两套凭据"这个差异面。 `COVERALLS_REPO_TOKEN` 至此只剩前端步骤里一个历史遗留 `if` 门禁引用。
+**最终采用的方案（见 §3）**：Go 侧改用 `coverallsapp/github-action@v2` + `format: golang`， 与 node 走**同一个上传器、同一个 `GITHUB_TOKEN`**，从根上消除"两条链路、两套凭据"这个差异面。 `COVERALLS_REPO_TOKEN` 现在只用于两个上传步骤的 `if` 跳过判断（job 级 `env`），不再作为上传凭据。
 
 ### 3.5 统计口径
 
@@ -229,7 +228,7 @@ echo "token len=${#COVERALLS_REPO_TOKEN} sha=$(printf %s "$COVERALLS_REPO_TOKEN"
 
 ## 5. 凭据
 
-**两个上传步骤实际都只用内置 `GITHUB_TOKEN`**（`github-token: ${{ secrets.GITHUB_TOKEN }}`）。 `COVERALLS_REPO_TOKEN` 现在只剩一处引用：前端步骤的历史遗留 `if` 门禁。Go 侧已完全不读它。
+**两个上传步骤都用内置 `GITHUB_TOKEN` 上传**（`github-token: ${{ secrets.GITHUB_TOKEN }}`）。 `COVERALLS_REPO_TOKEN` 定义在 job 级 `env`，只用于 `if: env.COVERALLS_REPO_TOKEN != ''` 的跳过判断，两个上传步骤都引用它，但都不拿它做鉴权。
 
 - Coveralls 后台若还没授权该仓库，`GITHUB_TOKEN` 同样会失败（401 / 422）。此时去 Coveralls → **Add Repo** 添加 `dtapps/certflow`，再重跑。
 - 若以后改回 `goveralls` 命令行版，`COVERALLS_REPO_TOKEN` 就必须是**本仓库**的 repo token， 长度与内容一字不差（粘贴带换行是最常见的坑）。校验方式见 3.4：打长度 + sha256 前 12 位 与其他仓库对比，别打印明文。GitHub secrets 只写不可读，配错只能重设。
@@ -245,7 +244,7 @@ echo "token len=${#COVERALLS_REPO_TOKEN} sha=$(printf %s "$COVERALLS_REPO_TOKEN"
 
 | 现象                                                   | 原因 / 处理                                                                                                                                                                                |
 |--------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 前端上传步骤显示 skipped                               | 前端那步仍带 `if: env.COVERALLS_REPO_TOKEN != ''`；Go 步骤已无此门禁                                                                                                                       |
+| 上传步骤显示 skipped                                   | 两个上传步骤都带 `if: env.COVERALLS_REPO_TOKEN != ''`；secret 未配置时两步都跳过                                                                                                           |
 | `cannot find file "...": ... is not in std (...)`      | 剥了模块前缀。`-coverprofile=coverage.out` 原样传入，不做 sed 替换                                                                                                                         |
 | `gitinfo.go: fail to run "git ...": exit status 128`   | 只有用 bin/goveralls 时才出现：容器内 dubious ownership（`uid=0` vs 目录属主 1001），加 `git config --global --add safe.directory "$GITHUB_WORKSPACE"`。**只影响 commit 字段，不导致 422** |
 | `422 Couldn't find a repository matching this job`     | `repo_token` 解析不出仓库（已实测复现）：secret 值不是本仓库的 token / 带空白 / 已失效。见 3.4                                                                                             |
@@ -266,7 +265,7 @@ go test -vet=off \
   -coverprofile=coverage.out ./internal/...
 head -2 coverage.out   # 应为 mode: 与 cnb.cool/dtapp/certflow/internal/...
 
-# 可选：用镜像里的 goveralls 验证它能否找到源文件（仅供手测，CI 不走这条路）
+# 可选：本地手测（镜像已不预装 goveralls，需先 go install github.com/mattn/goveralls@latest）
 goveralls -coverprofile=coverage.out -debug -shallow 2>&1 | head -50
 ```
 
