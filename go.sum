@@ -717,15 +717,14 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.131/go.mod 
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.147/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.173/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.186/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.197/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.198 h1:IPTq0ulD9y/m7wDe6wtyYBdMwiHfOYRDvjGOIB5E0j4=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.198/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1 h1:zfDYrQ0US6kiMrLrl0QB5r+HZrJoZTbXC/4YQ0lwaes=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1/go.mod h1:vyzaMSWRQF17oo4QZkKppd84MJs97EKp/WyQGE5s/kM=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147 h1:7wFGHghpGVkPotX6PCpwt7Xn4BerFib++kAoafMSyR0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147/go.mod h1:XMVT8POd1Rlwegh9N8EPPZP3+93Zo4tML9Asn5SL/lI=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.197 h1:MiqX+JywsdvTqORrtGeWo3vVeZguoEKZmCL1vpEt5oI=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.197/go.mod h1:VAvnD0KYTyUxbKOWxpiRfy8GMID2kL0vpxTf23NbqgU=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.198 h1:G9zoXe8BfCxwj4ybltOaV52eRJw9B4ZZBr7r5RlbOts=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.198/go.mod h1:5wLcsirISQohV0UBcF66Yu8j+hlTy+Bh+96tNLkaf9o=
 github.com/tinylib/msgp v1.6.5 h1:iAH6XTP7BpzErjBZlujJQXxA+GmRi2YWs6M4KdLtNbE=
 github.com/tinylib/msgp v1.6.5/go.mod h1:RSp0LW9oSxFut3KzESt5Voq4GVWyS+PSulT77roAqEA=
 github.com/tjfoc/gmsm v1.3.2/go.mod h1:HaUcFuY0auTiaHB9MHFGCPx5IaLhTUd2atbCFBQXn9w=
