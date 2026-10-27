@@ -87,7 +87,7 @@ certflow/
 │   │   ├── schema/            # Database model definitions
 │   │   │   ├── ca.go          # CA entity
 │   │   │   ├── certificate.go # Certificate entity
-│   │   │   ├── cert_upload.go # Uploaded certificate entity
+│   │   │   ├── cert_upload.go # Cloud certificate upload dedupe entity
 │   │   │   ├── dns_provider.go # DNS provider entity
 │   │   │   ├── deploy_target.go # Deploy target entity (provider/service/region config)
 │   │   │   ├── deploy_credential.go # Deploy credential entity
@@ -106,7 +106,7 @@ certflow/
 │   ├── httplog/               # HTTP request logging (sqlc-generated, separate DB)
 │   ├── auth/                  # Authentication service (password/TOTP/Passkey)
 │   ├── ca/                    # CA management
-│   ├── certificate/           # Certificate issuance/renewal/revocation/upload
+│   ├── certificate/           # Certificate issuance/renewal/revocation
 │   ├── cloudcred/             # Cloud credential types (neutral package, avoids import cycles)
 │   ├── config/                # Generic JSON config parsing
 │   ├── data/                  # Data export/import (per-table CSV zip)
@@ -183,7 +183,7 @@ certflow/
 ├── .cnb.yml                   # CNB entry: includes workflows + release pipeline
 ├── .gitlab-ci.yml             # GitLab: release sync only
 ├── .gitcode/workflows/        # GitCode: releases not published for now (config kept)
-├── .workflow/                 # Gitee pipeline (manual release)
+├── .workflow/                 # Gitee pipeline (webhook-triggered / manual fallback)
 ├── .golangci.yml              # Go linting configuration
 ├── Makefile                   # Make commands
 ├── Taskfile.yml               # Task build entry point
@@ -251,7 +251,7 @@ Injected variables (`main.go`):
 - **GitHub Actions (Release)**: Manual trigger with version input, six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes a GitHub Release; tick `prerelease` to publish a pre-release
 - **CNB**: Manual trigger with version (optional `pre_release=true`), downloads artifacts from GitHub Release and publishes locally
 - **Release platforms**: only GitHub / CNB / GitLab / Gitee publish releases; other platforms do not
-- **Mirror sync**: A successful GitHub release triggers CNB / GitLab sync automatically; Gitee uses the manual `.workflow/release.yml` pipeline (no API trigger); GitCode does not publish releases for now (`.gitcode/workflows/release.yml` and `sync-gitcode` are kept but not used as a release platform)
+- **Mirror sync**: A successful GitHub release triggers CNB / GitLab sync automatically; Gitee is triggered via webhook into `.workflow/release.yml` (needs `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`, run manually when unset); GitCode does not publish releases for now (`.gitcode/workflows/release.yml` and `sync-gitcode` are kept but not used as a release platform)
 
 ### Code Signing
 
@@ -271,7 +271,7 @@ SQLite is used as an embedded database, managed via Ent ORM. Entity models are d
 
 - **CA** — Certificate authority configuration
 - **Certificate** — SSL certificate information
-- **CertUpload** — Uploaded external certificates
+- **CertUpload** — Cloud certificate upload dedupe mapping
 - **DNSProvider** — DNS provider configuration
 - **DeployTarget** — Deploy target (provider/service/region)
 - **DeployCredential** — Deploy credentials
@@ -326,7 +326,7 @@ Test environment: Apple M1, Go 1.24+, in-memory (`:memory:`), `benchtime=3s`. Be
 
 ## Certificate Deployment
 
-Deploy issued/uploaded certificates to various cloud services. Implemented in `internal/deploy/`, split per provider (`aliyun.go`, `tencent.go`, `huawei.go`, `baidu.go`, `ctyun.go`, `volcengine.go`), with `service.go` dispatching.
+Deploy issued certificates to various cloud services. Implemented in `internal/deploy/`, split per provider (`aliyun.go`, `tencent.go`, `huawei.go`, `baidu.go`, `ctyun.go`, `volcengine.go`), with `service.go` dispatching.
 
 Supported providers and services:
 

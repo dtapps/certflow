@@ -6,13 +6,17 @@
         - name: 知识库构建
           image: cnbcool/knowledge-base
           settings:
-            # include 支持数组或逗号分隔；根目录 README 不在 docs/ 下，需显式列出。
+            # 指定需要包含的文件，使用 Glob 模式匹配，默认为 **/**.md， 支持数组或逗号分隔
             include:
               - 'docs/**.md'
-              - 'README.md'
-              - 'README_EN.md'
-              - 'DEVELOPMENT.md'
+              - 'docs/**/**.md'
+              - 'CHANGELOG.md'
+              - 'CONTRIBUTING.md'
               - 'DEVELOPMENT_EN.md'
+              - 'DEVELOPMENT.md'
+              - 'README_EN.md'
+              - 'README.md'
+              - 'SECURITY.md'
             # 是否启用 Issue 同步功能
             issueSyncEnabled: true
             # 是否忽略文档处理失败
@@ -22,13 +26,17 @@
         - name: 知识库构建
           image: cnbcool/knowledge-base
           settings:
-            # include 支持数组或逗号分隔；根目录 README 不在 docs/ 下，需显式列出。
+            # 指定需要包含的文件，使用 Glob 模式匹配，默认为 **/**.md， 支持数组或逗号分隔
             include:
               - 'docs/**.md'
-              - 'README.md'
-              - 'README_EN.md'
-              - 'DEVELOPMENT.md'
+              - 'docs/**/**.md'
+              - 'CHANGELOG.md'
+              - 'CONTRIBUTING.md'
               - 'DEVELOPMENT_EN.md'
+              - 'DEVELOPMENT.md'
+              - 'README_EN.md'
+              - 'README.md'
+              - 'SECURITY.md'
             # 是否启用 Issue 同步功能
             issueSyncEnabled: true
             # 是否忽略文档处理失败
@@ -38,13 +46,17 @@
         - name: 知识库构建
           image: cnbcool/knowledge-base
           settings:
-            # include 支持数组或逗号分隔；根目录 README 不在 docs/ 下，需显式列出。
+            # 指定需要包含的文件，使用 Glob 模式匹配，默认为 **/**.md， 支持数组或逗号分隔
             include:
               - 'docs/**.md'
-              - 'README.md'
-              - 'README_EN.md'
-              - 'DEVELOPMENT.md'
+              - 'docs/**/**.md'
+              - 'CHANGELOG.md'
+              - 'CONTRIBUTING.md'
               - 'DEVELOPMENT_EN.md'
+              - 'DEVELOPMENT.md'
+              - 'README_EN.md'
+              - 'README.md'
+              - 'SECURITY.md'
             # 是否启用 Issue 同步功能
             issueSyncEnabled: true
             # 是否忽略文档处理失败

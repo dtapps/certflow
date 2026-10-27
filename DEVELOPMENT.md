@@ -87,7 +87,7 @@ certflow/
 │   │   ├── schema/            # 数据库模型定义
 │   │   │   ├── ca.go          # CA 实体
 │   │   │   ├── certificate.go # 证书实体
-│   │   │   ├── cert_upload.go # 上传证书实体
+│   │   │   ├── cert_upload.go # 云端证书上传去重实体
 │   │   │   ├── dns_provider.go # DNS 提供商实体
 │   │   │   ├── deploy_target.go # 部署目标实体（云厂商/服务/区域配置）
 │   │   │   ├── deploy_credential.go # 部署凭证实体
@@ -106,7 +106,7 @@ certflow/
 │   ├── httplog/               # HTTP 请求日志（sqlc 生成，落独立库）
 │   ├── auth/                  # 认证服务（口令/TOTP/Passkey）
 │   ├── ca/                    # CA 管理
-│   ├── certificate/           # 证书申请/续期/撤销/上传
+│   ├── certificate/           # 证书申请/续期/撤销
 │   ├── cloudcred/             # 云厂商凭证类型（中性包，避免循环依赖）
 │   ├── config/                # 配置 JSON 的泛型解析
 │   ├── data/                  # 数据导入导出（按表 CSV 打包 zip）
@@ -183,7 +183,7 @@ certflow/
 ├── .cnb.yml                   # CNB 入口：include 各工作流 + Release 发布
 ├── .gitlab-ci.yml             # GitLab：仅发布同步
 ├── .gitcode/workflows/        # GitCode：当前不发布版本（配置保留）
-├── .workflow/                 # Gitee 流水线（手动发布）
+├── .workflow/                 # Gitee 流水线（webhook 触发 / 手动兜底）
 ├── .golangci.yml              # Go 代码检查配置
 ├── Makefile                   # Make 命令
 ├── Taskfile.yml               # Task 构建入口
@@ -252,7 +252,7 @@ make build VERSION=1.0.0
 - **GitHub Actions（Release）**：手动输入版本号，六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；勾选 `prerelease` 即发布为预发布版本
 - **CNB**：手动输入版本号（可传 `pre_release=true`），从 GitHub Release 下载产物并发布
 - **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
-- **镜像同步**：GitHub 发布成功后自动触发 CNB / GitLab 同步；Gitee 走 `.workflow/release.yml` 手动流水线（平台不支持 API 触发）；GitCode 当前不发布版本（`.gitcode/workflows/release.yml` 与 `sync-gitcode` 配置保留，未作为发布平台）
+- **镜像同步**：GitHub 发布成功后自动触发 CNB / GitLab 同步；Gitee 通过 webhook 触发 `.workflow/release.yml`（需 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）；GitCode 当前不发布版本（`.gitcode/workflows/release.yml` 与 `sync-gitcode` 配置保留，未作为发布平台）
 
 ### 代码签名
 
@@ -272,7 +272,7 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 - **CA** — 证书颁发机构配置
 - **Certificate** — SSL 证书信息
-- **CertUpload** — 上传的外部证书
+- **CertUpload** — 云端证书上传去重映射
 - **DNSProvider** — DNS 提供商配置
 - **DeployTarget** — 部署目标（厂商/服务/区域）
 - **DeployCredential** — 部署凭证
@@ -327,7 +327,7 @@ CI 会在打包完成后对各平台产物进行代码签名。**仅当仓库配
 
 ## 证书部署
 
-将已签发/上传的证书部署到云厂商的各类服务。实现位于 `internal/deploy/`，按厂商拆分文件（`aliyun.go`、`tencent.go`、`huawei.go`、`baidu.go`、`ctyun.go`、`volcengine.go`），`service.go` 统一分发。
+将已签发的证书部署到云厂商的各类服务。实现位于 `internal/deploy/`，按厂商拆分文件（`aliyun.go`、`tencent.go`、`huawei.go`、`baidu.go`、`ctyun.go`、`volcengine.go`），`service.go` 统一分发。
 
 支持的厂商与服务：
 

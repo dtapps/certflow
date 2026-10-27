@@ -8,15 +8,17 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) [![Codecov](https://img.shields.io/codecov/c/github/dtapps/certflow?style=flat-square&label=Codecov&logo=codecov)](https://codecov.io/gh/dtapps/certflow) [![Coveralls](https://img.shields.io/coveralls/github/dtapps/certflow?style=flat-square&label=Coveralls&logo=coveralls)](https://coveralls.io/github/dtapps/certflow) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
 
-[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) [![CNB Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) [![CNB PR Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage-pr)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+
+[![CNB Vulnerability](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest.link) [![CNB Vulnerability Diff](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest.link) [![CNB License](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest.link) [![CNB License Diff](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest.link) [![CNB SBOM](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest.link) [![CNB SBOM Diff](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest.link)
 
 </div>
 
 ## 功能特性
 
-- **证书管理** — 申请、续期、撤销、上传 SSL 证书，支持 30+ DNS 提供商自动验证
+- **证书管理** — 申请、续期、撤销 SSL 证书，支持 30+ DNS 提供商自动验证
 - **证书部署** — 一键将证书部署到云厂商 CDN / WAF / 负载均衡 / 边缘加速等，支持阿里云、腾讯云、华为云、百度云、天翼云、火山引擎，以及宝塔 / 1Panel / aaPanel / AcePanel / 雷池等面板与 WAF
 - **域名监控** — HTTPS/HTTP 健康检查，证书过期预警
 - **自动续期** — 定时任务自动续期即将过期的证书
@@ -91,11 +93,11 @@ make format-frontend-write # 格式化前端代码（Prettier）
 - **正式发布**：在 GitHub Actions 的 Release 工作流中手动输入版本号，六个平台并行构建并发布 GitHub Release
 - **预发布**：同一工作流勾选 `prerelease`（CNB 侧传 `pre_release=true`）即发布为预发布版本，不再单独跑每日构建
 - **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
-- **镜像同步**：发布成功后自动同步到 CNB / GitLab；Gitee 走 `.workflow/release.yml` 手动流水线
+- **镜像同步**：发布成功后自动同步到 CNB / GitLab；Gitee 通过 webhook 触发 `.workflow/release.yml`（需配置 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）
 
 ## 开发文档
 
-详见 [DEVELOPMENT.md](DEVELOPMENT.md)；CI / 覆盖率 / 发布同步 / 交接记录等专题见 [`docs/`](docs/)。
+详见 [DEVELOPMENT.md](DEVELOPMENT.md)；CI / 覆盖率 / 发布同步 / 交接记录等专题见 [`docs/`](docs/)；参与开发见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全报告见 [SECURITY.md](SECURITY.md)，版本变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 

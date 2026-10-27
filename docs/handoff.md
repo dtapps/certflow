@@ -40,10 +40,10 @@ go tool cover -func=coverage.out | tail -1
 7. `internal/ca/service.go` — `TestConnection` 不再把译文当 `fmt.Sprintf` 格式串。 7.5 `internal/monitor/service.go` — 新增 `certIssuerName` / `certSubjectName`（CN → Organization / CN → SAN[0] → Organization），`checkHTTPS`/`checkHTTP` 改用，修复现代 CA 证书（无 CN）导致监控列表「颁发者/主体」空白。
 8. `.cnb/workflows/{push,pull}-coverage.yml` — Go 覆盖率门禁**当前已暂停**（5903820 把 `lines` / `diffLines` 阈值注释掉，只上报数据不阻断）。恢复时记得：`lines: COVERAGE_LINES` 是 `exports` 输出变量，与阈值 `lines:` 不是同一个键。
 9. `frontend/scripts/vitest-json-to-junit.mjs` — 新增 `toRepoRelative()`：Vitest json reporter 的 `testResults[].name` 是绝对路径，直接写进 JUnit `classname` 会让 Codecov Tests 面板显示 `/__w/certflow/certflow/frontend/...`（runner 专属前缀，换 CI 就变一条记录）。现统一转成 `frontend/src/test/x.test.ts`，且**与前缀无关**（`/home/runner/work/...`、`/__w/...`、`/workspace/...`、`/builds/...` 均实测归一到同一值）。详见 `docs/codecov.md` 3.3.1。 ⚠️ 已上传的旧绝对路径记录不会迁移，只能等 Codecov 60 天保留期淘汰；判断是否生效看最新一次 run。
-10. `.github/workflows/release.yml` — 在 `sync-cnb` 后新增 `sync-gitlab`、`sync-gitcode`，`notify.needs` 同步补齐。三家用的是同一套语义：发布成功后 POST 触发对方流水线，非 2xx 只 `::warning::`、不影响 Release；未配置 secret 时靠 step 的 `if: env.X != ''` 整步跳过。
+10. `.github/workflows/release.yml` — 在 `sync-cnb` 后新增 `sync-gitee`、`sync-gitlab`、`sync-gitcode`，`notify.needs` 同步补齐。四家用的是同一套语义：发布成功后 POST 触发对方流水线，非 2xx 只 `::warning::`、不影响 Release；未配置 secret 时靠 step 的 `if: env.X != ''` 整步跳过。
     - ⚠️ **当前发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本。`sync-gitcode` 与 `.gitcode/workflows/release.yml` 仍在仓库中，但 GitCode 当前不作为发布平台，下面 GitCode 的实现细节按「备用/历史」看待。
-    - ⚠️ **`if` 要能读到 token，token 必须放 job 级 `env`**：step 自己 `env` 里的值在 `if` 求值阶段尚未展开，`if: env.X != ''` 会恒为 false（原 `sync-cnb` 就是这种写法，已一并修正）。三处现在都是 job 级 `env` + step 级 `if`，别再退回脚本内判空或 step 级 `env`。
-    - **每个平台只需 1 个 secret**：`SYNC_CNB_TOKEN`、`GITLAB_TRIGGER_TOKEN`、`GITCODE_TOKEN`。仓库标识、端点、ref、workflow 名全是脚本开头常量；仓库地址的唯一来源是 README「仓库」表——**GitLab 是 `dtapps`（带 s），GitCode / CNB 是 `dtapp`（不带 s）**，写错会 404。
+    - ⚠️ **`if` 要能读到 token，token 必须放 job 级 `env`**：step 自己 `env` 里的值在 `if` 求值阶段尚未展开，`if: env.X != ''` 会恒为 false（原 `sync-cnb` 就是这种写法，已一并修正）。四处现在都是 job 级 `env` + step 级 `if`，别再退回脚本内判空或 step 级 `env`。
+    - **每个平台 1~2 个 secret**：`SYNC_CNB_TOKEN`、`GITLAB_TRIGGER_TOKEN`、`GITCODE_TOKEN`、`GITEE_WEBHOOK_URL` + `GITEE_TOKEN`。仓库标识、端点、ref、workflow 名全是脚本开头常量；仓库地址的唯一来源是 README「仓库」表——**GitLab 是 `dtapps`（带 s），GitCode / CNB 是 `dtapp`（不带 s）**，写错会 404。
     - GitLab：`POST {API}/projects/{urlencode(PROJECT)}/trigger/pipeline`，`--form token/ref/variables[EVENT|VERSION|PRERELEASE]`；`GITLAB_TRIGGER_TOKEN` 是项目级 trigger token（`glptt-`），不是 PAT；若改用 PAT 需换成 `POST /projects/:id/pipeline` + `PRIVATE-TOKEN` 头。
     - GitCode：`POST {API}/repos/{REPO}/actions/workflows/{WORKFLOW}/dispatches?access_token=...`，body `{ref, inputs:{version, prerelease}}`；`GITCODE_TOKEN` 只能是个人访问令牌（平台无项目级触发器令牌），建议用专用账号签发；**平台侧 workflow 必须声明 `on: workflow_dispatch`**，否则无法 dispatch。
     - **下游实现**：`.gitlab-ci.yml` 的 `release`（stage `release`，`rules: $CI_PIPELINE_SOURCE == "trigger"`，`GIT_STRATEGY: none`，default 镜像为 `debian:trixie-slim` + `apt-get install curl jq`；不用 alpine 是因为需要自带 bash；原来的自建 CI 镜像与覆盖率 job 已于 2026-10-24 删除，见 `docs/gitlab-ci.md`）与 `.gitcode/workflows/release.yml`（`on: workflow_dispatch`，inputs `version`/`prerelease`）。两者逻辑一致：拉 GitHub Release → 下载全部 assets → 建本平台 Release → 传附件，并把正文里 `github.com/dtapps` 换成自家域名。
@@ -51,7 +51,7 @@ go tool cover -func=coverage.out | tail -1
       - ⚠️ package 路径里的文件名必须 `jq -sRr @uri` 编码：产物含空格/中文（`certflow 1.0.0 安装包.exe`），不编码 curl 直接 exit 3，且 `-s` 下无任何日志，表现为静默中断（mock 测试才发现）。
       - GitCode 附件是两阶段：`GET /releases/{tag}/upload_url?file_name=` 取预签名 URL + headers，再 `PUT` 并把 headers 原样带回（`x-obs-*` 少一个就 403）。
       - **GitCode API 版本**：Release 在 `api/v5`，workflow dispatch 在 `api/v8`，混用即 404。
-    - **Gitee 无 API 触发**：Gitee Go 只支持 push / PR / 定时触发，官方仍在索要 pipeline API（`oschina/git-osc#IHWZMT`），所以 GitHub 侧**没有** `sync-gitee` job。改为 `.workflow/release.yml`（`name: release`）单文件流水线：Gitee → 流水线 → 改全局参数 `VERSION` → 点「执行」。两个 step：`build@nodejs`（云端容器，**不需要主机组**，`shell@agent` 的 `hostGroupID` 才是必须挂 agent 的）用 python3 标准库下载 GitHub 资产并把文件名去掉版本段（`CertFlow-1.2.3-darwin-arm64.zip` → `darwin-arm64.zip`），再用平台插件 `release@gitee`（`upstreamArtifact` + `assertFiles` + `allowUpdate`）建 Release 传附件。**因此不需要 `GITEE_TOKEN`**，发版只靠插件 + 流水线自身的仓库权限；也没有独立脚本文件（原 `scripts/sync-gitee-release.sh` 已删除）。
+    - **Gitee**：GitHub 侧 `sync-gitee` job 通过 Gitee Go 的 Webhook 触发 `.workflow/release.yml`（`eventType=certflow-release`，参数 `VERSION` / `PRERELEASE`），需要 `GITEE_WEBHOOK_URL` + `GITEE_TOKEN`；未配置时整步跳过，Gitee 侧需手动改全局参数 `VERSION` 后执行。流水线内两个 step：`build@nodejs`（云端容器，**不需要主机组**，`shell@agent` 的 `hostGroupID` 才是必须挂 agent 的）用 python3 标准库下载 GitHub 资产并把文件名去掉版本段（`CertFlow-1.2.3-darwin-arm64.zip` → `darwin-arm64.zip`），再用平台插件 `release@gitee`（`upstreamArtifact` + `assertFiles` + `allowUpdate`）建 Release 传附件。
 
 ### 测试基建约定（后续补测必须遵守）
 - **绝不联网**：不访问真实 ACME / 云厂商 API。构建期就打云 API 的厂商（`huawei`、`azuredns`）用 `t.Skip`；HTTP 一律 `httptest`。
@@ -84,7 +84,7 @@ go tool cover -func=coverage.out | tail -1
 ## 五、关键约束
 
 - **禁止**未经用户同意 `git commit` / `push` / `reset`（AGENTS.md）。
-- `internal/data/backup.go` 有 **最高优先级硬约束**（见 AGENTS.md）：禁止复制 `.db` 文件实现导入导出、必须走 SQLite 数据搬运（CSV/ATTACH）、新增 ent 表必须同步 `orderedTables`、导入用事务 + `PRAGMA foreign_keys` 开关、`httplog.db` 不纳入迁移。现有测试已锁定这些行为，改实现前先看 `internal/data/backup_test.go`。
+- `internal/data/backup.go` 有 **最高优先级硬约束**（见 AGENTS.md）：禁止复制 `.db` 文件实现导入导出、必须走 SQLite 数据搬运（CSV/ATTACH）、表清单从 `sqlite_master` 动态读取（没有 `orderedTables`）、导入用事务 + `PRAGMA foreign_keys` 开关、`httplog.db` 不纳入迁移。现有测试已锁定这些行为，改实现前先看 `internal/data/backup_test.go`。
 - `*ent.Client` 没有 `.DB()`；读写底层库一律 `sql.Open("sqlite3", sqlite.BuildDSN(path))`。
 - UUID 必须 v7（`uuid.NewV7()`，`github.com/google/uuid`）。
 - Go 注释中文；所有用户可见文案必须走 `i18n.T()`（Go）/ `t()`（Vue）。
