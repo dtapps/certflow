@@ -1,0 +1,38 @@
+# CNB 代码安全扫描 · 公共忽略规则
+# https://docs.cnb.cool/zh/security/intro.html
+#
+# 语义（gitignore 风格）：本文件每一条都是「排除」；'!' 前缀才是重新纳入。
+# 对所有扫描能力生效。能力级差异才需要 .cnb/security/code_scan_config.yml，
+# 目前 secrets 与 software-composition-analysis 口径一致，统一写在这里。
+#
+# 原则：排除面保持最小。每多加一条，安全扫描面就少一块，按实际路径补，不要预先放宽。
+
+# Go 测试：测试里写死假 Key、假凭证、自签证书是刻意为之，扫出来是噪音。
+# 口径对齐 .golangci.yml 中 gosec 对 _test.go 的文件级豁免——只豁免测试文件本身。
+**/*_test.go
+
+# 前端测试：frontend/src/test/ 下的 *.test.ts（3 个）+ setup.ts 等测试辅助文件。
+# 当前内容不含任何凭证类字符串，排除了也不减少噪音，只为与 Go 测试口径一致——
+# 将来测试里写死假 token 时不必再回来补规则。
+frontend/src/test/**
+# test 目录之外的用例文件（将来就近放置的，如 stores/foo.test.ts）
+# 注意：只匹配 *.test.ts；*.spec.* 本仓库尚未出现，不预先排除。
+**/*.test.ts
+
+# vendor：当前仓库没有（Go modules，未提交 vendored 依赖）。
+# 留一行是防哪天 go mod vendor 被提交，成本为零。
+vendor/**
+
+# 以下刻意【不】排除，已逐项确认过：
+#   docs/**                 文档里出现过 COVERALLS_REPO_TOKEN，是环境变量名不是值；
+#                           若被 secrets 报假阳性，用 code_scan_config.yml 的 rules 单条抑制，
+#                           不要整目录排除——真实泄露最常藏在文档示例里。
+#   frontend/bindings/**    Wails 生成的 TS 绑定（53 个文件），无凭证内容，成本可忽略。
+#   frontend/src/locales/** 翻译 JSON，纯文案，无高熵字符串。
+#   go.mod / go.sum / pnpm-lock.yaml 等清单  SCA 的扫描对象，排除即等于放弃依赖漏洞检测。
+#
+# 未被 git 跟踪、扫描器本就看不到的路径（仅备查）：
+#   bin/                  构建产物，已在 .gitignore
+#   frontend/node_modules 依赖目录，已在 .gitignore
+#   frontend/dist         构建产物，已在 .gitignore
+# 本仓库没有 Go 的 testdata/、fixtures/、__mocks__ 目录；无 .pem/.key/.p12 等证书密钥文件入库。
