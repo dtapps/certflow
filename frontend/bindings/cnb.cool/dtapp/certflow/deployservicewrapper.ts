@@ -22,103 +22,103 @@ import * as $models from "./models.js";
  * CreateDeployTarget 创建部署目标
  */
 export function CreateDeployTarget(input: $models.CreateDeployTargetRequest): $CancellablePromise<$models.DeployTargetListItem | null> {
-    return $Call.ByID(1246689557, input);
+    return $Call.ByName("main.DeployServiceWrapper.CreateDeployTarget", input);
 }
 
 /**
  * DeleteDeployTarget 删除部署目标
  */
 export function DeleteDeployTarget(id: number): $CancellablePromise<void> {
-    return $Call.ByID(1384912914, id);
+    return $Call.ByName("main.DeployServiceWrapper.DeleteDeployTarget", id);
 }
 
 /**
  * DeployAllForCert 将证书部署到所有关联目标
  */
 export function DeployAllForCert(certID: number): $CancellablePromise<$models.DeployOutcomeDTO[] | null> {
-    return $Call.ByID(50524388, certID);
+    return $Call.ByName("main.DeployServiceWrapper.DeployAllForCert", certID);
 }
 
 /**
  * DeployCertificate 将证书部署到指定目标（domain 可指定 CDN 域名；siteID 为面板/防火墙类的站点 ID，云厂商忽略）
  */
 export function DeployCertificate(targetID: number, certID: number, domain: string, siteID: string): $CancellablePromise<$models.DeployOutcomeDTO | null> {
-    return $Call.ByID(2376935435, targetID, certID, domain, siteID);
+    return $Call.ByName("main.DeployServiceWrapper.DeployCertificate", targetID, certID, domain, siteID);
 }
 
 /**
  * FetchCDNDomains 根据内联凭证拉取 CDN 域名列表
  */
 export function FetchCDNDomains(input: $models.FetchCDNDomainsRequest): $CancellablePromise<string[] | null> {
-    return $Call.ByID(2484665597, input);
+    return $Call.ByName("main.DeployServiceWrapper.FetchCDNDomains", input);
 }
 
 /**
  * GetCurrentCerts 查询部署目标下所有资源当前生效证书（本地+云端对比用）。
  */
 export function GetCurrentCerts(targetID: number): $CancellablePromise<$models.CurrentCertsResultDTO | null> {
-    return $Call.ByID(328192825, targetID);
+    return $Call.ByName("main.DeployServiceWrapper.GetCurrentCerts", targetID);
 }
 
 /**
  * GetDeployTarget 获取单个部署目标
  */
 export function GetDeployTarget(id: number): $CancellablePromise<$models.DeployTargetListItem | null> {
-    return $Call.ByID(812958803, id);
+    return $Call.ByName("main.DeployServiceWrapper.GetDeployTarget", id);
 }
 
 /**
  * LinkCert 关联证书到部署目标
  */
 export function LinkCert(targetID: number, certID: number): $CancellablePromise<void> {
-    return $Call.ByID(2390802569, targetID, certID);
+    return $Call.ByName("main.DeployServiceWrapper.LinkCert", targetID, certID);
 }
 
 /**
  * ListCDNDomains 拉取指定部署目标下的 CDN 域名列表
  */
 export function ListCDNDomains(targetID: number): $CancellablePromise<string[] | null> {
-    return $Call.ByID(48949359, targetID);
+    return $Call.ByName("main.DeployServiceWrapper.ListCDNDomains", targetID);
 }
 
 /**
  * ListDeployLogs 获取某部署目标的部署历史（按时间倒序）
  */
 export function ListDeployLogs(targetID: number): $CancellablePromise<$models.DeployLogListItem[] | null> {
-    return $Call.ByID(3557743975, targetID);
+    return $Call.ByName("main.DeployServiceWrapper.ListDeployLogs", targetID);
 }
 
 /**
  * ListDeployTargets 获取所有部署目标
  */
 export function ListDeployTargets(): $CancellablePromise<$models.DeployTargetListItem[] | null> {
-    return $Call.ByID(3598363826);
+    return $Call.ByName("main.DeployServiceWrapper.ListDeployTargets");
 }
 
 /**
  * ListTargetsByCert 获取关联了某证书的部署目标
  */
 export function ListTargetsByCert(certID: number): $CancellablePromise<$models.DeployTargetListItem[] | null> {
-    return $Call.ByID(2397272416, certID);
+    return $Call.ByName("main.DeployServiceWrapper.ListTargetsByCert", certID);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(3488657132, app);
+    return $Call.ByName("main.DeployServiceWrapper.SetApp", app);
 }
 
 /**
  * UnlinkCert 取消证书与部署目标的关联
  */
 export function UnlinkCert(targetID: number, certID: number): $CancellablePromise<void> {
-    return $Call.ByID(1918040946, targetID, certID);
+    return $Call.ByName("main.DeployServiceWrapper.UnlinkCert", targetID, certID);
 }
 
 /**
  * UpdateDeployTarget 更新部署目标
  */
 export function UpdateDeployTarget(id: number, input: $models.UpdateDeployTargetRequest): $CancellablePromise<$models.DeployTargetListItem | null> {
-    return $Call.ByID(1544260928, id, input);
+    return $Call.ByName("main.DeployServiceWrapper.UpdateDeployTarget", id, input);
 }

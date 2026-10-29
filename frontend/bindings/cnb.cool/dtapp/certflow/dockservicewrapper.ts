@@ -18,40 +18,40 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * GetBadge 获取当前 Dock 徽章
  */
 export function GetBadge(): $CancellablePromise<string | null> {
-    return $Call.ByID(3507651352);
+    return $Call.ByName("main.DockServiceWrapper.GetBadge");
 }
 
 /**
  * HideAppIcon 隐藏 Dock 图标（仅 macOS）
  */
 export function HideAppIcon(): $CancellablePromise<void> {
-    return $Call.ByID(2298343515);
+    return $Call.ByName("main.DockServiceWrapper.HideAppIcon");
 }
 
 /**
  * RemoveBadge 移除 Dock 徽章
  */
 export function RemoveBadge(): $CancellablePromise<void> {
-    return $Call.ByID(3696035894);
+    return $Call.ByName("main.DockServiceWrapper.RemoveBadge");
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(2520192168, app);
+    return $Call.ByName("main.DockServiceWrapper.SetApp", app);
 }
 
 /**
  * SetBadge 设置 Dock 徽章
  */
 export function SetBadge(label: string): $CancellablePromise<void> {
-    return $Call.ByID(2539765660, label);
+    return $Call.ByName("main.DockServiceWrapper.SetBadge", label);
 }
 
 /**
  * ShowAppIcon 显示 Dock 图标（仅 macOS）
  */
 export function ShowAppIcon(): $CancellablePromise<void> {
-    return $Call.ByID(1135720576);
+    return $Call.ByName("main.DockServiceWrapper.ShowAppIcon");
 }

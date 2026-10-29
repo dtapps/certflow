@@ -22,33 +22,33 @@ import * as $models from "./models.js";
  * GetRecentRenewalLogs 获取最近的续期日志
  */
 export function GetRecentRenewalLogs(limit: number): $CancellablePromise<$models.RenewalLogItem[] | null> {
-    return $Call.ByID(3954117219, limit);
+    return $Call.ByName("main.SchedulerServiceWrapper.GetRecentRenewalLogs", limit);
 }
 
 /**
  * GetRenewalLogs 获取指定证书的续期日志
  */
 export function GetRenewalLogs(certID: number): $CancellablePromise<$models.RenewalLogItem[] | null> {
-    return $Call.ByID(480742346, certID);
+    return $Call.ByName("main.SchedulerServiceWrapper.GetRenewalLogs", certID);
 }
 
 /**
  * RunExpiryCheckNow 立即执行过期检查
  */
 export function RunExpiryCheckNow(): $CancellablePromise<void> {
-    return $Call.ByID(1899943105);
+    return $Call.ByName("main.SchedulerServiceWrapper.RunExpiryCheckNow");
 }
 
 /**
  * RunRenewalNow 立即执行续期任务
  */
 export function RunRenewalNow(): $CancellablePromise<void> {
-    return $Call.ByID(1384461214);
+    return $Call.ByName("main.SchedulerServiceWrapper.RunRenewalNow");
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(2059572034, app);
+    return $Call.ByName("main.SchedulerServiceWrapper.SetApp", app);
 }

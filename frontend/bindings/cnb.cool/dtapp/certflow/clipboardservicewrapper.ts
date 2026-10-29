@@ -18,12 +18,12 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(2792114035, app);
+    return $Call.ByName("main.ClipboardServiceWrapper.SetApp", app);
 }
 
 /**
  * SetText 设置剪贴板文本
  */
 export function SetText(text: string): $CancellablePromise<boolean> {
-    return $Call.ByID(3232090879, text);
+    return $Call.ByName("main.ClipboardServiceWrapper.SetText", text);
 }

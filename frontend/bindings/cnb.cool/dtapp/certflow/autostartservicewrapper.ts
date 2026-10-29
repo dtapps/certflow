@@ -18,26 +18,26 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * Disable 禁用开机自启
  */
 export function Disable(): $CancellablePromise<void> {
-    return $Call.ByID(2653829671);
+    return $Call.ByName("main.AutostartServiceWrapper.Disable");
 }
 
 /**
  * Enable 启用开机自启
  */
 export function Enable(): $CancellablePromise<void> {
-    return $Call.ByID(1794523906);
+    return $Call.ByName("main.AutostartServiceWrapper.Enable");
 }
 
 /**
  * IsEnabled 检查是否启用开机自启
  */
 export function IsEnabled(): $CancellablePromise<boolean> {
-    return $Call.ByID(1549991474);
+    return $Call.ByName("main.AutostartServiceWrapper.IsEnabled");
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(4074144410, app);
+    return $Call.ByName("main.AutostartServiceWrapper.SetApp", app);
 }

@@ -22,47 +22,47 @@ import * as $models from "./models.js";
  * CreateDNSProvider 创建 DNS 提供商
  */
 export function CreateDNSProvider(input: $models.CreateDNSProviderRequest): $CancellablePromise<$models.DNSProviderListItem | null> {
-    return $Call.ByID(618407618, input);
+    return $Call.ByName("main.DNSProviderServiceWrapper.CreateDNSProvider", input);
 }
 
 /**
  * DeleteDNSProvider 删除 DNS 提供商
  */
 export function DeleteDNSProvider(id: number): $CancellablePromise<void> {
-    return $Call.ByID(3153833539, id);
+    return $Call.ByName("main.DNSProviderServiceWrapper.DeleteDNSProvider", id);
 }
 
 /**
  * GetDNSProviderTypes 获取支持的 DNS 提供商类型
  */
 export function GetDNSProviderTypes(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(941193371);
+    return $Call.ByName("main.DNSProviderServiceWrapper.GetDNSProviderTypes");
 }
 
 /**
  * ListDNSProviders 获取所有 DNS 提供商
  */
 export function ListDNSProviders(): $CancellablePromise<$models.DNSProviderListItem[] | null> {
-    return $Call.ByID(139537879);
+    return $Call.ByName("main.DNSProviderServiceWrapper.ListDNSProviders");
 }
 
 /**
  * SetActive 设置 DNS 提供商的启用状态
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<$models.DNSProviderListItem | null> {
-    return $Call.ByID(544552946, id, active);
+    return $Call.ByName("main.DNSProviderServiceWrapper.SetActive", id, active);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(3412293203, app);
+    return $Call.ByName("main.DNSProviderServiceWrapper.SetApp", app);
 }
 
 /**
  * UpdateDNSProvider 更新 DNS 提供商
  */
 export function UpdateDNSProvider(id: number, input: $models.UpdateDNSProviderRequest): $CancellablePromise<$models.DNSProviderListItem | null> {
-    return $Call.ByID(747024261, id, input);
+    return $Call.ByName("main.DNSProviderServiceWrapper.UpdateDNSProvider", id, input);
 }

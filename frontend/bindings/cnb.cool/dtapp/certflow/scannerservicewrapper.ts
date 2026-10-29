@@ -21,33 +21,33 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * ClearHistory 清空扫描历史
  */
 export function ClearHistory(): $CancellablePromise<void> {
-    return $Call.ByID(1199909507);
+    return $Call.ByName("main.ScannerServiceWrapper.ClearHistory");
 }
 
 /**
  * DeleteResult 删除扫描结果
  */
 export function DeleteResult(id: number): $CancellablePromise<void> {
-    return $Call.ByID(3772641310, id);
+    return $Call.ByName("main.ScannerServiceWrapper.DeleteResult", id);
 }
 
 /**
  * ListHistory 获取扫描历史
  */
 export function ListHistory(): $CancellablePromise<(scanner$0.ScanResultItem | null)[] | null> {
-    return $Call.ByID(3606237364);
+    return $Call.ByName("main.ScannerServiceWrapper.ListHistory");
 }
 
 /**
  * Scan 执行一次证书扫描
  */
 export function Scan(domain: string, port: number, scanType: string): $CancellablePromise<scanner$0.ScanResultItem | null> {
-    return $Call.ByID(2263998317, domain, port, scanType);
+    return $Call.ByName("main.ScannerServiceWrapper.Scan", domain, port, scanType);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(1891311383, app);
+    return $Call.ByName("main.ScannerServiceWrapper.SetApp", app);
 }

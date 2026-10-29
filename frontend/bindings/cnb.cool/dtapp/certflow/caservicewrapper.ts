@@ -22,54 +22,54 @@ import * as $models from "./models.js";
  * CheckDirectoryURL 验证 ACME 目录 URL 是否可访问（按 URL，不依赖已有记录）
  */
 export function CheckDirectoryURL(rawURL: string): $CancellablePromise<string> {
-    return $Call.ByID(4114789158, rawURL);
+    return $Call.ByName("main.CAServiceWrapper.CheckDirectoryURL", rawURL);
 }
 
 /**
  * CreateCA 创建 CA
  */
 export function CreateCA(input: $models.CreateCACreateRequest): $CancellablePromise<$models.CAListItem | null> {
-    return $Call.ByID(1864512406, input);
+    return $Call.ByName("main.CAServiceWrapper.CreateCA", input);
 }
 
 /**
  * DeleteCA 删除 CA
  */
 export function DeleteCA(id: number): $CancellablePromise<void> {
-    return $Call.ByID(3338467077, id);
+    return $Call.ByName("main.CAServiceWrapper.DeleteCA", id);
 }
 
 /**
  * ListCA 获取所有 CA
  */
 export function ListCA(): $CancellablePromise<$models.CAListItem[] | null> {
-    return $Call.ByID(3585143622);
+    return $Call.ByName("main.CAServiceWrapper.ListCA");
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(3646092309, app);
+    return $Call.ByName("main.CAServiceWrapper.SetApp", app);
 }
 
 /**
  * SetCAActive 启用/禁用 CA（独立接口）
  */
 export function SetCAActive(id: number, active: boolean): $CancellablePromise<$models.CAListItem | null> {
-    return $Call.ByID(944996372, id, active);
+    return $Call.ByName("main.CAServiceWrapper.SetCAActive", id, active);
 }
 
 /**
  * TestCAConnection 测试 CA 连接
  */
 export function TestCAConnection(id: number): $CancellablePromise<string> {
-    return $Call.ByID(1129842694, id);
+    return $Call.ByName("main.CAServiceWrapper.TestCAConnection", id);
 }
 
 /**
  * UpdateCA 更新 CA
  */
 export function UpdateCA(id: number, input: $models.CAUpdateRequest): $CancellablePromise<$models.CAListItem | null> {
-    return $Call.ByID(3721545215, id, input);
+    return $Call.ByName("main.CAServiceWrapper.UpdateCA", id, input);
 }

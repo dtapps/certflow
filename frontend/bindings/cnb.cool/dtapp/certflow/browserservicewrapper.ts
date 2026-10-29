@@ -18,12 +18,12 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * OpenURL 在系统默认浏览器中打开 URL
  */
 export function OpenURL(url: string): $CancellablePromise<void> {
-    return $Call.ByID(1058880679, url);
+    return $Call.ByName("main.BrowserServiceWrapper.OpenURL", url);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(35209605, app);
+    return $Call.ByName("main.BrowserServiceWrapper.SetApp", app);
 }

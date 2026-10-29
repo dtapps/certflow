@@ -64,6 +64,22 @@ export interface DNSProviderConfig {
     "username"?: string;
 
     /**
+     * 各家专有字段名（名字不统一，但必须是本结构体的字段，否则会静默丢失）
+     * Namecheap
+     */
+    "api_user"?: string;
+
+    /**
+     * Porkbun
+     */
+    "secret_api_key"?: string;
+
+    /**
+     * 新网 Xinnet
+     */
+    "secret"?: string;
+
+    /**
      * 其他
      */
     "agent_id"?: string;

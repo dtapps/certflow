@@ -18,19 +18,19 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * HideWindow 隐藏窗口
  */
 export function HideWindow(): $CancellablePromise<void> {
-    return $Call.ByID(382833276);
+    return $Call.ByName("main.SysTrayService.HideWindow");
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(2065336251, app);
+    return $Call.ByName("main.SysTrayService.SetApp", app);
 }
 
 /**
  * ShowWindow 显示窗口
  */
 export function ShowWindow(): $CancellablePromise<void> {
-    return $Call.ByID(4256507945);
+    return $Call.ByName("main.SysTrayService.ShowWindow");
 }

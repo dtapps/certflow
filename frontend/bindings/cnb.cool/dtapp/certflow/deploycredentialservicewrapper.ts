@@ -22,47 +22,47 @@ import * as $models from "./models.js";
  * CreateDeployCredential 创建部署凭证
  */
 export function CreateDeployCredential(input: $models.CreateDeployCredentialRequest): $CancellablePromise<$models.DeployCredentialListItem | null> {
-    return $Call.ByID(2595047390, input);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.CreateDeployCredential", input);
 }
 
 /**
  * DeleteDeployCredential 删除部署凭证
  */
 export function DeleteDeployCredential(id: number): $CancellablePromise<void> {
-    return $Call.ByID(4140527633, id);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.DeleteDeployCredential", id);
 }
 
 /**
  * GetDeployCredential 获取单个部署凭证
  */
 export function GetDeployCredential(id: number): $CancellablePromise<$models.DeployCredentialListItem | null> {
-    return $Call.ByID(1585225462, id);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.GetDeployCredential", id);
 }
 
 /**
  * ListDeployCredentials 获取所有部署凭证
  */
 export function ListDeployCredentials(): $CancellablePromise<$models.DeployCredentialListItem[] | null> {
-    return $Call.ByID(3463458067);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.ListDeployCredentials");
 }
 
 /**
  * SetActive 设置部署凭证的启用状态
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<$models.DeployCredentialListItem | null> {
-    return $Call.ByID(2891396778, id, active);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.SetActive", id, active);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(2215655499, app);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.SetApp", app);
 }
 
 /**
  * UpdateDeployCredential 更新部署凭证
  */
 export function UpdateDeployCredential(id: number, input: $models.UpdateDeployCredentialRequest): $CancellablePromise<$models.DeployCredentialListItem | null> {
-    return $Call.ByID(2072120263, id, input);
+    return $Call.ByName("main.DeployCredentialServiceWrapper.UpdateDeployCredential", id, input);
 }

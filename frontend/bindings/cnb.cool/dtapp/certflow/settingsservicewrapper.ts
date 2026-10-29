@@ -18,12 +18,12 @@ import * as settings$0 from "./internal/settings/models.js";
  * GetSettings 获取当前设置
  */
 export function GetSettings(): $CancellablePromise<settings$0.Settings> {
-    return $Call.ByID(1954463446);
+    return $Call.ByName("main.SettingsServiceWrapper.GetSettings");
 }
 
 /**
  * SaveSettings 保存设置
  */
 export function SaveSettings(input: settings$0.Settings): $CancellablePromise<void> {
-    return $Call.ByID(524082881, input);
+    return $Call.ByName("main.SettingsServiceWrapper.SaveSettings", input);
 }

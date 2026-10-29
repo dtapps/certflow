@@ -26,7 +26,7 @@ import * as $models from "./models.js";
  * 用户取消对话框时返回空字符串与 nil 错误。
  */
 export function ExportData(): $CancellablePromise<string> {
-    return $Call.ByID(2350441544);
+    return $Call.ByName("cnb.cool/dtapp/certflow/internal/data.Service.ExportData");
 }
 
 /**
@@ -34,7 +34,7 @@ export function ExportData(): $CancellablePromise<string> {
  * 前端在触发导入后用定时器轮询本方法，直到 Running 变为 false 再给出结果提示。
  */
 export function GetImportStatus(): $CancellablePromise<$models.ImportStatus> {
-    return $Call.ByID(2879933685);
+    return $Call.ByName("cnb.cool/dtapp/certflow/internal/data.Service.GetImportStatus");
 }
 
 /**
@@ -43,12 +43,12 @@ export function GetImportStatus(): $CancellablePromise<$models.ImportStatus> {
  * 用户取消对话框时返回 nil。
  */
 export function ImportData(): $CancellablePromise<void> {
-    return $Call.ByID(2660786631);
+    return $Call.ByName("cnb.cool/dtapp/certflow/internal/data.Service.ImportData");
 }
 
 /**
  * SetApp 注入 Wails 应用实例，用于弹出原生文件对话框。
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(1903441681, app);
+    return $Call.ByName("cnb.cool/dtapp/certflow/internal/data.Service.SetApp", app);
 }

@@ -21,21 +21,21 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * 若 app 尚未初始化则返回零值。
  */
 export function GetEnvironmentInfo(): $CancellablePromise<application$0.EnvironmentInfo> {
-    return $Call.ByID(1535997196);
+    return $Call.ByName("main.SystemServiceWrapper.GetEnvironmentInfo");
 }
 
 /**
  * GetVersion 获取应用版本号
  */
 export function GetVersion(): $CancellablePromise<string> {
-    return $Call.ByID(301923417);
+    return $Call.ByName("main.SystemServiceWrapper.GetVersion");
 }
 
 /**
  * IsDarkMode 检测系统是否深色模式
  */
 export function IsDarkMode(): $CancellablePromise<boolean> {
-    return $Call.ByID(2550514530);
+    return $Call.ByName("main.SystemServiceWrapper.IsDarkMode");
 }
 
 /**
@@ -45,7 +45,7 @@ export function IsDarkMode(): $CancellablePromise<boolean> {
  * 用户，由用户手动重新打开应用（重新打开即触发 db.Init 读入导入数据）。
  */
 export function Quit(): $CancellablePromise<void> {
-    return $Call.ByID(130765846);
+    return $Call.ByName("main.SystemServiceWrapper.Quit");
 }
 
 /**
@@ -60,14 +60,14 @@ export function Quit(): $CancellablePromise<void> {
  *   - url：触发错误的页面/路由（可为空）。
  */
 export function ReportFrontendError(level: string, message: string, stack: string, url: string): $CancellablePromise<void> {
-    return $Call.ByID(3798188807, level, message, stack, url);
+    return $Call.ByName("main.SystemServiceWrapper.ReportFrontendError", level, message, stack, url);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(3339081910, app);
+    return $Call.ByName("main.SystemServiceWrapper.SetApp", app);
 }
 
 /**
@@ -76,12 +76,12 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
  * HTTP 请求在未显式设置 UA 时自动带上；monitor 检查请求也从该全局状态读取。
  */
 export function SetUserAgent(ua: string): $CancellablePromise<void> {
-    return $Call.ByID(3680343009, ua);
+    return $Call.ByName("main.SystemServiceWrapper.SetUserAgent", ua);
 }
 
 /**
  * ShowMessage 显示原生对话框（前端调用）
  */
 export function ShowMessage(title: string, message: string, msgType: string): $CancellablePromise<void> {
-    return $Call.ByID(1931405787, title, message, msgType);
+    return $Call.ByName("main.SystemServiceWrapper.ShowMessage", title, message, msgType);
 }

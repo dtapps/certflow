@@ -14,33 +14,33 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
  * GetLogDir 获取日志目录路径
  */
 export function GetLogDir(): $CancellablePromise<string> {
-    return $Call.ByID(917142846);
+    return $Call.ByName("main.LoggingServiceWrapper.GetLogDir");
 }
 
 /**
  * GetLogFiles 获取日志文件列表
  */
 export function GetLogFiles(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(3932744966);
+    return $Call.ByName("main.LoggingServiceWrapper.GetLogFiles");
 }
 
 /**
  * GetLogLevel 获取当前日志级别
  */
 export function GetLogLevel(): $CancellablePromise<string> {
-    return $Call.ByID(4005150463);
+    return $Call.ByName("main.LoggingServiceWrapper.GetLogLevel");
 }
 
 /**
  * ReadLog 读取日志内容
  */
 export function ReadLog(filename: string, tail: number): $CancellablePromise<string> {
-    return $Call.ByID(1971886249, filename, tail);
+    return $Call.ByName("main.LoggingServiceWrapper.ReadLog", filename, tail);
 }
 
 /**
  * SetLogLevel 设置日志级别
  */
 export function SetLogLevel(level: string): $CancellablePromise<void> {
-    return $Call.ByID(3160650603, level);
+    return $Call.ByName("main.LoggingServiceWrapper.SetLogLevel", level);
 }

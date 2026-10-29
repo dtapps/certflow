@@ -18,12 +18,12 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * OpenDirectory 在系统文件管理器中打开目录
  */
 export function OpenDirectory(path: string): $CancellablePromise<void> {
-    return $Call.ByID(4212715675, path);
+    return $Call.ByName("main.FileServiceWrapper.OpenDirectory", path);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(376558635, app);
+    return $Call.ByName("main.FileServiceWrapper.SetApp", app);
 }
