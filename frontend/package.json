@@ -40,7 +40,7 @@
     "eslint-plugin-vue": "^10.12.0",
     "prettier": "^3.9.10",
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2",
-    "typescript-eslint": "^8.72.0",
+    "typescript-eslint": "^8.72.1",
     "unplugin-auto-import": "^21.1.0",
     "unplugin-vue-components": "^32.1.0",
     "vite": "^8.3.5",
