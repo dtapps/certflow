@@ -33,9 +33,9 @@ concurrency:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    # 复用预构建 CI 镜像
+    # 复用统一 CI 镜像（ghcr.io/dtapps/golang/wails3:latest，各仓库不再自行打包）
     container:
-      image: ghcr.io/${{ github.repository }}/ci:latest
+      image: ghcr.io/dtapps/golang/wails3:latest
     env:
       COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
     steps:
