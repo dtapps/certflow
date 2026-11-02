@@ -36,7 +36,7 @@
     "@vitejs/plugin-vue": "^6.0.10",
     "@vitest/coverage-v8": "^5.0.5",
     "@vue/eslint-config-typescript": "^14.9.0",
-    "eslint": "^10.13.0",
+    "eslint": "^10.14.0",
     "eslint-plugin-vue": "^10.12.0",
     "prettier": "^3.9.10",
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2",
