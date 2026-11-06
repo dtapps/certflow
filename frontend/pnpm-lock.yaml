@@ -195,8 +195,8 @@ importers:
         specifier: ^1.5.4
         version: 1.5.4
       tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
+        specifier: ^4.3.4
+        version: 4.3.4
       vfonts:
         specifier: ^0.0.3
         version: 0.0.3

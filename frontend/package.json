@@ -22,7 +22,7 @@
     "naive-ui": "^2.45.3",
     "pinia": "^4.1.0",
     "qrcode": "^1.5.4",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.4",
     "vfonts": "^0.0.3",
     "vue": "3.6.0-rc.14",
     "vue-echarts": "^8.3.2",
