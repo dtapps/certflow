@@ -177,8 +177,7 @@ certflow/
 │   ├── release.yml            # Stable release (six platforms) / pre-release
 │   ├── push.yml               # push / PR checks
 │   ├── codecov.yml            # Codecov upload (coverage / bundle / tests)
-│   ├── coveralls.yml          # Coveralls upload
-│   └── ci-image.yml           # CI base image build (GHCR)
+│   └── coveralls.yml          # Coveralls upload (shared CI image maintained externally)
 ├── .cnb/workflows/            # CNB workflows (checks, coverage, security scans)
 ├── .cnb.yml                   # CNB entry: includes workflows + release pipeline
 ├── .gitlab-ci.yml             # GitLab: release sync only

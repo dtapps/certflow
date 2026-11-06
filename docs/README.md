@@ -57,16 +57,16 @@
 
 | 文档                                 | 内容                                                     |
 |--------------------------------------|----------------------------------------------------------|
-| [ci-image.md](ci-image.md)           | CI 基础镜像：两份 Dockerfile、工具版本、重建流程         |
+| [ci-image.md](ci-image.md)           | CI 镜像历史方案（已过时，统一镜像现状见文首声明）        |
 | [coverage-go.md](coverage-go.md)     | Go 覆盖率统计口径、CNB 流水线、门禁阈值状态              |
 | [coverage-node.md](coverage-node.md) | 前端覆盖率：Vitest 配置、CNB 流水线、门禁阈值状态        |
 | [codecov.md](codecov.md)             | Codecov 三支柱（覆盖率 / bundle / 测试结果）与归一化逻辑 |
 | [coveralls.md](coveralls.md)         | Coveralls 双 flag 上报与排错                             |
 | [gitlab-ci.md](gitlab-ci.md)         | GitLab 侧只做发布同步，及其历史原因                      |
 
-## 3. 开发日志（32 篇）
+## 3. 开发日志（35 篇）
 
-`docs/2026-*.md` 是按日期命名的开发日志，从 `2026-07-26.md` 到 `2026-10-24.md`，共 32 篇：
+`docs/2026-*.md` 是按日期命名的开发日志，从 `2026-07-26.md` 到 `2026-11-05.md`，共 35 篇：
 
 - 内容结构不固定，常见小节是「任务目标 / 执行细节 / 验证 / 遗留」。
 - 它们是**过程记录**：记录当时的判断、踩过的坑、临时结论，可能已被后续提交推翻。

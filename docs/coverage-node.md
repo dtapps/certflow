@@ -37,7 +37,7 @@ pnpm test:coverage          # 或 ./node_modules/.bin/vitest run --coverage
 
 ## 3. 流水线实现
 
-Node 覆盖率与 Go 覆盖率是两条**独立并行**流水线，复用同一个 `.cnb/ci/Dockerfile`（已预装 Node + pnpm + 腾讯云源）：
+Node 覆盖率与 Go 覆盖率是两条**独立并行**流水线，复用同一个统一镜像 `docker.cnb.cool/dtapp/golang/wails3`（各仓库不再重复打包 Dockerfile）：
 
 stage 顺序：`make deps` → `pnpm --dir ./frontend test:coverage` → `testing:coverage` 上报 → 打印 `node coverage: lines=... diff=...`。
 

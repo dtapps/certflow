@@ -10,13 +10,13 @@
 
 ## 1. 涉及文件
 
-| 文件                              | 作用                                                                                 |
-|-----------------------------------|--------------------------------------------------------------------------------------|
-| `.github/workflows/coveralls.yml` | 唯一入口：装依赖 → 跑 Go/前端测试 → 分别上报 `flag=go` / `flag=node`                 |
-| `.github/ci/Dockerfile`           | 提供 `ghcr.io/<repo>/ci:latest` 镜像（Go/Node/pnpm/GTK/WebKit + 钉版本的 Go 工具链） |
-| `Makefile`（`deps` 目标）         | `go mod download` + `pnpm --dir ./frontend install`                                  |
-| `coverage.out`                    | Go 覆盖率产物，**原样**以 `format: golang` 交给 action（路径带模块前缀，不要处理）   |
-| `frontend/coverage/lcov.info`     | 前端覆盖率产物（`pnpm test:coverage` 生成）                                          |
+| 文件                                  | 作用                                                                                     |
+|---------------------------------------|------------------------------------------------------------------------------------------|
+| `.github/workflows/coveralls.yml`     | 唯一入口：装依赖 → 跑 Go/前端测试 → 分别上报 `flag=go` / `flag=node`                     |
+| `ghcr.io/dtapps/golang/wails3:latest` | 统一 CI 镜像（Go/Node/pnpm/GTK/WebKit + Go 工具链），各仓库直接引用，不再自建 Dockerfile |
+| `Makefile`（`deps` 目标）             | `go mod download` + `pnpm --dir ./frontend install`                                      |
+| `coverage.out`                        | Go 覆盖率产物，**原样**以 `format: golang` 交给 action（路径带模块前缀，不要处理）       |
+| `frontend/coverage/lcov.info`         | 前端覆盖率产物（`pnpm test:coverage` 生成）                                              |
 
 ## 2. 工作流结构
 
@@ -29,10 +29,13 @@ on:
 
 concurrency:
   group: coveralls-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+  queue: max
 ```
 
-同一分支连续 push 会取消上一次运行，避免同一 commit 重复上传。
+同一分支的多次触发串行排队：绝不取消「正在运行」的旧运行，新运行进入 pending 等待，避免两次运行并发上传、把同一 commit 的 go / node 报告拆进不同 build。
+
+`queue: max` 让同一 group 最多保留 100 个 pending（默认值 `queue: single` 只留 1 个，新的会顶掉旧的 pending），按进入等待的先后 FIFO 依次执行，只有队列满时溢出的运行才会被取消。注意 `queue: max` 不能与 `cancel-in-progress: true` 组合，否则 workflow 校验失败；GitHub 也只保证按「开始等待的时间」FIFO，实际顺序不严格保证。
 
 ### 2.2 为什么是单个 job
 
@@ -54,21 +57,16 @@ jobs:
 
 ### 2.3 运行环境
 
-复用预构建镜像：
+复用统一 CI 镜像（各仓库不再自行打包，见 `.github/workflows/coveralls.yml`）：
 
 ```yaml
 container:
-  image: ghcr.io/${{ github.repository }}/ci:latest
+  image: ghcr.io/dtapps/golang/wails3:latest
 ```
 
-镜像里已有 Go / Node / pnpm / GTK4 / WebKit6，以及钉好版本的 Go 工具链：
+镜像里已有 Go / Node / pnpm / GTK4 / WebKit6，以及工作流直接调用的 Go 工具（如 `gotestsum`、`gojq`）。工具目录已在 `PATH` 中，故工作流里可以直接调用，**不需要** `setup-go`、`setup-node`、`apt-get install`，Wails 的 CGO 链接依赖也已齐备。具体工具版本由统一镜像维护，本仓库不再钉版本、也不再自行构建或推送镜像。
 
-| 工具      | 版本                        | 来源                  |
-|-----------|-----------------------------|-----------------------|
-| gotestsum | `GOTESTSUM_VERSION=v1.13.0` | `go install ...@版本` |
-| gojq      | `GOJQ_VERSION=v0.12.19`     | 同上                  |
-
-`ENV PATH="$GOPATH/bin:$PATH"` 已经包含 `/go/bin`，所以镜像里预装的 gotestsum / gojq 可以直接调用。 CI 里**不需要** `setup-go`、`setup-node`、`apt-get install`——Wails 的 CGO 链接依赖也齐了。 镜像由 `ci-image.yml` 推送，**首次运行前必须已存在**，否则容器起不来。
+> 历史：此前用 `.github/ci/Dockerfile` 自建 `ghcr.io/<repo>/ci:latest`，由 `ci-image.yml` 推送，首次运行前必须先构建。2026-11-02 起改为统一镜像，Dockerfile 与 `ci-image.yml` 均已删除；旧的钉版本 ARG（`GOTESTSUM_VERSION` / `GOJQ_VERSION`）不再由本仓库维护。
 
 ### 2.4 缓存
 

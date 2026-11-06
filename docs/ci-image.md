@@ -1,6 +1,13 @@
 # CI 基础镜像说明（certflow）
 
-本文只讲一件事：**两个平台的 CI 镜像怎么来的、装了什么、怎么改版本**。
+> ⚠️ **本文已过时（2026-11-02 起）**：下文记录的是「两个平台各自用 Dockerfile 自建 CI 镜像」的旧方案， 相关文件均已删除，**不要按本文配置**。当前现状：
+> - GitHub Actions（`.github/workflows/` 下 `push.yml` / `codecov.yml` / `coveralls.yml`）： `container.image: ghcr.io/dtapps/golang/wails3:latest`
+> - CNB（`.cnb/workflows/` 下 `push.yml` / `push-coverage.yml` / `pull-coverage.yml`）： `docker.image: docker.cnb.cool/dtapp/golang/wails3`
+> - 已删除：`.github/ci/Dockerfile`、`.cnb/ci/Dockerfile`、`.github/workflows/ci-image.yml`。 各仓库直接引用统一镜像，不再重复打包；镜像内容与工具版本由统一镜像仓库维护。
+>
+> 以下章节作为历史方案存档保留。
+
+本文只讲一件事：**两个平台的 CI 镜像怎么来的、装了什么、怎么改版本**（历史方案）。
 
 - 两份 Dockerfile，同一个目标：把「系统库 + Node + pnpm + Go 工具链」预装进镜像，让 CI 直接复用，不在每次运行里重复 `apt-get`、`go install`、下载 Node。
 - 基础镜像相同：`golang:1.27.3-trixie`（自带 Go 工具链与 Debian trixie 的 apt 源）。

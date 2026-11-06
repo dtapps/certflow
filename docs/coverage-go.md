@@ -34,11 +34,11 @@ go tool cover -func=coverage.out | tail -1
 
 ## 3. 流水线实现
 
-push 与 pull_request 各有一条**独立并行**的 Go 覆盖率流水线，都复用 `.cnb/ci/Dockerfile`， 并挂载 Go 模块与 build cache：
+push 与 pull_request 各有一条**独立并行**的 Go 覆盖率流水线，都直接引用统一镜像 `docker.cnb.cool/dtapp/golang/wails3`（各仓库不再重复打包 Dockerfile），并挂载 Go 模块与 build cache：
 
 ```yaml
 docker:
-  build: .cnb/ci/Dockerfile
+  image: docker.cnb.cool/dtapp/golang/wails3
   volumes:
     - /root/.cache/go-build:copy-on-write
     - /go/pkg/mod:copy-on-write

@@ -177,8 +177,7 @@ certflow/
 │   ├── release.yml            # 正式发布（六平台）/ 预发布
 │   ├── push.yml               # push / PR 检查
 │   ├── codecov.yml            # Codecov 上报（覆盖率 / bundle / tests）
-│   ├── coveralls.yml          # Coveralls 上报
-│   └── ci-image.yml           # CI 基础镜像构建（GHCR）
+│   └── coveralls.yml          # Coveralls 上报（统一 CI 镜像由外部仓库维护）
 ├── .cnb/workflows/            # CNB 工作流（检查、覆盖率、安全扫描等）
 ├── .cnb.yml                   # CNB 入口：include 各工作流 + Release 发布
 ├── .gitlab-ci.yml             # GitLab：仅发布同步
