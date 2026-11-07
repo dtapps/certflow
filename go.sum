@@ -711,7 +711,6 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.173 h1:BNlVsMG
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdn v1.3.173/go.mod h1:81Xy8cA0qx83Lz+JmEWnh92T4QiyIVeLRxGF77KJsmQ=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.1.1/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.131/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.147/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.173/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.186/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.206/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
@@ -719,8 +718,8 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.207 h1:mPXU
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.207/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1 h1:zfDYrQ0US6kiMrLrl0QB5r+HZrJoZTbXC/4YQ0lwaes=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1/go.mod h1:vyzaMSWRQF17oo4QZkKppd84MJs97EKp/WyQGE5s/kM=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147 h1:7wFGHghpGVkPotX6PCpwt7Xn4BerFib++kAoafMSyR0=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.147/go.mod h1:XMVT8POd1Rlwegh9N8EPPZP3+93Zo4tML9Asn5SL/lI=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206 h1:63G5mlyCe9mVB8Uq6Z5YteSIP55xD8gY5nl2mErYqBM=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206/go.mod h1:Z9mb61JCaRamry2Uq1KplI08XohwfjQ5NI4str2azRQ=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.206 h1:vFHUQ+XFcu6X3IS2WIJll5yCQHQmnfUzhqbAJYcN6JE=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.206/go.mod h1:11+pbbSNefkXtV/Q96pjv1/FQvzOfCOvCAknnxQzt5I=
 github.com/tinylib/msgp v1.6.5 h1:iAH6XTP7BpzErjBZlujJQXxA+GmRi2YWs6M4KdLtNbE=
