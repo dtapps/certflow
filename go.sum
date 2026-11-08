@@ -720,8 +720,8 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1 h1:zfDYrQ0U
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ecdn v1.1.1/go.mod h1:vyzaMSWRQF17oo4QZkKppd84MJs97EKp/WyQGE5s/kM=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206 h1:63G5mlyCe9mVB8Uq6Z5YteSIP55xD8gY5nl2mErYqBM=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206/go.mod h1:Z9mb61JCaRamry2Uq1KplI08XohwfjQ5NI4str2azRQ=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.206 h1:vFHUQ+XFcu6X3IS2WIJll5yCQHQmnfUzhqbAJYcN6JE=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.206/go.mod h1:11+pbbSNefkXtV/Q96pjv1/FQvzOfCOvCAknnxQzt5I=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.207 h1:h1InTHT0DNF6o1YHgzJxqJ84iAey/ScQSccjUc5OnGU=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.207/go.mod h1:RxWcLsj/ZknRrz+fqeNsLTC7XqpNoH7AwzsnaBPewrg=
 github.com/tinylib/msgp v1.6.5 h1:iAH6XTP7BpzErjBZlujJQXxA+GmRi2YWs6M4KdLtNbE=
 github.com/tinylib/msgp v1.6.5/go.mod h1:RSp0LW9oSxFut3KzESt5Voq4GVWyS+PSulT77roAqEA=
 github.com/tjfoc/gmsm v1.3.2/go.mod h1:HaUcFuY0auTiaHB9MHFGCPx5IaLhTUd2atbCFBQXn9w=
