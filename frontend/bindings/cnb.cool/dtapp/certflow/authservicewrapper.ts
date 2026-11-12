@@ -18,145 +18,145 @@ import * as auth$0 from "./internal/auth/models.js";
  * Authenticate 统一验证方法
  */
 export function Authenticate(method: string, credential: string): $CancellablePromise<boolean> {
-    return $Call.ByName("main.AuthServiceWrapper.Authenticate", method, credential);
+    return $Call.ByID(761062097, method, credential);
 }
 
 /**
  * CancelTOTP 取消未确认的 TOTP 设置
  */
 export function CancelTOTP(): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.CancelTOTP");
+    return $Call.ByID(2858935055);
 }
 
 /**
  * ChangePassword 修改密码
  */
 export function ChangePassword(oldPassword: string, newPassword: string): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.ChangePassword", oldPassword, newPassword);
+    return $Call.ByID(3225391533, oldPassword, newPassword);
 }
 
 /**
  * ClearPasskey 清除 Passkey 设置
  */
 export function ClearPasskey(): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.ClearPasskey");
+    return $Call.ByID(4140499539);
 }
 
 /**
  * ClearPassword 清除密码
  */
 export function ClearPassword(): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.ClearPassword");
+    return $Call.ByID(2195706236);
 }
 
 /**
  * ClearTOTP 清除 TOTP 设置
  */
 export function ClearTOTP(): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.ClearTOTP");
+    return $Call.ByID(232272356);
 }
 
 /**
  * FinishPasskeyLogin 完成 Passkey 登录
  */
 export function FinishPasskeyLogin(data: string): $CancellablePromise<boolean> {
-    return $Call.ByName("main.AuthServiceWrapper.FinishPasskeyLogin", data);
+    return $Call.ByID(2267805074, data);
 }
 
 /**
  * FinishPasskeyRegistration 完成 Passkey 注册
  */
 export function FinishPasskeyRegistration(data: string): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.FinishPasskeyRegistration", data);
+    return $Call.ByID(2632846936, data);
 }
 
 /**
  * GetActiveMethod 获取当前激活的认证方式
  */
 export function GetActiveMethod(): $CancellablePromise<string> {
-    return $Call.ByName("main.AuthServiceWrapper.GetActiveMethod");
+    return $Call.ByID(2330744143);
 }
 
 /**
  * GetAvailableMethods 获取已配置的认证方式列表
  */
 export function GetAvailableMethods(): $CancellablePromise<string[] | null> {
-    return $Call.ByName("main.AuthServiceWrapper.GetAvailableMethods");
+    return $Call.ByID(2154735987);
 }
 
 /**
  * GetPasskeyInfo 获取 Passkey 信息
  */
 export function GetPasskeyInfo(): $CancellablePromise<auth$0.PasskeyInfo | null> {
-    return $Call.ByName("main.AuthServiceWrapper.GetPasskeyInfo");
+    return $Call.ByID(1177881220);
 }
 
 /**
  * GetTOTPInfo 获取 TOTP 信息
  */
 export function GetTOTPInfo(): $CancellablePromise<auth$0.TOTPInfo | null> {
-    return $Call.ByName("main.AuthServiceWrapper.GetTOTPInfo");
+    return $Call.ByID(277771085);
 }
 
 /**
  * IsPasswordSet 检查是否已设置密码
  */
 export function IsPasswordSet(): $CancellablePromise<boolean> {
-    return $Call.ByName("main.AuthServiceWrapper.IsPasswordSet");
+    return $Call.ByID(1884537699);
 }
 
 /**
  * SetActiveMethod 设置激活的认证方式
  */
 export function SetActiveMethod(method: string): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.SetActiveMethod", method);
+    return $Call.ByID(1242079179, method);
 }
 
 /**
  * SetPassword 设置密码
  */
 export function SetPassword(password: string): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.SetPassword", password);
+    return $Call.ByID(2935120997, password);
 }
 
 /**
  * SetupTOTP 生成 TOTP 密钥
  */
 export function SetupTOTP(): $CancellablePromise<auth$0.TOTPSetupResult | null> {
-    return $Call.ByName("main.AuthServiceWrapper.SetupTOTP");
+    return $Call.ByID(633444892);
 }
 
 /**
  * StartPasskeyLogin 开始 Passkey 登录
  */
 export function StartPasskeyLogin(): $CancellablePromise<auth$0.PasskeyAuthenticationResponse | null> {
-    return $Call.ByName("main.AuthServiceWrapper.StartPasskeyLogin");
+    return $Call.ByID(3503471261);
 }
 
 /**
  * StartPasskeyRegistration 开始 Passkey 注册
  */
 export function StartPasskeyRegistration(): $CancellablePromise<auth$0.PasskeyRegistrationResponse | null> {
-    return $Call.ByName("main.AuthServiceWrapper.StartPasskeyRegistration");
+    return $Call.ByID(2733158049);
 }
 
 /**
  * VerifyPassword 验证密码
  */
 export function VerifyPassword(password: string): $CancellablePromise<boolean> {
-    return $Call.ByName("main.AuthServiceWrapper.VerifyPassword", password);
+    return $Call.ByID(4287357532, password);
 }
 
 /**
  * VerifyTOTP 验证 TOTP 码
  */
 export function VerifyTOTP(code: string): $CancellablePromise<boolean> {
-    return $Call.ByName("main.AuthServiceWrapper.VerifyTOTP", code);
+    return $Call.ByID(3374874116, code);
 }
 
 /**
  * VerifyTOTPSetup 验证 TOTP 设置码
  */
 export function VerifyTOTPSetup(code: string): $CancellablePromise<void> {
-    return $Call.ByName("main.AuthServiceWrapper.VerifyTOTPSetup", code);
+    return $Call.ByID(2973887441, code);
 }

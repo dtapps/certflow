@@ -22,68 +22,68 @@ import * as $models from "./models.js";
  * CheckPermission 检查通知权限是否已授权
  */
 export function CheckPermission(): $CancellablePromise<boolean> {
-    return $Call.ByName("main.NotificationServiceWrapper.CheckPermission");
+    return $Call.ByID(1024953774);
 }
 
 /**
  * ClearAllNotifications 清空所有通知
  */
 export function ClearAllNotifications(): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.ClearAllNotifications");
+    return $Call.ByID(2946926797);
 }
 
 /**
  * CountUnread 获取未读通知数量
  */
 export function CountUnread(): $CancellablePromise<number> {
-    return $Call.ByName("main.NotificationServiceWrapper.CountUnread");
+    return $Call.ByID(3844707413);
 }
 
 /**
  * DeleteNotification 删除通知
  */
 export function DeleteNotification(id: number): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.DeleteNotification", id);
+    return $Call.ByID(770718611, id);
 }
 
 /**
  * ListNotifications 获取通知列表
  */
 export function ListNotifications(limit: number, offset: number): $CancellablePromise<$models.NotificationItem[] | null> {
-    return $Call.ByName("main.NotificationServiceWrapper.ListNotifications", limit, offset);
+    return $Call.ByID(3849543041, limit, offset);
 }
 
 /**
  * MarkAllAsRead 标记所有通知为已读
  */
 export function MarkAllAsRead(): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.MarkAllAsRead");
+    return $Call.ByID(4284014153);
 }
 
 /**
  * MarkAsRead 标记通知为已读
  */
 export function MarkAsRead(id: number): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.MarkAsRead", id);
+    return $Call.ByID(3194562286, id);
 }
 
 /**
  * RequestPermission 请求通知权限
  */
 export function RequestPermission(): $CancellablePromise<boolean> {
-    return $Call.ByName("main.NotificationServiceWrapper.RequestPermission");
+    return $Call.ByID(1189881463);
 }
 
 /**
  * SendTestNotification 发送测试通知（不写数据库）
  */
 export function SendTestNotification(): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.SendTestNotification");
+    return $Call.ByID(2590084522);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByName("main.NotificationServiceWrapper.SetApp", app);
+    return $Call.ByID(1488100316, app);
 }

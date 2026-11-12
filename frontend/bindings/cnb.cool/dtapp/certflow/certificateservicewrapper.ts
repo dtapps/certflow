@@ -22,96 +22,96 @@ import * as $models from "./models.js";
  * ApplyCertificate 申请证书
  */
 export function ApplyCertificate(input: $models.ApplyCertRequest): $CancellablePromise<$models.ApplyCertResult | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.ApplyCertificate", input);
+    return $Call.ByID(3121240896, input);
 }
 
 /**
  * CompleteManualDNSChallenge 完成手动 DNS 挑战（第二步）
  */
 export function CompleteManualDNSChallenge(domain: string): $CancellablePromise<$models.ApplyCertResult | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.CompleteManualDNSChallenge", domain);
+    return $Call.ByID(2741666314, domain);
 }
 
 /**
  * DeleteCertificate 删除证书
  */
 export function DeleteCertificate(id: number): $CancellablePromise<void> {
-    return $Call.ByName("main.CertificateServiceWrapper.DeleteCertificate", id);
+    return $Call.ByID(2851391895, id);
 }
 
 /**
  * GetCertificateInfo 获取证书详情
  */
 export function GetCertificateInfo(id: number): $CancellablePromise<$models.CertificateListItem | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.GetCertificateInfo", id);
+    return $Call.ByID(3273426932, id);
 }
 
 /**
  * GetExpiringCertificates 获取即将过期的证书
  */
 export function GetExpiringCertificates(days: number): $CancellablePromise<$models.CertificateListItem[] | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.GetExpiringCertificates", days);
+    return $Call.ByID(3610856833, days);
 }
 
 /**
  * GetPendingChallengeInfo 获取待完成的手动 DNS 挑战信息（用于继续申请）
  */
 export function GetPendingChallengeInfo(certID: number): $CancellablePromise<$models.ManualDNSChallenge | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.GetPendingChallengeInfo", certID);
+    return $Call.ByID(1094952277, certID);
 }
 
 /**
  * ListCertificates 获取所有证书
  */
 export function ListCertificates(): $CancellablePromise<$models.CertificateListItem[] | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.ListCertificates");
+    return $Call.ByID(1524537515);
 }
 
 /**
  * ParseCertificateDetails 解析证书 PEM 内容返回详细信息
  */
 export function ParseCertificateDetails(id: number): $CancellablePromise<$models.CertificateDetails | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.ParseCertificateDetails", id);
+    return $Call.ByID(3378846873, id);
 }
 
 /**
  * RenewCertificate 续期证书
  */
 export function RenewCertificate(id: number): $CancellablePromise<$models.ApplyCertResult | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.RenewCertificate", id);
+    return $Call.ByID(1096455747, id);
 }
 
 /**
  * ResumeManualDNSChallenge 恢复手动 DNS 挑战（重新生成挑战信息）
  */
 export function ResumeManualDNSChallenge(certID: number): $CancellablePromise<$models.ManualDNSChallenge | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.ResumeManualDNSChallenge", certID);
+    return $Call.ByID(1993731650, certID);
 }
 
 /**
  * RevokeCertificate 撤销证书
  */
 export function RevokeCertificate(id: number): $CancellablePromise<void> {
-    return $Call.ByName("main.CertificateServiceWrapper.RevokeCertificate", id);
+    return $Call.ByID(3877758404, id);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByName("main.CertificateServiceWrapper.SetApp", app);
+    return $Call.ByID(3353235872, app);
 }
 
 /**
  * StartManualDNSChallenge 开始手动 DNS 挑战（第一步）
  */
 export function StartManualDNSChallenge(input: $models.ApplyCertRequest): $CancellablePromise<$models.ManualDNSChallenge | null> {
-    return $Call.ByName("main.CertificateServiceWrapper.StartManualDNSChallenge", input);
+    return $Call.ByID(2218287275, input);
 }
 
 /**
  * UpdateCertificateSettings 更新证书设置（自动续期、续期天数）
  */
 export function UpdateCertificateSettings(id: number, autoRenew: boolean, renewalDays: number): $CancellablePromise<void> {
-    return $Call.ByName("main.CertificateServiceWrapper.UpdateCertificateSettings", id, autoRenew, renewalDays);
+    return $Call.ByID(1946036944, id, autoRenew, renewalDays);
 }

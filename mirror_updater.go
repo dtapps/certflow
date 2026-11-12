@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -75,15 +77,16 @@ type mirrorProvider struct {
 }
 
 // newMirrorProvider 基于 github.Config 创建按语言选源的 Provider。
-// client 为全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS，由 network.BuildHTTPClient 构建），
-// 同时注入到 github provider 与校验文件拉取，避免自建裸 client 丢失全局注入。
+// checkClient 用于版本检测（带总超时，避免检测请求挂死）；
+// downloadClient 用于下载升级包（不设总超时，避免大文件被中途掐断）。
+// 两者都来自 network 包，复用全局 transport（UA 注入、代理、自定义 DNS）。
 // installedBuildTime 为本机已安装二进制的构建时间（ldflags 注入），nightly 时间对比用它对比
 // 远端 SHA256SUMS 的 build_time，为空时 nightly 检测直接跳过（无法比对，避免循环更新）。
 // cnbToken 为 CNB 只读 Token（ldflags 注入），预留给检测层走 CNB 鉴权 API（CNB 匿名 API 返回 401）。
 // installedGitCommit 为本机已安装二进制的 Git 提交（ldflags 注入），nightly 优先用它对比
 // 远端 SHA256SUMS 的 git_commit，相等即同一份代码直接跳过（避免每日重打同 commit 频繁提示）。
-func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTime string, installedGitCommit string, cnbToken string) (*mirrorProvider, error) {
-	cfg.HTTPClient = client
+func newMirrorProvider(cfg github.Config, checkClient, downloadClient *http.Client, installedBuildTime string, installedGitCommit string, cnbToken string) (*mirrorProvider, error) {
+	cfg.HTTPClient = checkClient
 	gh, err := github.New(cfg)
 	if err != nil {
 		return nil, err
@@ -106,7 +109,7 @@ func newMirrorProvider(cfg github.Config, client *http.Client, installedBuildTim
 	return &mirrorProvider{
 		Provider:           gh,
 		checkProvider:      ghNoChecksum,
-		client:             client,
+		client:             downloadClient,
 		prerelease:         cfg.Prerelease,
 		repo:               cfg.Repository,
 		baseURL:            base,
@@ -499,11 +502,15 @@ func (m *mirrorProvider) Download(ctx context.Context, rel *updater.Release, dst
 		}
 	}
 
+	// errUpdaterDstWrite 表示写入框架提供的目标流失败。此时 dst 中可能已有半包数据，
+	// 且框架在同一条流上叠加了 sha256，无法回退，必须终止而不是切换到下一个源。
 	for _, c := range candidates {
-		resetDst(dst)
 		logging.Debug("%s", i18n.T("log.updater_source_download", "Source", c.source, "URL", c.url))
 		if err := m.downloadFrom(ctx, c.url, rel, dst, onProgress); err != nil {
 			logging.Warn("%s", i18n.T("log.updater_source_failed", "Source", c.source, "Error", err))
+			if errors.Is(err, errUpdaterDstWrite) {
+				return err
+			}
 			continue
 		}
 		return nil
@@ -522,7 +529,15 @@ func (m *mirrorProvider) buildURL(tpl, tag, file string) string {
 	return u
 }
 
-// downloadFrom 从指定 URL 流式下载到 dst，并做基础防护。
+// errUpdaterDstWrite 表示写入框架目标流失败（不可重试，见 Download）。
+var errUpdaterDstWrite = errors.New("write update artifact to destination")
+
+// downloadFrom 从指定 URL 下载到临时文件，整包校验通过后再一次性写入 dst。
+//
+// 不能直接流式写 dst：框架传入的 dst 是同一条 MultiWriter（目标文件 + sha256），
+// 写入后既不能 Seek 也无法回退哈希状态，一旦某个源中途失败，回退到下一个源
+// 就会把所有字节追加在一起，最终文件损坏、摘要必然不符（甚至在校验信息缺失时
+// 直接安装坏包）。先落临时文件可保证 dst 只会收到一份完整数据。
 func (m *mirrorProvider) downloadFrom(ctx context.Context, urlStr string, rel *updater.Release, dst io.Writer, onProgress func(written, total int64)) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
@@ -538,48 +553,62 @@ func (m *mirrorProvider) downloadFrom(ctx context.Context, urlStr string, rel *u
 		return fmt.Errorf("%s", i18n.T("log.updater_http_status", "Status", resp.StatusCode))
 	}
 
+	tmp, err := os.CreateTemp("", "certflow-update-*.part")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+	}()
+
 	expected := rel.Artifact.Size
 	total := expected
 	if total == 0 && resp.ContentLength > 0 {
 		total = resp.ContentLength
 	}
-	written := int64(0)
-	buf := make([]byte, 64*1024)
-	for {
-		n, rerr := resp.Body.Read(buf)
-		if n > 0 {
-			if _, werr := dst.Write(buf[:n]); werr != nil {
-				return werr
-			}
-			written += int64(n)
-			if onProgress != nil {
-				onProgress(written, total)
-			}
+	written, err := io.Copy(tmp, &countingReader{r: resp.Body, onRead: func(n int64) {
+		if onProgress != nil {
+			onProgress(n, total)
 		}
-		if rerr == io.EOF {
-			break
-		}
-		if rerr != nil {
-			return rerr
-		}
+	}})
+	if err != nil {
+		return err
 	}
 	// 大小校验：期望大小已知且不符（多半是错误页/重定向页），回退下一源。
 	if expected > 0 && written != expected {
 		return fmt.Errorf("%s", i18n.T("log.updater_download_size_mismatch", "Expected", expected, "Actual", written))
 	}
+	if err := tmp.Sync(); err != nil {
+		return err
+	}
+	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	// 只有整包下载成功后才写 dst，保证多源重试不会污染框架侧文件与哈希。
+	if _, err := io.Copy(dst, tmp); err != nil {
+		return fmt.Errorf("%w: %w", errUpdaterDstWrite, err)
+	}
 	return nil
 }
 
-// resetDst 在多次下载尝试间清空 dst，避免上一源的部分数据污染下一源。
-func resetDst(dst io.Writer) {
-	type seekTruncater interface {
-		Seek(offset int64, whence int) (int64, error)
-		Truncate(size int64) error
+// countingReader 统计已读字节并回调进度。
+type countingReader struct {
+	r      io.Reader
+	read   int64
+	onRead func(delta int64)
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	if n > 0 {
+		c.read += int64(n)
+		if c.onRead != nil {
+			c.onRead(c.read)
+		}
 	}
-	if st, ok := dst.(seekTruncater); ok {
-		_, _ = st.Seek(0, io.SeekStart)
-		_ = st.Truncate(0)
-	}
+	return n, err
 }
 
 // fetchChecksumViaMirror 按语言单一源拉取校验侧车文件（如 SHA256SUMS）：
@@ -651,8 +680,14 @@ func (m *mirrorProvider) fetchChecksumViaMirror(ctx context.Context, rel *update
 	return nil, time.Time{}, "", false
 }
 
-// fetchText 从指定 URL 拉取文本内容（用于校验侧车文件）。
+// fetchText 从指定 URL 拉取文本内容（用于校验侧车文件与 API 元数据）。
+// 使用不设总超时的下载客户端，这里补一个默认 60s 超时，避免小请求挂死。
 func (m *mirrorProvider) fetchText(ctx context.Context, urlStr string) ([]byte, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err

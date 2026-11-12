@@ -21,28 +21,28 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
  * CheckNow 立即执行一次检查
  */
 export function CheckNow(id: number): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.CheckNow", id);
+    return $Call.ByID(877434032, id);
 }
 
 /**
  * Create 创建监控域名
  */
 export function Create(input: monitor$0.CreateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.Create", input);
+    return $Call.ByID(1021624084, input);
 }
 
 /**
  * Delete 删除监控域名
  */
 export function Delete(id: number): $CancellablePromise<void> {
-    return $Call.ByName("main.MonitorServiceWrapper.Delete", id);
+    return $Call.ByID(3389587627, id);
 }
 
 /**
  * List 获取所有监控域名
  */
 export function List(): $CancellablePromise<(monitor$0.MonitoredDomainItem | null)[] | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.List");
+    return $Call.ByID(3701956536);
 }
 
 /**
@@ -50,26 +50,26 @@ export function List(): $CancellablePromise<(monitor$0.MonitoredDomainItem | nul
  * id: 监控域名ID；days: 查询最近多少天；返回检查历史列表。
  */
 export function ListHistory(id: number, days: number): $CancellablePromise<(monitor$0.MonitorCheckLogItem | null)[] | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.ListHistory", id, days);
+    return $Call.ByID(1259614592, id, days);
 }
 
 /**
  * SetActive 设置监控域名的启用状态
  */
 export function SetActive(id: number, active: boolean): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.SetActive", id, active);
+    return $Call.ByID(2564808074, id, active);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByName("main.MonitorServiceWrapper.SetApp", app);
+    return $Call.ByID(1142570155, app);
 }
 
 /**
  * Update 更新监控域名
  */
 export function Update(id: number, input: monitor$0.UpdateInput): $CancellablePromise<monitor$0.MonitoredDomainItem | null> {
-    return $Call.ByName("main.MonitorServiceWrapper.Update", id, input);
+    return $Call.ByID(3363052401, id, input);
 }

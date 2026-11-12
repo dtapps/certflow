@@ -138,8 +138,12 @@ func (s *SysTrayService) ServiceStartup(ctx context.Context, options application
 		s.ShowWindow()
 	})
 
-	// 窗口关闭时隐藏到托盘而不是退出
+	// 窗口关闭时隐藏到托盘而不是退出；但应用正在退出（含自更新重启）时必须放行，
+	// 否则 Cancel 会拦住窗口关闭，拖慢甚至卡死退出流程。
 	s.mainWindow.RegisterHook(wailsEvents.Common.WindowClosing, func(e *application.WindowEvent) {
+		if appQuitting.Load() {
+			return
+		}
 		s.mainWindow.Hide()
 		e.Cancel()
 	})

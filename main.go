@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"cnb.cool/dtapp/certflow/internal/auth"
@@ -40,9 +40,6 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed updater_window.html
-var updaterWindowHTML string
-
 // 当前版本号（构建时通过 -ldflags 覆盖）不带 v
 var currentVersion = "dev"
 
@@ -51,6 +48,11 @@ var buildTime = ""
 var gitCommit = ""
 var githubToken = ""
 var cnbToken = ""
+
+// appQuitting 标记应用已进入退出流程。
+// Wails 退出时会关闭所有窗口；若「关闭即隐藏到托盘」的钩子此时仍然 Cancel，
+// 退出/自更新重启流程可能被卡住（helper 只等父进程 30 秒，超时便放弃替换）。
+var appQuitting atomic.Bool
 
 // formatBuildTime 将构建注入的 UTC RFC3339 时间（如 2006-01-02T15:04:05Z）
 // 解析为本地时区可读格式（2006-01-02 15:04:05）；解析失败则原样返回，空字符串返回"-"。
@@ -246,6 +248,12 @@ func main() {
 				mainWindow.Focus()
 			},
 		},
+		// 退出流程：先标记 appQuitting，让「关闭即隐藏到托盘」的窗口钩子放行，
+		// 避免退出（含自更新重启）被拦在窗口关闭环节。
+		ShouldQuit: func() bool {
+			appQuitting.Store(true)
+			return true
+		},
 		Services: []application.Service{
 			application.NewService(caSvc),
 			application.NewService(dnsSvc),
@@ -302,9 +310,12 @@ func main() {
 
 	// 配置自更新功能
 	// https://v3.wails.io/guides/updater/
-	// 更新器复用全局 HTTP 客户端（含 UA 注入、代理、自定义 DNS），
-	// 而非自建裸 client，避免丢失全局注入与可观测性。
-	updaterClient := network.BuildHTTPClient(settingsService.Get())
+	// 检测与下载使用两个客户端：检测走带 60s 总超时的普通客户端；
+	// 下载走不设总超时的客户端（http.Client.Timeout 会覆盖响应体读取，
+	// 更新包数十 MB，慢网下会被中途掐断）。两者都复用全局 transport
+	//（UA 注入、代理、自定义 DNS），避免丢失全局注入与可观测性。
+	updaterCheckClient := network.BuildHTTPClient(settingsService.Get())
+	updaterDownloadClient := network.BuildDownloadHTTPClient(settingsService.Get())
 	gh, err := newMirrorProvider(github.Config{
 		Repository:    "dtapps/certflow",
 		Token:         githubToken,
@@ -352,22 +363,38 @@ func main() {
 			logging.Debug(i18n.T("log.updater_matcher_none"))
 			return -1
 		},
-	}, updaterClient, buildTime, gitCommit, cnbToken)
+	}, updaterCheckClient, updaterDownloadClient, buildTime, gitCommit, cnbToken)
 	if err != nil {
 		logging.Error(i18n.T("log.updater_init_failed"), err)
 	} else {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
+			// 使用框架自带的更新窗口（默认模板 + 默认交互）。
 			Window: &updater.BuiltinWindow{
-				// 使用定制模板：版本号副标题不拼 "v" 前缀（nightly 显示 nightly 而非 vnightly）。
-				HTML: updaterWindowHTML,
 				Options: updater.WindowOptions{
 					Title: i18n.T("updater.title"),
 				},
 			},
 		}); err != nil {
 			logging.Error(i18n.T("log.updater_init_failed"), err)
+		} else {
+			// 内置更新窗口在 macOS 上收不到事件（内联 HTML 拿不到 Wails 运行时），
+			// 用户点不到 "Restart & Apply"，因此下载与暂存完成后自动触发重启。
+			// 这里不做任何 cleanup：即使重启失败，调度器/域名监控也保持正常运行。
+			app.Event.On(updater.EventUpdateReady, func(*application.CustomEvent) {
+				logging.Info(i18n.T("log.updater_ready"))
+				go func() {
+					defer func() {
+						if r := recover(); r != nil {
+							logging.Error("%s: %v", i18n.T("log.updater_restart_panic"), r)
+						}
+					}()
+					if err := app.Updater.Restart(context.Background()); err != nil {
+						logging.Warn("%s: %v", i18n.T("log.updater_restart_failed"), err)
+					}
+				}()
+			})
 		}
 	}
 
@@ -493,40 +520,15 @@ func main() {
 		schedulerService.Stop()
 	}()
 
-	// updater 下载安装完成（EventUpdateReady）后主动停掉后台任务，
-	// 避免它们在二进制替换 / 重启前继续写库或占用资源。
-	// 注意：这里【不能】关闭数据库。此时进程并未退出（要等 Quit/重启
-	// 真正触发后由 main 的 defer db.Close() 统一关闭），前端仍在运行并
-	// 周期性调用后端绑定（如未读通知数量 CountUnread），过早关闭 DB 会
-	// 导致 "sql: database is closed" 错误。
-	var cleanupOnce sync.Once
-	cleanup := func() {
-		cleanupOnce.Do(func() {
-			schedulerService.Stop()
-			monitorService.Stop()
-			cancel()
-		})
-	}
-
-	// 更新下载并暂存完成（StateReady）后，由代码主动触发 Restart 完成
-	// 二进制替换与进程重启，不再依赖用户点击窗口里的 "Restart & Apply"
-	// 按钮。之前只做 cleanup 而不调用 Restart，若窗口状态没正常切到
-	// Ready（仍停留在 "Contacting update server…"），用户便永远点不到
-	// Restart 按钮，进程永不退出重启，更新窗口也就一直卡住。
-	app.Event.On(updater.EventUpdateReady, func(e *application.CustomEvent) {
-		logging.Info(i18n.T("log.updater_ready"))
-		cleanup()
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logging.Error("%s: %v", i18n.T("log.updater_restart_panic"), r)
-				}
-			}()
-			if err := app.Updater.Restart(context.Background()); err != nil {
-				logging.Warn("%s: %v", i18n.T("log.updater_restart_failed"), err)
-			}
-		}()
-	})
+	// 自更新只负责「下载 + 校验 + 暂存」，替换二进制与重启由框架更新窗口里的
+	// "Restart & Apply" 按钮触发的 Restart 完成（先 Quit，再由 helper 等父进程
+	// 退出后替换并重新拉起）。
+	//
+	// 这里不再监听 EventUpdateReady 自动 Restart：框架 helper 只等父进程 30 秒，
+	// 本应用退出耗时可能超过该上限，helper 超时后会静默放弃替换并重启旧版本，
+	// 表现为「更新就绪 → 重启 → 还是旧版本」，且失败不会回传给应用、无法观测。
+	// 另外原实现在就绪时先停掉调度器/域名监控并 cancel，一旦重启失败这些后台
+	// 任务便永久停摆，只能重启应用恢复。
 
 	// 监听系统主题变化，通知前端
 	// 注意：Wails v3 的 Event.Emit 返回值是「事件是否被取消(cancelled)」，

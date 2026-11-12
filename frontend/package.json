@@ -26,7 +26,7 @@
     "vfonts": "^0.0.3",
     "vue": "3.6.0-rc.14",
     "vue-echarts": "^8.3.2",
-    "vue-router": "^5.4.0"
+    "vue-router": "^5.5.0"
   },
   "devDependencies": {
     "@codecov/vite-plugin": "^2.0.1",
@@ -37,13 +37,13 @@
     "@vitest/coverage-v8": "^5.1.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "eslint": "^10.14.0",
-    "eslint-plugin-vue": "^10.12.0",
+    "eslint-plugin-vue": "^10.12.1",
     "prettier": "^3.9.10",
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2",
-    "typescript-eslint": "^8.72.1",
+    "typescript-eslint": "^8.72.2",
     "unplugin-auto-import": "^21.1.0",
     "unplugin-vue-components": "^32.1.0",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.14"
   }

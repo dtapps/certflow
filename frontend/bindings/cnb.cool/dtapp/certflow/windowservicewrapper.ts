@@ -23,26 +23,26 @@ import * as $models from "./models.js";
  * https://v3.wails.io/zh-cn/reference/window/#size
  */
 export function GetWindowSize(): $CancellablePromise<$models.WindowSize> {
-    return $Call.ByName("main.WindowServiceWrapper.GetWindowSize");
+    return $Call.ByID(7655511);
 }
 
 /**
  * OpenHTMLWindow 用指定 HTML 内容打开新窗口
  */
 export function OpenHTMLWindow(opts: $models.HTMLWindowOptions): $CancellablePromise<void> {
-    return $Call.ByName("main.WindowServiceWrapper.OpenHTMLWindow", opts);
+    return $Call.ByID(293867115, opts);
 }
 
 /**
  * OpenWindow 打开独立窗口（不带导航）
  */
 export function OpenWindow(opts: $models.HTMLWindowOptions): $CancellablePromise<void> {
-    return $Call.ByName("main.WindowServiceWrapper.OpenWindow", opts);
+    return $Call.ByID(3566480882, opts);
 }
 
 /**
  * SetApp 设置 app 引用（用于获取应用生命周期）
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByName("main.WindowServiceWrapper.SetApp", app);
+    return $Call.ByID(1240195805, app);
 }

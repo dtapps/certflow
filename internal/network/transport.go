@@ -33,6 +33,24 @@ func unwrapHTTPTransport(rt http.RoundTripper) (*http.Transport, bool) {
 
 // BuildHTTPClient 根据设置构建带有自定义 DNS 和代理的 HTTP 客户端
 func BuildHTTPClient(s settings.Settings) *http.Client {
+	return &http.Client{
+		Transport: buildTransport(s),
+		Timeout:   60 * time.Second,
+	}
+}
+
+// BuildDownloadHTTPClient 构建用于大文件下载的 HTTP 客户端。
+// 不设置 http.Client.Timeout：该超时覆盖整个响应体读取，更新包动辄数十 MB，
+// 网络稍慢就会被中途掐断（表现为 context deadline exceeded while reading body）。
+// 这里只保留连接/响应头超时，整体取消由调用方传入的 context 控制。
+func BuildDownloadHTTPClient(s settings.Settings) *http.Client {
+	return &http.Client{
+		Transport: buildTransport(s),
+	}
+}
+
+// buildTransport 构建带自定义 DNS 与代理的 RoundTripper（供普通请求与下载共用）
+func buildTransport(s settings.Settings) http.RoundTripper {
 	transport := httplog.WrapTransport(&http.Transport{
 		// 自定义 DNS 解析
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -68,10 +86,7 @@ func BuildHTTPClient(s settings.Settings) *http.Client {
 		}
 	}
 
-	return &http.Client{
-		Transport: transport,
-		Timeout:   60 * time.Second,
-	}
+	return transport
 }
 
 // resolveHost 使用设置中启用的 DNS 服务器解析域名
