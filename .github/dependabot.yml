@@ -27,3 +27,12 @@ updates:
     labels:
       - 'dependencies'
       - 'github-actions'
+
+  # Docker 镜像依赖（扫描 build/docker 下的 Dockerfile）
+  - package-ecosystem: 'docker'
+    directory: '/build/docker'
+    schedule:
+      interval: 'daily'
+    labels:
+      - 'dependencies'
+      - 'docker'

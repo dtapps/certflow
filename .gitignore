@@ -14,6 +14,7 @@ build/android/gen/
 .mimocode/
 image/systray*
 .vscode/
+.trae
 # Dev logs (per-session notes, not committed)
 /docs/*-*-*.md
 /docs/*.png
