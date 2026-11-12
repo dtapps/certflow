@@ -5,6 +5,14 @@
 # Fail script on any error
 set -euxo pipefail
 
+# 容器里默认没有 /dev/fuse，而 linuxdeploy 自己就是一个 AppImage（运行时要挂 squashfs）。
+# 检测不到 fuse 设备时自动改为「解包运行」，GitHub 容器 job 与原生 runner 都能跑通；
+# 原生 runner / 本地有 fuse 时不设这个变量，行为与上游模板完全一致。
+if [ ! -e /dev/fuse ]; then
+    export APPIMAGE_EXTRACT_AND_RUN=1
+    echo "未检测到 /dev/fuse，APPIMAGE_EXTRACT_AND_RUN=1（解包运行 AppImage）"
+fi
+
 # Define variables
 APP_DIR="${APP_NAME}.AppDir"
 
@@ -31,5 +39,4 @@ else
 fi
 
 # Rename the generated AppImage
-mv "${APP_NAME}*.AppImage" "${APP_NAME}.AppImage"
-
+mv "${APP_NAME}"*.AppImage "${APP_NAME}.AppImage"

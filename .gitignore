@@ -12,7 +12,6 @@ build/android/overlay.json
 build/android/gen/
 .codebuddy/
 .mimocode/
-AGENTS.md
 image/systray*
 .vscode/
 # Dev logs (per-session notes, not committed)
@@ -27,3 +26,5 @@ coverage-go.xml
 frontend/test-results.json
 frontend/test-report.xml
 go-test-report.xml
+
+AGENTS.md

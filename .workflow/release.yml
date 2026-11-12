@@ -8,7 +8,7 @@
 #   - VERSION               可选。不填就按 GitHub 最新的 Release 自动判定（常态）；
 #                           只有补发历史版本才需要填，**带不带 v 都行**（v1.2.3 / 1.2.3），脚本自己归一化
 #   - CERTFLOW_GITHUB_TOKEN 可选，GitHub 只读令牌，仅用于避开 api.github.com 60 次/小时匿名限额
-#   - PRERELEASE            可选，填 true / false 强制指定预发布；不建则自动判断
+# 没有 PRERELEASE 全局参数：是否预发布由 VERSION 后缀与 GitHub Release 的 prerelease 字段判定。
 #
 # 正文：download-stage 请求 GitHub API 拿到 release.body（markdown），
 # 用 marked 转成 HTML，处理后压成单行写进 GITEE_PARAMS 的 RELEASE_BODY，
@@ -23,7 +23,8 @@
 #      → 块级元素之间插 <!--/-->，用注释里的 / 把路径切成短段，走 ENOENT 降级；
 #   3. KEY=VALUE 不能跨行 → 拼成单行，HTML 交给 Gitee 渲染。
 #
-# 预发布：默认按 GitHub 的 prerelease 字段判断，并用 tag 后缀（-rc/-beta/-alpha）
+# 预发布：默认按 GitHub 的 prerelease 字段判断，并用 tag 后缀
+# （-rc / -beta / -alpha / -nightly，以及滚动 tag nightly）
 # 和正文里的「预发布 / Pre-release」等字样兜底；结果写入 GITEE_PARAMS，
 # 由 release-stage 的 prerelease: ${PRERELEASE} 取用。
 #
@@ -67,9 +68,8 @@ strategy:
 ref_variable:
   - VERSION
   - CERTFLOW_GITHUB_TOKEN
-  # 预发布开关，可选。填 true / false 就强制指定；不建这个参数也没关系，
-  # 脚本会按 GitHub 的 prerelease 字段自动判断。
-  - PRERELEASE
+  # 没有 PRERELEASE 开关：是否预发布由 tag 后缀（rc/beta/alpha/nightly）与
+  # GitHub Release 的 prerelease 字段判定，避免出现「勾了预发布但版本号是正式版」。
   # Release 正文。download-stage 用 marked 把 GitHub 的 body 转成单行 HTML
   # 写进 GITEE_PARAMS，下游 description: ${RELEASE_BODY} 取值。
   - RELEASE_BODY
@@ -107,11 +107,7 @@ stages:
               echo "     想指定版本：全局参数 VERSION 填 v0.2.19，或 Webhook 的 payload.params 里带 VERSION"
             fi
 
-            # 预发布开关：全局参数 PRERELEASE 可选，填 true / false 则强制指定，
-            # 不配（或值不是这两种）就由脚本按 GitHub 的 prerelease 字段自动判断。
-            # 用 printenv 而不是直接展开：参数没建时平台不做插值，留下的是字面 ${...}，
-            # 直接展开会把占位符塞进脚本，这里读出来再在 node 里判掉。
-            export PRERELEASE_MANUAL="$(printenv PRERELEASE 2>/dev/null || true)"
+            # 预发布不再有手动开关：脚本按 GitHub 的 prerelease 字段 + tag 后缀判定。
 
             # 正文转换依赖：marked 把 markdown 转 HTML。走 npmmirror 国内镜像，
             # 装到当前工作目录，下面的 stdin 脚本按 cwd 解析 require('marked')。
@@ -148,7 +144,11 @@ stages:
             // tag 一律补 v（GitHub 侧的惯用形式是 v0.2.19）。查 GitHub Release 用它，
             // 与附件名用的 VER 完全独立，所以 VERSION 填哪种格式都能对上。
             // VERSION 没给时留空，由 main() 取 /releases/latest 后回填。
-            let TAG = VER ? 'v' + VER : '';
+            //
+            // 例外：滚动 tag `nightly` 不能补 v —— GitHub 上它就是 `nightly`，
+            // 补成 vnightly 会 404（更新器的 nightlyTag 也写死为 `nightly`）。
+            const ROLLING = /^nightly$/i.test(RAW);
+            let TAG = RAW ? (ROLLING ? 'nightly' : 'v' + VER) : '';
 
             // 断点续传要带 Range 头，重定向到签名地址时也得一路带着，否则续传变成从头下
             function request(url, redirects, withAuth, rangeFrom) {
@@ -441,21 +441,14 @@ stages:
                   notes.length + ' 字符 → 单行 HTML ' + oneLine.length + ' 字符' +
                   '（无裸 =，最长路径片段 ' + longest + ' 字节）');
 
-                // 预发布标记：全局参数 PRERELEASE 显式指定时最优先；否则
-                // GitHub 的 prerelease 字段最权威，再叠加 tag 后缀和正文关键词兜底。
+                // 预发布标记：GitHub 的 prerelease 字段最权威（由版本号后缀写入），
+                // 再叠加 tag 后缀与正文关键词兜底。没有人工开关。
                 // 结果写进 GITEE_PARAMS，供下游 prerelease 字段插值（布尔）。
-                const manual = (process.env.PRERELEASE_MANUAL || '').trim().toLowerCase();
-                const preByTag = /[-.](rc|beta|alpha|pre|preview)\d*(\.|\b)/i.test(VER);
+                const preByTag = /[-.](rc|beta|alpha|nightly|pre|preview)\d*(\.|\b)/i.test(VER) || ROLLING;
                 const preByBody = /(预发布|测试版|抢先版|pre-?release|release candidate)/i.test(body);
-                let PRE;
-                if (manual === 'true' || manual === 'false') {
-                  PRE = manual === 'true';
-                  console.log('预发布：按全局参数 PRERELEASE=' + manual + ' 指定');
-                } else {
-                  PRE = rel.prerelease === true || preByTag || preByBody;
-                  console.log('预发布：' + PRE + '（GitHub prerelease=' + rel.prerelease +
-                    '，tag 后缀=' + preByTag + '，正文关键词=' + preByBody + '）');
-                }
+                const PRE = rel.prerelease === true || preByTag || preByBody;
+                console.log('预发布：' + PRE + '（GitHub prerelease=' + rel.prerelease +
+                  '，tag 后缀=' + preByTag + '，正文关键词=' + preByBody + '）');
                 fs.appendFileSync(pf, 'PRERELEASE=' + (PRE ? 'true' : 'false') + '\n', 'utf8');
 
                 // 落盘名直接用 GitHub 资产原名，目录上传不看名字，
@@ -570,9 +563,8 @@ stages:
           - assets/GIT_COMMIT
           - assets/SHA256SUMS
         # 预发布：download-stage 判定后写入 GITEE_PARAMS，这里插值取 true / false。
-        # 判定优先级：GitHub 的 prerelease 字段 > tag 后缀（-rc/-beta/-alpha）> 正文关键词。
-        # 想强制指定，就在流水线全局参数里新建 PRERELEASE（值为 true 或 false），
-        # 脚本会优先用它（见下方 download-stage 的 preManual 判断）。
+        # 判定优先级：GitHub 的 prerelease 字段 > tag 后缀（-rc/-beta/-alpha/-nightly）> 正文关键词。
+        # 没有人工开关：版本号后缀是唯一真值源。
         prerelease: ${PRERELEASE}
         # 同 tag 已存在时覆盖，代替之前手写的「先删旧 Release」
         allowUpdate: true
