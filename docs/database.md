@@ -184,7 +184,7 @@ auth_methods 1 ──< passkey_credentials
 - 独立库 `data/httplog.db`，单表 `http_log`，sqlc 实现。
 - 只在**日志级别 DEBUG** 时包裹 `http.DefaultTransport` / `DefaultClient` 并记录；其它级别完全透传，避免性能损耗。
 - 常驻连接只做 INSERT；`Cleanup` 用保存的 DSN 临时开连接执行 DELETE 后关闭。
-- 保留天数取设置 `http_log_retention_days`（默认 30，`<=0` 表示不清理）；`main.go` 启动时先清一次，之后每 24 小时一次。
+- 保留天数取设置 `http_log_retention_days`（默认 7，`<=0` 表示不清理）；`main.go` 启动时先清一次，之后每 24 小时一次。
 - 记录内容可能包含请求头/响应体，排查完建议把级别调回 INFO 并清理。
 
 ## 9. 日常操作

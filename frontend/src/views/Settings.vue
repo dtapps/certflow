@@ -51,7 +51,7 @@ const defaultSettings: SafeSettings = {
   auto_check_expiry: true,
   check_interval: 6,
   monitor_history_days: 90,
-  http_log_retention_days: 30,
+  http_log_retention_days: 7,
   language: 'auto',
   theme: 'auto',
   prerelease: false,

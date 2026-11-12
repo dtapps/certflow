@@ -138,4 +138,4 @@ sqlite3 ~/.certflow/data/certflow.db \
   "select id,cert_domain,deploy_domain,success,message from deploy_logs order by id desc limit 20;"
 ```
 
-DEBUG 级别在「设置 → 日志」里切换，立即生效；请求日志需要 DEBUG 才会写 `httplog.db`，保留天数默认 30 天。日志与备份都可能含私钥 / 凭证，外发前先脱敏。
+DEBUG 级别在「设置 → 日志」里切换，立即生效；请求日志需要 DEBUG 才会写 `httplog.db`，保留天数默认 7 天。日志与备份都可能含私钥 / 凭证，外发前先脱敏。

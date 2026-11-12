@@ -98,7 +98,7 @@
 | 自动检查过期         | `auto_check_expiry`       | `true` | 是否注册过期检查任务            |
 | 过期检查间隔（小时） | `check_interval`          | `6`    | 过期检查频率                    |
 | 监控历史保留（天）   | `monitor_history_days`    | `90`   | `monitor_check_logs` 清理       |
-| HTTP 日志保留（天）  | `http_log_retention_days` | `30`   | `httplog.db` 清理，`<=0` 不清理 |
+| HTTP 日志保留（天）  | `http_log_retention_days` | `7`    | `httplog.db` 清理，`<=0` 不清理 |
 
 ## 5. 排查
 

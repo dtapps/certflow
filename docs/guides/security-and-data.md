@@ -80,7 +80,7 @@ DNS 选择还会影响 DNS-01 的传播检查：所有已启用的 DNS 服务器
 - `certflow.log`：应用主日志，可能包含域名、错误信息、云端返回片段。
 - `frontend.log`：前端运行时错误（发布版也会上报，因为发布构建会 drop `console`）。
 - `ent.log`：仅 DEBUG 下的 SQL；`gocron.log`：定时任务。
-- `httplog.db`：DEBUG 下的出站请求日志，会记录 URL / 头 / 响应片段。排查完把级别调回 INFO，并按 `http_log_retention_days` 清理（默认 30 天）。
+- `httplog.db`：DEBUG 下的出站请求日志，会记录 URL / 头 / 响应片段。排查完把级别调回 INFO，并按 `http_log_retention_days` 清理（默认 7 天）。
 - 日志查看器支持按文件读取末尾 N 行；「打开日志目录」调系统文件管理器。
 
 不要把含真实域名、Token、私钥片段的日志贴到公开 Issue。

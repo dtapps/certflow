@@ -151,7 +151,7 @@ func main() {
 		logging.Error(i18n.T("error.httplog_init_failed", "Error", err))
 	} else {
 		defer httplog.Close()
-		// 启动 HTTP 请求日志定期清理（保留天数取设置，默认 30 天）
+		// 启动 HTTP 请求日志定期清理（保留天数取设置，默认 7 天）
 		go func() {
 			cleanupHttpLog := func() {
 				days := settingsService.Get().HttpLogRetentionDays

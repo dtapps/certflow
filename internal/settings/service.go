@@ -146,7 +146,7 @@ func DefaultSettings() Settings {
 		RenewInterval:        1,
 		AutoRenewEnabled:     true,
 		MonitorHistoryDays:   90,
-		HttpLogRetentionDays: 30,
+		HttpLogRetentionDays: 7,
 		Language:             "auto",
 		Theme:                "auto",
 		Prerelease:           false,
