@@ -38,7 +38,8 @@ default:
 # 发布同步：从 GitHub Release 下载产物，发布到 GitLab Release
 # ---------------------------------------------------------------------------
 # 只在 trigger 源流水线跑（GitHub 侧 release.yml 的 sync-gitlab job 触发）：
-#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3 variables[PRERELEASE]=false
+#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3（nightly 传 nightly）
+# 是否预发布由 VERSION 后缀判定，不接受额外的布尔变量。
 #
 # 附件存放：GitLab 没有「Release 二进制附件」API，所以走 **Generic Package Registry**，
 # Release 的 assets link 指向 package 地址，并用 direct_asset_path 生成直链
@@ -57,7 +58,7 @@ release:
   rules:
     # 主路径：GitHub Actions 用 trigger token 自动触发
     - if: $CI_PIPELINE_SOURCE == "trigger"
-    # 手动路径：CI/CD → Pipelines → Run pipeline，在「变量」区填 VERSION（可加 PRERELEASE）
+    # 手动路径：CI/CD → Pipelines → Run pipeline，在「变量」区填 VERSION（后缀决定是否预发布）
     # 要求 VERSION 非空，没填就不创建这个 job，避免空跑一次必然失败的发布
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION
   script:
@@ -65,9 +66,20 @@ release:
       set -euo pipefail
 
       TAG="${VERSION:?未传入 VERSION —— 网页手动执行时请在 Run pipeline 的变量区填写（如 VERSION=v0.2.19）}"
-      case "$TAG" in v*) ;; *) TAG="v${TAG}" ;; esac
-      PRE="${PRERELEASE:-false}"
-      [ "$PRE" = "true" ] || PRE="false"
+      # 滚动 tag（nightly）不能补 v 前缀：GitHub 侧固定用 tag `nightly`，
+      # 补成 vnightly 会 404（更新器的 nightlyTag 也是写死的 `nightly`）。
+      # 其余版本一律补 v（允许传 0.2.19 或 v0.2.19）。
+      case "$TAG" in
+        v*) ;;
+        nightly | NIGHTLY) TAG="nightly" ;;
+        *) TAG="v${TAG}" ;;
+      esac
+      # 预发布：只看 tag 后缀（与 GitHub / CNB / GitCode 同一口径）。
+      # 不再接收外部传入的 PRERELEASE 变量：布尔和版本号打架时，Release 会自相矛盾。
+      case "$TAG" in
+        *-rc* | *-beta* | *-alpha* | *-nightly* | nightly) PRE="true" ;;
+        *) PRE="false" ;;
+      esac
       echo "版本号: ${TAG}  预发布: ${PRE}"
 
       GH_API="https://api.github.com/repos/dtapps/certflow"
@@ -121,6 +133,9 @@ release:
             -e "s#${GH_BASE}/releases/download/([^/ )]+)/([^ )]+)#${CI_PROJECT_URL}/-/releases/\1/downloads/\2#g" \
             -e "s#${GH_BASE}/releases/tag/([^/ )]+)#${CI_PROJECT_URL}/-/releases/\1#g" \
             -e "s#${GH_BASE}/releases([^A-Za-z0-9/]|$)#${CI_PROJECT_URL}/-/releases\1#g" \
+            -e "s#${GH_BASE}/compare/([^ )]+)#${CI_PROJECT_URL}/-/compare/\1#g" \
+            -e "s#${GH_BASE}/commits/([^ )]+)#${CI_PROJECT_URL}/-/commits/\1#g" \
+            -e "s#${GH_BASE}/commit/([^ )]+)#${CI_PROJECT_URL}/-/commit/\1#g" \
             -e "s#${GH_BASE}#${CI_PROJECT_URL}#g" \
         > body.md
 
@@ -145,8 +160,16 @@ release:
           403|409) echo "  ⚠ ${NAME} 已存在（同版本重发），复用已有文件" ;;
           *) echo "  ✗ 上传 ${NAME} 失败 HTTP=${HTTP}"; cat /tmp/pkg.out; exit 1 ;;
         esac
-        LINKS=$(echo "$LINKS" | jq --arg n "$NAME" --arg u "$UP_URL" --arg d "/${NAME}" \
-          '. + [{name: $n, url: $u, direct_asset_path: $d, link_type: "package"}]')
+        # 升级专用包（updater-*）与更新器元数据（BUILD_TIME / GIT_COMMIT）照常上传，
+        # 但**不列进 Release 的 assets 链接**：它们只给应用自更新用，普通用户点了也没法用。
+        # 这与 GitHub 正文下载表的口径一致（那边同样排除这三类）。
+        case "$NAME" in
+          updater-* | BUILD_TIME | GIT_COMMIT) ;;
+          *)
+            LINKS=$(echo "$LINKS" | jq --arg n "$NAME" --arg u "$UP_URL" --arg d "/${NAME}" \
+              '. + [{name: $n, url: $u, direct_asset_path: $d, link_type: "package"}]')
+            ;;
+        esac
       done
 
       # 幂等：删同 tag 的旧 release（tag 保留，下面创建时复用）
@@ -157,9 +180,15 @@ release:
         *) echo "⚠ 删除旧 release 返回 HTTP=${HTTP}（继续）" ;;
       esac
 
+      # 标题与 GitHub / CNB 同口径：项目名 + 版本，预发布额外带后缀
+      RELEASE_NAME="CertFlow ${TAG}"
+      if [ "$PRE" = "true" ]; then
+        RELEASE_NAME="CertFlow ${TAG} (预发布)"
+      fi
+
       # tag 不存在时由 ref 自动创建，指向默认分支最新提交
       PAYLOAD=$(jq -n \
-        --arg name "$TAG" \
+        --arg name "$RELEASE_NAME" \
         --arg tag "$TAG" \
         --arg desc "$(cat body.md)" \
         --arg ref "$CI_DEFAULT_BRANCH" \

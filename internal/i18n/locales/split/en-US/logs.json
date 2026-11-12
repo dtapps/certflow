@@ -412,6 +412,8 @@
   "log.updater_nightly_same_commit": "nightly remote commit ({{.Commit}}) matches local, same build, update skipped",
   "log.updater_nightly_skipped": "nightly prerelease published at {{.PublishedAt}} is older than local build ({{.BuildTime}}), skipped",
   "log.updater_ready": "Update ready, preparing to restart",
+  "log.updater_restart_panic": "panic while triggering auto restart: %v",
+  "log.updater_restart_failed": "auto restart failed: %v",
   "log.updater_release_missing_metadata": "release missing metadata",
   "log.updater_source_download": "Downloading update: source={{.Source}} url={{.URL}}",
   "log.updater_source_failed": "Update source failed, trying next: source={{.Source}} error={{.Error}}",

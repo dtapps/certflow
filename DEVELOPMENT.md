@@ -248,8 +248,8 @@ make build VERSION=1.0.0
 
 ### 发布工作流
 
-- **GitHub Actions（Release）**：手动输入版本号，六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；勾选 `prerelease` 即发布为预发布版本
-- **CNB**：手动输入版本号（可传 `pre_release=true`），从 GitHub Release 下载产物并发布
+- **GitHub Actions（Release）**：手动输入版本号或每天定时触发（定时等价于填 `nightly`），六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；是否预发布只看版本号后缀（`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`，滚动填 `nightly`），没有 `prerelease` 勾选框
+- **CNB**：手动输入版本号（只传 `version`，预发布同样看后缀），从 GitHub Release 下载产物并发布
 - **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
 - **镜像同步**：GitHub 发布成功后自动触发 CNB / GitLab 同步；Gitee 通过 webhook 触发 `.workflow/release.yml`（需 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）；GitCode 当前不发布版本（`.gitcode/workflows/release.yml` 与 `sync-gitcode` 配置保留，未作为发布平台）
 

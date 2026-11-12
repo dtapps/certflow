@@ -495,11 +495,10 @@ func main() {
 
 	// updater 下载安装完成（EventUpdateReady）后主动停掉后台任务，
 	// 避免它们在二进制替换 / 重启前继续写库或占用资源。
-	// 注意：这里【不能】关闭数据库。此时进程并未退出（要等用户点击
-	// Restart 触发 Quit 才退出），前端仍在运行并周期性调用后端绑定
-	// （如未读通知数量 CountUnread），过早关闭 DB 会导致
-	// "sql: database is closed" 错误。数据库由 main 的 defer db.Close()
-	// 在进程真正退出时统一关闭。
+	// 注意：这里【不能】关闭数据库。此时进程并未退出（要等 Quit/重启
+	// 真正触发后由 main 的 defer db.Close() 统一关闭），前端仍在运行并
+	// 周期性调用后端绑定（如未读通知数量 CountUnread），过早关闭 DB 会
+	// 导致 "sql: database is closed" 错误。
 	var cleanupOnce sync.Once
 	cleanup := func() {
 		cleanupOnce.Do(func() {
@@ -509,9 +508,24 @@ func main() {
 		})
 	}
 
+	// 更新下载并暂存完成（StateReady）后，由代码主动触发 Restart 完成
+	// 二进制替换与进程重启，不再依赖用户点击窗口里的 "Restart & Apply"
+	// 按钮。之前只做 cleanup 而不调用 Restart，若窗口状态没正常切到
+	// Ready（仍停留在 "Contacting update server…"），用户便永远点不到
+	// Restart 按钮，进程永不退出重启，更新窗口也就一直卡住。
 	app.Event.On(updater.EventUpdateReady, func(e *application.CustomEvent) {
 		logging.Info(i18n.T("log.updater_ready"))
 		cleanup()
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logging.Error("%s: %v", i18n.T("log.updater_restart_panic"), r)
+				}
+			}()
+			if err := app.Updater.Restart(context.Background()); err != nil {
+				logging.Warn("%s: %v", i18n.T("log.updater_restart_failed"), err)
+			}
+		}()
 	})
 
 	// 监听系统主题变化，通知前端

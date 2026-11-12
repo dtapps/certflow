@@ -10,7 +10,15 @@ include:
   - .cnb/workflows/sca.yml
 
 # 发布 Release（从 GitHub 下载 release 构建产物并发布到 CNB）
-# 支持预发布：通过页面/API 传入 pre_release=true 即发布为预发布版本（原 nightly 能力已合并到此）。
+#
+# 版本号规则（实现见 scripts/ci/resolve-prerelease.sh，与 GitHub 的 release.yml 同口径）：
+#   1.2.3                    -> v1.2.3，正式版
+#   1.2.3-rc.1 / -beta.1 / -alpha.1 / -nightly.20260101 -> 预发布
+#   nightly                  -> 滚动预发布 tag（更新器按固定 tag `nightly` 拉新版本）
+#
+# 「是不是预发布」只看版本号后缀，不再接受页面上的 pre_release 勾选：
+# 布尔输入会和版本号打架（此前 UI 勾了预发布但版本号是 1.0.0，就会发出一个
+# prerelease=true 却挂着正式版本号的 Release）。
 # CERTFLOW_GITHUB_TOKEN 去 envs 里配置环境变量
 .trigger_release: &trigger_release
   runner:
@@ -19,39 +27,52 @@ include:
   stages:
     - name: 处理版本号与选项
       script: |
-        # 正式版版本号由外部 API 通过环境变量 version 传入（api_trigger_release 的 env 字段）
-        if [ -z "$version" ]; then
-          echo "错误：未通过 env 传入 version 变量"
-          exit 1
-        fi
-        if ! echo "$version" | grep -qE '^v'; then
-          version="v${version}"
-        fi
-        echo "版本号: $version"
-        echo "##[set-output interior_version=$version]"
+        # 版本号归一化 / 格式校验 / 预发布判定只有一份实现：scripts/ci/resolve-prerelease.sh，
+        # GitHub 的 .github/workflows/release.yml 也 source 它，避免两边各写一套 grep 正则、
+        # 口径慢慢跑偏。
+        #
+        # 「是不是预发布」只看版本号后缀（rc / beta / alpha / nightly），不接受人工勾选：
+        # 布尔输入会和版本号打架（此前 pre_release 与 version 就是两套口径）。
+        # shellcheck source=scripts/ci/resolve-prerelease.sh
+        . scripts/ci/resolve-prerelease.sh
+        resolve_version "$version" || exit 1
+        echo "$PRE_NOTE"
 
-        # preRelease 选项：由页面/ENV 传入 pre_release（true/false），默认 false
-        pre_release="${pre_release:-false}"
-        if [ "$pre_release" != "true" ] && [ "$pre_release" != "false" ]; then
-          echo "警告：pre_release 值为 '${pre_release}'，仅支持 true/false，已回落到 false"
-          pre_release="false"
-        fi
-        echo "preRelease: $pre_release"
-        echo "##[set-output pre_release=$pre_release]"
+        # 通过 set-output 输出到 result，由下方 exports 映射成后续 stage 的环境变量。
+        echo "##[set-output interior_version=$TAG]"
+        echo "##[set-output interior_prerelease=$PRERELEASE]"
       exports:
         interior_version: INTERIOR_VERSION
-        pre_release: PRE_RELEASE
+        interior_prerelease: INTERIOR_PRERELEASE
 
-    # 生成 Release 选项文件（preRelease 按传入值动态设置），供下方 git:release 的 optionsFrom 引用
+    # 生成 Release 选项文件，供 git:release 的 optionsFrom 读取。
+    #
+    # 为什么不用 options 里的 ${INTERIOR_PRERELEASE} 直接插值：preRelease 的类型是严格的
+    # Boolean，而变量替换产出的是字符串 "false"，字符串在布尔位置上容易被当成真值，
+    # 导致正式版也被勾成预发布。走 optionsFrom 读到的是 JSON 里真正的布尔值，没有这个歧义。
+    # descriptionFromFile 同理：正文里有反引号、管道符和换行，塞进插值里容易被转义毁掉。
     - name: 生成 Release 选项文件
       script: |
-        cat > release_options.yml << EOF
-        tag: ${INTERIOR_VERSION}
-        title: "${INTERIOR_VERSION}"
-        descriptionFromFile: release_body.md
-        preRelease: ${PRE_RELEASE}
-        overlying: false
-        EOF
+        set -eu
+        # 空值写进配置后 git:release 会当成脏配置，报错还落在「发布」那一步，跟真正的原因隔了三屏。
+        # 空就直接死在这一步。
+        : "${INTERIOR_VERSION:?INTERIOR_VERSION 为空——第一步没跑成功}"
+        : "${INTERIOR_PRERELEASE:?INTERIOR_PRERELEASE 为空——第一步没跑成功}"
+
+        # 标题统一带项目名前缀（与 GitHub 的 .github/workflows/release.yml 同口径，改名字两边一起改）
+        project_name="CertFlow"
+
+        if [ "${INTERIOR_PRERELEASE}" = "true" ]; then
+          release_title="${project_name} ${INTERIOR_VERSION} (预发布)"
+          prerelease_json=true
+        else
+          release_title="${project_name} ${INTERIOR_VERSION}"
+          prerelease_json=false
+        fi
+
+        printf '{\n  "tag": "%s",\n  "title": "%s",\n  "descriptionFromFile": "release_body.md",\n  "preRelease": %s\n}\n' \
+          "${INTERIOR_VERSION}" "${release_title}" "${prerelease_json}" > ./.cnb-release-options.json
+        cat ./.cnb-release-options.json
 
     - name: 从 GitHub Release 下载构建产物
       script: |
@@ -191,7 +212,10 @@ include:
     # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
     - name: 创建 Release
       type: git:release
-      optionsFrom: release_options.yml
+      # tag / title / preRelease / description 全部来自上一步写出的 JSON。
+      # 版本号带 -rc / -beta / -alpha / -nightly 后缀才勾选「预发布」，正式版不勾，
+      # 不接受人工输入。overlying 默认 false（先删再建），与上方「删除已存在的 Release 与 Tag」一致。
+      optionsFrom: ./.cnb-release-options.json
 
     # https://docs.cnb.cool/zh/plugin/public/cnbcool/attachments.html
     - name: 上传 Release 附件
@@ -208,12 +232,12 @@ include:
       script: echo $FILES
 
 master:
-  # 手动触发：通过页面自定义按钮执行（可选是否预发布）
+  # 手动触发：通过页面自定义按钮执行（预发布看版本号后缀，页面不再有勾选框）
   web_trigger_release:
     - *trigger_release
 
   # API 触发：由 GitHub Actions 发布 Release 后调用 CNB Open API 触发（event=api_trigger_release）
-  # 需通过 env 传入 version 变量（如 {"version":"v1.2.3"}），发布到 CNB
-  # 可选：传入 pre_release 变量控制是否为预发布版本（true/false），默认 false
+  # 需通过 env 传入 version 变量（如 {"version":"v1.2.3"} / {"version":"v1.2.3-rc.1"} / {"version":"nightly"}）。
+  # 预发布标记由 version 后缀推导，env 里的 pre_release 已废弃（传了也不看，避免两套口径打架）。
   api_trigger_release:
     - *trigger_release

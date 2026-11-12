@@ -91,7 +91,10 @@ make format-frontend-write # 格式化前端代码（Prettier）
 ## 发布
 
 - **正式发布**：在 GitHub Actions 的 Release 工作流中手动输入版本号，六个平台并行构建并发布 GitHub Release
-- **预发布**：同一工作流勾选 `prerelease`（CNB 侧传 `pre_release=true`）即发布为预发布版本，不再单独跑每日构建
+- **预发布**：同一工作流输入带后缀的版本号即发布为预发布，**不看勾选框**（布尔输入会和版本号打架）：
+  - `1.2.3-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`：常规预发布，更新内容按同渠道对比
+  - `nightly`：滚动预发布，始终更新固定 tag `nightly` 的 Release（应用内「预发布更新」按这个 tag 拉取）
+- **Release 正文**：由 `scripts/ci/render-release-body.sh` 统一生成（发布信息表 / 下载表 / SHA256SUMS 校验 / 更新内容），更新内容由 `scripts/ci/release-changelog.sh` 按渠道选对比基准并分组；版本号归一化与预发布判定见 `scripts/ci/resolve-prerelease.sh`，GitHub 与 CNB 共用同一份实现
 - **发布平台**：只有 GitHub / CNB / GitLab / Gitee 四个平台发布版本，其他平台不发布
 - **镜像同步**：发布成功后自动同步到 CNB / GitLab；Gitee 通过 webhook 触发 `.workflow/release.yml`（需配置 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）
 

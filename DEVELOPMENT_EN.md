@@ -247,8 +247,8 @@ Injected variables (`main.go`):
 
 ### Release Workflow
 
-- **GitHub Actions (Release)**: Manual trigger with version input, six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes a GitHub Release; tick `prerelease` to publish a pre-release
-- **CNB**: Manual trigger with version (optional `pre_release=true`), downloads artifacts from GitHub Release and publishes locally
+- **GitHub Actions (Release)**: Manual trigger with a version input or the daily schedule (equivalent to `nightly`), six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes a GitHub Release; pre-release is decided only by the version suffix (`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`, rolling releases use `nightly`), there is no `prerelease` checkbox
+- **CNB**: Manual trigger with version (only `version` is passed; pre-release is likewise suffix-based), downloads artifacts from GitHub Release and publishes locally
 - **Release platforms**: only GitHub / CNB / GitLab / Gitee publish releases; other platforms do not
 - **Mirror sync**: A successful GitHub release triggers CNB / GitLab sync automatically; Gitee is triggered via webhook into `.workflow/release.yml` (needs `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`, run manually when unset); GitCode does not publish releases for now (`.gitcode/workflows/release.yml` and `sync-gitcode` are kept but not used as a release platform)
 

@@ -1,7 +1,7 @@
 # CI 基础镜像说明（certflow）
 
 > ⚠️ **本文已过时（2026-11-02 起）**：下文记录的是「两个平台各自用 Dockerfile 自建 CI 镜像」的旧方案， 相关文件均已删除，**不要按本文配置**。当前现状：
-> - GitHub Actions（`.github/workflows/` 下 `push.yml` / `codecov.yml` / `coveralls.yml`）： `container.image: ghcr.io/dtapps/golang/wails3:latest`
+> - GitHub Actions（`.github/workflows/` 下 `push.yml` / `codecov.yml` / `coveralls.yml` / `release.yml` 的 `build-linux` job）： `container.image: ghcr.io/dtapps/golang/wails3:latest`
 > - CNB（`.cnb/workflows/` 下 `push.yml` / `push-coverage.yml` / `pull-coverage.yml`）： `docker.image: docker.cnb.cool/dtapp/golang/wails3`
 > - 已删除：`.github/ci/Dockerfile`、`.cnb/ci/Dockerfile`、`.github/workflows/ci-image.yml`。 各仓库直接引用统一镜像，不再重复打包；镜像内容与工具版本由统一镜像仓库维护。
 >
