@@ -55,6 +55,8 @@ type Settings struct {
 	Language             string      `json:"language" mapstructure:"language"`                               // 语言：zh-CN/en-US/auto
 	Theme                string      `json:"theme" mapstructure:"theme"`                                     // 主题：dark/light/auto
 	Prerelease           bool        `json:"prerelease" mapstructure:"prerelease"`                           // 是否检查预发布版本
+	UpdateCheckInterval  int         `json:"update_check_interval" mapstructure:"update_check_interval"`     // 自动检查更新间隔（小时，0 表示关闭，仅在启动时检查一次）
+	AutoRestart          bool        `json:"auto_restart" mapstructure:"auto_restart"`                       // 更新安装完成后是否自动重启应用
 	DNSConfigs           []DNSConfig `json:"dns_configs" mapstructure:"dns_configs"`                         // DNS 解析配置列表
 	Proxy                ProxyConfig `json:"proxy" mapstructure:"proxy"`                                     // 代理配置
 	Log                  LogConfig   `json:"log" mapstructure:"log"`                                         // 日志配置
@@ -150,6 +152,8 @@ func DefaultSettings() Settings {
 		Language:             "auto",
 		Theme:                "auto",
 		Prerelease:           false,
+		UpdateCheckInterval:  0,
+		AutoRestart:          false,
 		DNSConfigs:           builtinDNSConfigs(nil),
 		Proxy: ProxyConfig{
 			Enabled:  false,
@@ -252,6 +256,8 @@ func (s *Service) setDefaults() {
 	s.v.SetDefault("language", def.Language)
 	s.v.SetDefault("theme", def.Theme)
 	s.v.SetDefault("prerelease", def.Prerelease)
+	s.v.SetDefault("update_check_interval", def.UpdateCheckInterval)
+	s.v.SetDefault("auto_restart", def.AutoRestart)
 	s.v.SetDefault("dns_configs", def.DNSConfigs)
 	s.v.SetDefault("proxy", def.Proxy)
 	s.v.SetDefault("log", def.Log)
@@ -345,6 +351,8 @@ func (s *Service) writeConfig() error {
 	v.Set("language", s.settings.Language)
 	v.Set("theme", s.settings.Theme)
 	v.Set("prerelease", s.settings.Prerelease)
+	v.Set("update_check_interval", s.settings.UpdateCheckInterval)
+	v.Set("auto_restart", s.settings.AutoRestart)
 	v.Set("dns_configs", s.settings.DNSConfigs)
 	v.Set("proxy", s.settings.Proxy)
 	v.Set("log", s.settings.Log)

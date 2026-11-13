@@ -31,5 +31,7 @@
   "notification.test.body": "This is a test notification. If you can see it, notifications are working correctly.",
   "notification.test.title": "Test Notification",
   "notification.update_available_subtitle": "Version {{.version}} is available, click to view",
-  "notification.update_available_title": "Update Available"
+  "notification.update_available_title": "Update Available",
+  "notification.update_ready_subtitle": "The new version has been downloaded and will take effect after restart",
+  "notification.update_ready_title": "Update Ready"
 }

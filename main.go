@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"embed"
 	"fmt"
 	"log"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -370,6 +368,12 @@ func main() {
 		if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{gh},
+			// 周期性自动检查：取自设置项 update_check_interval（单位小时），
+			// 0 表示关闭（只保留启动时的单次检查，见 checkUpdateOnStart）。
+			// 框架每 tick 走 CheckAndInstall：弹内置更新窗口 + 自动下载安装，
+			// 下载完成触发 EventUpdateReady，再按「更新完自动重启」决定是否重启。
+			// 该值 Init 时只读一次，改动设置需重启应用生效。
+			CheckInterval: time.Duration(settingsService.Get().UpdateCheckInterval) * time.Hour,
 			// 使用框架自带的更新窗口（默认模板 + 默认交互）。
 			Window: &updater.BuiltinWindow{
 				Options: updater.WindowOptions{
@@ -379,11 +383,25 @@ func main() {
 		}); err != nil {
 			logging.Error(i18n.T("log.updater_init_failed"), err)
 		} else {
-			// 内置更新窗口在 macOS 上收不到事件（内联 HTML 拿不到 Wails 运行时），
-			// 用户点不到 "Restart & Apply"，因此下载与暂存完成后自动触发重启。
-			// 这里不做任何 cleanup：即使重启失败，调度器/域名监控也保持正常运行。
+			// 更新包下载、校验并暂存完成后由这里决定是否立即重启：
+			//   - 设置项「更新完自动重启」开启：直接 Restart 完成二进制替换；
+			//   - 关闭：只记录日志 + 弹通知，等用户自己重启（或从菜单打开更新
+			//     窗口点 "Restart & Apply"），不会打断正在跑的调度器/域名监控。
+			// 注意内置更新窗口在 macOS 上收不到事件（内联 HTML 拿不到 Wails
+			// 运行时），所以自动化重启完全依赖这里，而不是窗口按钮。
 			app.Event.On(updater.EventUpdateReady, func(*application.CustomEvent) {
 				logging.Info(i18n.T("log.updater_ready"))
+				if !settingsService.Get().AutoRestart {
+					logging.Info("%s", i18n.T("log.updater_restart_skipped"))
+					emitNotification(app, events.NotificationPayload{
+						Title:    i18n.T("notification.update_ready_title"),
+						Subtitle: i18n.T("notification.update_ready_subtitle"),
+						Category: "system",
+						Level:    "info",
+					})
+					return
+				}
+				logging.Info("%s", i18n.T("log.updater_auto_restart"))
 				go func() {
 					defer func() {
 						if r := recover(); r != nil {
@@ -520,15 +538,12 @@ func main() {
 		schedulerService.Stop()
 	}()
 
-	// 自更新只负责「下载 + 校验 + 暂存」，替换二进制与重启由框架更新窗口里的
-	// "Restart & Apply" 按钮触发的 Restart 完成（先 Quit，再由 helper 等父进程
-	// 退出后替换并重新拉起）。
-	//
-	// 这里不再监听 EventUpdateReady 自动 Restart：框架 helper 只等父进程 30 秒，
-	// 本应用退出耗时可能超过该上限，helper 超时后会静默放弃替换并重启旧版本，
-	// 表现为「更新就绪 → 重启 → 还是旧版本」，且失败不会回传给应用、无法观测。
-	// 另外原实现在就绪时先停掉调度器/域名监控并 cancel，一旦重启失败这些后台
-	// 任务便永久停摆，只能重启应用恢复。
+	// 自更新分三步，职责边界固定：
+	//   1. Check：只查询是否有新版本（失败/无更新都只记日志）；
+	//   2. DownloadAndInstall：下载 + 校验 + 暂存（不替换正在运行的二进制）；
+	//   3. Restart：起 helper 子进程，等父进程退出后替换并重新拉起。
+	// 第 2、3 步由设置项「自动更新」「更新完自动重启」控制（见 update.go），
+	// 开关在运行时读取 settingsService，无需重启应用即可生效。
 
 	// 监听系统主题变化，通知前端
 	// 注意：Wails v3 的 Event.Emit 返回值是「事件是否被取消(cancelled)」，
@@ -542,7 +557,7 @@ func main() {
 		}
 	})
 
-	// 启动后异步检查更新
+	// 启动后异步检查更新（周期性检查与自动重启见 update.go）
 	if currentVersion != "dev" {
 		checkUpdateOnStart(app)
 	}
@@ -553,39 +568,4 @@ func main() {
 	}
 
 	fmt.Println(i18n.T("app.exited"))
-}
-
-// checkUpdateOnStart 启动后异步检查更新，有更新时发通知
-func checkUpdateOnStart(app *application.App) {
-	go func() {
-		// 兜底：同点击检查更新，避免 Updater 原生层 panic 拖死主进程。
-		defer func() {
-			if r := recover(); r != nil {
-				logging.Error("%s: %v", i18n.T("log.updater_check_panic"), r)
-			}
-		}()
-		// 生成 1 到 3 分钟之间的随机持续时间
-		minDuration := 1 * time.Minute
-		maxDuration := 3 * time.Minute
-		n, _ := rand.Int(rand.Reader, big.NewInt(int64(maxDuration-minDuration)))
-		randomDuration := minDuration + time.Duration(n.Int64())
-		time.Sleep(randomDuration)
-		rel, err := app.Updater.Check(context.Background())
-		if err != nil {
-			logging.Warn("%s: %v", i18n.T("log.updater_check_failed"), err)
-			return
-		}
-		if rel == nil {
-			return // 没有更新
-		}
-		// 发送桌面通知
-		if ok := app.Event.Emit(events.EventNotification, events.NotificationPayload{
-			Title:    i18n.T("notification.update_available_title"),
-			Subtitle: i18n.T("notification.update_available_subtitle", "version", rel.Version),
-			Category: "system",
-			Level:    "info",
-		}); !ok {
-			logging.Warn("%s", i18n.T("error.notification_failed"))
-		}
-	}()
 }

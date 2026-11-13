@@ -136,6 +136,16 @@ export interface Settings {
     "prerelease": boolean;
 
     /**
+     * 自动检查更新间隔（小时，0 表示关闭，仅在启动时检查一次）
+     */
+    "update_check_interval": number;
+
+    /**
+     * 更新安装完成后是否自动重启应用
+     */
+    "auto_restart": boolean;
+
+    /**
      * DNS 解析配置列表
      */
     "dns_configs": DNSConfig[] | null;

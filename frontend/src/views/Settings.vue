@@ -55,6 +55,8 @@ const defaultSettings: SafeSettings = {
   language: 'auto',
   theme: 'auto',
   prerelease: false,
+  update_check_interval: 0,
+  auto_restart: false,
   dns_configs: [],
   proxy: { enabled: false, protocol: 'http', host: '', port: 8080 },
   log: { level: 'INFO', max_mb: 10, max_backups: 5 },
@@ -932,6 +934,30 @@ onMounted(async () => {
               <p class="text-xs opacity-40 mt-0.5">{{ t('settings.about.prerelease.desc') }}</p>
             </div>
             <n-switch v-model:value="settings.prerelease" />
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <div>
+              <span class="opacity-50">{{ t('settings.about.checkInterval') }}</span>
+              <p class="text-xs opacity-40 mt-0.5">
+                {{ t('settings.about.checkInterval.desc') }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <n-input-number
+                v-model:value="settings.update_check_interval"
+                :min="0"
+                :max="720"
+                class="w-24"
+              />
+              <span class="text-sm opacity-60">{{ t('settings.about.checkInterval.unit') }}</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <div>
+              <span class="opacity-50">{{ t('settings.about.autoRestart') }}</span>
+              <p class="text-xs opacity-40 mt-0.5">{{ t('settings.about.autoRestart.desc') }}</p>
+            </div>
+            <n-switch v-model:value="settings.auto_restart" />
           </div>
           <div class="pt-2 border-t border-neutral-200 dark:border-neutral-700">
             <n-button secondary block @click="handleCheckUpdate">

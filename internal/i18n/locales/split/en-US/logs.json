@@ -376,6 +376,7 @@
   "log.totp_verifying": "TOTP verification in progress",
   "log.update_challenge_info_failed": "Failed to update challenge info: cert_id={{.ID}}, err={{.Error}}",
   "log.update_renewal_log_failed": "Failed to update renewal log (cert {{.ID}}): {{.Error}}",
+  "log.updater_auto_restart": "Restart after update is enabled, restarting now to finish installing",
   "log.updater_check_done": "Update check completed",
   "log.updater_check_failed": "Failed to check for updates",
   "log.updater_check_panic": "Panic during update check (recovered, main process unaffected): {{.Error}}",
@@ -415,6 +416,7 @@
   "log.updater_release_missing_metadata": "release missing metadata",
   "log.updater_restart_failed": "auto restart failed: %v",
   "log.updater_restart_panic": "panic while triggering auto restart: %v",
+  "log.updater_restart_skipped": "Update staged, but restart after update is disabled; waiting for a manual restart",
   "log.updater_source_download": "Downloading update: source={{.Source}} url={{.URL}}",
   "log.updater_source_failed": "Update source failed, trying next: source={{.Source}} error={{.Error}}",
   "log.wait_dns_challenge": "Waiting for DNS challenge info..."
