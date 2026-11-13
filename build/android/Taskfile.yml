@@ -16,11 +16,14 @@ vars:
   # SDK location: $ANDROID_HOME / $ANDROID_SDK_ROOT, else the per-OS default
   # (macOS: ~/Library/Android/sdk, Linux/other: ~/Android/Sdk)
   SDK_ROOT:
-    sh: 'echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk" || echo "$HOME/Android/Sdk")}}"'
+    sh: 'echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk"
+      || echo "$HOME/Android/Sdk")}}"'
   ADB:
-    sh: 'command -v adb || echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk" || echo "$HOME/Android/Sdk")}}/platform-tools/adb"'
+    sh: 'command -v adb || echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk"
+      || echo "$HOME/Android/Sdk")}}/platform-tools/adb"'
   EMULATOR:
-    sh: 'command -v emulator || echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk" || echo "$HOME/Android/Sdk")}}/emulator/emulator"'
+    sh: 'command -v emulator || echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk"
+      || echo "$HOME/Android/Sdk")}}/emulator/emulator"'
 
 tasks:
   install:deps:
@@ -48,7 +51,9 @@ tasks:
         vars:
           ARCH: '{{.ARCH | default .HOST_ARCH}}'
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION
+        | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN
+        | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
     env:
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
 
@@ -106,7 +111,9 @@ tasks:
         go build -buildmode=c-shared -overlay build/android/overlay.json {{.BUILD_FLAGS}} \
           -o build/android/app/src/main/jniLibs/$JNI_DIR/libwails.so
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -X main.currentVersion={{.VERSION
+        | default "dev"}} -X main.buildTime={{.BUILD_TIME}} -X main.gitCommit={{.GIT_COMMIT}} -X main.githubToken={{.GITHUB_TOKEN
+        | default ""}} -X main.cnbToken={{.CNB_TOKEN | default ""}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
 
   compile:go:all-archs:
     summary: Compile Go code for all Android architectures (fat APK)
@@ -123,7 +130,7 @@ tasks:
     deps:
       - task: build
         vars:
-          PRODUCTION: "true"
+          PRODUCTION: 'true'
           ARCH: '{{.ARCH | default .HOST_ARCH}}'
     cmds:
       - task: assemble:apk:release
@@ -133,20 +140,20 @@ tasks:
     deps:
       - task: build
         vars:
-          PRODUCTION: "true"
+          PRODUCTION: 'true'
           ARCH: arm64
     cmds:
       - task: compile:go:shared
         vars:
           ARCH: amd64
-          PRODUCTION: "true"
+          PRODUCTION: 'true'
       - task: assemble:apk:release
 
   assemble:apk:
     summary: Assembles a debug APK using Gradle
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
-        msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
+        msg: 'Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME'
     cmds:
       - |
         cd build/android
@@ -161,7 +168,7 @@ tasks:
     summary: Assembles a release APK using Gradle (signed with the debug keystore unless ANDROID_KEYSTORE_FILE is set)
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
-        msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
+        msg: 'Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME'
     cmds:
       - |
         cd build/android
@@ -187,7 +194,7 @@ tasks:
     internal: true
     summary: Generates bindings for Android
     sources:
-      - "**/*.go"
+      - '**/*.go'
       - go.mod
       - go.sum
     generates:
@@ -247,9 +254,9 @@ tasks:
         exit 1
     preconditions:
       - sh: '[ -x "{{.ADB}}" ] || command -v adb'
-        msg: "adb not found. Install the Android SDK platform-tools (or set ANDROID_HOME)"
+        msg: 'adb not found. Install the Android SDK platform-tools (or set ANDROID_HOME)'
       - sh: '[ -x "{{.EMULATOR}}" ] || command -v emulator'
-        msg: "emulator not found. Install the Android SDK emulator package (or set ANDROID_HOME)"
+        msg: 'emulator not found. Install the Android SDK emulator package (or set ANDROID_HOME)'
 
   deploy-emulator:
     summary: Deploy the packaged release APK to the Android Emulator

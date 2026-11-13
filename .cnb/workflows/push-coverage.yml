@@ -1,12 +1,10 @@
 '**':
   push:
     # Go 单元测试覆盖率（全量红线）。
-    # 复用同一 Dockerfile 构建环境与 Go 模块/构建缓存（不需要 pnpm 缓存，不构建前端）。
-    # 参考 CNB 官方示例 examples/ecosystem/testing-go-demo 的 testing:coverage 内置任务。
     - runner:
         tags: cnb:arch:amd64
       docker:
-        image: docker.cnb.cool/dtapp/golang/wails3:latest # 使用统一 Docker 镜像，避免各仓库重复打包
+        image: docker.cnb.cool/dtapp/golang/wails3:latest # 统一使用预构建的 CI 环境镜像
         volumes:
           - /root/.cache/go-build:copy-on-write # Go 构建缓存 - 加速编译
           - /root/.local/share/pnpm/store:copy-on-write # pnpm 全局存储 - 加速前端依赖安装
@@ -16,15 +14,7 @@
           script: make deps
 
         - name: 生成测试覆盖率
-          # 命令直接内联于 CI（不经 Makefile）：覆盖率是 CI 质量门禁，非日常开发命令。
-          # -vet=off：i18n.T() 作 printf 参数会触发 vet non-constant format 报错。
-          # -coverpkg 排除生成代码：internal/ent（ent 生成，占全树语句块约 73%，
-          # 计入会把总覆盖率从约 27% 稀释到约 5%，指标失去意义，与排除 vendor 同理）、
-          # internal/httplog/db（sqlc 生成，同样不写测试）。
-          script:
-            - go test -vet=off -coverpkg=$(go list ./internal/... | grep -vE '/internal/ent|/internal/httplog/db' | paste
-              -sd, -) -coverprofile=coverage.out ./internal/...
-            - go tool cover -func=coverage.out # 产出 coverage.out + 终端按函数摘要
+          script: make cover-go # 产出 coverage.out
 
         - name: 上报覆盖率（全量红线）
           # https://docs.cnb.cool/zh/build/internal-steps/testing/coverage.html
@@ -43,13 +33,11 @@
         - name: 输出覆盖率
           script: 'echo "coverage: lines=$COVERAGE_LINES diff=$COVERAGE_DIFF_PCT"'
 
-    # 前端 Node 单元测试覆盖率（全量红线）。
-    # 复用同一 Dockerfile（已预装 Node + pnpm + 腾讯云源，仅需 pnpm store 缓存）。
-    # 参考 CNB 官方示例 examples/ecosystem/testing-node-demo 的 testing:coverage 内置任务。
+    # 前端单元测试覆盖率（全量红线）。
     - runner:
         tags: cnb:arch:amd64
       docker:
-        image: docker.cnb.cool/dtapp/golang/wails3:latest # 使用统一 Docker 镜像，避免各仓库重复打包
+        image: docker.cnb.cool/dtapp/golang/wails3:latest # 统一使用预构建的 CI 环境镜像
         volumes:
           - /root/.cache/go-build:copy-on-write # Go 构建缓存 - 加速编译
           - /root/.local/share/pnpm/store:copy-on-write # pnpm 全局存储 - 加速前端依赖安装
@@ -59,10 +47,11 @@
           script: make deps
 
         - name: 生成前端测试覆盖率
-          script: pnpm --dir ./frontend test:coverage # 产出 frontend/coverage/lcov.info
+          script: make cover-node # 产出 frontend/coverage/lcov.info
 
-        - name: 上报覆盖率（Node 全量红线）
+        - name: 上报覆盖率（全量红线）
           # https://docs.cnb.cool/zh/build/internal-steps/testing/coverage.html
+          # lcov 格式由插件自动识别，无需指定 lang（lang=go 仅 golang 格式报告需要）
           type: testing:coverage
           options:
             key: node # 多报告数据键：与 Go 侧（key: go）区分，各自写入 meta map 互不覆盖

@@ -21,10 +21,14 @@
   "settings.data.import.failed": "导入失败",
   "settings.data.import.preparing": "准备导入",
   "systray.applyCert": "申请证书",
+  "systray.autostart": "开机自启",
   "systray.checkUpdate": "检查更新",
+  "systray.prerelease": "预发布版更新",
   "systray.quit": "退出",
+  "systray.restartAndUpdate": "重启并安装更新",
   "systray.scan": "证书扫描",
   "systray.settings": "设置",
   "systray.show": "显示窗口",
+  "systray.version": "CertFlow {{.Version}}",
   "updater.title": "检查更新"
 }

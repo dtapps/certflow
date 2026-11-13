@@ -41,6 +41,18 @@ var assets embed.FS
 // 当前版本号（构建时通过 -ldflags 覆盖）不带 v
 var currentVersion = "dev"
 
+// displayVersion 返回界面展示用的版本号：CI 注入的纯数字版本（如 1.2.3）加上
+// v 前缀，与发布 tag（v1.2.3）及更新窗口的显示口径对齐；非数字版本（如本地
+// dev 构建的 "dev"）原样返回，避免出现 "CertFlow vdev"。
+// 注意：仅用于展示；updater.CurrentVersion / 日志 / 统计上报仍用原始值。
+func displayVersion() string {
+	v := currentVersion
+	if v == "" || v[0] < '0' || v[0] > '9' {
+		return v
+	}
+	return "v" + v
+}
+
 // 构建信息（构建时通过 -ldflags 覆盖）
 var buildTime = ""
 var gitCommit = ""
@@ -391,6 +403,8 @@ func main() {
 			// 运行时），所以自动化重启完全依赖这里，而不是窗口按钮。
 			app.Event.On(updater.EventUpdateReady, func(*application.CustomEvent) {
 				logging.Info(i18n.T("log.updater_ready"))
+				// 重建托盘菜单：就绪后出现「重启并安装更新」，供关闭自动重启时手动完成。
+				systraySvc.RefreshMenu()
 				if !settingsService.Get().AutoRestart {
 					logging.Info("%s", i18n.T("log.updater_restart_skipped"))
 					emitNotification(app, events.NotificationPayload{
@@ -452,6 +466,9 @@ func main() {
 
 	// 注入主窗口引用；系统托盘的创建与菜单初始化已移入 SysTrayService.ServiceStartup（随应用生命周期启动）
 	systraySvc.setMainWindow(mainWindow)
+	// 注入设置与开机自启服务：托盘菜单里的「预发布版更新」「开机自启」复选框需要读写
+	systraySvc.setSettingsService(settingsService)
+	systraySvc.setAutostartService(autostartSvc)
 
 	// 设置系统服务的主窗口引用
 	systemSvc.setMainWindow(mainWindow)

@@ -8,8 +8,7 @@
 #
 # 只用环境变量传参（不解析位置参数），这样流水线里可以直接 `sh scripts/ci/render-release-body.sh`：
 #
-#   VERSION       必填，归一化后的版本号（带 v 前缀），如 v1.2.3-rc.1；
-#                 滚动 tag 传 nightly（不带 v）
+#   VERSION       必填，归一化后的版本号（带 v 前缀），如 v1.2.3-rc.1 / v1.2.4-nightly.20260101
 #   PRERELEASE    必填，true / false，决定是否加「预发布」警示块
 #   DL_BASE       必填，附件下载基址，如 https://github.com/o/r/releases/download/v1.2.3
 #   STABLE_URL    选填，正式版列表页 URL，预发布时提示用户去哪找稳定版

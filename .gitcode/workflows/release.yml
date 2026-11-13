@@ -41,20 +41,23 @@ jobs:
 
           : "${GITCODE_TOKEN:?未配置 secret GITCODE_TOKEN}"
 
-          # 版本号归一（允许传 1.2.3 或 v1.2.3）
-          # 滚动 tag（nightly）不能补 v 前缀：GitHub 侧固定用 tag `nightly`，
-          # 补成 vnightly 会 404（更新器 nightlyTag 也写死为 `nightly`）。
+          # 版本号归一（允许传 1.2.3 或 v1.2.3）。
+          # nightly 的日期版本由 GitHub 发布流水线生成（如 v1.2.4-nightly.20260101），
+          # 这里只接收最终 tag；传裸 nightly 无法推导基版本与日期，直接报错。
           TAG="${VERSION:?未传入 version}"
           case "$TAG" in
             v*) ;;
-            nightly | NIGHTLY) TAG="nightly" ;;
+            nightly | NIGHTLY)
+              echo "错误: 请传最终 nightly 版本（如 v1.2.4-nightly.20260101），不要传裸 nightly" >&2
+              exit 1
+              ;;
             *) TAG="v${TAG}" ;;
           esac
 
           # 预发布：只看版本号后缀（与 GitHub / CNB / GitLab 同一口径）。
           # 不再接受外部传入的布尔值：布尔和版本号打架时，发出来的 Release 会自相矛盾。
           case "$TAG" in
-            *-rc* | *-beta* | *-alpha* | *-nightly* | nightly) PRE="true" ;;
+            *-rc* | *-beta* | *-alpha* | *-nightly*) PRE="true" ;;
             *) PRE="false" ;;
           esac
           if [ "$PRE" = "true" ]; then STATUS="pre"; else STATUS="latest"; fi

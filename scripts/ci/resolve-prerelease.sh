@@ -10,19 +10,27 @@
 #   v1.2.3-beta.1         -> TAG=v1.2.3-beta.1 PRERELEASE=true    预发布（beta）
 #   v1.2.3-alpha.1        -> TAG=v1.2.3-alpha.1 PRERELEASE=true   预发布（alpha）
 #   v1.2.3-nightly.20260101 -> TAG=v1.2.3-nightly.20260101 PRERELEASE=true 预发布（nightly）
-#   nightly               -> TAG=nightly       PRERELEASE=true    滚动预发布
+#   nightly               -> 自动展开为 v<最近正式版+1补丁>-nightly.<YYYYMMDD>
 #
 # 只用版本号后缀判定，不接受「是不是预发布」这种布尔输入：布尔输入会和版本号打架。
 #
-# nightly 有两种形态，不要混：
-#   1) 固定滚动 tag `nightly`：更新器（mirror_updater.go 的 nightlyTag）按这个名字
-#      拉预发布 Release，所以它**不能**加 v 前缀，也不参与「版本号必须更新」的校验。
-#   2) 历史渠道 tag `vX.Y.Z-nightly.N`：和 rc/beta/alpha 一样按渠道对比 changelog。
+# nightly 的两种写法，最终都落到带日期的合法 semver 上，不再有固定的滚动 tag：
+#   - 输入写 `nightly`：取最近正式版 +1 补丁做基版本（1.2.3 -> 1.2.4），
+#     日期取 UTC 当天，生成 v1.2.4-nightly.20260101。
+#     每天一个 tag；GitHub 发布流水线发布后只保留最近 3 个 nightly Release。
+#     基版本必须比已发布的正式版高，否则 semver 会把 1.2.3 判成比
+#     1.2.3-nightly.X 新，更新器会误提示「升级到旧正式版」。
+#   - 输入直接写日期版本（v1.2.4-nightly.20260101）：按普通预发布处理。
+# 更新器按 `-nightly.` 后缀列出 Release 找最新，不再依赖固定 tag。
 #
 # 用法（被 source）：
 #   . scripts/ci/resolve-prerelease.sh
 #   resolve_version "${VERSION}"
 #   printf '%s %s\n' "${TAG}" "${PRERELEASE}"
+#
+# 自检可用环境变量固定 nightly 的展开结果（CI 不需要设置）：
+#   NIGHTLY_BASE_VERSION  基版本（X.Y.Z），替代自动探测的最近正式版
+#   NIGHTLY_DATE          日期（YYYYMMDD），替代 UTC 当天
 #
 # 直接执行可以跑内置用例自检（改了正则以后先跑它）：
 #   bash scripts/ci/resolve-prerelease.sh --self-test
@@ -34,7 +42,7 @@
 #   归一化版本号（补 v 前缀）并判定是否预发布；
 #   结果写入全局变量 TAG / PRERELEASE / VERSION_TYPE / CHANNEL / VERSION_BARE / PRE_NOTE
 #   并导出给后续步骤：
-#     TAG          git tag / Release 用的版本号，如 v1.2.3-rc.1 或 nightly（固定滚动 tag）
+#     TAG          git tag / Release 用的版本号，如 v1.2.3-rc.1 或 v1.2.4-nightly.20260101
 #     PRERELEASE   true / false
 #     CHANNEL      stable / rc / beta / alpha / nightly，供 changelog 选对比基准
 #     VERSION_BARE 去掉 v 前缀，供 ldflags 注入 main.currentVersion（应用内展示不带 v）
@@ -50,16 +58,43 @@ resolve_version() {
     return 1
   fi
 
-  # 固定滚动 tag：nightly。更新器按这个名字拉预发布 Release，加 v 前缀就再也找不到，
-  # 所以单独识别，不参与「补 v 前缀」逻辑。
+  # 滚动预发布（nightly）：展开成带日期的合法 semver，不再使用固定 tag。
+  #   基版本 = 最近正式版 +1 补丁（1.2.3 -> 1.2.4），日期 = UTC 当天（YYYYMMDD）。
+  # 基版本必须高于已发布正式版：semver 里 1.2.3-nightly.X < 1.2.3，
+  # 用原版本号做基版本会让更新器误提示「升级到旧正式版」。
   case "${input}" in
     nightly | NIGHTLY)
-      TAG="nightly"
+      local base date_part major rest minor patch next
+      base="${NIGHTLY_BASE_VERSION:-}"
+      if [ -z "${base}" ]; then
+        # 排除所有预发布后缀，只留正式版 tag，取版本最大的那个
+        base="$(git tag -l 'v*' 2>/dev/null \
+          | grep -Ev -- '-(rc|beta|alpha|nightly)' \
+          | sed 's/^[vV]//' | sort -V | tail -n 1 || true)"
+      fi
+      base="${base:-0.0.0}"
+      if ! printf '%s' "${base}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        printf '错误: nightly 基版本不是 X.Y.Z: %s\n' "${base}" >&2
+        return 1
+      fi
+      major="${base%%.*}"
+      rest="${base#*.}"
+      minor="${rest%%.*}"
+      patch="${rest#*.}"
+      next="${major}.${minor}.$((patch + 1))"
+
+      date_part="${NIGHTLY_DATE:-$(date -u +%Y%m%d)}"
+      if ! printf '%s' "${date_part}" | grep -Eq '^[0-9]{8}$'; then
+        printf '错误: nightly 日期不是 YYYYMMDD: %s\n' "${date_part}" >&2
+        return 1
+      fi
+
+      TAG="v${next}-nightly.${date_part}"
       PRERELEASE="true"
       VERSION_TYPE="预发布"
       CHANNEL="nightly"
-      VERSION_BARE="nightly"
-      PRE_NOTE="版本号: ${TAG}（${VERSION_TYPE}，prerelease=${PRERELEASE}，滚动 tag）"
+      VERSION_BARE="${next}-nightly.${date_part}"
+      PRE_NOTE="版本号: ${TAG}（${VERSION_TYPE}，prerelease=${PRERELEASE}，channel=nightly，基版本 ${next}）"
       export TAG PRERELEASE VERSION_TYPE CHANNEL VERSION_BARE PRE_NOTE
       return 0
       ;;
@@ -160,11 +195,19 @@ check_version 'v1.2.3-rc' 'v1.2.3-rc' 'true'
 check_version 'V1.2.3-RC.1' 'V1.2.3-RC.1' 'true'
 check_version 'v1.2.3-alpha.1.2' 'v1.2.3-alpha.1.2' 'true'
 check_version ' v1.2.3 ' 'v1.2.3' 'false'
-# nightly 两种形态：固定滚动 tag（不加 v 前缀）与历史渠道后缀（vX.Y.Z-nightly.N）
-check_version 'nightly' 'nightly' 'true'
-check_version 'NIGHTLY' 'nightly' 'true'
+# nightly：输入 nightly 展开为「最近正式版 +1 补丁 -nightly.UTC日期」。
+# 用环境变量固定基版本与日期，避免自检依赖仓库 tag 和当天日期。
+NIGHTLY_BASE_VERSION='1.2.3'
+NIGHTLY_DATE='20260101'
+export NIGHTLY_BASE_VERSION NIGHTLY_DATE
+check_version 'nightly' 'v1.2.4-nightly.20260101' 'true'
+check_version 'NIGHTLY' 'v1.2.4-nightly.20260101' 'true'
 check_version 'v1.2.3-nightly.20260101' 'v1.2.3-nightly.20260101' 'true'
 check_version 'v1.2.3-Nightly.7' 'v1.2.3-Nightly.7' 'true'
+# 补丁号进位：1.2.9 -> 1.2.10
+NIGHTLY_BASE_VERSION='1.2.9'
+check_version 'nightly' 'v1.2.10-nightly.20260101' 'true'
+NIGHTLY_BASE_VERSION='1.2.3'
 # 不带 rc/beta/alpha/nightly 后缀的一律是正式版
 check_version 'v1.2.3-hotfix' 'v1.2.3-hotfix' 'false'
 check_version 'v2.0.0-core' 'v2.0.0-core' 'false'
@@ -189,7 +232,7 @@ check_bare 'v1.2.3' '1.2.3'
 check_bare '1.2.3' '1.2.3'
 check_bare 'V1.2.3-RC.1' '1.2.3-RC.1'
 check_bare 'v1.2.3-nightly.20260101' '1.2.3-nightly.20260101'
-check_bare 'nightly' 'nightly'
+check_bare 'nightly' '1.2.4-nightly.20260101'
 
 # 渠道要能和 changelog 的口径对上
 check_channel() {
@@ -212,6 +255,7 @@ check_channel 'v1.2.3-beta.2' 'beta'
 check_channel 'v1.2.3-alpha.3' 'alpha'
 check_channel 'v1.2.3-nightly.20260101' 'nightly'
 check_channel 'nightly' 'nightly'
+unset NIGHTLY_BASE_VERSION NIGHTLY_DATE
 
 # 非法输入必须被拒绝，不能漏到 git tag / Docker tag / JSON 里：
 # 空版本号历史上会打出 :v 这种非法标签；引号/分号会破坏 optionsFrom 的 JSON 结构。

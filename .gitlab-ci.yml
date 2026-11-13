@@ -38,7 +38,7 @@ default:
 # 发布同步：从 GitHub Release 下载产物，发布到 GitLab Release
 # ---------------------------------------------------------------------------
 # 只在 trigger 源流水线跑（GitHub 侧 release.yml 的 sync-gitlab job 触发）：
-#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3（nightly 传 nightly）
+#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3（nightly 传带日期的最终 tag）
 # 是否预发布由 VERSION 后缀判定，不接受额外的布尔变量。
 #
 # 附件存放：GitLab 没有「Release 二进制附件」API，所以走 **Generic Package Registry**，
@@ -66,18 +66,21 @@ release:
       set -euo pipefail
 
       TAG="${VERSION:?未传入 VERSION —— 网页手动执行时请在 Run pipeline 的变量区填写（如 VERSION=v0.2.19）}"
-      # 滚动 tag（nightly）不能补 v 前缀：GitHub 侧固定用 tag `nightly`，
-      # 补成 vnightly 会 404（更新器的 nightlyTag 也是写死的 `nightly`）。
+      # nightly 的日期版本由 GitHub 发布流水线生成（如 v1.2.4-nightly.20260101），
+      # 这里只接收最终 tag；传裸 nightly 无法推导基版本与日期，直接报错。
       # 其余版本一律补 v（允许传 0.2.19 或 v0.2.19）。
       case "$TAG" in
         v*) ;;
-        nightly | NIGHTLY) TAG="nightly" ;;
+        nightly | NIGHTLY)
+          echo "错误: 请传最终 nightly 版本（如 v1.2.4-nightly.20260101），不要传裸 nightly" >&2
+          exit 1
+          ;;
         *) TAG="v${TAG}" ;;
       esac
       # 预发布：只看 tag 后缀（与 GitHub / CNB / GitCode 同一口径）。
       # 不再接收外部传入的 PRERELEASE 变量：布尔和版本号打架时，Release 会自相矛盾。
       case "$TAG" in
-        *-rc* | *-beta* | *-alpha* | *-nightly* | nightly) PRE="true" ;;
+        *-rc* | *-beta* | *-alpha* | *-nightly*) PRE="true" ;;
         *) PRE="false" ;;
       esac
       echo "版本号: ${TAG}  预发布: ${PRE}"

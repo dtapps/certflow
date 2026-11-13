@@ -1,6 +1,12 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
 import viteConfig from './vite.config'
 
+// 扫描 / 排除清单由 Makefile「测试覆盖率」节通过环境变量注入（唯一来源），
+// 新增目录只改 Makefile；不经过 make 直接跑 vitest 时回退到默认值，行为不变。
+// 多个 glob 用空格或逗号分隔。
+const list = (value: string | undefined, fallback: string[]) =>
+  value ? value.split(/[,\s]+/).filter(Boolean) : fallback
+
 // 单元测试配置：复用 vite.config 的插件与别名（@bindings / naive-ui 解析器等），
 // 仅额外声明测试环境与覆盖率。本区块自包含，可随 package.json 的 test 脚本
 // 一起复制到其他 Vite + Vue 项目使用。
@@ -13,18 +19,19 @@ export default mergeConfig(
     test: {
       environment: 'node',
       setupFiles: ['./src/test/setup.ts'],
+      include: list(process.env.VITEST_TEST_INCLUDE, ['src/test/**/*.test.ts']),
       coverage: {
         provider: 'v8',
         // lcov 供 CI（CNB testing:coverage）解析，text 供本地阅读
         reporter: ['lcov', 'text'],
         reportsDirectory: './coverage',
-        include: ['src/**/*.{ts,vue}'],
-        exclude: [
+        include: list(process.env.VITEST_COVER_INCLUDE, ['src/**/*.ts', 'src/**/*.vue']),
+        exclude: list(process.env.VITEST_COVER_EXCLUDE, [
           'src/test/**', // 测试自身不计入
           'src/main.ts', // 入口：挂载 DOM / 读 navigator.userAgent，导入即有副作用
           'src/logviewer/main.ts', // 第二个入口（log-viewer.html），同上
           'src/**/*.d.ts', // 生成/环境声明文件
-        ],
+        ]),
         // 全量度量：未测试文件按 0% 计入分母，指标不虚高（与 Go 侧整包度量同思路）
         all: true,
       },

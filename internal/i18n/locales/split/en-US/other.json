@@ -21,10 +21,14 @@
   "settings.data.import.failed": "Import failed",
   "settings.data.import.preparing": "Preparing import",
   "systray.applyCert": "Apply Certificate",
+  "systray.autostart": "Launch at Login",
   "systray.checkUpdate": "Check for Updates",
+  "systray.prerelease": "Pre-release Updates",
   "systray.quit": "Quit",
+  "systray.restartAndUpdate": "Restart & Update",
   "systray.scan": "Certificate Scanner",
   "systray.settings": "Settings",
   "systray.show": "Show Window",
+  "systray.version": "CertFlow {{.Version}}",
   "updater.title": "Check for Updates"
 }

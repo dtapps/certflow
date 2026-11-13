@@ -1,5 +1,5 @@
 # 发布工作流
-# 两种触发：手动填版本号；每天 UTC 00:00 定时构建 nightly 滚动预发布。
+# 两种触发：手动填版本号；每天 UTC 00:00 定时构建 nightly 预发布。
 # 均自动构建六个平台并发布 GitHub Release，再同步到 CNB / GitLab / Gitee / GitCode。
 #
 # 版本号规则（实现见 scripts/ci/resolve-prerelease.sh，CNB 的 .cnb.yml 同口径）：
@@ -8,8 +8,10 @@
 #   1.2.3-beta.1             -> 预发布（beta 渠道）
 #   1.2.3-alpha.1            -> 预发布（alpha 渠道）
 #   1.2.3-nightly.20260101   -> 预发布（nightly 渠道）
-#   nightly                  -> 滚动预发布：更新固定 tag `nightly` 的 Release，
-#                               自动更新器（mirror_updater.go）按这个 tag 拉新版本
+#   nightly                  -> 定时任务的默认值（手动填也可）：不是版本号，自动推导成
+#                               <最近正式版 + 1 个补丁>-nightly.<UTC 构建日期>，
+#                               例如最近正式版 v0.2.7 → tag v0.2.8-nightly.20261114。
+#                               每天一个 tag，GitHub 上只保留最近 3 个 nightly Release。
 #
 # 「是不是预发布」不接受人工勾选，只看版本号后缀：布尔输入会和版本号打架。
 #
@@ -22,18 +24,18 @@
 # https://github.com/actions/upload-artifact
 # https://github.com/actions/download-artifact
 # https://github.com/softprops/action-gh-release
-# https://github.com/arduino/setup-task
+# https://github.com/dtapps/golang
 name: Release
 
 on:
-  # 旧 nightly.yml 合并进本文件时保留了版本号规则，却漏了定时触发，
-  # 导致 nightly 只能手动跑。这里补回：每天 UTC 00:00（北京时间 08:00）。
+  # 每天 UTC 00:00（北京时间 08:00）。
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号。预发布看后缀：1.2.3-rc.1 / 1.2.3-beta.1 / 1.2.3-alpha.1 / 1.2.3-nightly.1；滚动预发布填 nightly；无后缀即正式版'
+        description: '版本号。预发布看后缀：1.2.3-rc.1 / 1.2.3-beta.1 / 1.2.3-alpha.1 / 1.2.3-nightly.20260101；填 nightly 自动生成带日期的 nightly
+          版本；无后缀即正式版'
         required: true
         type: string
       commit:
@@ -41,10 +43,6 @@ on:
         required: false
         type: string
         default: ''
-      nsis_version:
-        description: 'NSIS 版本号（例如 3.13，留空用默认 3.13）'
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -64,7 +62,7 @@ jobs:
   # 统一生成版本号与构建参数（BUILD_TIME / GIT_COMMIT），确保「所有平台注入的 build_time」
   # 与 Release 正文里的构建时间完全一致。
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       tag: ${{ steps.gen.outputs.tag }}
       version: ${{ steps.gen.outputs.version }}
@@ -78,7 +76,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v7
         with:
-          # 滚动 tag（nightly）的包内版本要取最近正式版，需要 tag 历史
+          # nightly 的基版本要取最近正式版 tag，需要完整 tag 历史
           fetch-depth: 0
           ref: ${{ inputs.commit || github.sha }}
       - name: 解析版本号（预发布看后缀）
@@ -93,26 +91,18 @@ jobs:
           # 归一化 / 格式校验 / 预发布判定只有一份实现，本流水线与 .cnb.yml 共用
           # shellcheck source=scripts/ci/resolve-prerelease.sh
           . scripts/ci/resolve-prerelease.sh
+          # nightly 在这里展开成 v<最近正式版+1补丁>-nightly.<UTC日期>
           resolve_version "${VERSION_INPUT}"
           echo "${PRE_NOTE}"
 
           # 装进包内的版本必须是纯数字 X.Y.Z：NSIS 的 VIProductVersion 要求 X.X.X.X
           # （模板会拼一个 .0），macOS 的 CFBundleShortVersionString 也只接受数字。
-          # 后缀（-rc.1 / -nightly.N）只留在 tag、Release 标题与产物文件名里。
-          ROLLING=0
-          case "${TAG}" in v*) ;; *) ROLLING=1 ;; esac
-
+          # 后缀（-rc.1 / -nightly.20260101）只留在 tag、Release 标题与产物文件名里。
           APP_VERSION="${VERSION_BARE%%-*}"
           if printf '%s' "${APP_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             : # 1.2.3，直接用
           elif printf '%s' "${APP_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+$'; then
             APP_VERSION="${APP_VERSION}.0" # 1.2 -> 1.2.0
-          elif [ "${ROLLING}" -eq 1 ]; then
-            # 滚动 tag（nightly）没有数字版本：取最近一个正式版，避免回退成 0.0.0
-            APP_VERSION="$(git tag -l 'v*' | grep -Ev -- '-(rc|beta|alpha|nightly)' \
-              | sed 's/^[vV]//' | sort -V | tail -n 1 || true)"
-            APP_VERSION="${APP_VERSION:-0.0.0}"
-            echo "⚠️ ${VERSION_BARE} 不是版本号，包内版本取最近正式版 ${APP_VERSION}"
           else
             echo "::error::版本号 ${TAG} 必须是 X.Y.Z（可带 -rc.1 后缀），当前无法生成安装包版本"
             exit 1
@@ -127,9 +117,10 @@ jobs:
           fi
 
           {
-            # tag 用于 git tag / Release 名（滚动 tag nightly 不带 v）
+            # tag 用于 git tag / Release 名（统一带 v 前缀）
             echo "tag=${TAG}"
-            # version 用于 ldflags 注入与产物文件名，去掉 v 前缀（应用内展示 1.2.3 / 1.2.3-rc.1）
+            # version 用于 ldflags 注入与产物文件名，去掉 v 前缀
+            # （应用内展示 1.2.3 / 1.2.3-rc.1 / 1.2.4-nightly.20260101）
             echo "version=${VERSION_BARE}"
             # app_version 用于安装包元数据（Info.plist / NSIS / nfpm），必须纯数字
             echo "app_version=${APP_VERSION}"
@@ -168,9 +159,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
       CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
-      # NSIS 官方便携版版本号：引用 input，留空兜底默认 3.13；脚本只读此 env，单一真值来源。
-      # https://nsis.sourceforge.io/Download
-      NSIS_VERSION: ${{ inputs.nsis_version || '3.13' }}
       # Windows Authenticode 签名所需的证书（未配置对应 secret 时签名步骤自动跳过）
       SIGN_CERTIFICATE: ${{ secrets.WINDOWS_SIGN_CERTIFICATE }}
       SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERTIFICATE_PASSWORD }}
@@ -285,108 +273,21 @@ jobs:
             printf '%s\n' "GO_BIN_DIR=$HOME/go/bin" >> "$GITHUB_ENV"
           fi
 
-      # 缓存 wails3 CLI 二进制（go install 每次从源码编译很慢）。
-      # 命中缓存则跳过安装；key 含 go.mod 哈希，wails3 版本随依赖变化时自动失效。
-      # 注意：setup-go 不会注入 GOBIN 环境变量，故 path 直接写确定的 $GOPATH/bin 路径
-      # （不能用步骤级 env 变量，GitHub 的 with: 输入无法引用步骤级 env）。
-      # 缓存整个 Go bin 目录（含 wails3 等 go install 工具），避免每次重新编译安装，加速下载。
-      # key 含 go.mod 哈希：依赖版本变化时自动失效重装；整目录缓存命中即跳过安装步骤。
-      - name: 缓存 Go bin 目录
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.GO_BIN_DIR }}
-          key: gobin-${{ runner.os }}-${{ matrix.goarch }}-${{ hashFiles('go.mod') }}
-
+      # 安装 wails3 CLI + go-task + NSIS：action 不装 Go（只检查），Go 由上面的 setup-go 提供。
       - name: 安装 Wails3
-        env:
-          # 必须同时钉 GOPATH 和 GOBIN：CI 容器里 setup-go 把 GOPATH 默认设为只读的 /go，
-          # 仅设 GOBIN 无法覆盖，go install 仍会去写 /go 导致 "mkdir /go: read-only file system"。
-          # 二者统一指向 $HOME/go（可写），与上方 wails3 缓存 path 保持一致。
-          GOPATH: ${{ env.GO_PATH_DIR }}
-          GOBIN: ${{ env.GO_BIN_DIR }}
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-
-      # 把 GOBIN（$HOME/go/bin）加入 PATH，否则后续 wails3 doctor / task（go-task）会 command not found。
-      # setup-go 只把它的 GOPATH(/go/bin) 加进 PATH，与我们安装目录不一致，必须显式追加。
-      - name: 将 GOBIN 加入 PATH
-        run: echo "${{ env.GO_BIN_DIR }}" >> $GITHUB_PATH
-
-      # 安装 go-task（go-task / Task）
-      - name: 安装 go-task
-        uses: arduino/setup-task@v3
+        uses: dtapps/golang@main
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          framework: wails3
+          setup-only: true
+          # task = go-task；nsis = Windows 打包用的 makensis（仅 Windows 生效）
+          tools: task,nsis
+          # action 默认关闭缓存，显式开启：缓存 CLI 二进制与 Windows 的 NSIS 解压目录
+          cache: true
 
       # 环境检查：wails3 doctor 仅做环境体检，不影响实际编译/打包，故允许失败不阻断构建。
       - name: 检查构建环境
         continue-on-error: true
         run: wails3 doctor
-
-      - name: 安装 NSIS
-        if: ${{ runner.os == 'Windows' }}
-        shell: pwsh
-        run: |
-          # 下载 NSIS 官方便携版（绿色 zip，无需安装器）。
-          # 不依赖 winget/choco：arm runner 上 winget 不可用，choco 缓存恢复会导致解压目录未落地。
-          # 注意：GitHub 的 pwsh 默认 $ErrorActionPreference='Stop'，Write-Error 会被升级为
-          # OperationStopped 异常直接终止脚本（表现为 "OperationStopped: exit code 1"）。
-          # 故显式设为 Continue，并用 Write-Host + exit 1 报告失败，避免异常中断。
-          $ErrorActionPreference = 'Continue'
-          # 读取 job 级 env（不依赖 inputs）。
-          $nsisVer = $env:NSIS_VERSION
-          $urls = @(
-            "https://downloads.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip",
-            "https://master.dl.sourceforge.net/project/nsis/NSIS%203/$nsisVer/nsis-$nsisVer.zip"
-          )
-          $dest = "$env:RUNNER_TEMP\nsis"
-          $zip = "$env:RUNNER_TEMP\nsis-$nsisVer.zip"
-          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
-          $ok = $false
-          foreach ($u in $urls) {
-            try {
-              Write-Host "下载 NSIS $nsisVer from $u ..."
-              # 用 curl.exe（Windows 自带）而非 Invoke-WebRequest：SourceForge 返回带签名参数的
-              # 302 重定向，Invoke-WebRequest 在部分 runner 上跟随重定向会写入错误页而非真文件，
-              # 导致后续 Expand-Archive 拿到损坏 zip 解压失败。curl.exe 能稳定跟随重定向取回真文件。
-              curl.exe -L -f -o $zip $u
-              if (Test-Path $zip) {
-                $ok = $true
-                break
-              } else {
-                Write-Host "下载后文件不存在"
-              }
-            } catch {
-              Write-Host "下载失败: $_"
-            }
-          }
-          if (-not $ok) {
-            Write-Host "NSIS 下载失败：所有镜像均不可用"
-            exit 1
-          }
-          try {
-            Expand-Archive -Path $zip -DestinationPath $dest -Force -ErrorAction Stop
-          } catch {
-            Write-Host "解压失败: $($_.Exception.Message)"
-            exit 1
-          }
-          # 在解压目录动态探测 makensis.exe（不假设固定目录结构）
-          $candidates = @(
-            "$dest\nsis-$nsisVer\Bin\makensis.exe",
-            "$dest\nsis-$nsisVer\makensis.exe"
-          )
-          $makensis = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $makensis) {
-            $found = Get-ChildItem -Path $dest -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($found) { $makensis = $found.FullName }
-          }
-          if (-not $makensis) {
-            Write-Host "makensis.exe 未找到，请检查 NSIS 下载包"
-            exit 1
-          }
-          # 把 makensis.exe 所在目录加入 PATH
-          $makensisDir = Split-Path -Parent $makensis
-          Add-Content -Path $env:GITHUB_PATH -Value $makensisDir
-          Write-Host "makensis 路径: $makensis"
 
       # 固定 SQLite 驱动策略（不提供手动选择）：
       # - Windows 平台使用 modernc（纯 Go，避免 CGO/MinGW 麻烦）
@@ -691,12 +592,6 @@ jobs:
         run: pnpm install
         working-directory: frontend
 
-      # 镜像带 wails3 CLI，但没有 go-task；`wails3 task` 依赖它。
-      - name: 安装 go-task
-        uses: arduino/setup-task@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: 同步版本号
         shell: bash
         run: |
@@ -771,11 +666,11 @@ jobs:
   # CNB / GitLab / Gitee 复用这份正文，只换下载链接域名。
   release:
     needs: [build, build-linux, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # 归一化后的 tag：v1.2.3 / v1.2.3-rc.1 / nightly（滚动 tag）
+      # 归一化后的 tag：v1.2.3 / v1.2.3-rc.1 / v1.2.4-nightly.20260101
       VERSION: ${{ needs.prepare.outputs.tag }}
       PRERELEASE: ${{ needs.prepare.outputs.pre_release }}
       REPO_URL: https://github.com/${{ github.repository }}
@@ -820,15 +715,23 @@ jobs:
 
           case "${VERSION}" in
             v*)
-              # 版本 tag 不能已存在：重跑同一次发布会把 tag 挪到新提交上，
-              # 历史 Release 的对比基准跟着变。
+              # 版本 tag 已存在时：正式版/rc 等不允许重发（会把 tag 挪到新提交，
+              # 历史 Release 的对比基准跟着变）；nightly 是同一天重跑，允许删掉重建。
               if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
-                echo "❌ tag ${VERSION} 已存在，不能重复发布"
-                echo "   已有指向: $(git rev-parse --short "${VERSION}")"
-                echo "   当前 HEAD: $(git rev-parse --short HEAD)"
-                exit 1
+                case "${VERSION}" in
+                  *-nightly.*)
+                    echo "✅ nightly tag ${VERSION} 已存在，按同日重跑处理（会删除旧 Release 与 tag 后重建）"
+                    ;;
+                  *)
+                    echo "❌ tag ${VERSION} 已存在，不能重复发布"
+                    echo "   已有指向: $(git rev-parse --short "${VERSION}")"
+                    echo "   当前 HEAD: $(git rev-parse --short HEAD)"
+                    exit 1
+                    ;;
+                esac
+              else
+                echo "✅ tag ${VERSION} 不存在，可以发布"
               fi
-              echo "✅ tag ${VERSION} 不存在，可以发布"
 
               # 新版本必须比已有的同渠道/正式版更新，否则正文里的 diff 是反的
               if [ "${PRERELEASE}" = "false" ]; then
@@ -841,9 +744,8 @@ jobs:
               fi
               ;;
             *)
-              # 滚动 tag（nightly）：每次发布都指向同一个 tag，允许覆盖，
-              # 也不参与「版本号必须更新」的校验（它不是版本号）。
-              echo "✅ ${VERSION} 是滚动 tag，允许覆盖已有 Release"
+              echo "::error::版本号 ${VERSION} 必须以 v 开头"
+              exit 1
               ;;
           esac
 
@@ -901,8 +803,8 @@ jobs:
           BUILD_TIME="$(date -u -d "${RAW_BUILD_TIME}" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || printf '%s' "${RAW_BUILD_TIME}")"
           export BUILD_TIME
 
-          # 更新内容：按渠道选对比基准（rc 对 rc、beta 对 beta、正式版对正式版，
-          # 滚动 tag nightly 对上一个正式版）。脚本挑不出基准时会 exit 1（而不是谎报
+          # 更新内容：按渠道选对比基准（rc 对 rc、beta 对 beta、nightly 对上一个 nightly、
+          # 正式版对正式版）。脚本挑不出基准时会 exit 1（而不是谎报
           # 「首次发布」），这里显式接住，避免发出一个正文带错误提示的 Release。
           # GitHub 的提交路径是 /commit/<sha>，和 CNB 的 /-/commit 不同，前缀显式传。
           if ! CHANGELOG="$(COMMIT_URL="${REPO_URL}/commit" sh scripts/ci/release-changelog.sh "${VERSION}")"; then
@@ -918,7 +820,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 滚动 tag（nightly）必须删掉重建，否则旧平台的附件会一直堆在 Release 上
+          # nightly 同日重跑时同名 tag 已存在：删掉旧 Release 与 tag 再重建，
+          # 避免旧平台的附件堆在 Release 上。其它渠道正常情况下 tag 是新的，这里为空操作。
           gh release delete "${VERSION}" --yes --cleanup-tag 2>/dev/null || true
 
       - name: 发布 Release
@@ -932,6 +835,33 @@ jobs:
           body_path: release_body.md
           files: release/*
 
+      - name: 清理旧 nightly Release（只保留最近 3 个）
+        if: needs.prepare.outputs.pre_release == 'true' && contains(needs.prepare.outputs.tag, '-nightly.')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # 只处理日期 nightly（tag 以 -nightly.YYYYMMDD 结尾），rc / beta / alpha 不动。
+          # 用远端 Release 列表而不是本地 git tag：刚发布的 tag 由 action-gh-release
+          # 通过 API 创建，当前工作区不一定已经拉到这个 tag 引用。
+          mapfile -t nightly < <(
+            gh release list --limit 200 --json tagName,isPrerelease,isDraft \
+              --jq '.[] | select(.isPrerelease and (.isDraft | not)) | .tagName' \
+              | grep -E -- '-nightly\.[0-9]{8}$' \
+              | sort -rV || true
+          )
+
+          if [ "${#nightly[@]}" -le 3 ]; then
+            echo "nightly Release 共 ${#nightly[@]} 个，无需清理"
+            exit 0
+          fi
+          for old in "${nightly[@]:3}"; do
+            echo "删除旧 nightly Release: ${old}"
+            gh release delete "${old}" --yes --cleanup-tag
+          done
+
   # GitHub Release 发布成功后，触发 CNB 同步构建（把 GitHub Release 镜像到 CNB）。
   # 独立成 job：便于在其后追加 webhook 通知（notify job），也让「同步」与「发布」解耦。
   # 延迟 8 秒：等 GitHub CDN 把刚发布的附件同步好，避免 CNB 侧下载 404。
@@ -940,10 +870,10 @@ jobs:
   # 创建后填到 GitHub 仓库 secret SYNC_CNB_TOKEN。
   sync-cnb:
     needs: [release, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       SYNC_CNB_TOKEN: ${{ secrets.SYNC_CNB_TOKEN }}
-      # 归一化后的 tag（v1.2.3 / v1.2.3-rc.1 / nightly）与预发布标记，均来自版本号后缀
+      # 归一化后的 tag（v1.2.3 / v1.2.3-rc.1 / v1.2.4-nightly.20260101）与预发布标记，均来自版本号后缀
       VERSION: ${{ needs.prepare.outputs.tag }}
       PRERELEASE: ${{ needs.prepare.outputs.pre_release }}
     steps:
@@ -997,11 +927,11 @@ jobs:
   # 不配也不影响发版，只是 Gitee 那边需要手动点执行。
   sync-gitee:
     needs: [release, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       GITEE_WEBHOOK_URL: ${{ secrets.GITEE_WEBHOOK_URL }}
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-      # 归一化后的 tag（v1.2.3 / v1.2.3-rc.1 / nightly），预发布由后缀在 Gitee 侧判定
+      # 归一化后的 tag（v1.2.3 / v1.2.3-rc.1 / v1.2.4-nightly.20260101），预发布由后缀在 Gitee 侧判定
       VERSION: ${{ needs.prepare.outputs.tag }}
     steps:
       - name: 触发 Gitee 发布流水线
@@ -1036,7 +966,7 @@ jobs:
   # 只触发流水线、不绑用户；创建后填到 GitHub 仓库 secret GITLAB_TRIGGER_TOKEN。
   sync-gitlab:
     needs: [release, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
     env:
       GITLAB_TRIGGER_TOKEN: ${{ secrets.GITLAB_TRIGGER_TOKEN }}
@@ -1080,7 +1010,7 @@ jobs:
   # access_token 按官方要求走 query，故日志不打印完整 URL。
   sync-gitcode:
     needs: [release, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
     env:
       GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
@@ -1124,7 +1054,7 @@ jobs:
   notify:
     # 等所有镜像同步 job 结束（未配置 secret 时它们只是跳过，不影响 success 判定）。
     needs: [sync-cnb, sync-gitee, sync-gitlab, sync-gitcode, release, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: ${{ needs.release.result == 'success' }}
     env:
       SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
