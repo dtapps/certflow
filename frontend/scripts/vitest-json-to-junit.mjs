@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 将 Vitest 的 JSON reporter 输出（默认 test-results.json）转换为 JUnit XML（默认 test-report.xml），
-// 供 codecov/test-results-action 上传测试分析结果（Test Analytics）。
+// 供 codecov/codecov-action（report_type: test_results）上传测试分析结果（Test Analytics）。
 //
 // 用法：
 //   node scripts/vitest-json-to-junit.mjs [input.json] [output.xml]

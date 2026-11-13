@@ -37,7 +37,7 @@ concurrency:
 
 jobs:
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # 复用统一 CI 镜像（ghcr.io/dtapps/golang/wails3:latest，各仓库不再自行打包）
     container:
       image: ghcr.io/dtapps/golang/wails3:latest
