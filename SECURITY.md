@@ -9,7 +9,7 @@ CertFlow 是单用户、本地运行的桌面应用（Go + Wails + Vue），没�
 | 最新 GitHub Release | ✅ 支持     |
 | 更早版本            | ❌ 请先升级 |
 
-只对最新发布版本提供安全修复。预发布版本（`-rc` / `-beta` / `-alpha` / `-nightly` 后缀，含滚动 `nightly`）用于验证，不承诺修复时效。
+只对最新发布版本提供安全修复。预发布版本（`-rc` / `-beta` / `-alpha` / `-nightly` 后缀，含每日构建的 `-nightly.YYYYMMDD`）用于验证，不承诺修复时效。
 
 ## 2. 报告渠道
 

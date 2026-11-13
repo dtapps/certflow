@@ -40,6 +40,10 @@ const (
 
 	// dlStatsCNBProxy：中文（CNB）下载中转前缀，规则同 dlStatsGitHubProxy。
 	dlStatsCNBProxy = "https://dl-stats.dtapp.net/"
+
+	// nightlyTagMarker 是 nightly 预发布 tag 的固定片段，如 v1.2.4-nightly.20260101。
+	// nightly 每天一个新 tag，没有固定名字，更新器按这个片段从 Release 列表里挑最新的。
+	nightlyTagMarker = "-nightly."
 )
 
 // mirrorProvider 包装 github.Provider，仅重写下载地址。
@@ -51,19 +55,19 @@ type mirrorProvider struct {
 
 	// prerelease 控制是否提供 nightly 预发布更新（对应设置项 Prerelease）。
 	prerelease bool
-	// repo / baseURL / githubToken 用于直接按 tag 拉取 nightly Release，
-	// 绕过 github provider 内置的 semver「IsNewer」门槛（nightly 非合法 semver）。
+	// repo / baseURL / githubToken 用于直接列出 Release 拉取 nightly 元数据，
+	// 绕过 github provider 内置的 semver「IsNewer」门槛。
+	// nightly 是合法 semver（v1.2.4-nightly.20260101），但每天一个新 tag，
+	// 需要按 `-nightly.` 片段从列表里挑，而不是按固定 tag 取。
 	repo        string
 	baseURL     string
 	githubToken string
 	// cnbToken 为 CNB 只读 Token（构建期 ldflags 注入，与 githubToken 同源），
 	// 预留给「检测层走 CNB 鉴权 API」使用——CNB 匿名 API 返回 401，
-	// 需带 Token 才能按 tag 拉取 nightly 元数据，使中文用户断 GitHub 也能检测更新。
+	// 需带 Token 才能列出 nightly Release，使中文用户断 GitHub 也能检测更新。
 	cnbToken string
 	// assetMatcher 复用 github provider 的平台匹配逻辑。
 	assetMatcher github.AssetMatcher
-	// nightlyTag 为固定预发布标签（默认 nightly）。
-	nightlyTag string
 	// installedBuildTime 为本机已安装二进制的构建时间（ldflags 注入）。
 	// nightly 时间对比直接用它对比「远端 SHA256SUMS 的 build_time」：
 	// 远端 build_time 不晚于本机 installedBuildTime 即视为已是最新（跳过）。
@@ -116,7 +120,6 @@ func newMirrorProvider(cfg github.Config, checkClient, downloadClient *http.Clie
 		githubToken:        cfg.Token,
 		cnbToken:           cnbToken,
 		assetMatcher:       matcher,
-		nightlyTag:         "nightly",
 		installedBuildTime: installedBuildTime,
 		installedGitCommit: installedGitCommit,
 	}, nil
@@ -182,12 +185,12 @@ func (m *mirrorProvider) checkNightly(ctx context.Context, req updater.CheckRequ
 	return m.checkNightlyCNB(ctx, req)
 }
 
-// checkNightlyGitHub 直接按 nightlyTag 拉取 GitHub 预发布 Release，跳过 github
-// provider 内置的 semver「IsNewer」门槛（nightly 非合法 semver，会被恒判为「不更新」）。
+// checkNightlyGitHub 列出最近的 GitHub Release，挑出最新的 nightly 预发布。
+// nightly 每天一个新 tag（如 v1.2.4-nightly.20260101），没有固定 tag 可取，
+// 因此走 /releases 列表并按 `-nightly.` 片段筛选。
 // 仅在 Prerelease=true 时调用。无可用 nightly 返回 (nil, nil)；网络错误返回 err。
 func (m *mirrorProvider) checkNightlyGitHub(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
-	tag := m.nightlyTag
-	u := m.baseURL + "/repos/" + m.repo + "/releases/tags/" + tag
+	u := m.baseURL + "/repos/" + m.repo + "/releases?per_page=30"
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -216,26 +219,42 @@ func (m *mirrorProvider) checkNightlyGitHub(ctx context.Context, req updater.Che
 		return nil, fmt.Errorf("%s", i18n.T("log.updater_github_api_error", "Status", resp.StatusCode, "Body", string(body)))
 	}
 
-	var rel ghRelease
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+	var rels []ghRelease
+	if err := json.NewDecoder(resp.Body).Decode(&rels); err != nil {
 		return nil, fmt.Errorf("%s: %w", i18n.T("log.updater_github_decode_error"), err)
 	}
 
-	return m.buildNightlyRelease(ctx, req, tag, rel.Name, rel.Body, rel.HTMLURL, rel.Draft, rel.PublishedAt, asReleaseAssetsLocal(rel.Assets), nil)
+	rel, ok := pickNewestNightlyGitHub(rels)
+	if !ok {
+		return nil, nil
+	}
+	return m.buildNightlyRelease(ctx, req, rel.TagName, rel.Name, rel.Body, rel.HTMLURL, rel.Draft, rel.PublishedAt, asReleaseAssetsLocal(rel.Assets), nil)
 }
 
-// checkNightlyCNB 通过 CNB 鉴权 API 拉取 nightly 预发布 Release（CNB 匿名 API
-// 返回 401，必须带 cnbToken）。CNB release 结构与 GitHub 基本一致，但 asset.id
-// 为字符串且资产自带 hash_value（sha256），可直接用于校验，无需 SHA256SUMS 侧车。
-// 仅在 GitHub 网络不可达时由 checkNightly 回退调用。
+// pickNewestNightlyGitHub 返回列表中最新的非草稿 nightly。
+// GitHub 的 /releases 列表按发布时间倒序，遇到第一个匹配项即最新。
+func pickNewestNightlyGitHub(rels []ghRelease) (ghRelease, bool) {
+	for _, rel := range rels {
+		if rel.Draft {
+			continue
+		}
+		if isNightlyTag(rel.TagName) {
+			return rel, true
+		}
+	}
+	return ghRelease{}, false
+}
+
+// checkNightlyCNB 通过 CNB 鉴权 API 列出 Release，挑出最新的 nightly 预发布
+// （CNB 匿名 API 返回 401，必须带 cnbToken）。CNB release 结构与 GitHub 基本一致，
+// 但 asset.id 为字符串且资产自带 hash_value（sha256），可直接用于校验，无需 SHA256SUMS 侧车。
 func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
-	tag := m.nightlyTag
 	if m.cnbToken == "" {
 		// 未配置 cnbToken：中文用户检测层仅用 CNB，无 token 即视为「无更新」。
 		logging.Debug("%s", i18n.T("log.updater_nightly_cnb_no_token"))
 		return nil, nil
 	}
-	u := cnbAPIBase + "/dtapp/certflow/-/releases/tags/" + tag
+	u := cnbAPIBase + "/dtapp/certflow/-/releases?page=1&page_size=30"
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -267,11 +286,20 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 		return nil, fmt.Errorf("%s", i18n.T("log.updater_cnb_api_error", "Status", resp.StatusCode, "Body", string(body)))
 	}
 
-	var rel cnbRelease
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+	var raw json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("%s: %w", i18n.T("log.updater_cnb_decode_error"), err)
 	}
+	rels, err := decodeCNBReleaseList(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", i18n.T("log.updater_cnb_decode_error"), err)
+	}
+	rel, ok := pickNewestNightlyCNB(rels)
+	if !ok {
+		return nil, nil
+	}
 
+	tag := rel.TagName
 	// CNB 资产自带 hash_value（sha256），按索引对应传给 buildNightlyRelease。
 	hashes := make([]string, len(rel.Assets))
 	for i, a := range rel.Assets {
@@ -279,6 +307,53 @@ func (m *mirrorProvider) checkNightlyCNB(ctx context.Context, req updater.CheckR
 	}
 	htmlURL := "https://cnb.cool/dtapp/certflow/-/releases/tag/" + tag
 	return m.buildNightlyRelease(ctx, req, tag, rel.Name, rel.Body, htmlURL, rel.Draft, rel.PublishedAt, asReleaseAssetsCNB(rel.Assets), hashes)
+}
+
+// pickNewestNightlyCNB 返回列表中发布时间最新的非草稿 nightly。
+// 不依赖 API 返回顺序：CNB 列表排序未在文档中约定，按 published_at 取最大更稳妥。
+func pickNewestNightlyCNB(rels []cnbRelease) (cnbRelease, bool) {
+	var best cnbRelease
+	found := false
+	for _, rel := range rels {
+		if rel.Draft || !isNightlyTag(rel.TagName) {
+			continue
+		}
+		if !found || rel.PublishedAt.After(best.PublishedAt) {
+			best = rel
+			found = true
+		}
+	}
+	return best, found
+}
+
+// decodeCNBReleaseList 兼容 CNB 列表接口的两种常见形状：裸数组与分页包装
+// （items / list / data）。形状不认识时返回错误，由调用方降级为「无更新」。
+func decodeCNBReleaseList(raw json.RawMessage) ([]cnbRelease, error) {
+	var list []cnbRelease
+	if err := json.Unmarshal(raw, &list); err == nil {
+		return list, nil
+	}
+	var wrap struct {
+		Items []cnbRelease `json:"items"`
+		List  []cnbRelease `json:"list"`
+		Data  []cnbRelease `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &wrap); err != nil {
+		return nil, err
+	}
+	switch {
+	case len(wrap.Items) > 0:
+		return wrap.Items, nil
+	case len(wrap.List) > 0:
+		return wrap.List, nil
+	default:
+		return wrap.Data, nil
+	}
+}
+
+// isNightlyTag 判断 tag 是否为 nightly 预发布（如 v1.2.4-nightly.20260101）。
+func isNightlyTag(tag string) bool {
+	return strings.Contains(strings.ToLower(tag), nightlyTagMarker)
 }
 
 // buildNightlyRelease 将解析出的 nightly 元数据组装为 updater.Release，挑选匹配
@@ -297,9 +372,9 @@ func (m *mirrorProvider) buildNightlyRelease(ctx context.Context, req updater.Ch
 	picked := assets[idx]
 
 	out := &updater.Release{
-		// nightly 预发布版本号就是裸 "nightly"（窗口会自动拼 v 显示为 vnightly），
-		// 不掺杂本机版本号，保持 nightly 语义独立。
-		Version:     tag,
+		// 版本号取 tag 去掉 v 前缀（如 1.2.4-nightly.20260101），更新窗口会拼成
+		// v1.2.4-nightly.20260101 展示，不再是过去的裸 "vnightly"。
+		Version:     strings.TrimPrefix(strings.TrimPrefix(tag, "v"), "V"),
 		Channel:     "prerelease",
 		Name:        name,
 		Notes:       body,

@@ -1,10 +1,9 @@
 # 推送工作流
+# 
 # https://github.com/actions/runner-images
 # https://github.com/actions/checkout
 # https://github.com/actions/cache
-# https://github.com/actions/setup-go
-# https://github.com/actions/setup-node
-# https://github.com/pnpm/action-setup
+# https://github.com/dtapps/golang
 name: PushRequest
 
 on:
@@ -29,7 +28,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # 直接使用统一 CI 镜像（含 Go/Node/pnpm + GTK/WebKit + 全部 Go 工具链），
     # 免去每次重装系统库与 go install 工具。镜像统一维护在 ghcr.io/dtapps/golang/wails3:latest，
     # 不再由各仓库自行打包（原 ci-image.yml 已废弃）。

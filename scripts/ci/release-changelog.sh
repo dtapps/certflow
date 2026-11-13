@@ -10,8 +10,8 @@
 #       发 v1.0.45 → 对比 v1.0.43（中间那些 -rc.1/-rc.2 不算基准）
 #   - 该渠道还没有过 tag 时，回退到上一个正式版
 #       首次发 v1.0.44-rc.1 → 对比 v1.0.43
-#   - 固定滚动 tag（nightly）：它每次发布都指向同一个 tag，无法当基准，
-#     直接和上一个正式版对比（= 这一轮 nightly 累积的全部改动）
+#       nightly（v1.2.4-nightly.20260101）同理：对比上一个 nightly，
+#       第一次发 nightly 时回退到上一个正式版
 #
 # 为什么不用 `git describe --tags --abbrev=0 'HEAD^'`：
 #   1) 它取的是「最近的可达 tag」，不区分渠道。发正式版时会取到刚发的 rc，
@@ -52,20 +52,10 @@ case "${version}" in
   *-nightly*) channel='nightly' ;;
 esac
 
-# 固定滚动 tag（nightly）：每次都指向同一个 tag，不能拿它当对比基准，
-# 直接和上一个正式版比。同时它不参与「只保留比当前版本旧」的过滤——
-# `nightly` 不是版本号，和 v1.0.3 一起 sort -V 会被判成「比当前版本新」，
-# 过滤后候选集全空，反而报错。
-rolling=0
-case "${version}" in
-  v*) ;;
-  *) rolling=1 ;;
-esac
-
 # ── 收集候选 tag ────────────────────────────────────────────────────────────
-# 只认合法的 SemVer 版本 tag：vX.Y.Z 或 vX.Y.Z-rc.N / -beta.N / -alpha.N / -nightly.N。
+# 只认合法的 SemVer 版本 tag：vX.Y.Z 或 vX.Y.Z-rc.N / -beta.N / -alpha.N / -nightly.YYYYMMDD。
 # 不合规的 tag 一律不进候选集 —— 否则一个随手建的 v1.0.44.rc1 之类就会变成
-# 对比基准，把 diff 算到错误的区间上。裸 `nightly` tag 也在此被排除。
+# 对比基准，把 diff 算到错误的区间上。
 # 拉取 tag 是调用方的责任：GitHub 用 fetch-depth: 0，CNB 用 git fetch --tags，
 # 工作流里都有独立一步校验，这里不做兜底 fetch。
 all_tags="$(git tag -l 'v*' 2>/dev/null \
@@ -112,12 +102,7 @@ EOF
 
 base=''
 if [ -n "${same_channel}" ]; then
-  if [ "${rolling}" -eq 1 ]; then
-    # 固定滚动 tag 没有「比自己旧」的概念，直接取同渠道（这里是正式版）最新的
-    base="$(pick_latest "${same_channel}")"
-  else
-    base="$(pick_latest "$(older_than_version "${same_channel}")")"
-  fi
+  base="$(pick_latest "$(older_than_version "${same_channel}")")"
 fi
 
 # 同渠道没有更早的 tag（首次发这个渠道）→ 回退到上一个正式版

@@ -721,7 +721,7 @@
   "notification.test.title": "Test Notification",
   "notification.update_available_subtitle": "Version {{.version}} is available, click to view",
   "notification.update_available_title": "Update Available",
-  "notification.update_ready_subtitle": "The new version has been downloaded and will take effect after restart",
+  "notification.update_ready_subtitle": "The new version has been downloaded. Finish from the tray menu \"Restart & Update\".",
   "notification.update_ready_title": "Update Ready",
   "settings.about.buildTime": "Build Time",
   "settings.about.gitCommit": "Git Commit",
@@ -736,10 +736,14 @@
   "settings.data.import.failed": "Import failed",
   "settings.data.import.preparing": "Preparing import",
   "systray.applyCert": "Apply Certificate",
+  "systray.autostart": "Launch at Login",
   "systray.checkUpdate": "Check for Updates",
+  "systray.prerelease": "Pre-release Updates",
   "systray.quit": "Quit",
+  "systray.restartAndUpdate": "Restart & Update",
   "systray.scan": "Certificate Scanner",
   "systray.settings": "Settings",
   "systray.show": "Show Window",
+  "systray.version": "CertFlow {{.Version}}",
   "updater.title": "Check for Updates"
 }

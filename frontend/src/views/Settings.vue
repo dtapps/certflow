@@ -921,12 +921,12 @@ onMounted(async () => {
       <n-card :title="t('settings.about.title')" size="small" class="mt-4">
         <div class="space-y-3">
           <div class="flex justify-between py-2">
-            <span class="opacity-50">{{ t('settings.about.name') }}</span
-            ><span>CertFlow</span>
+            <span class="opacity-50">{{ t('settings.about.name') }}</span><span>CertFlow</span>
           </div>
           <div class="flex justify-between py-2">
-            <span class="opacity-50">{{ t('settings.about.version') }}</span
-            ><span>{{ appVersion || 'unknown' }}</span>
+            <span class="opacity-50">{{ t('settings.about.version') }}</span><span>{{
+              appVersion || 'unknown'
+            }}</span>
           </div>
           <div class="flex items-center justify-between py-2">
             <div>

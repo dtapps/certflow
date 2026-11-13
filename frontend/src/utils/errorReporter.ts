@@ -49,10 +49,6 @@ export function reportError(message: string, stack?: string, url?: string) {
   send('error', message, stack, url)
 }
 
-export function reportWarn(message: string, stack?: string, url?: string) {
-  send('warn', message, stack, url)
-}
-
 // 将 console 的变参格式化为可读 message 与 stack（若参数含 Error 实例则取 stack）。
 function formatArgs(args: unknown[]): { message: string; stack: string } {
   const parts: string[] = []

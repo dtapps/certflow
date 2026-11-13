@@ -11,7 +11,7 @@ minimumReleaseAgeExclude:
 # glob@13 的内联产物里带着 minimatch 10 的漏洞代码，故一并抬到 glob@14（内联已修复版本）。
 overrides:
   # TNB 用 TS7 引擎（tsgo）；版本写死以避免与 CI frozen-lockfile 冲突，升级时手动 bump 版本号
-  typescript: npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2
+  typescript: npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2
   # 修复 CVE-2021-3807 (ansi-regex 4.1.0/5.0.0 低效正则复杂度漏洞)，升级到推荐修复版本 6.0.1
   ansi-regex: 6.0.1
   minimatch: 11.0.5

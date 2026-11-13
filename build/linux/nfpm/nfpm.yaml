@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "CertFlow"
+name: 'CertFlow'
 arch: ${GOARCH}
-platform: "linux"
-version: "0.0.1"
-section: "default"
-priority: "extra"
+platform: 'linux'
+version: '0.0.1'
+section: 'default'
+priority: 'extra'
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "SSL 证书管理工具，支持证书申请、续期、过期监控等功能。"
-vendor: "DTApp"
-homepage: "https://wails.io"
-license: "MIT"
-release: "1"
+description: 'SSL 证书管理工具，支持证书申请、续期、过期监控等功能。'
+vendor: 'DTApp'
+homepage: 'https://wails.io'
+license: 'MIT'
+release: '1'
 
 contents:
-  - src: "./bin/CertFlow"
-    dst: "/usr/local/bin/CertFlow"
-  - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/CertFlow.png"
-  - src: "./build/linux/CertFlow.desktop"
-    dst: "/usr/share/applications/CertFlow.desktop"
+  - src: './bin/CertFlow'
+    dst: '/usr/local/bin/CertFlow'
+  - src: './build/appicon.png'
+    dst: '/usr/share/icons/hicolor/128x128/apps/CertFlow.png'
+  - src: './build/linux/CertFlow.desktop'
+    dst: '/usr/share/applications/CertFlow.desktop'
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
@@ -45,7 +45,7 @@ overrides:
 
 # scripts section to ensure desktop database is updated after install
 scripts:
-  postinstall: "./build/linux/nfpm/scripts/postinstall.sh"
+  postinstall: './build/linux/nfpm/scripts/postinstall.sh'
   # You can also add preremove, postremove if needed
   # preremove: "./build/linux/nfpm/scripts/preremove.sh"
   # postremove: "./build/linux/nfpm/scripts/postremove.sh"

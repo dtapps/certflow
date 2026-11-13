@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/test/**/*.test.ts",
+    "scripts/*.mjs"
+  ],
+  "ignoreDependencies": [
+    "prettier"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreIssues": {
+    "src/utils/events.ts": [
+      "exports",
+      "types"
+    ]
+  },
+  "project": [
+    "src/**/*.{ts,vue}",
+    "src/**/*.css",
+    "scripts/**/*.mjs"
+  ]
+}

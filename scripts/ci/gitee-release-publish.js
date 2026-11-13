@@ -20,6 +20,50 @@ const MANIFEST = process.env.MANIFEST || 'gitee-release.json';
 const API = process.env.CERTFLOW_GITEE_API || 'https://gitee.com/api/v5/repos/dtapps/certflow';
 const TOKEN = (process.env.CERTFLOW_GITEE_TOKEN || '').trim();
 
+// 只保留最近 3 个日期 nightly（与 GitHub release.yml 的清理步骤同口径）。
+// 镜像侧每天被动同步一次，tag 各不相同；而 Gitee 的附件配额是「仓库累计 1GB」，
+// 旧 nightly 不删会持续吃掉配额（上传步骤里的配额跳过就是被它挤出来的）。
+// 清理失败只告警，不影响本次发布结果——发布成功比清理重要。
+async function cleanupOldNightly() {
+  try {
+    const res = await gt('GET', '/releases?per_page=100&page=1');
+    if (res.status !== 200) {
+      console.log('⚠ 查询 Release 列表失败（HTTP ' + res.status + '），跳过 nightly 清理');
+      return;
+    }
+    let list = null;
+    try { list = JSON.parse(res.text); } catch (e) { list = null; }
+    if (!Array.isArray(list)) {
+      console.log('⚠ Release 列表不是数组，跳过 nightly 清理');
+      return;
+    }
+    // 只认「预发布 + tag 以 -nightly.YYYYMMDD 结尾」，rc / beta / alpha 与正式版不动。
+    // 日期是定长数字，按 tag 字符串倒序即按时间倒序，无需解析版本号。
+    const nightly = list
+      .filter((r) => r && r.prerelease && /-nightly\.\d{8}$/.test(r.tag_name || ''))
+      .sort((a, b) => (a.tag_name < b.tag_name ? 1 : a.tag_name > b.tag_name ? -1 : 0));
+    if (nightly.length <= 3) {
+      console.log('nightly Release 共 ' + nightly.length + ' 个，无需清理');
+      return;
+    }
+    for (const old of nightly.slice(3)) {
+      console.log('删除旧 nightly Release：' + old.tag_name);
+      const del = await gt('DELETE', '/releases/' + old.id);
+      if (del.status !== 204 && del.status !== 200) {
+        console.log('⚠ 删除 Release 失败（HTTP ' + del.status + '），继续下一个');
+        continue;
+      }
+      // tag 不随 Release 一起删，单独删；失败只告警（下次发布不受影响）
+      const dt = await gt('DELETE', '/tags/' + encodeURIComponent(old.tag_name));
+      if (dt.status !== 204 && dt.status !== 200) {
+        console.log('⚠ 删除 tag 失败（HTTP ' + dt.status + '），忽略');
+      }
+    }
+  } catch (err) {
+    console.log('⚠ 清理旧 nightly 异常（忽略）：' + (err && err.message ? err.message : String(err)));
+  }
+}
+
 function fail(msg) {
   console.error('错误：' + msg);
   process.exit(1);
@@ -151,6 +195,9 @@ async function main() {
     failed.forEach((x) => console.log('  - ' + x));
     fail('有 ' + failed.length + ' 个附件上传失败，见上面的 HTTP 状态与响应体');
   }
+  // ── 清理旧 nightly（保留最近 3 个）──
+  await cleanupOldNightly();
+
   console.log('发布完成：' + (release.html_url || m.tag));
 }
 

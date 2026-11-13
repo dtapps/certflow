@@ -9,7 +9,7 @@
 // 以及某次体积没超 100MB 的 AppImage 都不特殊处理。
 //
 // 环境变量：
-//   RELEASE_VERSION        可选，v1.2.3 / 1.2.3 / nightly；留空取 GitHub 最新 Release
+//   RELEASE_VERSION        可选，v1.2.3 / 1.2.3 / v1.2.4-nightly.20260101；留空取 GitHub 最新 Release
 //   CERTFLOW_GITHUB_TOKEN  可选，避开 api.github.com 匿名限流
 //   OUT_DIR                默认 assets
 //   MANIFEST               默认 gitee-release.json
@@ -201,8 +201,12 @@ async function main() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
   const raw = (process.env.RELEASE_VERSION || '').trim();
-  const rolling = /^nightly$/i.test(raw);
-  let tag = raw ? (rolling ? 'nightly' : 'v' + raw.replace(/^v/i, '')) : '';
+  // nightly 的日期 tag 由 GitHub 发布流水线生成，这里只接收最终 tag；
+  // 传裸 nightly 拼不出真实 tag，直接报错避免 404。
+  if (/^nightly$/i.test(raw)) {
+    fail('请传最终 nightly 版本（如 v1.2.4-nightly.20260101），不要传裸 nightly');
+  }
+  let tag = raw ? 'v' + raw.replace(/^v/i, '') : '';
 
   // 指定了版本就按 tag 精确取（补发历史版本）；没指定就取最新。
   const relUrl = tag
@@ -262,7 +266,7 @@ async function main() {
     .split('https://github.com/dtapps/certflow').join('https://gitee.com/dtapps/certflow')
     .trim();
   const bodyHtml = renderBody(body || ('CertFlow ' + tag), tag);
-  const preByTag = /[-.](rc|beta|alpha|nightly|pre|preview)\d*(\.|\b)/i.test(ver) || rolling;
+  const preByTag = /[-.](rc|beta|alpha|nightly|pre|preview)\d*(\.|\b)/i.test(ver);
   const preByBody = /(预发布|测试版|抢先版|pre-?release|release candidate)/i.test(body);
   const pre = rel.prerelease === true || preByTag || preByBody;
   console.log('预发布：' + pre + '（GitHub prerelease=' + rel.prerelease +

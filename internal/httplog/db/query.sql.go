@@ -11,7 +11,9 @@ import (
 )
 
 const deleteOldHttpLog = `-- name: DeleteOldHttpLog :execrows
-DELETE FROM http_log WHERE created_at < ?
+DELETE FROM http_log
+WHERE
+  created_at < ?
 `
 
 func (q *Queries) DeleteOldHttpLog(ctx context.Context, createdAt sql.NullTime) (int64, error) {
@@ -23,7 +25,8 @@ func (q *Queries) DeleteOldHttpLog(ctx context.Context, createdAt sql.NullTime) 
 }
 
 const insertHttpLog = `-- name: InsertHttpLog :exec
-INSERT INTO http_log (
+INSERT INTO
+  http_log (
     hostname,
     method,
     url,
@@ -38,7 +41,9 @@ INSERT INTO http_log (
     created_at,
     go_version,
     plugin_version
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  )
+VALUES
+  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertHttpLogParams struct {

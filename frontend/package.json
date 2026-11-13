@@ -1,18 +1,4 @@
 {
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
-  "license": "MIT",
-  "type": "module",
-  "packageManager": "pnpm@12.18.0",
-  "scripts": {
-    "dev": "vite",
-    "build:dev": "vue-tsc && vite build --minify false --mode development",
-    "build": "vue-tsc && vite build --mode production",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
-  },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
     "@vicons/ionicons5": "^0.13.0",
@@ -23,7 +9,6 @@
     "pinia": "^4.1.0",
     "qrcode": "^1.5.4",
     "tailwindcss": "^4.3.5",
-    "vfonts": "^0.0.3",
     "vue": "3.6.0-rc.14",
     "vue-echarts": "^8.3.2",
     "vue-router": "^5.5.0"
@@ -33,12 +18,13 @@
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^26.6.6",
-    "@vitejs/plugin-vue": "^6.0.10",
+    "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/coverage-v8": "^5.1.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "eslint": "^10.14.0",
     "eslint-plugin-vue": "^10.12.1",
-    "prettier": "^3.9.10",
+    "knip": "^6.45.1",
+    "prettier": "^3.10.1",
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2",
     "typescript-eslint": "^8.72.2",
     "unplugin-auto-import": "^21.1.0",
@@ -46,5 +32,25 @@
     "vite": "^8.3.8",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.14"
-  }
+  },
+  "license": "MIT",
+  "name": "frontend",
+  "packageManager": "pnpm@12.18.0",
+  "private": true,
+  "scripts": {
+    "build": "vue-tsc && vite build --mode production",
+    "build:dev": "vue-tsc && vite build --minify false --mode development",
+    "deps:clean": "knip --fix",
+    "dev": "vite",
+    "format": "prettier --write \"src/**/*.{vue,ts,js,css}\"",
+    "format:check": "prettier --check \"src/**/*.{vue,ts,js,css}\"",
+    "lint": "eslint \"src/**/*.{vue,ts,js}\"",
+    "lint:fix": "eslint --fix \"src/**/*.{vue,ts,js}\"",
+    "lint:unused": "knip",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "type": "module",
+  "version": "0.0.0"
 }

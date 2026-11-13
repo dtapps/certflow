@@ -4,11 +4,11 @@
 
 ## 1. 总览：三个支柱 + 职责分离
 
-| 支柱                     | 内容            | 本仓库实现                                                                                                | Codecov 里看什么                      |
-|--------------------------|-----------------|-----------------------------------------------------------------------------------------------------------|---------------------------------------|
-| 覆盖率 Coverage          | 代码行覆盖率    | `codecov/codecov-action` 上传 Go `coverage.out` 与前端 `lcov.info`                                        | Coverage 面板、PR 评论、patch 状态    |
-| 打包体积 Bundle Analysis | 前端 chunk 体积 | `@codecov/vite-plugin`（构建时上传）                                                                      | Bundle 面板（体积趋势 / 回归）        |
-| 测试结果 Test Analytics  | 单测运行结果    | Go：`gotestsum --junitfile`；Vue：Vitest `json` → 脚本转 JUnit；合并由 `codecov/test-results-action` 上传 | Tests 面板（时长 / flaky / 失败分析） |
+| 支柱                     | 内容            | 本仓库实现                                                                                                                         | Codecov 里看什么                      |
+|--------------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------|
+| 覆盖率 Coverage          | 代码行覆盖率    | `codecov/codecov-action` 上传 Go `coverage.out` 与前端 `lcov.info`                                                                 | Coverage 面板、PR 评论、patch 状态    |
+| 打包体积 Bundle Analysis | 前端 chunk 体积 | `@codecov/vite-plugin`（构建时上传）                                                                                               | Bundle 面板（体积趋势 / 回归）        |
+| 测试结果 Test Analytics  | 单测运行结果    | Go：`gotestsum --junitfile`；Vue：Vitest `json` → 脚本转 JUnit；合并由 `codecov/codecov-action`（`report_type: test_results`）上传 | Tests 面板（时长 / flaky / 失败分析） |
 
 > **职责分离（重要）**：CNB 流水线（`testing:coverage`）负责**硬性红线门禁**（`lines` / `diffLines`），会阻断低覆盖率合并；GitHub Actions 只负责**把数据上报到 Codecov** 做可视化（PR 评论、徽章、patch 状态）。因此 `.github/codecov.yml` 里的 `status` 全部设为 `informational`，避免与 CNB 双重门禁。
 >
@@ -53,7 +53,7 @@
 
 ### 3.3 测试结果（Test Analytics）
 
-Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传到同一个 `codecov/test-results-action@v1`：
+Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传到同一个 `codecov/codecov-action@v7`（`report_type: test_results`；原 `codecov/test-results-action` 已归档废弃）：
 
 - **Vue（Vitest 5.0.5）**：无内置 junit reporter（社区 `@vitest/junit` 包在 npm 也已不可得），改用内置 `json` reporter 产出 `test-results.json`，再由零依赖脚本转 JUnit：
   1. 测试步骤额外挂内置 `json` reporter 产出 `test-results.json`：
@@ -64,7 +64,7 @@ Go 与 Vue 都不原生产出 JUnit，分别用不同方式转换后合并上传
 
      （`coverage/lcov.info` 仍正常产出，不受影响。）
   2. 转换步骤用 `node scripts/vitest-json-to-junit.mjs` 把 JSON 转成 `test-report.xml`（JUnit 格式）。
-  3. 上传步骤用 `codecov/test-results-action@v1` 上传 `frontend/test-report.xml`。
+  3. 上传步骤用 `codecov/codecov-action@v7`（`report_type: test_results`）上传 `frontend/test-report.xml`。
 - **Go**：`go test` 也不原生产 JUnit，用 `gotestsum` 包裹（参数原样透传，`coverage.out` 照常产出），额外生成 `go-test-report.xml`：
 
   ```
@@ -163,7 +163,7 @@ gitlab     /builds/group/certflow/frontend/src/test/format.test.ts → 同上
 
 - **Go 测试 `ld` 报错 `cannot find -lwebkitgtk-6.0` 等**：系统库未装，确认 `apt-get install` 步骤在跑且为 `ubuntu-24.04`。
 - **Bundle 面板空白**：检查「构建前端」步骤是否真的上传成功；插件与 Vite 8 不兼容时该步骤会 `continue-on-error` 失败但不阻断。
-- **Tests 面板空白**：检查 `test-results.json` 是否生成、`vitest-json-to-junit.mjs` 是否产出 `test-report.xml`、`codecov/test-results-action` 是否拿到 token。
+- **Tests 面板空白**：检查 `test-results.json` 是否生成、`vitest-json-to-junit.mjs` 是否产出 `test-report.xml`、`codecov-action` 的 `report_type: test_results` 是否拿到 token。
 - **覆盖率双份/互相覆盖**：确认 `.github/codecov.yml` 的 `flags` 已区分 `go` / `node`，且 `status` 为 `informational`。
 
 ## 7. 注意事项

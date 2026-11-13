@@ -32,6 +32,6 @@
   "notification.test.title": "测试通知",
   "notification.update_available_subtitle": "版本 {{.version}} 可用，点击查看详情",
   "notification.update_available_title": "发现新版本",
-  "notification.update_ready_subtitle": "新版本已下载完成，重启应用后生效",
+  "notification.update_ready_subtitle": "新版本已下载完成，可在托盘菜单「重启并安装更新」完成",
   "notification.update_ready_title": "更新已就绪"
 }

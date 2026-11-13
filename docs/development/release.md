@@ -9,15 +9,14 @@
 - `workflow_dispatch`：手动填版本号。
 - `schedule`：每天 UTC 00:00（北京时间 08:00）自动构建，等价于手动填 `nightly`。
 
-| 输入           | 说明                                                                                                                                                                                         |
-|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `version`      | 版本号，正式版 `1.2.3`（带不带 `v` 均可，tag 统一为 `v1.2.3`）；预发布看后缀：`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`；滚动预发布填 `nightly`（tag 就是 `nightly`，不加 `v`） |
-| `commit`       | 要构建的提交，留空用默认分支最新提交                                                                                                                                                         |
-| `nsis_version` | NSIS 版本号，留空用默认                                                                                                                                                                      |
+| 输入      | 说明                                                                                                                                                                                                                                                       |
+|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `version` | 版本号，正式版 `1.2.3`（带不带 `v` 均可，tag 统一为 `v1.2.3`）；预发布看后缀：`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`；填 `nightly` 自动展开为 `v<最近正式版+1补丁>-nightly.<UTC日期>`（如最近正式版 `v1.2.3` → `v1.2.4-nightly.20260101`） |
+| `commit`  | 要构建的提交，留空用默认分支最新提交                                                                                                                                                                                                                       |
 
 **没有 `prerelease` 勾选框**：是否预发布只由版本号后缀决定，避免布尔输入与版本号打架。归一化与判定统一走 `scripts/ci/resolve-prerelease.sh`，GitHub 与 CNB 共用同一份实现。
 
-`prepare` job 输出：`tag`（归一化 tag，如 `v1.2.3-rc.1` / `nightly`）、`version`（去掉 `v`，注入 `main.currentVersion` 与产物名）、`app_version`（纯数字，供 NSIS / plist / nfpm）、`pre_release`、`release_title`、`build_time`（`scripts/get-build-time.sh`）与 `git_commit` / `git_commit_full`。
+`prepare` job 输出：`tag`（归一化 tag，如 `v1.2.3-rc.1` / `v1.2.4-nightly.20260101`）、`version`（去掉 `v`，注入 `main.currentVersion` 与产物名）、`app_version`（纯数字，供 NSIS / plist / nfpm）、`pre_release`、`release_title`、`build_time`（`scripts/get-build-time.sh`）与 `git_commit` / `git_commit_full`。
 
 ## 2. 六平台矩阵
 
@@ -68,7 +67,7 @@
 
 1. `prepare`：归一化版本号（`scripts/ci/resolve-prerelease.sh`），算 `tag` / `version` / `app_version` / 预发布标记 / 构建时间 / 提交。
 2. `build` / `build-linux`（六路并行）：打包 → 签名 → 重命名 → 平台内 `SHA256SUMS` → 上传 artifact（保留 1 天）。
-3. `release`：下载全部 artifact → 预发布时写 `BUILD_TIME`/`GIT_COMMIT` → 统一 `SHA256SUMS`（追加 `# build_time` / `# git_commit` 注释，供更新器判定 nightly 是否真更新）→ `release-changelog.sh` 按渠道选对比基准 → `render-release-body.sh` 生成正文 → 删除同名旧 Release → `softprops/action-gh-release@v3` 用归一化 tag 发布。版本 tag 必须比已有同渠道版本新且不可重复；滚动 tag `nightly` 允许覆盖（每次删了重建）。
+3. `release`：下载全部 artifact → 预发布时写 `BUILD_TIME`/`GIT_COMMIT` → 统一 `SHA256SUMS`（追加 `# build_time` / `# git_commit` 注释，供更新器判定 nightly 是否真更新）→ `release-changelog.sh` 按渠道选对比基准 → `render-release-body.sh` 生成正文 → 删除同名旧 Release → `softprops/action-gh-release@v3` 用归一化 tag 发布 → nightly 发布后清理旧 Release，GitHub 只保留最近 3 个。版本 tag 必须比已有同渠道版本新且不可重复；nightly 的日期 tag 正常情况下每天新建，同一天重跑时允许删掉重建（镜像平台暂不做同等清理）。
 4. 同步 job（全部 `needs: release`，失败只 `::warning::`，不影响 Release；只传归一化 tag，预发布由各端按后缀自行判定）：
    - `sync-cnb`：延迟 8 秒等 CDN，POST `api.cnb.cool/.../-/build/start`，`event=api_trigger_release`，env 带 `version`。需要 `SYNC_CNB_TOKEN`（权限 `repo-cnb-trigger:rw`）。
    - `sync-gitee`：POST Gitee Go webhook（`eventType=certflow-release`，参数只有 `VERSION`）。需要 `GITEE_WEBHOOK_URL` + `GITEE_TOKEN`。
