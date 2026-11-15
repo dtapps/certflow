@@ -1,0 +1,242 @@
+# GitHub Release → GitLab Release 的同步工作流（job 定义）。
+#
+# 全局配置（stages / default image / before_script）在仓库根目录 .gitlab-ci.yml，
+# 本文件由它通过 include:local 引入；新增工作流时记得同步补 include。
+#
+# ---------------------------------------------------------------------------
+# 发布同步：从 GitHub Release 下载产物，发布到 GitLab Release
+# ---------------------------------------------------------------------------
+# 只在 trigger 源流水线跑（GitHub 侧 release.yml 的 sync-gitlab job 触发）：
+#   POST /api/v4/projects/:id/trigger/pipeline  variables[VERSION]=v1.2.3（nightly 传带日期的最终 tag）
+# 是否预发布由 VERSION 后缀判定，不接受额外的布尔变量。
+#
+# 附件存放：GitLab 没有「Release 二进制附件」API，所以走 **Generic Package Registry**，
+# Release 的 assets link 指向 package 地址，并用 direct_asset_path 生成直链
+# （/-/releases/<tag>/downloads/<file>），对外表现与 GitHub 的 release 资产一致。
+#
+# 认证：优先 CI_JOB_TOKEN（Releases API 与 Package Registry 均支持）；
+# 若项目禁用了 job token 权限，配一个 GL_RELEASE_TOKEN（PAT，api scope）即自动切换。
+# GitHub 令牌：项目 → Settings → CI/CD → Variables 加 CERTFLOW_GITHUB_TOKEN（Masked，不要勾 Protected，
+# 否则 trigger 流水线的 ref 不是保护分支时取不到值）。与 .cnb.yml 用的同一个只读令牌，
+# 只为绕开 api.github.com 的 60 次/小时匿名限额（按 IP 限，共享 runner 很容易撞上）。
+release:
+  stage: release
+  variables:
+    GIT_STRATEGY: none # 不检出代码，全部在临时目录完成
+  timeout: 30m
+  rules:
+    # 主路径：GitHub Actions 用 trigger token 自动触发
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+    # 手动路径：CI/CD → Pipelines → Run pipeline，在「变量」区填 VERSION（后缀决定是否预发布）
+    # 要求 VERSION 非空，没填就不创建这个 job，避免空跑一次必然失败的发布
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION
+  script:
+    - |
+      set -euo pipefail
+
+      TAG="${VERSION:?未传入 VERSION —— 网页手动执行时请在 Run pipeline 的变量区填写（如 VERSION=v0.2.19）}"
+      # nightly 的日期版本由 GitHub 发布流水线生成（如 v1.2.4-nightly.20260101），
+      # 这里只接收最终 tag；传裸 nightly 无法推导基版本与日期，直接报错。
+      # 其余版本一律补 v（允许传 0.2.19 或 v0.2.19）。
+      case "$TAG" in
+        v*) ;;
+        nightly | NIGHTLY)
+          echo "错误: 请传最终 nightly 版本（如 v1.2.4-nightly.20260101），不要传裸 nightly" >&2
+          exit 1
+          ;;
+        *) TAG="v${TAG}" ;;
+      esac
+      # 预发布：只看 tag 后缀（与 GitHub / CNB / GitCode 同一口径）。
+      # 不再接收外部传入的 PRERELEASE 变量：布尔和版本号打架时，Release 会自相矛盾。
+      case "$TAG" in
+        *-rc* | *-beta* | *-alpha* | *-nightly*) PRE="true" ;;
+        *) PRE="false" ;;
+      esac
+      echo "版本号: ${TAG}  预发布: ${PRE}"
+
+      GH_API="https://api.github.com/repos/dtapps/certflow"
+      API="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}"
+
+      if [ -n "${GL_RELEASE_TOKEN:-}" ]; then
+        AUTH=(-H "PRIVATE-TOKEN: ${GL_RELEASE_TOKEN}")
+      else
+        AUTH=(-H "JOB-TOKEN: ${CI_JOB_TOKEN}")
+      fi
+
+      # GitHub 公开仓库匿名也能下，但 API 只有 60 次/小时；没配 token 时回落到匿名，不报错。
+      gh_get() {
+        if [ -n "${CERTFLOW_GITHUB_TOKEN:-}" ]; then
+          curl -fsSL -H "Authorization: token ${CERTFLOW_GITHUB_TOKEN}" "$1" -o "$2"
+        else
+          curl -fsSL "$1" -o "$2"
+        fi
+      }
+
+      WORK=$(mktemp -d)
+      cd "$WORK"
+      mkdir dist
+
+      echo "读取 GitHub Release: ${TAG}"
+      gh_get "${GH_API}/releases/tags/${TAG}" release.json
+      COUNT=$(jq '.assets | length' release.json)
+      if [ "$COUNT" -le 0 ]; then
+        echo "错误：GitHub Release ${TAG} 没有附件"
+        exit 1
+      fi
+      echo "共 ${COUNT} 个附件"
+
+      for i in $(seq 0 $((COUNT - 1))); do
+        NAME=$(jq -r ".assets[$i].name" release.json)
+        URL=$(jq -r ".assets[$i].browser_download_url" release.json)
+        echo "下载 ${NAME} ..."
+        gh_get "$URL" "dist/${NAME}"
+      done
+      ls -lh dist
+
+      # 复用 GitHub 正文，把仓库链接替换为 GitLab。
+      #
+      # 顺序不能颠倒：GitHub 的下载地址是 /releases/download/<tag>/<file>，
+      # GitLab 的直链是 /-/releases/<tag>/downloads/<file>（多一个 /-，download 变 downloads）。
+      # 如果只换域名，会得到 https://gitlab.com/dtapps/certflow/releases/download/...
+      # —— GitLab 没有这条路由，表格里点下载必然 404。
+      GH_BASE="https://github.com/dtapps/certflow"
+      jq -r '.body // ""' release.json \
+        | sed -E \
+            -e "s#${GH_BASE}/releases/download/([^/ )]+)/([^ )]+)#${CI_PROJECT_URL}/-/releases/\1/downloads/\2#g" \
+            -e "s#${GH_BASE}/releases/tag/([^/ )]+)#${CI_PROJECT_URL}/-/releases/\1#g" \
+            -e "s#${GH_BASE}/releases([^A-Za-z0-9/]|$)#${CI_PROJECT_URL}/-/releases\1#g" \
+            -e "s#${GH_BASE}/compare/([^ )]+)#${CI_PROJECT_URL}/-/compare/\1#g" \
+            -e "s#${GH_BASE}/commits/([^ )]+)#${CI_PROJECT_URL}/-/commits/\1#g" \
+            -e "s#${GH_BASE}/commit/([^ )]+)#${CI_PROJECT_URL}/-/commit/\1#g" \
+            -e "s#${GH_BASE}#${CI_PROJECT_URL}#g" \
+        > body.md
+
+      # 兜底：正文里只要还残留指向 GitHub 的链接，说明上面的规则没覆盖到，
+      # 宁可让 job 失败，也别发出一个点进去 404 的 release 页面。
+      if grep -n "github.com/dtapps/certflow" body.md; then
+        echo "错误：Release 正文仍含指向 GitHub 的链接，中止发布"
+        exit 1
+      fi
+
+      # 上传到 Generic Package Registry（同版本重发会 403，视为已存在）
+      LINKS='[]'
+      for f in dist/*; do
+        NAME=$(basename "$f")
+        # 文件名可能含空格/中文（如 macOS 的「安装包.dmg」），路径段必须 URL 编码，
+        # 否则 curl 直接报 URL malformed（exit 3，且 -s 下不打日志，很难查）。
+        ENC=$(printf '%s' "$NAME" | jq -sRr @uri)
+        UP_URL="${API}/packages/generic/certflow/${TAG}/${ENC}"
+        HTTP=$(curl -s -o /tmp/pkg.out -w "%{http_code}" -X PUT "${AUTH[@]}" --upload-file "$f" "$UP_URL")
+        case "$HTTP" in
+          200|201) echo "  ✓ 已上传 ${NAME}" ;;
+          403|409) echo "  ⚠ ${NAME} 已存在（同版本重发），复用已有文件" ;;
+          *) echo "  ✗ 上传 ${NAME} 失败 HTTP=${HTTP}"; cat /tmp/pkg.out; exit 1 ;;
+        esac
+        # 升级专用包（updater-*）与更新器元数据（BUILD_TIME / GIT_COMMIT）照常上传，
+        # 但**不列进 Release 的 assets 链接**：它们只给应用自更新用，普通用户点了也没法用。
+        # 这与 GitHub 正文下载表的口径一致（那边同样排除这三类）。
+        case "$NAME" in
+          updater-* | BUILD_TIME | GIT_COMMIT) ;;
+          *)
+            LINKS=$(echo "$LINKS" | jq --arg n "$NAME" --arg u "$UP_URL" --arg d "/${NAME}" \
+              '. + [{name: $n, url: $u, direct_asset_path: $d, link_type: "package"}]')
+            ;;
+        esac
+      done
+
+      # 幂等：删同 tag 的旧 release（tag 保留，下面创建时复用）
+      HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH[@]}" "${API}/releases/${TAG}")
+      case "$HTTP" in
+        200|204) echo "已删除旧 release ${TAG}" ;;
+        404) echo "无旧 release，直接创建" ;;
+        *) echo "⚠ 删除旧 release 返回 HTTP=${HTTP}（继续）" ;;
+      esac
+
+      # 标题与 GitHub / CNB 同口径：项目名 + 版本，预发布额外带后缀
+      RELEASE_NAME="CertFlow ${TAG}"
+      if [ "$PRE" = "true" ]; then
+        RELEASE_NAME="CertFlow ${TAG} (预发布)"
+      fi
+
+      # tag 不存在时由 ref 自动创建，指向默认分支最新提交
+      PAYLOAD=$(jq -n \
+        --arg name "$RELEASE_NAME" \
+        --arg tag "$TAG" \
+        --arg desc "$(cat body.md)" \
+        --arg ref "$CI_DEFAULT_BRANCH" \
+        --argjson links "$LINKS" \
+        '{name: $name, tag_name: $tag, description: $desc, ref: $ref, assets: {links: $links}}')
+
+      HTTP=$(curl -s -o /tmp/rel.json -w "%{http_code}" -X POST "${AUTH[@]}" \
+        -H "Content-Type: application/json" -d "$PAYLOAD" "${API}/releases")
+      if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+        echo "创建 release 失败 HTTP=${HTTP}"
+        cat /tmp/rel.json
+        exit 1
+      fi
+
+      # ── 清理旧 nightly（与 GitHub 同口径：只保留最近 3 个）──
+      # 镜像侧每天被动同步一次，tag 各不相同；GitHub 侧删掉的旧 nightly 不会自动从这里消失。
+      # 只处理日期 nightly，rc / beta / alpha 与正式版不动（GitLab 的 Release 没有 prerelease
+      # 字段，只能按 tag 后缀判定，不要试图从响应里找）。
+      case "$TAG" in
+        *-nightly.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9])
+          # 清理是「尽力而为」：关掉 errexit，任何一步失败只打印，不让 job 失败——
+          # 发布本身已经完成了，job 一红整个同步流水线就是失败状态。
+          set +e
+
+          PAGE=1
+          TAGS=""
+          while [ "$PAGE" -le 10 ]; do
+            RESP=$(curl -sS "${AUTH[@]}" "${API}/releases?per_page=100&page=${PAGE}")
+            # 非数组（鉴权失败等）当作取不到，直接停，不要把错误对象当页数往下翻
+            if ! printf '%s' "$RESP" | jq -e 'type == "array"' >/dev/null 2>&1; then
+              echo "⚠ 获取 Release 列表失败（第 ${PAGE} 页），跳过 nightly 清理"
+              printf '  响应：%s\n' "$(printf '%s' "$RESP" | head -c 200)"
+              TAGS=""
+              break
+            fi
+            N=$(printf '%s' "$RESP" | jq 'length')
+            TAGS=$(printf '%s\n%s\n' "$TAGS" "$(printf '%s' "$RESP" | jq -r '.[].tag_name')")
+            if [ "$N" -lt 100 ]; then break; fi
+            PAGE=$((PAGE + 1))
+          done
+
+          NIGHTLY=$(printf '%s\n' "$TAGS" | grep -E -- '-nightly\.[0-9]{8}$' | sort -rV || true)
+          TOTAL=$(printf '%s\n' "$NIGHTLY" | grep -c . || true)
+          if [ "${TOTAL:-0}" -le 3 ]; then
+            echo "nightly Release 共 ${TOTAL:-0} 个，无需清理"
+          else
+            for OLD in $(printf '%s\n' "$NIGHTLY" | tail -n +4); do
+              DEL=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH[@]}" "${API}/releases/${OLD}")
+              if [ "$DEL" != "200" ] && [ "$DEL" != "204" ]; then
+                echo "⚠ 删除旧 nightly release ${OLD} 失败 HTTP=${DEL}，跳过该版本的剩余清理"
+                continue
+              fi
+              echo "已删除旧 nightly release ${OLD}"
+              TCODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH[@]}" "${API}/repository/tags/${OLD}")
+              if [ "$TCODE" != "200" ] && [ "$TCODE" != "204" ] && [ "$TCODE" != "404" ]; then
+                echo "⚠ 删除同名 tag ${OLD} 失败 HTTP=${TCODE}"
+              fi
+              # 附件在 Generic Package Registry，不会随 Release 删除；不清就一直占存储。
+              # CI_JOB_TOKEN 往往没有删包权限，失败只告警（配了 GL_RELEASE_TOKEN 才能真回收）。
+              PKGS=$(curl -sS "${AUTH[@]}" \
+                "${API}/packages?package_type=generic&package_name=certflow&per_page=100" || true)
+              for PID in $(printf '%s' "$PKGS" | jq -r --arg v "$OLD" '.[] | select(.version == $v) | .id' 2>/dev/null); do
+                PCODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH[@]}" "${API}/packages/${PID}")
+                case "$PCODE" in
+                  200|202|204) echo "  已删除 package ${OLD}（id=${PID}）" ;;
+                  404) ;;
+                  *) echo "  ⚠ 删除 package ${OLD}（id=${PID}）失败 HTTP=${PCODE}（CI_JOB_TOKEN 可能无权限）" ;;
+                esac
+              done
+            done
+          fi
+          ;;
+        *)
+          echo "非日期 nightly 发布，跳过清理"
+          ;;
+      esac
+
+      echo ""
+      echo "完成：${CI_PROJECT_URL}/-/releases/${TAG}"
