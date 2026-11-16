@@ -12,9 +12,23 @@ branch:
             - developer
         inputs:
           version:
-            # 预发布与否由版本号后缀决定（见 scripts/ci/resolve-prerelease.sh），
-            # 不再单独提供「预发布」开关：布尔输入会和版本号打架。
-            name: 版本号
-            description: 例如 1.0.0（正式版）、1.0.0-rc.1（预发布）、v1.2.4-nightly.20260101（每日预发布）
-            required: true
+            name: 打包版本
+            description: 请输入打包版本，如 v1.2.3；预发布版本请带 rc/beta/alpha/nightly 后缀，如 v1.2.3-rc.1、v1.2.3-nightly.20260101（填 nightly
+              自动推导当天夜间构建版本）
+            required: true # 是否必填
             type: input
+          commit:
+            name: 构建提交
+            description: 可选：要发布的代码版本（完整 SHA / 分支 / tag）；留空则用当前分支 HEAD
+            required: false
+            type: input
+
+      - name: 生成 Code Wiki
+        description: 重新分析仓库并生成 Code Wiki 文档
+        event: web_trigger_codewiki # 触发的 CI 事件名
+        permissions:
+          roles:
+            - owner
+            - master
+            - developer
+

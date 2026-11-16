@@ -3,6 +3,23 @@
 # 全局配置（stages / default image / before_script）在仓库根目录 .gitlab-ci.yml，
 # 本文件由它通过 include:local 引入；新增工作流时记得同步补 include。
 #
+# 版本号规则（实现见 scripts/ci/resolve-prerelease.sh，与 GitHub 的 release.yml / CNB 的 .cnb.yml 同口径）：
+#   1.2.3                    -> 正式版，Release 不勾选 prerelease
+#   1.2.3-rc.1               -> 预发布（rc 渠道）
+#   1.2.3-beta.1             -> 预发布（beta 渠道）
+#   1.2.3-alpha.1            -> 预发布（alpha 渠道）
+#   1.2.3-nightly.20260101   -> 预发布（nightly 渠道）
+#   nightly                  -> 不是版本号本身，会自动展开成
+#                               <最近正式版 + 1 个补丁>-nightly.<UTC 构建日期>：
+#                               定时任务（每天 UTC 00:00）用它；手动执行填 nightly
+#                               同样会展开（基版本取最近正式版，日期取执行当天的 UTC 日期）。
+#                               例如最近正式版 v0.2.7 → tag v0.2.8-nightly.20261114。
+#                               每天一个 tag，GitHub 上只保留最近 3 个 nightly Release。
+#
+# 注意：裸 nightly 只能由 GitHub 侧展开（定时任务或手动执行填 nightly 都一样），
+# 本镜像端只接收**最终 tag**（如 v1.2.4-nightly.20260101），
+# 传裸 nightly 直接报错（拼不出真实 tag，只能 404）。
+#
 # ---------------------------------------------------------------------------
 # 发布同步：从 GitHub Release 下载产物，发布到 GitLab Release
 # ---------------------------------------------------------------------------
@@ -35,6 +52,9 @@ release:
       set -euo pipefail
 
       TAG="${VERSION:?未传入 VERSION —— 网页手动执行时请在 Run pipeline 的变量区填写（如 VERSION=v0.2.19）}"
+      # 同步来源的提交号（构建元数据，与版本号相互独立）：GitHub 侧触发流水线时搭
+      # VERSION 的车传下来（variables[COMMIT]），只作记录，不参与任何判定。
+      echo "同步来源提交: ${COMMIT:-未提供}"
       # nightly 的日期版本由 GitHub 发布流水线生成（如 v1.2.4-nightly.20260101），
       # 这里只接收最终 tag；传裸 nightly 无法推导基版本与日期，直接报错。
       # 其余版本一律补 v（允许传 0.2.19 或 v0.2.19）。

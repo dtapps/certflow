@@ -8,11 +8,15 @@ SSL 证书管理工具，支持证书申请、续期、过期监控等功能。
 
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) [![Codecov](https://img.shields.io/codecov/c/github/dtapps/certflow?style=flat-square&label=Codecov&logo=codecov)](https://codecov.io/gh/dtapps/certflow) [![Coveralls](https://img.shields.io/coveralls/github/dtapps/certflow?style=flat-square&label=Coveralls&logo=coveralls)](https://coveralls.io/github/dtapps/certflow) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+[![CNB 版本](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Star 数](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Fork 数](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB 构建](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) [![CNB 覆盖率](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) [![CNB PR 覆盖率](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage-pr)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) ![CNB 下载请求数](https://img.shields.io/endpoint?label=CNB%20下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
 
-[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) [![CNB Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) [![CNB PR Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage-pr)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) ![下载请求数](https://img.shields.io/endpoint?label=下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+[![CNB 漏洞](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest.link) [![CNB 漏洞差异](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest.link) [![CNB 许可证](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest.link) [![CNB 许可证差异](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest.link) [![CNB SBOM](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest.link) [![CNB SBOM 差异](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest.link)
 
-[![CNB Vulnerability](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest.link) [![CNB Vulnerability Diff](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest.link) [![CNB License](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest.link) [![CNB License Diff](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest.link) [![CNB SBOM](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest.link) [![CNB SBOM Diff](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest.link)
+[![CNB 访问](https://commit.cool/badge/visit/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 发布频率](https://commit.cool/badge/release/frequency/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 距离上次发布](https://commit.cool/badge/release/last/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 发布总数](https://commit.cool/badge/releases/dtapp/certflow)](https://cnb.cool/dtapp/certflow/-/releases) [![CNB 仓库年龄](https://commit.cool/badge/age/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 主要语言](https://commit.cool/badge/language/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 仓库许可证](https://commit.cool/badge/license/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB 存储用量](https://commit.cool/badge/usage/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Git 存储](https://commit.cool/badge/usage/git/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB LFS 存储](https://commit.cool/badge/usage/lfs/dtapp/certflow)](https://cnb.cool/dtapp/certflow)
+
+[![GitHub 版本](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![GitHub 下载量](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![GitHub Star 数](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![GitHub Fork 数](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![GitHub 许可证](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![GitHub 支持平台](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![GitHub 构建](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) [![Codecov](https://img.shields.io/codecov/c/github/dtapps/certflow?style=flat-square&label=Codecov&logo=codecov)](https://codecov.io/gh/dtapps/certflow) [![Coveralls](https://img.shields.io/coveralls/github/dtapps/certflow?style=flat-square&label=Coveralls&logo=coveralls)](https://coveralls.io/github/dtapps/certflow) ![GitHub 下载请求数](https://img.shields.io/endpoint?label=GitHub%20下载请求数&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+
+[![GitHub 访问](https://visitor-badge.laobi.icu/badge?page_id=github/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub 距离上次发布](https://img.shields.io/github/release-date/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub 仓库年龄](https://img.shields.io/github/created-at/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub 主要语言](https://img.shields.io/github/languages/top/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub 存储用量](https://img.shields.io/github/repo-size/dtapps/certflow)](https://github.com/dtapps/certflow)
 
 </div>
 
@@ -102,12 +106,36 @@ make format-frontend-write # 格式化前端代码（Prettier）
 
 详见 [DEVELOPMENT.md](DEVELOPMENT.md)；CI / 覆盖率 / 发布同步 / 交接记录等专题见 [`docs/`](docs/)；参与开发见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全报告见 [SECURITY.md](SECURITY.md)，版本变更见 [CHANGELOG.md](CHANGELOG.md)。
 
-## 许可
+## 许可证
 
-详见仓库 `LICENSE` 文件。
+见 [LICENSE](LICENSE) 文件。
 
 ## 致谢
 
 <a href="https://wails.io">
   <img src="https://wails.io/img/wails-button-light.svg" width="90" height="24" alt="Built with Wails">
 </a>
+
+## Star 走势
+
+<details>
+<summary><b>点击展开查看图表</b></summary>
+
+**CNB**
+
+[![CNB Star 走势](https://commit.cool/stars/dtapp/certflow)](https://cnb.cool/dtapp/certflow)
+
+**GitHub**
+
+[![Star 走势](https://api.star-history.com/chart?repos=dtapps/certflow&type=date&legend=top-left)](https://www.star-history.com/?repos=dtapps%2Fcertflow&type=date&legend=top-left)
+
+</details>
+
+## 下载量统计图
+
+<details>
+<summary><b>点击展开查看图表</b></summary>
+
+[![下载量统计图](https://release-monitor.com/chart/dtapps/certflow.svg?stable=5)](https://release-monitor.com/#/dtapps/certflow)
+
+</details>

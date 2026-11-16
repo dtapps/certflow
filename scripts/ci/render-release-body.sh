@@ -28,96 +28,13 @@
 
 set -eu
 
-# 产物名解析：CertFlow-{版本}-{os}-{arch}[-install].{ext}
-# 输出四个全局变量 PLAT / ARCH / EXT / KIND（KIND=installer 表示 Windows 安装程序）
-#
-# 从**末尾两段**取 os / arch，而不是从前缀切：版本号本身带连字符
-# （1.0.3-rc.1 / 1.0.3-nightly.20260706），按「项目名-版本-os-arch」四段切会把
-# os 解析成版本号，整张表的平台/架构全错（旧版脚本就踩过这个坑）。
-parse_artifact_name() {
-  fname="$1"
-  PLAT='其它'
-  ARCH='-'
-  EXT=''
-  KIND=''
-
-  # 长后缀优先匹配：.pkg.tar.zst 必须先于 .tar.gz 判断
-  case "${fname}" in
-    *.pkg.tar.zst)
-      EXT='.pkg.tar.zst'
-      stem="${fname%.pkg.tar.zst}"
-      ;;
-    *.tar.gz)
-      EXT='.tar.gz'
-      stem="${fname%.tar.gz}"
-      ;;
-    *.AppImage)
-      EXT='.AppImage'
-      stem="${fname%.AppImage}"
-      ;;
-    *.deb)
-      EXT='.deb'
-      stem="${fname%.deb}"
-      ;;
-    *.rpm)
-      EXT='.rpm'
-      stem="${fname%.rpm}"
-      ;;
-    *.zip)
-      EXT='.zip'
-      stem="${fname%.zip}"
-      ;;
-    *.exe)
-      EXT='.exe'
-      stem="${fname%.exe}"
-      ;;
-    *) return 0 ;;
-  esac
-
-  # Windows 安装程序是 CertFlow-1.0.3-windows-amd64-install.exe：
-  # 先剥掉 -install，否则 arch 会被解析成 amd64-install
-  case "${stem}" in
-    *-install)
-      KIND='installer'
-      stem="${stem%-install}"
-      ;;
-  esac
-
-  arch="${stem##*-}"
-  rest="${stem%-*}"
-  os="${rest##*-}"
-
-  case "${os}" in
-    linux) PLAT='Linux' ;;
-    windows) PLAT='Windows' ;;
-    darwin) PLAT='macOS' ;;
-    *) PLAT="${os}" ;;
-  esac
-
-  case "${arch}" in
-    amd64) ARCH='x86_64' ;;
-    arm64) ARCH='ARM64' ;;
-    *) ARCH="${arch}" ;;
-  esac
-}
-
-# 说明列：一句话说清这是哪个平台的什么包、怎么用。
-# 依赖 parse_artifact_name 设置的全局变量 PLAT / EXT / KIND，把说明写到 stdout，
-# 调用处用命令替换接住（避免往 Release 正文里直接插入一行）。
-describe_artifact() {
-  case "${PLAT}:${KIND}:${EXT}" in
-    Windows:installer:.exe) printf '%s' 'Windows 安装程序（exe，双击安装）' ;;
-    Windows::.zip) printf '%s' 'Windows 免安装包（zip，解压运行）' ;;
-    macOS::.zip) printf '%s' 'macOS 应用包（zip，解压得到 CertFlow.app）' ;;
-    macOS::.tar.gz) printf '%s' 'macOS 裸二进制包（tar.gz）' ;;
-    Linux::.AppImage) printf '%s' 'AppImage 便携版（chmod +x 后直接运行）' ;;
-    Linux::.deb) printf '%s' 'Debian/Ubuntu 安装包（deb）' ;;
-    Linux::.rpm) printf '%s' 'Fedora/RHEL 安装包（rpm）' ;;
-    Linux::.pkg.tar.zst) printf '%s' 'Arch Linux 安装包（pkg.tar.zst）' ;;
-    Linux::.tar.gz) printf '%s' 'Linux 通用包（tar.gz，解压即用）' ;;
-    *) printf '压缩包（%s），解压即用' "${EXT}" ;;
-  esac
-}
+# 产物名解析与下载表「说明」列文案：来自跨仓库通用脚本 describe-artifact.sh。
+# 之前这两个函数内嵌在本文件里、且应用名写死 CertFlow；抽成独立文件后，
+# 各仓库（CertFlow / Kai / fnmusic-sync / ...）可共用同一份实现，只在各自
+# 文案偏好不同时用 DESC_* 环境变量覆盖（见该脚本文案表注释）。
+# 被 source 时它只导出 parse_artifact_name / describe_artifact 两个函数，
+# 不改本脚本的位置参数，也不会触发它自己的自检。
+. "$(dirname "$0")/describe-artifact.sh"
 
 # 哪些附件不该进下载表格：
 #   SHA256SUMS / BUILD_TIME / GIT_COMMIT —— 校验与自动更新用的元数据，不是给人点的
@@ -361,9 +278,9 @@ if [ "${1:-}" = '--self-test' ]; then
   expect "${tmp_dir}/stable.md" 'macOS 应用包（zip，解压得到 CertFlow.app）' 'macOS 行说明'
   expect "${tmp_dir}/stable.md" 'Windows 安装程序（exe，双击安装）' 'Windows 行说明'
   expect "${tmp_dir}/stable.md" 'AppImage 便携版（chmod +x 后直接运行）' 'AppImage 行说明'
-  expect "${tmp_dir}/stable.md" 'Debian/Ubuntu 安装包（deb）' 'deb 行说明'
-  expect "${tmp_dir}/stable.md" 'Fedora/RHEL 安装包（rpm）' 'rpm 行说明'
-  expect "${tmp_dir}/stable.md" 'Arch Linux 安装包（pkg.tar.zst）' 'Arch 行说明'
+  expect "${tmp_dir}/stable.md" 'Debian/Ubuntu 安装包（dpkg -i）' 'deb 行说明'
+  expect "${tmp_dir}/stable.md" 'Fedora/RHEL 安装包（rpm -i）' 'rpm 行说明'
+  expect "${tmp_dir}/stable.md" 'Arch Linux 安装包（pacman -U）' 'Arch 行说明'
 
   # 版本号本身带连字符时也必须解析正确（rc / nightly 渠道发版时的真实文件名）
   echo '── 带后缀版本号的产物名 ──'

@@ -8,11 +8,15 @@ Built with Go + Vue 3 cross-platform desktop application architecture, powered b
 
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) [![Codecov](https://img.shields.io/codecov/c/github/dtapps/certflow?style=flat-square&label=Codecov&logo=codecov)](https://codecov.io/gh/dtapps/certflow) [![Coveralls](https://img.shields.io/coveralls/github/dtapps/certflow?style=flat-square&label=Coveralls&logo=coveralls)](https://coveralls.io/github/dtapps/certflow) ![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
-
-[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) [![CNB Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) [![CNB PR Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage-pr)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) ![Download Requests](https://img.shields.io/endpoint?label=Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
+[![CNB Release](https://cnb.cool/dtapp/certflow/-/badge/release)](https://cnb.cool/dtapp/certflow/-/badge/release.link) [![CNB Stars](https://cnb.cool/dtapp/certflow/-/badge/star)](https://cnb.cool/dtapp/certflow) [![CNB Forks](https://cnb.cool/dtapp/certflow/-/badge/fork)](https://cnb.cool/dtapp/certflow) [![CNB Build](https://cnb.cool/dtapp/certflow/-/badge/git/latest/ci/status/push)](https://cnb.cool/dtapp/certflow) [![CNB Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) [![CNB PR Coverage](https://cnb.cool/dtapp/certflow/-/badge/git/latest/testing/unit/coverage-pr)](https://cnb.cool/dtapp/certflow/-/insights/unit-test) ![CNB Download Requests](https://img.shields.io/endpoint?label=CNB%20Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.net%2Fshields.json%3Fplatform%3Dcnb.cool%26repository%3D%2Fdtapp%2Fcertflow)
 
 [![CNB Vulnerability](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/full/latest.link) [![CNB Vulnerability Diff](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/vulnerability/diff/latest.link) [![CNB License](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/full/latest.link) [![CNB License Diff](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/license/diff/latest.link) [![CNB SBOM](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/full/latest.link) [![CNB SBOM Diff](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest)](https://cnb.cool/dtapp/certflow/-/badge/security/sbom/diff/latest.link)
+
+[![CNB Visit](https://commit.cool/badge/visit/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Release Frequency](https://commit.cool/badge/release/frequency/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Last Release](https://commit.cool/badge/release/last/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Total Releases](https://commit.cool/badge/releases/dtapp/certflow)](https://cnb.cool/dtapp/certflow/-/releases) [![CNB Repo Age](https://commit.cool/badge/age/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Language](https://commit.cool/badge/language/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Repo License](https://commit.cool/badge/license/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Storage Usage](https://commit.cool/badge/usage/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB Git Usage](https://commit.cool/badge/usage/git/dtapp/certflow)](https://cnb.cool/dtapp/certflow) [![CNB LFS Usage](https://commit.cool/badge/usage/lfs/dtapp/certflow)](https://cnb.cool/dtapp/certflow)
+
+[![GitHub Release](https://img.shields.io/github/v/release/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/releases) [![GitHub Downloads](https://img.shields.io/github/downloads/dtapps/certflow/total?style=flat-square)](https://github.com/dtapps/certflow/releases) [![GitHub Stars](https://img.shields.io/github/stars/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/stargazers) [![GitHub Forks](https://img.shields.io/github/forks/dtapps/certflow?style=flat-square)](https://github.com/dtapps/certflow/network/members) [![GitHub License](https://img.shields.io/github/license/dtapps/certflow?style=flat-square)](LICENSE) [![GitHub Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-007EC6?style=flat-square)](https://github.com/dtapps/certflow) [![GitHub Build](https://img.shields.io/github/actions/workflow/status/dtapps/certflow/push.yml?style=flat-square)](https://github.com/dtapps/certflow/actions/workflows/push.yml) [![Codecov](https://img.shields.io/codecov/c/github/dtapps/certflow?style=flat-square&label=Codecov&logo=codecov)](https://codecov.io/gh/dtapps/certflow) [![Coveralls](https://img.shields.io/coveralls/github/dtapps/certflow?style=flat-square&label=Coveralls&logo=coveralls)](https://coveralls.io/github/dtapps/certflow) ![GitHub Download Requests](https://img.shields.io/endpoint?label=GitHub%20Download%20Requests&url=https%3A%2F%2Fdl-stats.dtapp.top%2Fshields.json%3Fplatform%3Dgithub.com%26repository%3D%2Fdtapps%2Fcertflow)
+
+[![GitHub Visit](https://visitor-badge.laobi.icu/badge?page_id=github/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub Last Release](https://img.shields.io/github/release-date/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub Repo Age](https://img.shields.io/github/created-at/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub Language](https://img.shields.io/github/languages/top/dtapps/certflow)](https://github.com/dtapps/certflow) [![GitHub Repo Size](https://img.shields.io/github/repo-size/dtapps/certflow)](https://github.com/dtapps/certflow)
 
 </div>
 
@@ -104,10 +108,34 @@ See [DEVELOPMENT_EN.md](DEVELOPMENT_EN.md); CI, coverage, release-sync and hando
 
 ## License
 
-See the `LICENSE` file in the repository.
+See the [LICENSE](LICENSE) file.
 
 ## Acknowledgements
 
 <a href="https://wails.io">
   <img src="https://wails.io/img/wails-button-light.svg" width="90" height="24" alt="Built with Wails">
 </a>
+
+## Star History
+
+<details>
+<summary><b>Click to expand the chart</b></summary>
+
+**CNB**
+
+[![CNB Star History](https://commit.cool/stars/dtapp/certflow)](https://cnb.cool/dtapp/certflow)
+
+**GitHub**
+
+[![Star History](https://api.star-history.com/chart?repos=dtapps/certflow&type=date&legend=top-left)](https://www.star-history.com/?repos=dtapps%2Fcertflow&type=date&legend=top-left)
+
+</details>
+
+## Download Count
+
+<details>
+<summary><b>Click to expand the chart</b></summary>
+
+[![Download Count](https://release-monitor.com/chart/dtapps/certflow.svg?stable=5)](https://release-monitor.com/#/dtapps/certflow)
+
+</details>
