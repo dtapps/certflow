@@ -5,6 +5,7 @@
 # .trigger_release 锚点与 master 下的两个 *trigger_release 引用必须留在同一个文件里，
 # 不能把锚点定义放这里、引用放 release.yml。
 include:
+  - .cnb/workflows/announcement-cleanup.yml
   - .cnb/workflows/cnb-sechook.yml
   - .cnb/workflows/code-review.yml
   - .cnb/workflows/code-security-config.yml
