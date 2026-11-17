@@ -147,11 +147,131 @@ make package VERSION=1.2.3
 
 ## 9. 常见问题
 
-| 现象                      | 原因 / 处置                                                     |
-|---------------------------|-----------------------------------------------------------------|
-| Release 建了但没附件      | artifact 下载失败或重命名步骤没产出，看 `build` job 的 `ls -lh` |
-| 更新提示「无更新」        | 中文走 CNB；确认 CNB 已有同名 Release 与 `updater-*` 资产       |
-| mac 包打不开              | 未签名 / 未公证；检查三个 Apple Secret 是否齐全                 |
-| Windows 安装包被拦        | 未签名；SmartScreen 属预期                                      |
-| 同步 job 全绿但镜像没更新 | `if: env.X != ''` 整步跳过；确认 Secret 在 job 级 `env` 里可见  |
-| Linux 构建失败            | 缺 webkit2gtk 等系统依赖，用官方 runner 或 `ci-image` 镜像      |
+| 现象                      | 原因 / 处置                                                                                                  |
+|---------------------------|--------------------------------------------------------------------------------------------------------------|
+| Release 建了但没附件      | artifact 下载失败或重命名步骤没产出，看 `build` job 的 `ls -lh`                                              |
+| 更新提示「无更新」        | 中文走 CNB；确认 CNB 已有同名 Release 与 `updater-*` 资产                                                    |
+| mac 包打不开              | 未签名 / 未公证；检查三个 Apple Secret 是否齐全                                                              |
+| Windows 安装包被拦        | 未签名；SmartScreen 属预期                                                                                   |
+| 同步 job 全绿但镜像没更新 | `if: env.X != ''` 整步跳过；确认 Secret 在 job 级 `env` 里可见                                               |
+| Linux 构建失败            | 缺 webkit2gtk 等系统依赖，用官方 runner 或 `ci-image` 镜像                                                   |
+| 公告没自动创建            | 该 stage 只告警不阻断；看 stage 日志里的 HTTP 码；也可在 Issue 页面用「发版公告」模板手工补一条              |
+| GitHub 侧没发公告         | 仓库没打开 Discussions（分类接口 404）；看 announce job 的 `::warning::`；确认 Settings 里已开启 Discussions |
+
+## 10. 发版公告 Issue
+
+Release 发布成功后，CNB 侧流水线会**自动开一条 Issue** 作为发版公告（模板见 `.cnb/ISSUE_TEMPLATE/release-announcement.yml`）。
+
+| 项        | 说明                                                                                                                              |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------|
+| 触发位置  | `.cnb/workflows/release.yml` 的「准备发版公告」+「创建发版公告」两个 stage（`web_trigger_release` 与 `api_trigger_release` 共用） |
+| 建 Issue  | 官方 `cnbcool/cnb-cli` 插件（`cnb --module issues --tool create-issue`），CNB_TOKEN 由流水线自动注入                              |
+| 正文来源  | `scripts/ci/render-announcement-body.sh` 生成；下载表 / 校验 / 更新内容取自 Release 正文（`release_body.md`），不另编一套         |
+| 标题      | `[发版公告] CertFlow <版本号>`                                                                                                    |
+| 标签      | `发版公告`；标签不存在时先用官方 CLI 建好，带标签被拒则去掉标签重试，公告照发                                                     |
+| 幂等      | 同一版本重跑（Release 会先删后建）时改写已有公告，不重复开一条                                                                    |
+| 跳过条件  | `nightly` 版本不建公告（每天一个 tag，否则 Issue 列表会变成日报）                                                                 |
+| 失败处理  | 只告警、不让 stage 变红（发布已完成，变红会被 GitHub 侧 `sync-cnb` 误记成「同步失败」）                                           |
+| 评论      | 公告建好后追加一条评论，把「整理用户友好的更新日志」交给仓库里的 NPC（CodeBuddy）；开关与内容见 10.3                              |
+| GitHub 侧 | 不在 Issue 发公告，改在仓库 **Discussions** 开一条讨论（正文同一份脚本渲染），细节见 10.4                                         |
+
+### 10.1 为什么用官方 CLI 而不是直接调 OpenAPI
+
+CNB **没有创建 Issue 的内置步骤**：`git:issue-update` 只能改状态 / 标签 / 处理人（`state` / `label.add` / `assignee.add`）， 既不能创建、也不能改标题与正文（`git:issue-create`、`git:issue-comment` 在官方内置任务清单里并不存在）。 能创建 Issue 的官方工具是 `cnbcool/cnb-cli` 插件——官方 OpenAPI 命令行工具，鉴权、接口路径、字段名都由官方维护。
+
+因此创建 / 更新 / 建标签统一走官方 CLI：
+
+```bash
+cnb --module repo-labels --tool post-label  --path '{"repo":"dtapp/certflow"}' --data '{"name":"发版公告",...}'
+cnb --module issues --tool list-issues     --path '{"repo":"dtapp/certflow"}' --query '{"state":"open","keyword":"v1.2.3"}'
+cnb --module issues --tool create-issue    --path '{"repo":"dtapp/certflow"}' --data '{"title":"...","body":"...","labels":["发版公告"]}'
+cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","number":123}' --data '{"title":"...","body":"..."}'
+```
+
+### 10.2 两个踩过的坑（改脚本前先看）
+
+1. **`--data` 必须是单行 JSON**：官方 CLI 解析 `--data` 时会先把控制字符（真实换行）转义成两字符的 `\n`， 而 JSON 的空白只能是真实换行——多行 JSON 会被转成非法 JSON，CLI 解析失败后会把整段文本当字符串原样发出去 （服务端收到双重编码的请求体）。所以拼 payload 用 `jq -nc`（紧凑单行），不能用 `jq -n`。
+2. **`--path` 不要写成 `"{\"repo\":\"...\"}"`**：多层引号 + 反斜杠转义会在 YAML → shell → argv 之间被吃掉， 实测把 `repo` 传成了 `[object Object]`，请求直接 404。统一用 `printf '{"repo":"%s"}' "${REPO}"` 拼成变量再传。
+
+### 10.3 公告评论（两个环境变量）
+
+公告 Issue 建好后，流水线会再追加一条评论，把「整理一份用户友好的更新日志」交给仓库里的 NPC （`.cnb/settings.yml` 里导入的 `npc/CodeBuddy`），由它把整理好的日志作为评论发回公告里。
+
+| 环境变量                       | 位置         | 说明                                                                |
+|--------------------------------|--------------|---------------------------------------------------------------------|
+| `ANNOUNCEMENT_COMMENT_ENABLED` | job 级 `env` | 是否发评论（`true` / `false`）；关掉后公告照建，只是不追加评论      |
+| `ANNOUNCEMENT_COMMENT_TEXT`    | job 级 `env` | 评论内容，默认让 NPC 根据公告里的更新内容整理一份用户友好的更新日志 |
+
+```yaml
+# .cnb/workflows/release.yml 的 .trigger_release（job 级 env，所有 stage 都能读到）
+  env:
+    ANNOUNCEMENT_COMMENT_ENABLED: "true"
+    ANNOUNCEMENT_COMMENT_TEXT: |-
+      @CodeBuddy 请根据本次发布的更新内容（见上方），整理一份用户友好的更新日志，并作为评论发布在这里。
+```
+
+实现要点：
+
+- 评论用官方 CLI 发：`cnb --module issues --tool post-issue-comment`（需 `repo-notes:rw`，可信事件的 `CNB_TOKEN` 自带）；
+- 评论正文只放提示语本身，不夹带别的东西：更新内容就在上面那条公告的正文里，NPC 自己会读；
+- **评论也去重**：发之前先 `list-issue-comments`，正文首行已存在就跳过（评论删不掉，重跑不该重复发）；列表查询失败时会打告警说明「无法确认是否发过」，但仍会发一次，避免 NPC 永远收不到活；
+- `work_mode` 不传：官方接口这个字段缺省就是 true（通知 NPC 进入工作模式），显式传反而多余；
+- 公告没建成（`nightly` / 正文渲染失败）时不会有评论：上一步没落盘 Issue 编号，评论 stage 直接跳过；
+- 开关关闭时只打印一行提示，公告本身照发。
+
+### 10.4 GitHub 侧：发到 Discussions
+
+GitHub 侧不在 Issue 里发公告，而是**在仓库 Discussions 里开一条讨论**（公告是对外的版本说明，讨论区比 Issue 更贴切）， 正文与 CNB 侧同一份脚本渲染，只有下载表指向自家平台。
+
+| 项       | 说明                                                                                                                        |
+|----------|-----------------------------------------------------------------------------------------------------------------------------|
+| 触发位置 | `.github/workflows/release.yml` 的 `announce` job（`needs: [release, prepare]`）                                            |
+| 正文来源 | 取已发布 Release 的正文（`gh api repos/…/releases/tags/<tag> --jq .body`）再交给 `render-announcement-body.sh` 渲染         |
+| 发布方式 | 官方 `actions/github-script@v9` + **GraphQL**（`github.graphql`）；GitHub 没有专门「发讨论」的第一方 action                 |
+| 标题     | `[发版公告] CertFlow <版本号>`（与 CNB 侧同一份格式，由渲染脚本 `TITLE_FILE` 产出）                                         |
+| 分类     | `ANNOUNCEMENT_DISCUSSION_CATEGORY`（默认 `General`）；也可用 `ANNOUNCEMENT_DISCUSSION_CATEGORY_ID` 直接给分类 node id       |
+| 令牌     | 默认 `GITHUB_TOKEN`；读不到 Discussions 时用 secret `ANNOUNCEMENT_TOKEN`（fine-grained PAT 勾 Discussions: Read and write） |
+| 幂等     | 按标题找出**所有**同版本讨论，逐条 `updateDiscussion` 更新成同一份内容；**不关闭任何一条**（关掉像是版本被撤）              |
+| 跳过条件 | `nightly` 不发；`ANNOUNCEMENT_ENABLED` 关掉也不发                                                                           |
+| 失败处理 | 只 `::warning::` 告警，不让流水线变红（Release 已经发出去了）                                                               |
+
+⚠️ **仓库 Discussions 只能用 GraphQL，REST 没有对应端点**：REST 里只有 org/team discussions， `/repos/{owner}/{repo}/discussions*` 这条路径不存在——所以 `GET /repos/…/discussions/categories` 无论用 `GITHUB_TOKEN` 还是带「Discussions: Read and write」的 fine-grained PAT，都会稳定返回 404。 四个调用全部改成 GraphQL：
+
+```graphql
+query    { repository(owner:$owner, name:$repo) { id discussionCategories(first:25) { nodes { id name } } } }
+query    { repository(owner:$owner, name:$repo) { discussions(first:100, after:$cursor) { nodes { id number title } pageInfo { hasNextPage endCursor } } } }
+mutation ($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+  createDiscussion(input: {repositoryId:$repositoryId, categoryId:$categoryId, title:$title, body:$body}) { discussion { number url } }
+}
+mutation ($id: ID!, $title: String!, $body: String!) {
+  updateDiscussion(input: {discussionId:$id, title:$title, body:$body}) { discussion { number } }
+}
+```
+
+分类与讨论都用 **node id**（`DIC_…` / `D_…`），不是数字 id。
+
+前置条件：仓库要在 **Settings → General 里打开 Discussions**；令牌需具备 Discussions 读写权限 （`GITHUB_TOKEN` 在部分仓库读不到，配 secret `ANNOUNCEMENT_TOKEN` 覆盖）。
+
+### 10.5 公告清理（定时任务）
+
+公告挂久了没人维护就该收掉。两个平台各有一个定时任务，**每天 0 点（北京时间）**清理超过 7 天的版本公告：
+
+| 平台   | 文件                                                                    | 触发                                                                                                    | 清理对象                                                                                               |
+|--------|-------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| CNB    | `.cnb/workflows/announcement-cleanup.yml`（由 `.cnb.yml` include 引入） | `master` 下的字符串键 `"crontab: 0 0 * * *"`；时区是 CNB 系统的 `Asia/Shanghai`（写 `0 0` 即中国 0 点） | 带「发版公告」标签、**更新时间**早于 7 天前的开放 Issue；CLI 只负责筛，关闭交给官方 `git:issue-update` |
+| GitHub | `.github/workflows/announcement-cleanup.yml`                            | `schedule: "0 16 * * *"`（Actions 的 schedule 只认 UTC，UTC 16:00 = 北京 0 点）                         | 标题以 `[发版公告] CertFlow ` 开头、创建时间超过 7 天的讨论                                            |
+
+要点：
+
+- 过期天数用 job 级 `env: ANNOUNCEMENT_EXPIRE_DAYS`（默认 7）调整；
+- CNB 用 `updated_time_end` 筛而不是创建时间：接口没有按创建时间筛的参数。公告 Issue 建出来就不再动， updated ≈ created；只有重发版本会刷新 updated——刚刷新过的公告本来就该继续挂着，这个口径反而更合理；
+- GitHub 走 GraphQL 列讨论（REST 没有仓库 Discussions 端点），按 `createdAt` 筛； 关闭用 `closeDiscussion` mutation，**尽力而为**：仓库/令牌不支持时只 `::warning::` 列出待人工关闭的条目；
+- **定时任务放在独立文件**（`.cnb/workflows/announcement-cleanup.yml`），由 `.cnb.yml` 的 `include` 引入； ⚠️ include 引入的 crontab 只在 **`.cnb.yml` 本身变更推送**时才会同步，只改模板文件不生效—— 改完记得在 `.cnb.yml` 里做一次无害改动（例如调一下注释）一起提交；
+- **关闭走官方内置步骤** `git:issue-update`（`options: {fromFile: close-issue-refs.txt, state: close}`）： 第一步的 CLI 只把过期公告编号写进文本，第二步一次调用批量关闭，比逐条调 CLI 快得多； `fromFile` 的解析规则是文本里出现 ` #123`（**`#` 前必须有空格**），所以每行写成 ` #151` 这种形式； 解析不到编号时（无过期 / 查询失败）写一句不含编号的占位文本，等于空操作。
+- **分支键必须是仓库的默认分支**（本仓库是 `master`，不是 `main`）：写错分支定时任务挂在不存在的分支上，永远不会触发；
+- 清理失败只告警，不把定时任务标红（下一轮还会再跑一遍）；
+- CNB 的定时任务以最后修改该配置的用户身份执行，`CNB_TOKEN` 默认只能访问当前仓库（够用：只关本仓库的 Issue）；
+
+（CNB 侧）手工补一条时，在 Issue 页面选「发版公告」模板提交，字段与自动生成的公告一致。
+
+> ⚠️ 公告正文由「发布用的那个提交」里的脚本渲染。若发布的是早于该脚本的提交，公告会被跳过（stage 会打印提示）。
