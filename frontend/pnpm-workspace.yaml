@@ -18,3 +18,17 @@ overrides:
   glob: 14.0.4
   zod: 4.6.6
 
+# 已确认「上游无修复版本」的高危漏洞容忍清单（只接受 GHSA ID，CVE 号写在这里无效）。
+# 命中项不会让 pnpm audit 失败，但仍会在输出里单独列出：`N ignored: 1 high`。
+audit:
+  ignore:
+    # GHSA-fc5q-39xc-vjpf（CVE-2026-112366）：picomatch <= 4.0.7 单分支重复 extglob 造成的 ReDoS。
+    # 现状（2026-11 核查）：上游最新版即 4.0.7（2026-08-24 发布），公告 first_patched_version = None，
+    # 修复 PR micromatch/picomatch#194 仍 open，因此 overrides / 升级都无法消除，只能等待 4.0.8+。
+    # 影响面：picomatch 仅被 vue-router 的 unplugin 构建期入口（dist/unplugin-*.mjs）引用；
+    # 本项目未使用 vue-router 的文件路由插件（vite.config.ts 只用了 unplugin-auto-import / unplugin-vue-components），
+    # 该路径不可达，且构建产物（internal/webui/www）中不含 picomatch；glob 模式全部由本仓库硬编码，无可控输入。
+    # 复查方式：picomatch 发版后 `pnpm update picomatch` → `pnpm audit --production --audit-level high`
+    #          → 若不再报 GHSA-fc5q-39xc-vjpf 即删除本条目。
+    - GHSA-fc5q-39xc-vjpf
+
