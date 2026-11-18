@@ -162,18 +162,18 @@ make package VERSION=1.2.3
 
 Release 发布成功后，CNB 侧流水线会**自动开一条 Issue** 作为发版公告（模板见 `.cnb/ISSUE_TEMPLATE/release-announcement.yml`）。
 
-| 项        | 说明                                                                                                                              |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| 触发位置  | `.cnb/workflows/release.yml` 的「准备发版公告」+「创建发版公告」两个 stage（`web_trigger_release` 与 `api_trigger_release` 共用） |
-| 建 Issue  | 官方 `cnbcool/cnb-cli` 插件（`cnb --module issues --tool create-issue`），CNB_TOKEN 由流水线自动注入                              |
-| 正文来源  | `scripts/ci/render-announcement-body.sh` 生成；下载表 / 校验 / 更新内容取自 Release 正文（`release_body.md`），不另编一套         |
-| 标题      | `[发版公告] CertFlow <版本号>`                                                                                                    |
-| 标签      | `发版公告`；标签不存在时先用官方 CLI 建好，带标签被拒则去掉标签重试，公告照发                                                     |
-| 幂等      | 同一版本重跑（Release 会先删后建）时改写已有公告，不重复开一条                                                                    |
-| 跳过条件  | `nightly` 版本不建公告（每天一个 tag，否则 Issue 列表会变成日报）                                                                 |
-| 失败处理  | 只告警、不让 stage 变红（发布已完成，变红会被 GitHub 侧 `sync-cnb` 误记成「同步失败」）                                           |
-| 评论      | 公告建好后追加一条评论，把「整理用户友好的更新日志」交给仓库里的 NPC（CodeBuddy）；开关与内容见 10.3                              |
-| GitHub 侧 | 不在 Issue 发公告，改在仓库 **Discussions** 开一条讨论（正文同一份脚本渲染），细节见 10.4                                         |
+| 项        | 说明                                                                                                                                                                                                               |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 触发位置  | `.cnb/workflows/release.yml` 的「准备发版公告」+「创建发版公告」两个 stage（`web_trigger_release` 与 `api_trigger_release` 共用）                                                                                  |
+| 建 Issue  | 官方 `cnbcool/cnb-cli` 插件（`cnb --module issues --tool create-issue`），CNB_TOKEN 由流水线自动注入                                                                                                               |
+| 正文来源  | `scripts/ci/render-announcement-body.sh` 生成；下载表 / 校验 / 更新内容取自 Release 正文（`release_body.md`），不另编一套                                                                                          |
+| 标题      | `[发版公告] CertFlow <版本号>`                                                                                                                                                                                     |
+| 标签      | `发版公告`；标签不存在时先用官方 CLI 建好，带标签被拒则去掉标签重试，公告照发                                                                                                                                      |
+| 幂等      | 同一版本重跑（Release 会先删后建）时改写已有公告，不重复开一条                                                                                                                                                     |
+| 跳过条件  | `nightly` 不建公告（每天一个 tag，否则 Issue 列表会变成日报）：三个公告 stage 都挂 `if` 锚点，`case "${INTERIOR_VERSION}" in *-nightly.*) exit 1` 即跳过（CNB 的 `if` 是一段 shell 脚本，退出码 0 才执行该 stage） |
+| 失败处理  | 只告警、不让 stage 变红（发布已完成，变红会被 GitHub 侧 `sync-cnb` 误记成「同步失败」）                                                                                                                            |
+| 评论      | 公告建好后追加一条评论，把「整理用户友好的更新日志」交给仓库里的 NPC（CodeBuddy）；开关与内容见 10.3                                                                                                               |
+| GitHub 侧 | 不在 Issue 发公告，改在仓库 **Discussions** 开一条讨论（正文同一份脚本渲染），细节见 10.4                                                                                                                          |
 
 ### 10.1 为什么用官方 CLI 而不是直接调 OpenAPI
 
@@ -223,17 +223,17 @@ cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","num
 
 GitHub 侧不在 Issue 里发公告，而是**在仓库 Discussions 里开一条讨论**（公告是对外的版本说明，讨论区比 Issue 更贴切）， 正文与 CNB 侧同一份脚本渲染，只有下载表指向自家平台。
 
-| 项       | 说明                                                                                                                        |
-|----------|-----------------------------------------------------------------------------------------------------------------------------|
-| 触发位置 | `.github/workflows/release.yml` 的 `announce` job（`needs: [release, prepare]`）                                            |
-| 正文来源 | 取已发布 Release 的正文（`gh api repos/…/releases/tags/<tag> --jq .body`）再交给 `render-announcement-body.sh` 渲染         |
-| 发布方式 | 官方 `actions/github-script@v9` + **GraphQL**（`github.graphql`）；GitHub 没有专门「发讨论」的第一方 action                 |
-| 标题     | `[发版公告] CertFlow <版本号>`（与 CNB 侧同一份格式，由渲染脚本 `TITLE_FILE` 产出）                                         |
-| 分类     | `ANNOUNCEMENT_DISCUSSION_CATEGORY`（默认 `General`）；也可用 `ANNOUNCEMENT_DISCUSSION_CATEGORY_ID` 直接给分类 node id       |
-| 令牌     | 默认 `GITHUB_TOKEN`；读不到 Discussions 时用 secret `ANNOUNCEMENT_TOKEN`（fine-grained PAT 勾 Discussions: Read and write） |
-| 幂等     | 按标题找出**所有**同版本讨论，逐条 `updateDiscussion` 更新成同一份内容；**不关闭任何一条**（关掉像是版本被撤）              |
-| 跳过条件 | `nightly` 不发；`ANNOUNCEMENT_ENABLED` 关掉也不发                                                                           |
-| 失败处理 | 只 `::warning::` 告警，不让流水线变红（Release 已经发出去了）                                                               |
+| 项       | 说明                                                                                                                          |
+|----------|-------------------------------------------------------------------------------------------------------------------------------|
+| 触发位置 | `.github/workflows/release.yml` 的 `announce` job（`needs: [release, prepare]`）                                              |
+| 正文来源 | 取已发布 Release 的正文（`gh api repos/…/releases/tags/<tag> --jq .body`）再交给 `render-announcement-body.sh` 渲染           |
+| 发布方式 | 官方 `actions/github-script@v9` + **GraphQL**（`github.graphql`）；GitHub 没有专门「发讨论」的第一方 action                   |
+| 标题     | `[发版公告] CertFlow <版本号>`（与 CNB 侧同一份格式，由渲染脚本 `TITLE_FILE` 产出）                                           |
+| 分类     | `ANNOUNCEMENT_DISCUSSION_CATEGORY`（默认 `General`）；也可用 `ANNOUNCEMENT_DISCUSSION_CATEGORY_ID` 直接给分类 node id         |
+| 令牌     | 默认 `GITHUB_TOKEN`；读不到 Discussions 时用 secret `ANNOUNCEMENT_TOKEN`（fine-grained PAT 勾 Discussions: Read and write）   |
+| 幂等     | 按标题找出**所有**同版本讨论，逐条 `updateDiscussion` 更新成同一份内容；**不关闭任何一条**（关掉像是版本被撤）                |
+| 跳过条件 | `nightly` **在 job 级 `if: !contains(tag, 'nightly')` 整个跳过**（两个 step 都不跑）；`ANNOUNCEMENT_ENABLED` 关掉则脚本内跳过 |
+| 失败处理 | 只 `::warning::` 告警，不让流水线变红（Release 已经发出去了）                                                                 |
 
 ⚠️ **仓库 Discussions 只能用 GraphQL，REST 没有对应端点**：REST 里只有 org/team discussions， `/repos/{owner}/{repo}/discussions*` 这条路径不存在——所以 `GET /repos/…/discussions/categories` 无论用 `GITHUB_TOKEN` 还是带「Discussions: Read and write」的 fine-grained PAT，都会稳定返回 404。 四个调用全部改成 GraphQL：
 

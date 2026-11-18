@@ -81,6 +81,21 @@ jobs:
           # nightly 的基版本要取最近正式版 tag，需要完整 tag 历史
           fetch-depth: 0
           ref: ${{ inputs.commit || github.sha }}
+
+      # 容器工作区是 runner 挂进来的 bind mount（属主是 runner 用户），容器内进程却是 root，
+      - name: 让容器内的 git 可用
+        shell: bash
+        run: |
+          git config --system --add safe.directory '*' 2>/dev/null || true
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" 2>/dev/null || true
+
+          # 结果打进日志：以后一眼能看出这条登记有没有生效
+          if git status --porcelain > /dev/null 2>&1; then
+            echo "✓ 容器内 git 可用，COMMIT=$(git rev-parse --short HEAD)"
+          else
+            echo "⚠️ 容器内 git 仍不可用。"
+          fi
+
       - name: 解析版本号（预发布看后缀）
         id: gen
         shell: bash
@@ -605,17 +620,18 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
 
-      # 容器工作区是 runner 挂进来的 bind mount（属主 runner 用户），进程却是 root：
-      # go build 做 VCS 盖章时 git status 会因 dubious ownership 失败。
+      # 容器工作区是 runner 挂进来的 bind mount（属主是 runner 用户），容器内进程却是 root，
       - name: 让容器内的 git 可用
         shell: bash
         run: |
           git config --system --add safe.directory '*' 2>/dev/null || true
           git config --global --add safe.directory "$GITHUB_WORKSPACE" 2>/dev/null || true
+
+          # 结果打进日志：以后一眼能看出这条登记有没有生效
           if git status --porcelain > /dev/null 2>&1; then
             echo "✓ 容器内 git 可用，COMMIT=$(git rev-parse --short HEAD)"
           else
-            echo "⚠️ 容器内 git 仍不可用"
+            echo "⚠️ 容器内 git 仍不可用。"
           fi
 
       # 镜像内 GOPATH=/go，工具在 /go/bin 且已在 PATH；缓存路径按容器内实际目录写。
@@ -889,6 +905,9 @@ jobs:
   announce:
     needs: [release, prepare]
     runs-on: ubuntu-26.04
+    # nightly 每天一个 tag：每天都开一条讨论会把讨论区刷成日报。
+    # 直接在 job 级跳过——job 不跑，两个 step 都不会执行，也就不存在「跳过了一半」的问题。
+    if: ${{ !contains(needs.prepare.outputs.tag, 'nightly') }}
     permissions:
       contents: read
       discussions: write
@@ -920,14 +939,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # nightly 每天一个 tag：每天都开一条讨论会把讨论区刷成日报。
-          case "${VERSION}" in
-            *-nightly.*)
-              echo "跳过 nightly 版本（${VERSION}）的发版公告"
-              exit 0
-              ;;
-          esac
-
           # 正文与 Release 正文同源：直接取已发布 Release 的正文，不重新渲染
           # （发布用的提交可能还没进分支头，正文脚本未必是同一份）。
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${VERSION}" --jq '.body // ""' > release_body.md
@@ -947,7 +958,12 @@ jobs:
           export STABLE_URL="${REPO_URL}/releases/latest"
           export COMMIT_SHA="${COMMIT_SHA}"
 
-          sh scripts/ci/render-announcement-body.sh > /dev/null
+          # 渲染失败只告警并结束这一步：这里跑在 Release 发布之后，不该让流水线变红。
+          # 下一步读不到标题会自动告警跳过（见 github-script 里的 try/catch）。
+          if ! sh scripts/ci/render-announcement-body.sh > /dev/null; then
+            echo "::warning::生成公告正文失败，跳过发版公告"
+            exit 0
+          fi
           echo "公告正文已生成：${OUT_FILE}"
 
       # 用官方 actions/github-script 调 Discussions API。
@@ -976,8 +992,17 @@ jobs:
             const repo = context.repo.repo
 
             // 标题与正文都从文件读：脚本注入的坑（把不可信内容拼进 JS）就绕开了。
-            const title = fs.readFileSync(process.env.TITLE_FILE, 'utf8').trim()
-            const body = fs.readFileSync(process.env.BODY_FILE, 'utf8')
+            // 上一步如果整体跳过（取不到 Release 正文 / 渲染失败）就不会有这两个文件，
+            // 读失败只告警并跳过——公告失败不该让发布流水线变红。
+            let title
+            let body
+            try {
+              title = fs.readFileSync(process.env.TITLE_FILE, 'utf8').trim()
+              body = fs.readFileSync(process.env.BODY_FILE, 'utf8')
+            } catch (err) {
+              core.warning(`读不到公告标题或正文（${err.message}），跳过发版公告`)
+              return 'skipped'
+            }
 
             // 开关：只有 true / 1 / yes / on 才发，其余值跳过。
             const enabled = String(process.env.ANNOUNCEMENT_ENABLED || '').toLowerCase()
