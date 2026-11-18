@@ -118,6 +118,57 @@ jobs:
             RELEASE_TITLE="${PROJECT_NAME} ${TAG}"
           fi
 
+          # 发版前先把版本号这件事验干净。这几件事出错都不会让构建失败，
+          # 但会发出一个「看起来成功、内容是错的」Release。
+          # 放在 prepare 而不是 release：校验失败就不要白跑六个平台的打包。
+          echo "版本号: ${TAG}"
+
+          # checkout 已带 fetch-depth: 0，这里再补一次兜底
+          git fetch --tags --quiet --force || true
+          count=$(git tag -l 'v*' | wc -l | tr -d ' ')
+          echo "本地版本 tag: ${count} 个"
+          if [ "$count" -eq 0 ]; then
+            echo "❌ 一个版本 tag 都没有，changelog 会退化成「首次发布」"
+            echo "   检查 checkout 是否带 tag（需要 fetch-depth: 0）"
+            exit 1
+          fi
+
+          case "${TAG}" in
+            v*)
+              # 版本 tag 已存在时：正式版/rc 等不允许重发（会把 tag 挪到新提交，
+              # 历史 Release 的对比基准跟着变）；nightly 是同一天重跑，允许删掉重建。
+              if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+                case "${TAG}" in
+                  *-nightly.*)
+                    echo "✅ nightly tag ${TAG} 已存在，按同日重跑处理（会删除旧 Release 与 tag 后重建）"
+                    ;;
+                  *)
+                    echo "❌ tag ${TAG} 已存在，不能重复发布"
+                    echo "   已有指向: $(git rev-parse --short "${TAG}")"
+                    echo "   当前 HEAD: $(git rev-parse --short HEAD)"
+                    exit 1
+                    ;;
+                esac
+              else
+                echo "✅ tag ${TAG} 不存在，可以发布"
+              fi
+
+              # 新版本必须比已有的同渠道/正式版更新，否则正文里的 diff 是反的
+              if [ "${PRERELEASE}" = "false" ]; then
+                latest=$(git tag -l 'v*' | grep -Ev -- '-(rc|beta|alpha|nightly)' | grep -v '\.rc' | sort -V | tail -n 1 || true)
+                if [ -n "$latest" ] && [ "$(printf '%s\n%s\n' "$latest" "${TAG}" | sort -V | tail -n 1)" != "${TAG}" ]; then
+                  echo "❌ 版本号 ${TAG} 比已有的正式版 ${latest} 旧"
+                  exit 1
+                fi
+                echo "✅ 比上一个正式版 ${latest:-（无）} 新"
+              fi
+              ;;
+            *)
+              echo "::error::版本号 ${TAG} 必须以 v 开头"
+              exit 1
+              ;;
+          esac
+
           {
             # tag 用于 git tag / Release 名（统一带 v 前缀）
             echo "tag=${TAG}"
@@ -708,60 +759,6 @@ jobs:
       - name: 显示发布文件
         run: ls -lh release/
 
-      # 发版前先把版本号这件事验干净。这几件事出错都不会让构建失败，
-      # 但会发出一个「看起来成功、内容是错的」Release。
-      - name: 校验版本号与 tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "版本号: ${VERSION}"
-
-          # checkout 已带 fetch-depth: 0，这里再补一次兜底
-          git fetch --tags --quiet --force || true
-          count=$(git tag -l 'v*' | wc -l | tr -d ' ')
-          echo "本地版本 tag: ${count} 个"
-          if [ "$count" -eq 0 ]; then
-            echo "❌ 一个版本 tag 都没有，changelog 会退化成「首次发布」"
-            echo "   检查 checkout 是否带 tag（需要 fetch-depth: 0）"
-            exit 1
-          fi
-
-          case "${VERSION}" in
-            v*)
-              # 版本 tag 已存在时：正式版/rc 等不允许重发（会把 tag 挪到新提交，
-              # 历史 Release 的对比基准跟着变）；nightly 是同一天重跑，允许删掉重建。
-              if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
-                case "${VERSION}" in
-                  *-nightly.*)
-                    echo "✅ nightly tag ${VERSION} 已存在，按同日重跑处理（会删除旧 Release 与 tag 后重建）"
-                    ;;
-                  *)
-                    echo "❌ tag ${VERSION} 已存在，不能重复发布"
-                    echo "   已有指向: $(git rev-parse --short "${VERSION}")"
-                    echo "   当前 HEAD: $(git rev-parse --short HEAD)"
-                    exit 1
-                    ;;
-                esac
-              else
-                echo "✅ tag ${VERSION} 不存在，可以发布"
-              fi
-
-              # 新版本必须比已有的同渠道/正式版更新，否则正文里的 diff 是反的
-              if [ "${PRERELEASE}" = "false" ]; then
-                latest=$(git tag -l 'v*' | grep -Ev -- '-(rc|beta|alpha|nightly)' | grep -v '\.rc' | sort -V | tail -n 1 || true)
-                if [ -n "$latest" ] && [ "$(printf '%s\n%s\n' "$latest" "${VERSION}" | sort -V | tail -n 1)" != "${VERSION}" ]; then
-                  echo "❌ 版本号 ${VERSION} 比已有的正式版 ${latest} 旧"
-                  exit 1
-                fi
-                echo "✅ 比上一个正式版 ${latest:-（无）} 新"
-              fi
-              ;;
-            *)
-              echo "::error::版本号 ${VERSION} 必须以 v 开头"
-              exit 1
-              ;;
-          esac
-
       - name: 生成 SHA256SUMS
         shell: bash
         run: |
@@ -1169,6 +1166,10 @@ jobs:
   #   SYNC_GITEE_WEBHOOK_URL —— Gitee 流水线详情页给出的 Webhook 触发地址（GitHub 仓库里的 secret 名）
   #   SYNC_GITEE_TOKEN       —— Gitee → 个人中心 → 私人令牌（GitHub 仓库里的 secret 名）
   # 不配也不影响发版，只是 Gitee 那边需要手动点执行。
+  # 下载源：webhook 触发时显式传 DOWNLOAD_SOURCE=github（Gitee 直接搬刚发布的 GitHub
+  # Release，避免与并行的 sync-cnb 产生时序竞态），会覆盖 Gitee 后台同名全局参数；
+  # 手动执行仍走后台配置。github 源读 api.github.com 匿名会限流，建议在 Gitee 全局
+  # 参数配 CERTFLOW_GITHUB_TOKEN（只读）；不要把 secrets.GITHUB_TOKEN 从 webhook 传过去。
   sync-gitee:
     needs: [release, prepare]
     runs-on: ubuntu-26.04
@@ -1193,15 +1194,18 @@ jobs:
           echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
           sleep 8
 
-          # 传 VERSION + COMMIT：Gitee 端按 GitHub Release 的 prerelease 字段 + tag 后缀判定，
-          # 不再传 PRERELEASE 布尔（两套口径会打架；Gitee 的全局参数开关也已删除）。
-          # COMMIT 只是搭车带上（构建元数据），Gitee 端没声明同名全局参数就忽略它。
-          echo "触发 Gitee 流水线: ${VERSION} (commit=${COMMIT})"
+          # 传 VERSION + COMMIT + DOWNLOAD_SOURCE：
+          # - VERSION：Gitee 端按 GitHub Release 的 prerelease 字段 + tag 后缀判定，
+          #   不再传 PRERELEASE 布尔（两套口径会打架；Gitee 的全局参数开关已删除）。
+          # - COMMIT：搭车带上的构建元数据，Gitee 端没声明同名全局参数就忽略它。
+          # - DOWNLOAD_SOURCE=github：让 Gitee 直接搬刚发布完的 GitHub Release 附件，
+          #   消除与并行的 sync-cnb 之间的时序竞态（默认 cnb 源可能拿到旧文件/404）。
+          echo "触发 Gitee 流水线: ${VERSION} (commit=${COMMIT}, source=github)"
 
           HTTP=$(curl -s -o /tmp/gitee.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${GITEE_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"eventType\":\"certflow-release\",\"payload\":{\"params\":{\"VERSION\":\"${VERSION}\",\"COMMIT\":\"${COMMIT}\"}}}" \
+            -d "{\"eventType\":\"certflow-release\",\"payload\":{\"params\":{\"VERSION\":\"${VERSION}\",\"COMMIT\":\"${COMMIT}\",\"DOWNLOAD_SOURCE\":\"github\"}}}" \
             "${GITEE_WEBHOOK_URL}")
 
           echo "Gitee webhook 响应 HTTP=${HTTP}"

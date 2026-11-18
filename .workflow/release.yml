@@ -149,6 +149,33 @@ stages:
               exit 1
             fi
 
+            # 双触发去重：Gitee 现在由 GitHub 与 CNB 两边触发（一个源 github、一个源 cnb），
+            # 只要有一边发布成功即可。下载前先查目标 tag 的 Gitee Release 是否已存在：
+            # 存在 → 本次整段跳过（exit 0），不再下载、不重建 Release（重建会删掉先到者的附件）。
+            # 本流水线 strategy.blocking: true，两个触发串行执行：后到者开始前先到者已跑完
+            # （含附件上传），所以这里查到 Release 存在时附件必定齐全，不存在竞态。
+            # 注意 Gitee 的 GET /releases/tags/{tag} 在「没有这个 Release」时返回 200 + body null，
+            # 不是 404，所以必须解析 body、看有没有非空对象（有 id），不能只看 HTTP 状态。
+            # 查不到 / 查询出错时一律「继续发布」：宁可稍后 publish 幂等重建，也不漏发。
+            GITEE_API="https://gitee.com/api/v5/repos/dtapps/certflow"
+            EXIST_BODY=$(curl -sS --max-time 20 -w '\n%{http_code}' \
+              "${GITEE_API}/releases/tags/${RELEASE_VERSION}?access_token=${CERTFLOW_GITEE_TOKEN}" \
+              2>/dev/null || true)
+            EXIST_HTTP="${EXIST_BODY##*$'\n'}"
+            EXIST_JSON="${EXIST_BODY%$'\n'*}"
+            if [ "$EXIST_HTTP" = "200" ]; then
+              # body 是 JSON 对象且有 id → Release 已存在；body 为 null → 还没发过
+              EXIST_ID=$(printf '%s' "${EXIST_JSON:-null}" |
+                node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const o=JSON.parse(s);process.stdout.write(o&&o.id?String(o.id):"")}catch(e){}})')
+              if [ -n "$EXIST_ID" ]; then
+                echo "✓ Gitee 上 ${RELEASE_VERSION} 的 Release 已存在（id=${EXIST_ID}，另一触发源已发布），跳过本次下载与发布"
+                exit 0
+              fi
+              echo "Gitee 上 ${RELEASE_VERSION} 的 Release 尚不存在，继续发布"
+            else
+              echo "⚠ 查询 Gitee Release 状态异常（HTTP ${EXIST_HTTP:-无响应}），按未发布处理，继续发布"
+            fi
+
             # 切到发布对应的 commit：只从**本仓库自己的 origin**取（不跨平台去 GitHub 拉）——
             # 本仓库是权威源，commit 迟早会同步过来；还没到就沿用分支头，不阻断同步。
             if [ -n "$RELEASE_COMMIT" ]; then
