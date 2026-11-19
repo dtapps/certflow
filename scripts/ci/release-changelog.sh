@@ -24,6 +24,10 @@
 #   sh scripts/ci/release-changelog.sh <版本号>
 #   # 输出（多行 Markdown）到 stdout；挑不出基准时 exit 1，由工作流中断发布
 #
+# 「上一个版本是哪个 tag」不在本脚本里判断：统一走 scripts/ci/resolve-prev-tag.sh。
+# 发版公告评论要用同一份判定（「对比哪两个 tag」），两边必须是同一个口径，
+# 否则公告和 Release 正文的更新区间会对不上。
+#
 # 环境变量：
 #   COMMIT_URL  选填，提交链接前缀。拼成 ${COMMIT_URL}/<sha>。
 #               GitHub 是 ${REPO_URL}/commit，CNB 是 ${REPO_URL}/-/commit。
@@ -41,108 +45,22 @@ if [ -z "${version}" ]; then
   exit 2
 fi
 
-# ── 渠道判定 ────────────────────────────────────────────────────────────────
-# 只看版本号后缀决定渠道，和 resolve-prerelease.sh 的口径保持一致：
-# 预发布后缀一律用连字符（-rc.N / -beta.N / -alpha.N / -nightly.N）。
-channel='stable'
-case "${version}" in
-  *-rc*) channel='rc' ;;
-  *-beta*) channel='beta' ;;
-  *-alpha*) channel='alpha' ;;
-  *-nightly*) channel='nightly' ;;
-esac
+# ── 对比基准 ────────────────────────────────────────────────────────────────
+# 渠道判定（正式版对正式版、rc 对 rc、该渠道首次回退正式版）只在
+# resolve-prev-tag.sh 里实现一份，这里直接调它，免得两边口径慢慢跑偏。
+# 用 $0 的同级目录找它：本脚本可能在 scripts/ci/ 下被 sh 调用，也可能被拷到别处。
+ci_dir="$(dirname "$0")"
+[ -f "${ci_dir}/resolve-prev-tag.sh" ] || ci_dir='scripts/ci'
 
-# ── 收集候选 tag ────────────────────────────────────────────────────────────
-# 只认合法的 SemVer 版本 tag：vX.Y.Z 或 vX.Y.Z-rc.N / -beta.N / -alpha.N / -nightly.YYYYMMDD。
-# 不合规的 tag 一律不进候选集 —— 否则一个随手建的 v1.0.44.rc1 之类就会变成
-# 对比基准，把 diff 算到错误的区间上。
-# 拉取 tag 是调用方的责任：GitHub 用 fetch-depth: 0，CNB 用 git fetch --tags，
-# 工作流里都有独立一步校验，这里不做兜底 fetch。
-all_tags="$(git tag -l 'v*' 2>/dev/null \
-  | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-(rc|beta|alpha|nightly)(\.[0-9]+)?)?$' \
-  || true)"
-
-# 按渠道过滤出「同渠道」的 tag。注意排除当前版本自己：重跑同一次发布时，
-# 当前 tag 可能已经建好了，不排除就会变成自己和自己对比（diff 为空）。
-same_channel=''
-for t in ${all_tags}; do
-  [ "${t}" = "${version}" ] && continue
-  t_channel='stable'
-  case "${t}" in
-    *-rc*) t_channel='rc' ;;
-    *-beta*) t_channel='beta' ;;
-    *-alpha*) t_channel='alpha' ;;
-    *-nightly*) t_channel='nightly' ;;
-  esac
-  [ "${t_channel}" = "${channel}" ] || continue
-  same_channel="${same_channel}${same_channel:+
-}${t}"
-done
-
-# ── 选基准 ──────────────────────────────────────────────────────────────────
-# 同渠道里挑版本号最大的那个。用 sort -V 而不是 --sort=-v:refname：
-# 后者对 rc.2 / rc.10 这类排序不符合直觉，且不同 git 版本行为有差异。
-pick_latest() {
-  printf '%s\n' "$1" | sed '/^$/d' | sort -V -r | head -n 1
-}
-
-# 只保留「比当前版本旧」的 tag。
-# 补发历史版本（比如已经发过 rc.2 再回头发 rc.1）时，候选集里会有比当前版本更新的
-# tag，不过滤就会拿「未来」当基准，diff 变成反向的。
-older_than_version() {
-  while IFS= read -r t; do
-    [ -n "${t}" ] || continue
-    # sort -V -r 后取首行：若首行是当前版本，说明 t 不比它新
-    latest="$(printf '%s\n%s\n' "${t}" "${version}" | sort -V -r | head -n 1)"
-    [ "${latest}" = "${version}" ] && printf '%s\n' "${t}"
-  done <<EOF
-$1
-EOF
-}
-
-base=''
-if [ -n "${same_channel}" ]; then
-  base="$(pick_latest "$(older_than_version "${same_channel}")")"
-fi
-
-# 同渠道没有更早的 tag（首次发这个渠道）→ 回退到上一个正式版
-if [ -z "${base}" ] && [ "${channel}" != 'stable' ]; then
-  stable_tags=''
-  for t in ${all_tags}; do
-    [ "${t}" = "${version}" ] && continue
-    case "${t}" in
-      *-rc* | *-beta* | *-alpha* | *-nightly*) continue ;;
-    esac
-    stable_tags="${stable_tags}${stable_tags:+
-}${t}"
-  done
-  if [ -n "${stable_tags}" ]; then
-    base="$(pick_latest "$(older_than_version "${stable_tags}")")"
-  fi
-fi
-
-# ── 输出 ────────────────────────────────────────────────────────────────────
-# 只有仓库里一个版本 tag 都没有时，才是真的「首次发布」。
-# 有 tag 但挑不出基准，说明是取数出了问题（比如 clone 时没拉 tag），
-# 这时报「首次发布」会盖住真正的故障，必须显式报错让人去看。
-if [ -z "${base}" ]; then
-  # 排掉「当前版本自己」之后还剩几个 tag
-  others="$(printf '%s\n' "${all_tags}" | sed '/^$/d' | grep -vxF "${version}" || true)"
-  # 一个 tag 都没有，或只有当前版本自己 → 这就是这个仓库/渠道的第一次发布
-  if [ -z "${others}" ]; then
-    printf '首次发布\n'
-    exit 0
-  fi
-  # 有别的 tag 却挑不出基准，说明取数有问题，不能拿「首次发布」把故障盖住
-  printf '错误: 仓库里有 %d 个其它版本 tag，但挑不出 %s 渠道的对比基准。\n' \
-    "$(printf '%s\n' "${others}" | sed '/^$/d' | wc -l | tr -d ' ')" "${channel}" >&2
-  printf '常见原因：clone 时没拉取 tag（GitHub 需要 fetch-depth: 0），或 tag 命名不符合预期。\n' >&2
+prev_rc=0
+base="$(sh "${ci_dir}/resolve-prev-tag.sh" "${version}")" || prev_rc=$?
+if [ "${prev_rc}" -ne 0 ]; then
+  printf '❌ 取不到 %s 的对比基准，更新内容无法生成\n' "${version}" >&2
   exit 1
 fi
-
-# 基准就是当前版本（重跑同一次发布）→ 没有可对比的提交
-if [ "${base}" = "${version}" ]; then
-  printf '与上一个版本（%s）相比没有新提交。\n' "${base}"
+if [ -z "${base}" ]; then
+  # 仓库里一个可用版本 tag 都没有：这是真正的首次发布
+  printf '首次发布\n'
   exit 0
 fi
 
