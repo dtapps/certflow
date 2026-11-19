@@ -1,6 +1,6 @@
 # 发布工作流
 # 两种触发：手动填版本号；每天 UTC 00:00 定时构建 nightly 预发布。
-# 均自动构建六个平台并发布 GitHub Release，再同步到 CNB / GitLab / Gitee / GitCode。
+# 均自动构建六个平台并发布 GitHub Release，再同步到 CNB / Gitee。
 #
 # 版本号规则（实现见 scripts/ci/resolve-prerelease.sh，CNB 的 .cnb.yml 同口径）：
 #   1.2.3                    -> 正式版，Release 不勾选 prerelease
@@ -743,7 +743,7 @@ jobs:
 
   # 所有平台构建完成后，发布 GitHub Release。
   # 正文/更新内容分别在 scripts/ci/render-release-body.sh 与 release-changelog.sh，
-  # CNB / GitLab / Gitee 复用这份正文，只换下载链接域名。
+  # CNB / Gitee 复用这份正文，只换下载链接域名。
   release:
     needs: [build, build-linux, prepare]
     runs-on: ubuntu-26.04
@@ -870,8 +870,8 @@ jobs:
           set -euo pipefail
 
           # 清理失败不能连累发布：本步骤在 release job 里，一旦非零退出，
-          # 后面 needs: release 的 sync-cnb / sync-gitee / sync-gitlab / sync-gitcode
-          # 以及 notify 会全部被跳过。所以任何失败都只打一条告警，然后按成功结束。
+          # 后面 needs: release 的 sync-cnb / sync-gitee 以及 notify 会全部被跳过。
+          # 所以任何失败都只打一条告警，然后按成功结束。
           trap 'code=$?; echo "::warning::清理旧 nightly 失败（exit=${code}），不影响 Release 与各平台同步" >&2; exit 0' ERR
 
           # 只处理日期 nightly（tag 以 -nightly.YYYYMMDD 结尾），rc / beta / alpha 不动。
@@ -1258,156 +1258,6 @@ jobs:
             echo "status=failed" >> "$GITHUB_OUTPUT"
           fi
 
-  # Release 发布成功后触发 GitLab 的 release job（.gitlab-ci.yml，只在 trigger 源下跑：
-  # 下载 GitHub 资产 → 传 Generic Package → 建 GitLab Release）。用项目级 trigger token，只触发不绑用户。
-  # secret 只有 SYNC_GITLAB_TRIGGER_TOKEN；仓库/端点/ref 见下方常量（仓库地址取自 README 镜像表）。
-  # 令牌：GitLab 项目 → Settings → CI/CD → Pipeline trigger tokens → Add new token（形如 glptt-xxx），
-  # 只触发流水线、不绑用户；创建后填到 GitHub 仓库 secret SYNC_GITLAB_TRIGGER_TOKEN。
-  sync-gitlab:
-    needs: [release, prepare]
-    runs-on: ubuntu-26.04
-    # 供 notify job 在通知里展示同步状态
-    outputs:
-      status: ${{ steps.status.outputs.status }}
-    # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
-    env:
-      GITLAB_TRIGGER_TOKEN: ${{ secrets.SYNC_GITLAB_TRIGGER_TOKEN }}
-      # 只传 tag：预发布由 .gitlab-ci.yml 按 tag 后缀自行判定（单一真值源）
-      VERSION: ${{ needs.prepare.outputs.tag }}
-      # 本次构建的完整提交号（**构建元数据**，与版本号相互独立）：搭 VERSION 的车传给
-      # 下游记一笔（variables[COMMIT]），不参与任何判定。
-      COMMIT: ${{ needs.prepare.outputs.git_commit_full }}
-    steps:
-      - name: 触发 GitLab 同步流水线
-        id: trigger
-        if: ${{ env.GITLAB_TRIGGER_TOKEN != '' }}
-        shell: bash
-        run: |
-          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
-          sleep 8
-
-          API="https://gitlab.com/api/v4"   # 自建 GitLab 实例改这里
-          PROJECT="dtapps/certflow"         # README 镜像地址表；dtapps 带 s，GitCode 那边是 dtapp
-          REF="master"                      # 镜像仓库要构建的分支
-          # 路径形式必须 URL 编码（/ → %2F）。
-          PROJ=$(printf '%s' "$PROJECT" | jq -sRr @uri)
-
-          echo "触发 GitLab 流水线: ${API}/projects/${PROJ}/trigger/pipeline (ref=${REF})"
-          HTTP=$(curl -s -o /tmp/gitlab_trigger.json -w "%{http_code}" -X POST \
-            --form "token=${GITLAB_TRIGGER_TOKEN}" \
-            --form "ref=${REF}" \
-            --form "variables[EVENT]=api_trigger_release" \
-            --form "variables[VERSION]=${VERSION}" \
-            --form "variables[COMMIT]=${COMMIT}" \
-            "${API}/projects/${PROJ}/trigger/pipeline")
-
-          echo "GitLab trigger/pipeline 响应 HTTP=${HTTP}"
-          cat /tmp/gitlab_trigger.json
-          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
-            echo "status=failed" >> "$GITHUB_OUTPUT"
-            echo "::warning::触发 GitLab 同步流水线失败（HTTP=${HTTP}），不影响 GitHub Release"
-          else
-            echo "status=triggered" >> "$GITHUB_OUTPUT"
-            echo "✓ 已成功请求 GitLab 执行同步流水线"
-          fi
-
-      # 触发步骤被跳过（未配置 secret）或中途失败时，也要给出一个确定的状态，
-      # 否则 notify 里只能显示「未知」，分不清「没触发」和「触发了但失败」。
-      - name: 记录同步状态
-        id: status
-        if: always()
-        shell: bash
-        run: |
-          if [ "${{ steps.trigger.outcome }}" = "skipped" ]; then
-            echo "status=skipped" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ steps.trigger.outputs.status }}" ]; then
-            echo "status=${{ steps.trigger.outputs.status }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failed" >> "$GITHUB_OUTPUT"
-          fi
-
-  # Release 发布成功后 dispatch GitCode 的 release.yml（即 .gitcode/workflows/release.yml，
-  # 逻辑：下载 GitHub 资产 → 建 GitCode Release → 逐个上传附件），须声明 on: workflow_dispatch。
-  # secret 只有 SYNC_GITCODE_TOKEN（个人令牌）；仓库/端点/workflow/ref 见下方常量（仓库地址取自 README 镜像表）。
-  # 令牌：GitCode → 头像 → 个人设置 → 访问令牌 → 新建访问令牌（勾 repo 读写，令牌只显示一次），
-  # 创建后填到 GitHub 仓库 secret SYNC_GITCODE_TOKEN。
-  # access_token 按官方要求走 query，故日志不打印完整 URL。
-  sync-gitcode:
-    needs: [release, prepare]
-    runs-on: ubuntu-26.04
-    # 供 notify job 在通知里展示同步状态
-    outputs:
-      status: ${{ steps.status.outputs.status }}
-    # token 放 job 级 env（step 自己的 env 在 if 求值时还读不到）。
-    env:
-      GITCODE_TOKEN: ${{ secrets.SYNC_GITCODE_TOKEN }}
-      # 只传 tag：GitCode 侧由 tag 后缀自行判定预发布，
-      # 不再多传一个布尔（两套口径迟早打架，GitHub 侧已按此原则改造）。
-      VERSION: ${{ needs.prepare.outputs.tag }}
-      # 本次构建的完整提交号（**构建元数据**，与版本号相互独立）：搭 VERSION 的车传给
-      # 下游记一笔（inputs.commit），不参与任何判定。
-      COMMIT: ${{ needs.prepare.outputs.git_commit_full }}
-    steps:
-      - name: 触发 GitCode 同步流水线
-        id: trigger
-        if: ${{ env.GITCODE_TOKEN != '' }}
-        shell: bash
-        run: |
-          echo "等待 8 秒，确保 GitHub Release 附件已同步到 CDN ..."
-          sleep 8
-
-          API="https://api.gitcode.com/api/v8"  # 私有化部署改这里
-          REPO="dtapp/certflow"                 # README 镜像地址表；dtapp 不带 s，GitLab 那边是 dtapps
-          WORKFLOW="release.yml"                # .gitcode/workflows/ 下的文件名，也可填 workflow id
-          REF="main"                            # 镜像仓库主分支（commit 不可用时的回退）
-          # dispatch 的 ref 用**本次发布的 commit**：让下游跑发布那一版的 workflow / 脚本，
-          # 而不是分支最新版本。镜像仓库还没同步该 commit 时 dispatch 会失败，
-          # 这时自动回退到分支重试一次，不影响同步。
-          dispatch() {
-            local ref="$1"
-            curl -s -o /tmp/gitcode_dispatch.json -w "%{http_code}" -X POST \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n \
-                --arg ref "$ref" \
-                --arg version "${VERSION}" \
-                --arg commit "${COMMIT}" \
-                '{ref: $ref, inputs: {version: $version, commit: $commit}}')" \
-              "${API}/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches?access_token=${GITCODE_TOKEN}"
-          }
-
-          TARGET_REF="${COMMIT:-$REF}"
-          echo "触发 GitCode workflow: ${REPO} / ${WORKFLOW} (ref=${TARGET_REF})"
-          HTTP=$(dispatch "${TARGET_REF}")
-          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ] && [ "${TARGET_REF}" != "${REF}" ]; then
-            echo "用 commit 触发失败（HTTP=${HTTP}），回退到分支 ${REF} 重试"
-            HTTP=$(dispatch "${REF}")
-          fi
-
-          echo "GitCode dispatches 响应 HTTP=${HTTP}"
-          cat /tmp/gitcode_dispatch.json
-          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
-            echo "status=failed" >> "$GITHUB_OUTPUT"
-            echo "::warning::触发 GitCode 同步流水线失败（HTTP=${HTTP}），不影响 GitHub Release"
-          else
-            echo "status=triggered" >> "$GITHUB_OUTPUT"
-            echo "✓ 已成功请求 GitCode 执行同步流水线"
-          fi
-
-      # 触发步骤被跳过（未配置 secret）或中途失败时，也要给出一个确定的状态，
-      # 否则 notify 里只能显示「未知」，分不清「没触发」和「触发了但失败」。
-      - name: 记录同步状态
-        id: status
-        if: always()
-        shell: bash
-        run: |
-          if [ "${{ steps.trigger.outcome }}" = "skipped" ]; then
-            echo "status=skipped" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ steps.trigger.outputs.status }}" ]; then
-            echo "status=${{ steps.trigger.outputs.status }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failed" >> "$GITHUB_OUTPUT"
-          fi
-
   # 构建 / 发布 / 各镜像平台同步全部完成后，通过 ServerChan3（方糖）推送 webhook 通知。
   # 需配置 secret SERVERCHAN_SENDKEY（形如 SCTxxxx 或 sctp{uid}t...）；未配置则跳过通知。
   # API 文档：https://doc.sc3.ft07.com/zh/serverchan3/server/api
@@ -1415,7 +1265,7 @@ jobs:
   #          带 uid 的 sendkey（sctp 开头）→ https://<uid>.push.ft07.com/send/<sendkey>.send
   notify:
     # 等所有镜像同步 job 结束（未配置 secret 时它们只是跳过，不影响 success 判定）。
-    needs: [sync-cnb, sync-gitee, sync-gitlab, sync-gitcode, release, prepare]
+    needs: [sync-cnb, sync-gitee, release, prepare]
     runs-on: ubuntu-26.04
     if: ${{ needs.release.result == 'success' }}
     env:
@@ -1458,14 +1308,11 @@ jobs:
           REPO="${{ github.repository }}"
 
           # 各镜像平台的 Release 页面（仓库路径各平台不同，别抄错）：
-          #   CNB / GitCode → dtapp（不带 s）；Gitee / GitLab → dtapps（带 s）
-          # URL 格式按各平台同步脚本的输出对齐：
-          #   GitLab 是 /-/releases/<tag>（没有 /tag 这一段），其余是 /releases/tag/<tag>
+          #   CNB → dtapp（不带 s）；Gitee → dtapps（带 s）
+          # URL 格式按各平台同步脚本的输出对齐：都是 /releases/tag/<tag>
           GH_RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
           CNB_RELEASE_URL="https://cnb.cool/dtapp/certflow/-/releases/tag/${TAG}"
           GITEE_RELEASE_URL="https://gitee.com/dtapps/certflow/releases/tag/${TAG}"
-          GITLAB_RELEASE_URL="https://gitlab.com/dtapps/certflow/-/releases/${TAG}"
-          GITCODE_RELEASE_URL="https://gitcode.com/dtapp/certflow/releases/tag/${TAG}"
 
           # 同步状态 → 中文标签。状态来自各 sync job 的 outputs：
           #   triggered=已触发（异步执行，进度看平台页面）/ skipped=未配置 secret / failed=触发失败
@@ -1490,9 +1337,7 @@ jobs:
           DESP="${DESP}**GitHub Release**: [${TAG}](${GH_RELEASE_URL})  "$'\n'
           DESP="${DESP}**CNB Release**: [${TAG}](${CNB_RELEASE_URL})  "$'\n'
           DESP="${DESP}**Gitee Release**: [${TAG}](${GITEE_RELEASE_URL})  "$'\n'
-          DESP="${DESP}**GitLab Release**: [${TAG}](${GITLAB_RELEASE_URL})  "$'\n'
-          DESP="${DESP}**GitCode Release**: [${TAG}](${GITCODE_RELEASE_URL})  "$'\n'
-          DESP="${DESP}**镜像同步**: CNB $(sync_state "${{ needs['sync-cnb'].outputs.status }}") · Gitee $(sync_state "${{ needs['sync-gitee'].outputs.status }}") · GitLab $(sync_state "${{ needs['sync-gitlab'].outputs.status }}") · GitCode $(sync_state "${{ needs['sync-gitcode'].outputs.status }}")"
+          DESP="${DESP}**镜像同步**: CNB $(sync_state "${{ needs['sync-cnb'].outputs.status }}") · Gitee $(sync_state "${{ needs['sync-gitee'].outputs.status }}")"
 
           echo "推送 ServerChan3 通知: ${TITLE}"
           HTTP=$(curl -s -o /tmp/sc3.json -w "%{http_code}" -X POST \

@@ -3,8 +3,8 @@
 # 生成 Release 正文（Markdown）。
 #
 # 事实来源：GitHub 的 .github/workflows/release.yml 调用这一份生成正文；
-# CNB / GitLab / Gitee 三个镜像侧都直接复用 GitHub Release 的正文（只把下载链接
-# 换成自家域名），所以正文格式只有这一处实现，改一处三边一起变。
+# CNB / Gitee 两个镜像侧都直接复用 GitHub Release 的正文（只把下载链接
+# 换成自家域名），所以正文格式只有这一处实现，改一处两边一起变。
 #
 # 只用环境变量传参（不解析位置参数），这样流水线里可以直接 `sh scripts/ci/render-release-body.sh`：
 #

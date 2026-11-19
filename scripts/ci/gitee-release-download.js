@@ -259,7 +259,7 @@ function downloadFile(asset, dest, expectedSize) {
 }
 
 // ── cnb 源的固定附件清单 ─────────────────────────────────────────────────
-// 与另外四个平台逐字一致的产物名（{V} 换成去掉 v 的版本号）。CNB 的 API 匿名 401，
+// 与 GitHub Release 上的产物名逐字一致（{V} 换成去掉 v 的版本号）。CNB 的 API 匿名 401，
 // 所以不查元数据、不依赖 GitHub 的资产列表：名字写死在这里，大小用 probeSize 现问。
 // 上游增减产物时要同步改这份清单（发布脚本按名字找文件）。
 const CNB_TEMPLATES = [

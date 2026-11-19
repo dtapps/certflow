@@ -62,7 +62,6 @@
 | [coverage-node.md](coverage-node.md) | 前端覆盖率：Vitest 配置、CNB 流水线、门禁阈值状态        |
 | [codecov.md](codecov.md)             | Codecov 三支柱（覆盖率 / bundle / 测试结果）与归一化逻辑 |
 | [coveralls.md](coveralls.md)         | Coveralls 双 flag 上报与排错                             |
-| [gitlab-ci.md](gitlab-ci.md)         | GitLab 侧只做发布同步，及其历史原因                      |
 
 ## 3. 开发日志（38 篇）
 
