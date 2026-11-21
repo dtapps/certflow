@@ -11,57 +11,38 @@
 // 环境变量（**不能以 GITEE_ 开头**：Gitee 流水线自己占用了这个前缀，
 // 全局参数用 GITEE_xxx 会被平台拒绝或覆盖，所以统一走 CERTFLOW_ 前缀）：
 //   CERTFLOW_GITEE_TOKEN  必填，个人令牌（repo 读写）
+//   CERTFLOW_GITEE_REPO   默认 dtapps/certflow（owner/repo）
 //   MANIFEST              默认 gitee-release.json
-//   CERTFLOW_GITEE_API    默认 https://gitee.com/api/v5/repos/dtapps/certflow
+//   CERTFLOW_GITEE_API    默认 https://gitee.com/api/v5/repos/<REPO>
+//
+// 删除逻辑（同名旧 Release、旧 nightly）统一在 scripts/ci/delete-release.sh；
+// 旧 nightly 的清理由 .workflow/release.yml 在发布后单独调用脚本完成。
 
 const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
 
 const MANIFEST = process.env.MANIFEST || 'gitee-release.json';
-const API = process.env.CERTFLOW_GITEE_API || 'https://gitee.com/api/v5/repos/dtapps/certflow';
+const REPO = process.env.CERTFLOW_GITEE_REPO || 'dtapps/certflow';
+const API = process.env.CERTFLOW_GITEE_API || 'https://gitee.com/api/v5/repos/' + REPO;
 const TOKEN = (process.env.CERTFLOW_GITEE_TOKEN || '').trim();
 
-// 只保留最近 3 个日期 nightly（与 GitHub release.yml 的清理步骤同口径）。
-// 镜像侧每天被动同步一次，tag 各不相同；而 Gitee 的附件配额是「仓库累计 1GB」，
-// 旧 nightly 不删会持续吃掉配额（上传步骤里的配额跳过就是被它挤出来的）。
-// 清理失败只告警，不影响本次发布结果——发布成功比清理重要。
-async function cleanupOldNightly() {
-  try {
-    const res = await gt('GET', '/releases?per_page=100&page=1');
-    if (res.status !== 200) {
-      console.log('⚠ 查询 Release 列表失败（HTTP ' + res.status + '），跳过 nightly 清理');
-      return;
-    }
-    let list = null;
-    try { list = JSON.parse(res.text); } catch (e) { list = null; }
-    if (!Array.isArray(list)) {
-      console.log('⚠ Release 列表不是数组，跳过 nightly 清理');
-      return;
-    }
-    // 只认「预发布 + tag 以 -nightly.YYYYMMDD 结尾」，rc / beta / alpha 与正式版不动。
-    // 日期是定长数字，按 tag 字符串倒序即按时间倒序，无需解析版本号。
-    const nightly = list
-      .filter((r) => r && r.prerelease && /-nightly\.\d{8}$/.test(r.tag_name || ''))
-      .sort((a, b) => (a.tag_name < b.tag_name ? 1 : a.tag_name > b.tag_name ? -1 : 0));
-    if (nightly.length <= 3) {
-      console.log('nightly Release 共 ' + nightly.length + ' 个，无需清理');
-      return;
-    }
-    for (const old of nightly.slice(3)) {
-      console.log('删除旧 nightly Release：' + old.tag_name);
-      const del = await gt('DELETE', '/releases/' + old.id);
-      if (del.status !== 204 && del.status !== 200) {
-        console.log('⚠ 删除 Release 失败（HTTP ' + del.status + '），继续下一个');
-        continue;
-      }
-      // tag 不随 Release 一起删，单独删；失败只告警（下次发布不受影响）
-      const dt = await gt('DELETE', '/tags/' + encodeURIComponent(old.tag_name));
-      if (dt.status !== 204 && dt.status !== 200) {
-        console.log('⚠ 删除 tag 失败（HTTP ' + dt.status + '），忽略');
-      }
-    }
-  } catch (err) {
-    console.log('⚠ 清理旧 nightly 异常（忽略）：' + (err && err.message ? err.message : String(err)));
+// 调公共删除脚本：Gitee 没有删 tag 的 API，脚本内部用 git push --delete 处理。
+// 历史版本（老 commit）里可能还没有这个脚本，跳过预删除即可——同名 Release 还在时
+// 创建会返回 400，错误信息足够定位。
+function runDeleteScript(args) {
+  const script = path.join(__dirname, 'delete-release.sh');
+  if (!fs.existsSync(script)) {
+    console.log('⚠ 找不到 scripts/ci/delete-release.sh（旧版本），跳过同名 Release 预删除');
+    return;
   }
+  execFileSync('sh', [script, '--platform', 'gitee'].concat(args), {
+    stdio: 'inherit',
+    env: Object.assign({}, process.env, {
+      RELEASE_GITEE_TOKEN: TOKEN,
+      RELEASE_GITEE_REPO: REPO
+    })
+  });
 }
 
 function fail(msg) {
@@ -95,25 +76,14 @@ async function main() {
   console.log('待上传 ' + m.files.length + ' 个（' + mb(m.totalBytes || 0) + '）');
 
   // ── 同名先删，保证幂等重跑 ──
-  // 注意：Gitee 的 GET /releases/tags/{tag} 在「没有这个 Release」时返回 **200 + body `null`**，
-  // 不是 404。所以这里不能只看状态码，还要判断解析结果。
-  const existing = await gt('GET', '/releases/tags/' + encodeURIComponent(m.tag));
-  let old = null;
-  if (existing.status === 200) {
-    try { old = JSON.parse(existing.text); } catch (e) { old = null; }
-  } else if (existing.status !== 404) {
-    fail('查询旧 Release 失败（HTTP ' + existing.status + '）：' + existing.text.slice(0, 300));
-  }
-
-  if (old && old.id) {
-    console.log('删除同名旧 Release：' + old.id + '（' + (old.name || m.tag) + '）');
-    const del = await gt('DELETE', '/releases/' + old.id);
-    // 删不掉就别往下走：同名 Release 还在，创建会报 400，错误现场会被挪远
-    if (del.status !== 204 && del.status !== 200) {
-      fail('删除旧 Release 失败（HTTP ' + del.status + '）：' + del.text.slice(0, 300));
-    }
-  } else {
-    console.log('无同名 Release，直接创建');
+  // 删除逻辑统一在 scripts/ci/delete-release.sh：Gitee 的 GET /releases/tags/{tag}
+  // 在「没有这个 Release」时返回 **200 + body `null`**，脚本内部按 body 判断。
+  // --keep-tag 表示只删 Release，新建时复用原 tag（与之前行为一致）。
+  console.log('检查同名旧 Release（scripts/ci/delete-release.sh）');
+  try {
+    runDeleteScript(['--tag', m.tag, '--keep-tag']);
+  } catch (err) {
+    fail('删除同名旧 Release 失败：' + (err && err.message ? err.message : String(err)));
   }
 
   // ── 建 Release ──
@@ -195,8 +165,6 @@ async function main() {
     failed.forEach((x) => console.log('  - ' + x));
     fail('有 ' + failed.length + ' 个附件上传失败，见上面的 HTTP 状态与响应体');
   }
-  // ── 清理旧 nightly（保留最近 3 个）──
-  await cleanupOldNightly();
 
   console.log('发布完成：' + (release.html_url || m.tag));
 }

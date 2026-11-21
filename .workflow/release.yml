@@ -22,10 +22,13 @@
 # 本镜像端只接收**最终 tag**（如 v1.2.4-nightly.20260101），
 # 传裸 nightly 直接报错（拼不出真实 tag，只能 404）。
 #
-# 实现拆成两个脚本（都在 scripts/ci/，可本地单独跑）：
+# 实现拆成三个脚本（都在 scripts/ci/，可本地单独跑）：
 #   1) gitee-release-download.js —— 按跳过规则下载产物到 assets/，写出清单 gitee-release.json
 #      （清单里含 tag / 预发布 / 正文 HTML / 待上传文件列表）
 #   2) gitee-release-publish.js  —— 读清单，建 Release 并逐个上传附件
+#   3) delete-release.sh         —— 通用删除脚本：同名旧 Release（--tag --keep-tag）、
+#                                   旧 nightly（--keep 3）。Gitee 没有删 tag 的 API，
+#                                   tag 用 token 走 git push --delete；删完会复查。
 #
 # 为什么不用 release@gitee 插件：
 #   - assertFiles 是静态清单，做不到「某个文件超 100MB 就跳过它」；
@@ -94,6 +97,10 @@ stages:
             export SOURCE_INPUT="${DOWNLOAD_SOURCE}"
             export CERTFLOW_GITHUB_TOKEN="${CERTFLOW_GITHUB_TOKEN}"
             export CERTFLOW_GITEE_TOKEN="${CERTFLOW_GITEE_TOKEN}"
+            # 删除脚本（scripts/ci/delete-release.sh）用通用的 RELEASE_* 变量；
+            # Gitee 平台全局参数仍叫 CERTFLOW_GITEE_TOKEN（外部配置），这里映射过去。
+            export RELEASE_GITEE_TOKEN="${CERTFLOW_GITEE_TOKEN}"
+            export RELEASE_GITEE_REPO="dtapps/certflow"
             # 本次发布对应的 commit：GitHub 侧同步时通过 webhook 的 params 一起传过来
             # （对应全局参数 COMMIT，可选）。用途是让本流水线跑**发布那一版**的脚本
             # （scripts/ci/gitee-release-*.js），而不是镜像仓库分支头的最新版。
@@ -203,3 +210,10 @@ stages:
 
             echo "======== 2/2 发布（建 Release + 逐个上传）========"
             node scripts/ci/gitee-release-publish.js
+
+            # 清理旧 nightly（保留最近 3 个）：删除逻辑统一在 scripts/ci/delete-release.sh。
+            # Gitee 没有删 tag 的 API，脚本用 token 走 git push --delete 删 tag（需要 git）。
+            # 清理失败只告警：发布已经完成，不能因为清理把整条流水线弄红。
+            echo "======== 清理旧 nightly（保留最近 3 个）========"
+            sh scripts/ci/delete-release.sh --platform gitee --keep 3 ||
+              echo "⚠ 清理旧 nightly 失败（不影响本次发布）"

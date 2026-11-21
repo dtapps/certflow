@@ -848,7 +848,8 @@ jobs:
         run: |
           # nightly 同日重跑时同名 tag 已存在：删掉旧 Release 与 tag 再重建，
           # 避免旧平台的附件堆在 Release 上。其它渠道正常情况下 tag 是新的，这里为空操作。
-          gh release delete "${VERSION}" --yes --cleanup-tag 2>/dev/null || true
+          # 删除逻辑与 CNB 共用 scripts/ci/delete-release.sh（Release / tag 分别删并复查）。
+          sh scripts/ci/delete-release.sh --platform github --tag "${VERSION}" || true
 
       - name: 发布 Release
         uses: softprops/action-gh-release@v3
@@ -867,31 +868,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-
           # 清理失败不能连累发布：本步骤在 release job 里，一旦非零退出，
           # 后面 needs: release 的 sync-cnb / sync-gitee 以及 notify 会全部被跳过。
-          # 所以任何失败都只打一条告警，然后按成功结束。
-          trap 'code=$?; echo "::warning::清理旧 nightly 失败（exit=${code}），不影响 Release 与各平台同步" >&2; exit 0' ERR
-
-          # 只处理日期 nightly（tag 以 -nightly.YYYYMMDD 结尾），rc / beta / alpha 不动。
-          # 用远端 Release 列表而不是本地 git tag：刚发布的 tag 由 action-gh-release
-          # 通过 API 创建，当前工作区不一定已经拉到这个 tag 引用。
-          mapfile -t nightly < <(
-            gh release list --limit 200 --json tagName,isPrerelease,isDraft \
-              --jq '.[] | select(.isPrerelease and (.isDraft | not)) | .tagName' \
-              | grep -E -- '-nightly\.[0-9]{8}$' \
-              | sort -rV || true
-          )
-
-          if [ "${#nightly[@]}" -le 3 ]; then
-            echo "nightly Release 共 ${#nightly[@]} 个，无需清理"
-            exit 0
-          fi
-          for old in "${nightly[@]:3}"; do
-            echo "删除旧 nightly Release: ${old}"
-            gh release delete "${old}" --yes --cleanup-tag
-          done
+          # 脚本本身失败只告警、退出 0；这里再兜一层，防止脚本自身出错把发布拖红。
+          sh scripts/ci/delete-release.sh --platform github --keep 3 ||
+            echo "::warning::清理旧 nightly 失败，不影响 Release 与各平台同步"
 
   # GitHub 侧的发版公告：Release 发布成功后，在仓库 Discussions 里开一条讨论。
   #

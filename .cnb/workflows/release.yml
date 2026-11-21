@@ -201,60 +201,14 @@
         cat release_body.md
 
     # 删除已存在的 Release 与 Tag，再重建，避免旧附件堆积。
-    # 两步均调用 CNB Open API，CNB_TOKEN 需 repo-release:rw 权限，
-    # CNB_API_ENDPOINT 由流水线自动注入。注意：DeleteTag 不会自动删 Release，
-    # DeleteRelease 也不会自动删 Tag，所以两个对象必须分别删除。
+    # Release 与 tag 是两个对象，必须分别删；实现与 GitHub 共用
+    # scripts/ci/delete-release.sh（CNB 删 tag 走 /-/git/tags/…，删完会复查确认）。
+    # CNB_TOKEN 需 repo-release:rw 权限，CNB_API_ENDPOINT 由流水线自动注入。
     - name: 删除已存在的 Release 与 Tag
       shell: true
       script: |
-        set -e
-        API="${CNB_API_ENDPOINT%/}"
-        REPO="$CNB_REPO_SLUG"
-        TAG="${INTERIOR_VERSION}"
-
-        # ---- 第 1 步：删除 Release（发行版） ----
-        # 查询：GET /-/releases/tags/{tag}  → 200 存在 / 404 不存在
-        echo "查询是否已存在 release (tag=$TAG) ..."
-        HTTP=$(curl -s -o /tmp/nr.json -w "%{http_code}" \
-          -H "Authorization: Bearer $CNB_TOKEN" \
-          -H "Accept: application/vnd.cnb.api+json" \
-          "$API/$REPO/-/releases/tags/$TAG")
-        if [ "$HTTP" = "200" ]; then
-          ID=$(jq -r '.id // .release_id // empty' /tmp/nr.json)
-          echo "release 已存在 (id=$ID)，删除后重新发布"
-          # 删除：DELETE /-/releases/{id}  → 成功返回 204/200
-          DEL=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-            -H "Authorization: Bearer $CNB_TOKEN" \
-            -H "Accept: application/vnd.cnb.api+json" \
-            "$API/$REPO/-/releases/$ID")
-          if [ "$DEL" = "204" ] || [ "$DEL" = "200" ]; then
-            echo "已删除旧 release"
-          else
-            echo "删除 release 失败 HTTP=$DEL"; exit 1
-          fi
-        elif [ "$HTTP" = "404" ]; then
-          echo "release 不存在，直接发布"
-        else
-          echo "查询 release 失败 HTTP=$HTTP"; cat /tmp/nr.json; exit 1
-        fi
-
-        # ---- 第 2 步：删除 Git Tag（标签） ----
-        # 删除：DELETE /-/tags/{repo}/{tag}  → 204 成功 / 404 不存在
-        # 该接口仅删 tag，不删关联 Release，故需在第 1 步之外单独删除。
-        echo "删除同名 tag (tag=$TAG) ..."
-        TAG_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-          -X DELETE \
-          -H "Authorization: Bearer $CNB_TOKEN" \
-          -H "Accept: application/vnd.cnb.api+json" \
-          "$API/$REPO/-/tags/$TAG")
-        if [ "$TAG_HTTP" = "204" ] || [ "$TAG_HTTP" = "200" ]; then
-          echo "已删除旧 tag"
-        elif [ "$TAG_HTTP" = "404" ]; then
-          echo "tag 不存在，跳过"
-        else
-          # 删 tag 失败不阻断发布（后续 git:release 会在已有 tag 上重建）
-          echo "删除 tag 失败 HTTP=$TAG_HTTP（继续发布）"
-        fi
+        set -eu
+        sh scripts/ci/delete-release.sh --platform cnb --tag "${INTERIOR_VERSION}"
 
     # https://docs.cnb.cool/zh/build/internal-steps.html#git-release
     - name: 创建 Release
@@ -315,79 +269,20 @@
           echo "✓ 已请求 Gitee 执行发布流水线（异步执行，进度看 Gitee 流水线页面）"
         fi
 
-    # 清理旧 nightly（与 GitHub release.yml 的「只保留最近 3 个」同口径）。
+    # 清理旧 nightly（与 GitHub 同口径，实现共用 scripts/ci/delete-release.sh）。
     # 镜像侧每天被动同步一次，tag 各不相同，不清理就会无限堆积（Release + tag + 附件）；
     # GitHub 侧删掉的旧 nightly 也不会自动从 CNB 消失。
     # 只处理日期 nightly（tag 以 -nightly.YYYYMMDD 结尾），rc / beta / alpha 与正式版一律不动。
+    # 清理失败只告警：stage 一红整条同步流水线就算失败，而发布本身已经完成了。
     - name: 清理旧 nightly（只保留最近 3 个）
       script: |
         set -eu
-        TAG="${INTERIOR_VERSION}"
-        case "${INTERIOR_PRERELEASE}:${TAG}" in
+        case "${INTERIOR_PRERELEASE}:${INTERIOR_VERSION}" in
           true:*-nightly.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
-          *) echo "非日期 nightly 发布（${TAG}），跳过清理"; exit 0 ;;
+          *) echo "非日期 nightly 发布（${INTERIOR_VERSION}），跳过清理"; exit 0 ;;
         esac
-
-        # 清理是「尽力而为」：从这里开始关掉 errexit。stage 一红整条同步流水线就算失败，
-        # 而发布本身已经完成了，所以任何一步失败只打印，不让 stage 失败。
-        set +e
-
-        API="${CNB_API_ENDPOINT%/}"
-        REPO="$CNB_REPO_SLUG"
-
-        # 列表形状兼容裸数组与 {items|list|data: [...]} 包装（与 mirror_updater.go 的解码口径一致）
-        RAW=$(curl -sS -H "Authorization: Bearer $CNB_TOKEN" \
-          -H "Accept: application/vnd.cnb.api+json" \
-          "$API/$REPO/-/releases?page=1&page_size=100")
-        if ! printf '%s' "$RAW" | jq -e . >/dev/null 2>&1; then
-          echo "⚠ 获取 Release 列表失败，跳过 nightly 清理"
-          printf '  响应：%s\n' "$(printf '%s' "$RAW" | head -c 200)"
-          exit 0
-        fi
-
-        OLD_TAGS=$(printf '%s' "$RAW" | jq -r '
-          (if type == "array" then . else (.items // .list // .data // []) end)
-          | .[]
-          | select((.draft // false) | not)
-          | select(.prerelease == true)
-          | .tag_name
-          | select(test("-nightly\\.[0-9]{8}$"))
-        ' 2>/dev/null | sort -rV || true)
-
-        TOTAL=$(printf '%s\n' "$OLD_TAGS" | grep -c . || true)
-        if [ "${TOTAL:-0}" -le 3 ]; then
-          echo "nightly Release 共 ${TOTAL:-0} 个，无需清理"
-          exit 0
-        fi
-
-        # 前 3 个是保留项，其余逐个删：DeleteRelease 不会连带删 tag，两个对象必须分别删。
-        printf '%s\n' "$OLD_TAGS" | tail -n +4 | while IFS= read -r OLD; do
-          [ -n "$OLD" ] || continue
-          REL=$(curl -sS -H "Authorization: Bearer $CNB_TOKEN" \
-            -H "Accept: application/vnd.cnb.api+json" \
-            "$API/$REPO/-/releases/tags/$OLD")
-          ID=$(printf '%s' "$REL" | jq -r '.id // .release_id // empty' 2>/dev/null)
-          if [ -n "$ID" ]; then
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-              -H "Authorization: Bearer $CNB_TOKEN" \
-              -H "Accept: application/vnd.cnb.api+json" \
-              "$API/$REPO/-/releases/$ID")
-            case "$CODE" in
-              200|204) echo "已删除旧 nightly release ${OLD}（id=${ID}）" ;;
-              *) echo "⚠ 删除 release ${OLD}（id=${ID}）失败 HTTP=${CODE}" ;;
-            esac
-          else
-            echo "⚠ 未取到 ${OLD} 的 release id，跳过删除"
-          fi
-          TCODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-            -H "Authorization: Bearer $CNB_TOKEN" \
-            -H "Accept: application/vnd.cnb.api+json" \
-            "$API/$REPO/-/tags/$OLD")
-          case "$TCODE" in
-            200|204) echo "已删除同名 tag ${OLD}" ;;
-            *) echo "⚠ 删除 tag ${OLD} 失败 HTTP=${TCODE}" ;;
-          esac
-        done
+        sh scripts/ci/delete-release.sh --platform cnb --keep 3 ||
+          echo "⚠ 清理旧 nightly 失败（不影响本次发布）"
 
     # 发布成功后同步开一条「发版公告」Issue。
     #
