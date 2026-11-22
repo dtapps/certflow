@@ -184,19 +184,26 @@ cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","num
 1. **`--data` 必须是单行 JSON**：官方 CLI 解析 `--data` 时会先把控制字符（真实换行）转义成两字符的 `\n`， 而 JSON 的空白只能是真实换行——多行 JSON 会被转成非法 JSON，CLI 解析失败后会把整段文本当字符串原样发出去 （服务端收到双重编码的请求体）。所以拼 payload 用 `jq -nc`（紧凑单行），不能用 `jq -n`。
 2. **`--path` 不要写成 `"{\"repo\":\"...\"}"`**：多层引号 + 反斜杠转义会在 YAML → shell → argv 之间被吃掉， 实测把 `repo` 传成了 `[object Object]`，请求直接 404。统一用 `printf '{"repo":"%s"}' "${REPO}"` 拼成变量再传。
 
-### 10.3 公告评论（两个环境变量）
+### 10.3 公告评论（一个 NPC 总开关 + 一个内容变量）
 
-公告 Issue 建好后，流水线会再追加一条评论，把「整理一份用户友好的更新日志」交给仓库里的 NPC （`.cnb/settings.yml` 里导入的 `npc/CodeBuddy`），由它把整理好的日志作为评论发回公告里。
+公告 Issue 建好后，流水线会再追加一条评论，把「整理一份用户友好的更新日志」交给仓库里的 NPC （`.cnb/settings.yml` 里导入的 `npc/CodeBuddy`），由它把整理好的日志作为评论发回公告里。这是本仓库目前唯一触发 NPC 的地方——不发评论就等于不触发 NPC。
 
-| 环境变量                       | 位置         | 说明                                                                |
-|--------------------------------|--------------|---------------------------------------------------------------------|
-| `ANNOUNCEMENT_COMMENT_ENABLED` | job 级 `env` | 是否发评论（`true` / `false`）；关掉后公告照建，只是不追加评论      |
-| `ANNOUNCEMENT_COMMENT_TEXT`    | job 级 `env` | 评论内容，默认让 NPC 根据公告里的更新内容整理一份用户友好的更新日志 |
+| 环境变量                    | 位置             | 说明                                                                         |
+|-----------------------------|------------------|------------------------------------------------------------------------------|
+| `NPC_ENABLED`               | job 级 `imports` | **NPC 全局总开关**（来自 `envs/npc.yml`）；关掉后仓库里所有 NPC 功能都不触发 |
+| `ANNOUNCEMENT_COMMENT_TEXT` | job 级 `env`     | 评论内容，默认让 NPC 根据公告里的更新内容整理一份用户友好的更新日志          |
+
+`NPC_ENABLED` 识别 `true` / `1` / `yes` / `on`（大小写不敏感），关闭时「准备发版公告 / 创建发版公告 / 发布公告评论」三个 stage 一起被 `if` 跳过——公告不建、评论不发、NPC 不触发；缺省按 `true` 处理，避免 `envs` 暂时取不到时误伤发版。`NPC_ENABLED` 放在公共 `envs` 仓库，便于一处统一关闭多个仓库的 NPC 功能。
+
+> 早先的 `ANNOUNCEMENT_COMMENT_ENABLED` 已删除：它与 `NPC_ENABLED` 语义重复，现在只保留一个总开关。
 
 ```yaml
-# .cnb/workflows/release.yml 的 .trigger_release（job 级 env，所有 stage 都能读到）
+# .cnb/workflows/release.yml 的 .trigger_release
+  imports:
+    - https://cnb.cool/dtapp/envs/-/blob/main/github.yml
+    - https://cnb.cool/dtapp/envs/-/blob/main/certflow.yml
+    - https://cnb.cool/dtapp/envs/-/blob/main/npc.yml   # NPC_ENABLED: 'true'
   env:
-    ANNOUNCEMENT_COMMENT_ENABLED: "true"
     ANNOUNCEMENT_COMMENT_TEXT: |-
       @CodeBuddy 请根据本次发布的更新内容（见上方），整理一份用户友好的更新日志，并作为评论发布在这里。
 ```
@@ -205,10 +212,11 @@ cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","num
 
 - 评论用官方 CLI 发：`cnb --module issues --tool post-issue-comment`（需 `repo-notes:rw`，可信事件的 `CNB_TOKEN` 自带）；
 - 评论正文只放提示语本身，不夹带别的东西：更新内容就在上面那条公告的正文里，NPC 自己会读；
+- **开关判断放在 stage 级 `if`，三个公告 stage 共用锚点**：「准备发版公告」「创建发版公告」「发布公告评论」都引用 `if: *npc_workflow`（定义在第一个 stage 上）。它是一段 shell 脚本：先判非 `nightly`，再判 `NPC_ENABLED`，不满足就 `exit 1` 让整个 stage 跳过——脚本逻辑里不再有开关判断，条件也只维护一份；缺省按 `true`。
 - **评论也去重**：发之前先 `list-issue-comments`，正文首行已存在就跳过（评论删不掉，重跑不该重复发）；列表查询失败时会打告警说明「无法确认是否发过」，但仍会发一次，避免 NPC 永远收不到活；
 - `work_mode` 不传：官方接口这个字段缺省就是 true（通知 NPC 进入工作模式），显式传反而多余；
-- 公告没建成（`nightly` / 正文渲染失败）时不会有评论：上一步没落盘 Issue 编号，评论 stage 直接跳过；
-- 开关关闭时只打印一行提示，公告本身照发。
+- 公告没建成（`nightly` / 正文渲染失败）时不会有评论：`nightly` 由 stage 的 `if` 拦掉；正文渲染失败时上一步没落盘 Issue 编号，脚本里跳过；
+- 开关关闭（`NPC_ENABLED=false`）时三个公告 stage 整个被 `if` 跳过：公告不建、评论不发、NPC 不触发。
 
 ### 10.4 GitHub 侧：发到 Discussions
 
