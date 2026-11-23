@@ -163,7 +163,7 @@ Release 发布成功后，CNB 侧流水线会**自动开一条 Issue** 作为发
 | 幂等      | 同一版本重跑（Release 会先删后建）时改写已有公告，不重复开一条                                                                                                                                                     |
 | 跳过条件  | `nightly` 不建公告（每天一个 tag，否则 Issue 列表会变成日报）：三个公告 stage 都挂 `if` 锚点，`case "${INTERIOR_VERSION}" in *-nightly.*) exit 1` 即跳过（CNB 的 `if` 是一段 shell 脚本，退出码 0 才执行该 stage） |
 | 失败处理  | 只告警、不让 stage 变红（发布已完成，变红会被 GitHub 侧 `sync-cnb` 误记成「同步失败」）                                                                                                                            |
-| 评论      | 公告建好后追加一条评论，把「整理用户友好的更新日志」交给仓库里的 NPC（CodeBuddy）；开关与内容见 10.3                                                                                                               |
+| 评论      | 公告建好后追加一条评论，@ 本仓库自定义 NPC「发版日志助手」整理用户友好的更新日志；开关与内容见 10.3                                                                                                                |
 | GitHub 侧 | 不在 Issue 发公告，改在仓库 **Discussions** 开一条讨论（正文同一份脚本渲染），细节见 10.4                                                                                                                          |
 
 ### 10.1 为什么用官方 CLI 而不是直接调 OpenAPI
@@ -186,12 +186,35 @@ cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","num
 
 ### 10.3 公告评论（一个 NPC 总开关 + 一个内容变量）
 
-公告 Issue 建好后，流水线会再追加一条评论，把「整理一份用户友好的更新日志」交给仓库里的 NPC （`.cnb/settings.yml` 里导入的 `npc/CodeBuddy`），由它把整理好的日志作为评论发回公告里。这是本仓库目前唯一触发 NPC 的地方——不发评论就等于不触发 NPC。
+公告 Issue 建好后，流水线会再追加一条评论，@ 本仓库**自定义 NPC「发版日志助手」**，让它把「整理一份用户友好的更新日志」作为评论发回公告里。这是本仓库目前唯一触发 NPC 的地方——不发评论就等于不触发 NPC。
 
-| 环境变量                    | 位置             | 说明                                                                         |
-|-----------------------------|------------------|------------------------------------------------------------------------------|
-| `NPC_ENABLED`               | job 级 `imports` | **NPC 全局总开关**（来自 `envs/npc.yml`）；关掉后仓库里所有 NPC 功能都不触发 |
-| `ANNOUNCEMENT_COMMENT_TEXT` | job 级 `env`     | 评论内容，默认让 NPC 根据公告里的更新内容整理一份用户友好的更新日志          |
+#### 自定义 NPC 角色（`.cnb/settings.yml`）
+
+角色定义在仓库自己的 `npc.roles` 里，不依赖通用的 `npc/CodeBuddy`——好处是整理要求固化在 `prompt` 里，只维护一份，手聊 @ 它也能得到同样规范的日志：
+
+```yaml
+# .cnb/settings.yml
+npc:
+  imports:
+    list:
+      # ...（原有导入保持不动）
+  roles:
+    - name: 发版日志助手
+      slogan: 整理发版更新日志
+      prompt: |-
+        你是 CertFlow 的发版日志助手……（忽略测试/文档、按「新增/变更/修复/破坏性变更」分组、
+        与公告「更新内容」一致、取不到 git 历史就按公告改写、把日志作为评论发回）
+```
+
+- **提及格式**：自定义 NPC 必须写全 `@仓库路径(角色名)`，即 `@dtapp/certflow(发版日志助手)`，不像系统 `@CodeBuddy` 能简写；
+- **@ 后的路径用 `{{REPOSLUG}}` 占位符**：评论模板里写 `@{{REPOSLUG}}(发版日志助手)`，「发布公告评论」stage 发评论前用流水线注入的 `CNB_REPO_SLUG` 替换（兜底 `dtapp/certflow`），不写死仓库地址——改名 / fork 后仍能 @ 到本仓库的角色；与其它占位符一样走 sed，分隔符 `|`、替换串 `&` 不可用；
+- **无需额外代码**：只定义角色即可，CNB 用默认运行环境 `cnbcool/default-npc:latest` + 内置 `npc:go` 任务兜底，不必写 `.cnb.yml` 事件流水线或 Dockerfile；被 @ 后走 `issue.comment@npc` 事件；
+- **prompt 里不要写 `{{...}}` 占位符**：流水线只替换评论正文里的占位符，settings.yml 的 prompt 是静态的；让 NPC 从 @ 它的评论里读真实 tag。
+
+| 环境变量                    | 位置             | 说明                                                                          |
+|-----------------------------|------------------|-------------------------------------------------------------------------------|
+| `NPC_ENABLED`               | job 级 `imports` | **NPC 全局总开关**（来自 `envs/npc.yml`）；关掉后仓库里所有 NPC 功能都不触发  |
+| `ANNOUNCEMENT_COMMENT_TEXT` | job 级 `env`     | 评论正文，@「发版日志助手」并给出要对比的两个 tag；整理要求写在角色 prompt 里 |
 
 `NPC_ENABLED` 识别 `true` / `1` / `yes` / `on`（大小写不敏感），关闭时「准备发版公告 / 创建发版公告 / 发布公告评论」三个 stage 一起被 `if` 跳过——公告不建、评论不发、NPC 不触发；缺省按 `true` 处理，避免 `envs` 暂时取不到时误伤发版。`NPC_ENABLED` 放在公共 `envs` 仓库，便于一处统一关闭多个仓库的 NPC 功能。
 
@@ -205,13 +228,13 @@ cnb --module issues --tool update-issue    --path '{"repo":"dtapp/certflow","num
     - https://cnb.cool/dtapp/envs/-/blob/main/npc.yml   # NPC_ENABLED: 'true'
   env:
     ANNOUNCEMENT_COMMENT_TEXT: |-
-      @CodeBuddy 请根据本次发布的更新内容（见上方），整理一份用户友好的更新日志，并作为评论发布在这里。
+      @{{REPOSLUG}}(发版日志助手) 请对比标签 {{PREVIOUSTAG}} 和 {{CURRENTTAG}} 的差异（git log / git diff {{PREVIOUSTAG}}...{{CURRENTTAG}}），整理一份用户友好的更新日志，并作为评论发布在这里。
 ```
 
 实现要点：
 
 - 评论用官方 CLI 发：`cnb --module issues --tool post-issue-comment`（需 `repo-notes:rw`，可信事件的 `CNB_TOKEN` 自带）；
-- 评论正文只放提示语本身，不夹带别的东西：更新内容就在上面那条公告的正文里，NPC 自己会读；
+- 评论正文只放 @ 提及 + 两个 tag，不再重复写整理要求（那些已固化在角色 prompt 里，避免两处维护）；更新内容就在那条公告的正文里，NPC 自己会读；
 - **开关判断放在 stage 级 `if`，三个公告 stage 共用锚点**：「准备发版公告」「创建发版公告」「发布公告评论」都引用 `if: *npc_workflow`（定义在第一个 stage 上）。它是一段 shell 脚本：先判非 `nightly`，再判 `NPC_ENABLED`，不满足就 `exit 1` 让整个 stage 跳过——脚本逻辑里不再有开关判断，条件也只维护一份；缺省按 `true`。
 - **评论也去重**：发之前先 `list-issue-comments`，正文首行已存在就跳过（评论删不掉，重跑不该重复发）；列表查询失败时会打告警说明「无法确认是否发过」，但仍会发一次，避免 NPC 永远收不到活；
 - `work_mode` 不传：官方接口这个字段缺省就是 true（通知 NPC 进入工作模式），显式传反而多余；
