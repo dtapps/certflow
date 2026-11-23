@@ -23,7 +23,7 @@
     "@vue/eslint-config-typescript": "^14.9.0",
     "eslint": "^10.15.0",
     "eslint-plugin-vue": "^10.12.1",
-    "knip": "^6.45.1",
+    "knip": "^6.46.1",
     "prettier": "^3.10.1",
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2",
     "typescript-eslint": "^8.73.0",
