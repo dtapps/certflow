@@ -297,8 +297,8 @@ github.com/go-acme/tencentclouddnspod v1.3.131 h1:0Bd/OKGdf29c8w7CHwmZVmy+n/XEtO
 github.com/go-acme/tencentclouddnspod v1.3.131/go.mod h1:k16hkO9WcDw+4U2oCjdJdTQ7/MpYeA1HrnDmW9lIzdY=
 github.com/go-acme/tencentedgdeone v1.3.186 h1:/vgNw6yTmtSdf4oNr5SZSgqy3syeuXsB6WcWC1FkrG8=
 github.com/go-acme/tencentedgdeone v1.3.186/go.mod h1:8F0Bbyd/sEwsi/fzNbFIoQK5+honTFEYTdwU+1w6jBA=
-github.com/go-co-op/gocron/v2 v2.23.1 h1:DAM4k6jfBHaaaLS0yCps8Jdq3smQZRoEg+/hwR5bLlk=
-github.com/go-co-op/gocron/v2 v2.23.1/go.mod h1:QwAfxPmGC9tPDL5R9R3inaJYPDvYEXs/zkYrXD3L9jk=
+github.com/go-co-op/gocron/v2 v2.23.2 h1:MI2iotc5ybmfcWWDZ8yL30uk8oIYm+1RK17ZEg/ivlE=
+github.com/go-co-op/gocron/v2 v2.23.2/go.mod h1:QwAfxPmGC9tPDL5R9R3inaJYPDvYEXs/zkYrXD3L9jk=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
