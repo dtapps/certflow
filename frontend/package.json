@@ -9,7 +9,7 @@
     "pinia": "^4.1.0",
     "qrcode": "^1.5.4",
     "tailwindcss": "^4.3.5",
-    "vue": "3.6.0-rc.15",
+    "vue": "3.6.0-rc.16",
     "vue-echarts": "^8.3.2",
     "vue-router": "^5.5.1"
   },
