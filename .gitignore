@@ -33,3 +33,8 @@ AGENTS.md
 # Gitee 发布脚本的中间产物（下载目录与清单），只存在于流水线工作区
 /assets/
 /gitee-release.json
+
+# 同步
+/scripts/ci/delete-release.sh
+/scripts/ci/describe-artifact.sh
+/scripts/ci/render-ci-notice.sh

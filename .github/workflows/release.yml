@@ -40,6 +40,7 @@ on:
           版本；无后缀即正式版'
         required: true
         type: string
+        default: 'nightly'
       commit:
         description: '要构建的提交（留空则使用默认分支最新提交）'
         required: false
@@ -81,6 +82,18 @@ jobs:
           # nightly 的基版本要取最近正式版 tag，需要完整 tag 历史
           fetch-depth: 0
           ref: ${{ inputs.commit || github.sha }}
+
+      # 缓存同步下来的模板脚本；key 绑定仓库内脚本内容，脚本一改就换新缓存，
+      # 避免旧缓存把已跟踪脚本（如 resolve-prerelease.sh）恢复成旧版本。
+      - name: 缓存脚本
+        uses: actions/cache@v6
+        with:
+          path: scripts/ci
+          key: ci-scripts-${{ hashFiles('scripts/ci/**') }}
+
+      - name: 同步脚本
+        shell: bash
+        run: make fetch-scripts
 
       # 容器工作区是 runner 挂进来的 bind mount（属主是 runner 用户），容器内进程却是 root，
       - name: 让容器内的 git 可用
@@ -142,11 +155,6 @@ jobs:
           git fetch --tags --quiet --force || true
           count=$(git tag -l 'v*' | wc -l | tr -d ' ')
           echo "本地版本 tag: ${count} 个"
-          if [ "$count" -eq 0 ]; then
-            echo "❌ 一个版本 tag 都没有，changelog 会退化成「首次发布」"
-            echo "   检查 checkout 是否带 tag（需要 fetch-depth: 0）"
-            exit 1
-          fi
 
           case "${TAG}" in
             v*)
@@ -244,6 +252,18 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit || github.sha }}
+
+      # 缓存同步下来的模板脚本；key 绑定仓库内脚本内容，脚本一改就换新缓存，
+      # 避免旧缓存把已跟踪脚本（如 resolve-prerelease.sh）恢复成旧版本。
+      - name: 缓存脚本
+        uses: actions/cache@v6
+        with:
+          path: scripts/ci
+          key: ci-scripts-${{ hashFiles('scripts/ci/**') }}
+
+      - name: 同步脚本
+        shell: bash
+        run: make fetch-scripts
 
       # 构建参数（BUILD_TIME / GIT_COMMIT）已由 prepare job 统一生成，这里直接引用，
       # 保证所有平台注入的 build_time 与 SHA256SUMS 写入的 build_time 完全一致。
@@ -620,6 +640,18 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
 
+      # 缓存同步下来的模板脚本；key 绑定仓库内脚本内容，脚本一改就换新缓存，
+      # 避免旧缓存把已跟踪脚本（如 resolve-prerelease.sh）恢复成旧版本。
+      - name: 缓存脚本
+        uses: actions/cache@v6
+        with:
+          path: scripts/ci
+          key: ci-scripts-${{ hashFiles('scripts/ci/**') }}
+
+      - name: 同步脚本
+        shell: bash
+        run: make fetch-scripts
+
       # 容器工作区是 runner 挂进来的 bind mount（属主是 runner 用户），容器内进程却是 root，
       - name: 让容器内的 git 可用
         shell: bash
@@ -764,6 +796,18 @@ jobs:
           # 需要完整 tag 历史，才能按渠道算出「上一个同渠道版本」并生成 changelog
           fetch-depth: 0
           ref: ${{ inputs.commit || github.sha }}
+
+      # 缓存同步下来的模板脚本；key 绑定仓库内脚本内容，脚本一改就换新缓存，
+      # 避免旧缓存把已跟踪脚本（如 resolve-prerelease.sh）恢复成旧版本。
+      - name: 缓存脚本
+        uses: actions/cache@v6
+        with:
+          path: scripts/ci
+          key: ci-scripts-${{ hashFiles('scripts/ci/**') }}
+
+      - name: 同步脚本
+        shell: bash
+        run: make fetch-scripts
 
       - name: 下载所有产物
         uses: actions/download-artifact@v8
@@ -914,6 +958,18 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit || github.sha }}
+
+      # 缓存同步下来的模板脚本；key 绑定仓库内脚本内容，脚本一改就换新缓存，
+      # 避免旧缓存把已跟踪脚本（如 resolve-prerelease.sh）恢复成旧版本。
+      - name: 缓存脚本
+        uses: actions/cache@v6
+        with:
+          path: scripts/ci
+          key: ci-scripts-${{ hashFiles('scripts/ci/**') }}
+
+      - name: 同步脚本
+        shell: bash
+        run: make fetch-scripts
 
       - name: 生成公告正文
         shell: bash
