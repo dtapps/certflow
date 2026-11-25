@@ -1,0 +1,131 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // 定位：Dependabot 为主，Renovate 为备用；由 .github/workflows/renovate.yml
+  //       每天定时运行，也可在 Actions 页面手动触发。
+  // 备用策略：dependencyDashboardApproval=true，定时运行只刷新 Dependency Dashboard，
+  //           不自动开 PR；Dependabot 失效时人工在 Dashboard 勾选需要的更新再创建 PR，
+  //           因此两套机器人不会重复提 PR，也无需停用 dependabot.yml。
+  extends: ["config:recommended"],
+
+  // 频率由 workflow 的 cron 控制（每天 00:00 UTC）；这里不额外限制时段。
+  // 备用模式下实际创建 PR 需人工在 Dashboard 批准。
+  timezone: "Asia/Shanghai",
+  schedule: ["at any time"],
+
+  // 本仓库依赖数量多（云厂商 SDK 密集），限速避免一次性刷屏。
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+
+  // 与仓库现有提交风格保持一致：build(deps): bump xxx
+  // config:recommended 默认开启语义化提交（fix/chore），这里显式关闭并覆盖前缀。
+  semanticCommits: "disabled",
+  commitMessagePrefix: "build(deps):",
+  commitMessageAction: "bump",
+
+  // major 单独 PR 便于人工评估破坏性变更；minor/patch 按包合并（默认行为，显式声明）。
+  separateMajorMinor: true,
+  separateMinorPatch: false,
+
+  // 新版本发布 3 天后再跟进，降低供应链投毒风险。
+  minimumReleaseAge: "3 days",
+
+  // 集中查看待处理更新；只扫描项目实际使用的四类依赖。
+  dependencyDashboard: true,
+  // 备用模式关键开关：只在 Dashboard 列出更新，人工勾选后才创建 PR，避免与 Dependabot 重复。
+  dependencyDashboardApproval: true,
+  // Dashboard 的标题与头尾说明可自定义为中文；正文勾选项列表由 Renovate 生成，保持默认英文。
+  dependencyDashboardTitle: "依赖更新面板（Renovate 备用）",
+  dependencyDashboardHeader: "Dependabot 是主依赖更新方案；本面板仅作备用。普通更新请勾选后再让 Renovate 创建 PR，漏洞修复更新无需勾选会直接建 PR。",
+  dependencyDashboardFooter: "勾选后 Renovate 会在下一次运行时创建 PR；发布未满 3 天的新版本不会显示。",
+  enabledManagers: ["gomod", "npm", "github-actions", "dockerfile"],
+  labels: ["dependencies"],
+
+  // CI 门禁未全部恢复（见 docs/handoff.md），所有更新 PR 必须人工确认后再合并。
+  automerge: false,
+
+  packageRules: [
+    // ---------- Go ----------
+    {
+      matchManagers: ["gomod"],
+      postUpdateOptions: ["gomodTidy"],
+      addLabels: ["go"],
+    },
+    {
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "Go 依赖（非 major）",
+    },
+    // 云厂商 SDK 发版极频繁，非 major 更新合并为一个 PR；需要按厂商拆分时复制本规则。
+    {
+      matchManagers: ["gomod"],
+      matchPackageNames: [
+        "github.com/alibabacloud-go/**",
+        "github.com/tencentcloud/**",
+        "github.com/huaweicloud/**",
+        "github.com/volcengine/**",
+        "github.com/aws/**",
+      ],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "Go 云厂商 SDK（非 major）",
+    },
+    // Wails Go SDK 与前端 runtime 必须同版本升级，合并到同一个 PR。
+    {
+      matchManagers: ["gomod", "npm"],
+      matchPackageNames: ["github.com/wailsapp/wails/v3", "@wailsio/runtime"],
+      groupName: "Wails 运行时与 SDK（同步升级）",
+    },
+    // Wails v4 等 major 版本涉及桌面运行时破坏性变更，暂不自动跟进。
+    {
+      matchPackageNames: ["github.com/wailsapp/wails/v3", "@wailsio/runtime"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+    // Go 版本由统一 CI 镜像提供，go.mod 的 go/toolchain 指令需人工评估后修改。
+    {
+      matchManagers: ["gomod"],
+      matchDepTypes: ["golang", "toolchain"],
+      enabled: false,
+    },
+
+    // ---------- 前端（pnpm） ----------
+    {
+      matchManagers: ["npm"],
+      postUpdateOptions: ["pnpmDedupe"],
+      addLabels: ["frontend"],
+    },
+    {
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["minor", "patch", "digest"],
+      groupName: "前端依赖（非 major）",
+    },
+    // TypeScript 通过 npm alias 指向 typescript-native-bridge，升级需人工确认桥接版本。
+    {
+      matchManagers: ["npm"],
+      matchPackageNames: ["typescript", "npm:typescript-native-bridge"],
+      enabled: false,
+    },
+
+    // ---------- GitHub Actions ----------
+    {
+      matchManagers: ["github-actions"],
+      addLabels: ["github-actions"],
+    },
+    {
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["minor", "patch", "digest"],
+      groupName: "GitHub Actions（非 major）",
+    },
+
+    // ---------- Docker ----------
+    {
+      matchManagers: ["dockerfile"],
+      addLabels: ["docker"],
+    },
+    {
+      matchManagers: ["dockerfile"],
+      matchUpdateTypes: ["minor", "patch", "digest"],
+      groupName: "Docker 基础镜像（非 major）",
+    },
+  ],
+}
