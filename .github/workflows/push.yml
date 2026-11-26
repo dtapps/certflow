@@ -34,6 +34,8 @@ jobs:
     # 不再由各仓库自行打包（原 ci-image.yml 已废弃）。
     container:
       image: ghcr.io/dtapps/golang/wails3:latest
+      env:
+        GIT_SHIM_SAFE_DIRECTORY: 'true'
     steps:
       - name: 检出代码
         uses: actions/checkout@v7
