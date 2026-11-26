@@ -178,9 +178,8 @@ certflow/
 │   ├── push.yml               # push / PR 检查
 │   ├── codecov.yml            # Codecov 上报（覆盖率 / bundle / tests）
 │   └── coveralls.yml          # Coveralls 上报（统一 CI 镜像由外部仓库维护）
-├── .cnb/workflows/            # CNB 工作流（检查、覆盖率、安全扫描等）
-├── .cnb.yml                   # CNB 入口：include 各工作流 + Release 发布
-├── .workflow/                 # Gitee 流水线（webhook 触发 / 手动兜底）
+├── .cnb/workflows/            # CNB 工作流（检查、覆盖率、安全扫描、Release 同步等）
+├── .cnb.yml                   # CNB 入口：include 各工作流
 ├── .golangci.yml              # Go 代码检查配置
 ├── Makefile                   # Make 命令
 ├── Taskfile.yml               # Task 构建入口
@@ -246,10 +245,10 @@ make build VERSION=1.0.0
 
 ### 发布工作流
 
-- **GitHub Actions（Release）**：手动输入版本号或每天定时触发（定时等价于填 `nightly`，自动展开为带日期的 `v1.2.4-nightly.20260101`），六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；是否预发布只看版本号后缀（`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`），没有 `prerelease` 勾选框
-- **CNB**：手动输入版本号（只传 `version`，预发布同样看后缀），从 GitHub Release 下载产物并发布
-- **发布平台**：只有 GitHub / CNB / Gitee 三个平台发布版本，其他平台不发布
-- **镜像同步**：GitHub 发布成功后自动触发 CNB 同步；Gitee 通过 webhook 触发 `.workflow/release.yml`（需 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）
+- **GitHub Actions（Release）**：手动输入版本号，或每天 UTC 00:00（北京时间 08:00）定时构建 nightly；六个平台并行构建（macOS arm64 / amd64、Linux amd64 / arm64、Windows amd64 / arm64），发布 GitHub Release；是否预发布只看版本号后缀（`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`），没有 `prerelease` 勾选框
+- **CNB**：GitHub Release 发布后由 API 传入版本号与 commit 立即同步，也可手动输入版本号；只下载 GitHub Release 产物并发布到 CNB，不重新构建
+- **发布平台**：只有 GitHub / CNB 两个平台发布版本，其他平台仅为代码镜像；Gitee 工作流已删除
+- **触发方式**：GitHub 的 `sync-cnb` job 调用 CNB `api_trigger_release`；CNB 保留页面按钮手动触发
 
 ### 代码签名
 

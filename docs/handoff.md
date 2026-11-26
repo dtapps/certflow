@@ -40,11 +40,11 @@ go tool cover -func=coverage.out | tail -1
 7. `internal/ca/service.go` — `TestConnection` 不再把译文当 `fmt.Sprintf` 格式串。 7.5 `internal/monitor/service.go` — 新增 `certIssuerName` / `certSubjectName`（CN → Organization / CN → SAN[0] → Organization），`checkHTTPS`/`checkHTTP` 改用，修复现代 CA 证书（无 CN）导致监控列表「颁发者/主体」空白。
 8. `.cnb/workflows/{push,pull}-coverage.yml` — Go 覆盖率门禁**当前已暂停**（5903820 把 `lines` / `diffLines` 阈值注释掉，只上报数据不阻断）。恢复时记得：`lines: COVERAGE_LINES` 是 `exports` 输出变量，与阈值 `lines:` 不是同一个键。
 9. `frontend/scripts/vitest-json-to-junit.mjs` — 新增 `toRepoRelative()`：Vitest json reporter 的 `testResults[].name` 是绝对路径，直接写进 JUnit `classname` 会让 Codecov Tests 面板显示 `/__w/certflow/certflow/frontend/...`（runner 专属前缀，换 CI 就变一条记录）。现统一转成 `frontend/src/test/x.test.ts`，且**与前缀无关**（`/home/runner/work/...`、`/__w/...`、`/workspace/...`、`/builds/...` 均实测归一到同一值）。详见 `docs/codecov.md` 3.3.1。 ⚠️ 已上传的旧绝对路径记录不会迁移，只能等 Codecov 60 天保留期淘汰；判断是否生效看最新一次 run。
-10. `.github/workflows/release.yml` — 在 `sync-cnb` 后新增 `sync-gitee`，`notify.needs` 同步补齐。两家用的是同一套语义：发布成功后 POST 触发对方流水线，非 2xx 只 `::warning::`、不影响 Release；未配置 secret 时靠 step 的 `if: env.X != ''` 整步跳过。
-    - ⚠️ **当前发布平台**：只有 GitHub / CNB / Gitee 三个平台发布版本。
-    - ⚠️ **`if` 要能读到 token，token 必须放 job 级 `env`**：step 自己 `env` 里的值在 `if` 求值阶段尚未展开，`if: env.X != ''` 会恒为 false（原 `sync-cnb` 就是这种写法，已一并修正）。两处现在都是 job 级 `env` + step 级 `if`，别再退回脚本内判空或 step 级 `env`。
-    - **每个平台 1~2 个 secret**：`SYNC_CNB_TOKEN`、`SYNC_GITEE_WEBHOOK_URL` + `SYNC_GITEE_TOKEN`。仓库标识、端点、ref、workflow 名全是脚本开头常量；仓库地址的唯一来源是 README「仓库」表——**CNB 是 `dtapp`（不带 s），Gitee 是 `dtapps`（带 s）**，写错会 404。
-    - **Gitee**：GitHub 侧 `sync-gitee` job 通过 Gitee Go 的 Webhook 触发 `.workflow/release.yml`（`eventType=certflow-release`，参数只有 `VERSION`），需要 `SYNC_GITEE_WEBHOOK_URL` + `SYNC_GITEE_TOKEN`；未配置时整步跳过，Gitee 侧需手动改全局参数 `VERSION` 后执行。流水线只跑两个脚本：`scripts/ci/gitee-release-download.js`（按单文件 100MB 上限过滤 → 下载 → 写清单 `gitee-release.json`）与 `scripts/ci/gitee-release-publish.js`（手写 v5 API：查/删同名 Release → 建 Release → 逐个上传附件；`updater-*` / `BUILD_TIME` / `GIT_COMMIT` 照常上传）。已弃用 `release@gitee` 插件与 `GITEE_PARAMS` 参数通道。
+10. `.github/workflows/release.yml` / `.cnb/workflows/release.yml` — GitHub 每天 UTC 00:00（北京时间 08:00）构建并发布 nightly，发布成功后通过 API 触发 CNB 立即下载同步。
+    - ⚠️ **当前发布平台**：只有 GitHub / CNB 两个平台发布版本；Gitee 发布工作流与 webhook 已删除，Gitee 仓库仅保留为代码镜像。
+    - **CNB 同步不重新构建**：它从 GitHub 下载 Release 产物与正文，再发布到 CNB；API 触发显式传入刚发布的 tag 与 commit。
+    - **所需 Secret**：CNB 的 `CERTFLOW_GITHUB_TOKEN` 用于读取 GitHub Release 和下载附件；GitHub 仓库的 `SYNC_CNB_TOKEN` 用于触发 CNB（权限 `repo-cnb-trigger:rw`）。`SYNC_GITEE_WEBHOOK_URL`、`SYNC_GITEE_TOKEN` 不再使用。
+    - **手动同步**：CNB 页面「发布 Release」按钮可填写最终 `version` 或 `nightly`，以及可选 `commit`。
 
 ### 测试基建约定（后续补测必须遵守）
 - **绝不联网**：不访问真实 ACME / 云厂商 API。构建期就打云 API 的厂商（`huawei`、`azuredns`）用 `t.Skip`；HTTP 一律 `httptest`。

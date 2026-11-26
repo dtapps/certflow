@@ -2,7 +2,7 @@
 #
 # 版本号归一化 + 预发布判定。
 #
-# 事实来源：GitHub Actions 的 release.yml 与 CNB 的 .cnb.yml（trigger_release）都
+# 事实来源：GitHub Actions 的 release.yml 与 CNB 的 .cnb/workflows/release.yml 都
 # source 这一份实现，避免两处各写一套 grep 正则、判断口径慢慢跑偏：
 #
 #   v1.2.3 / 1.2.3        -> TAG=v1.2.3        PRERELEASE=false   正式版（stable）

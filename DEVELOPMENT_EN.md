@@ -178,9 +178,8 @@ certflow/
 │   ├── push.yml               # push / PR checks
 │   ├── codecov.yml            # Codecov upload (coverage / bundle / tests)
 │   └── coveralls.yml          # Coveralls upload (shared CI image maintained externally)
-├── .cnb/workflows/            # CNB workflows (checks, coverage, security scans)
-├── .cnb.yml                   # CNB entry: includes workflows + release pipeline
-├── .workflow/                 # Gitee pipeline (webhook-triggered / manual fallback)
+├── .cnb/workflows/            # CNB workflows (checks, coverage, security scans, release sync)
+├── .cnb.yml                   # CNB entry: includes workflows
 ├── .golangci.yml              # Go linting configuration
 ├── Makefile                   # Make commands
 ├── Taskfile.yml               # Task build entry point
@@ -245,10 +244,10 @@ Injected variables (`main.go`):
 
 ### Release Workflow
 
-- **GitHub Actions (Release)**: Manual trigger with a version input or the daily schedule (equivalent to `nightly`, expanded to a dated version like `v1.2.4-nightly.20260101`), six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64), publishes a GitHub Release; pre-release is decided only by the version suffix (`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`), there is no `prerelease` checkbox
-- **CNB**: Manual trigger with version (only `version` is passed; pre-release is likewise suffix-based), downloads artifacts from GitHub Release and publishes locally
-- **Release platforms**: only GitHub / CNB / Gitee publish releases; other platforms do not
-- **Mirror sync**: A successful GitHub release triggers CNB sync automatically; Gitee is triggered via webhook into `.workflow/release.yml` (needs `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`, run manually when unset)
+- **GitHub Actions (Release)**: Manual version input or a daily build at UTC 00:00 (08:00 Beijing time); six-platform parallel build (macOS arm64 / amd64, Linux amd64 / arm64, Windows amd64 / arm64) and GitHub Release publication. Pre-release status is decided only by the version suffix (`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`); there is no `prerelease` checkbox
+- **CNB**: After a GitHub Release is published, an API call passes the tag and commit for immediate sync; manual version input is also supported. CNB downloads GitHub Release artifacts and publishes them without rebuilding
+- **Release platforms**: only GitHub / CNB publish releases; other platforms are code mirrors only. The Gitee workflow has been removed
+- **Triggers**: GitHub’s `sync-cnb` job calls CNB’s `api_trigger_release`; CNB also keeps the web button for manual runs
 
 ### Code Signing
 

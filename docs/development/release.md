@@ -1,6 +1,6 @@
 # 构建与发布
 
-发布由 GitHub Actions 的 `Release` 工作流驱动：手动触发或每天定时触发，六平台并行构建，然后发布到 GitHub，再同步到其它平台。
+发布由 GitHub Actions 的 `Release` 工作流驱动：手动触发或每天 UTC 00:00 定时构建，六平台并行构建并发布 GitHub Release。Release 发布成功后，GitHub 通过 API 触发 CNB 立即下载并同步对应版本。
 
 ## 1. 触发参数
 
@@ -21,17 +21,19 @@
 - 定时任务固定在 UTC 00:00（北京时间 08:00）跑；手动执行是随时，日期按点执行那天算。
 - 同一天内手动重跑会得到**同一个 tag**。nightly 允许同日重跑（`release` job 会删掉旧 Release 与 tag 重建）；正式版 / rc / beta / alpha 则不允许——tag 已存在会直接失败，避免把历史 Release 的对比基准挪走。
 
-Gitee 镜像端手动执行时**不接受裸 `nightly`**：它拿不到 tag 历史，推不出基版本与日期，只接收展开后的最终 tag。
+`.cnb/workflows/release.yml` 有两种触发方式：
 
-上面这段版本号规则在**所有发布 / 同步工作流的文件头都写了一份**（改规则时三处一起改）：
+- `api_trigger_release`：GitHub Release 发布成功后触发，API 显式传入本次 `version` 与 `commit`，立即同步对应版本。
+- `web_trigger_release`：页面按钮手动填写版本号（最终 tag 或 `nightly`）。
 
-| 文件                            | 角色                                                                          |
-|---------------------------------|-------------------------------------------------------------------------------|
-| `.github/workflows/release.yml` | 发布（GitHub Release）+ 触发各镜像同步                                        |
-| `.cnb/workflows/release.yml`    | 同步到 CNB Release（由 `.cnb.yml` 的 `include` 引入；发布配置已从此文件拆出） |
-| `.workflow/release.yml`         | 同步到 Gitee Release                                                          |
+CNB 只下载并镜像 GitHub 产物，不重新构建。
 
-Gitee 镜像端只接收**最终 tag**（如 `v1.2.4-nightly.20260101`），传裸 `nightly` 会直接报错——裸 `nightly` 只能由 GitHub 的定时任务展开成带日期的版本。
+上面这段版本号规则在**发布与同步工作流的文件头都写了一份**（改规则时两处一起改）：
+
+| 文件                            | 角色                                             |
+|---------------------------------|--------------------------------------------------|
+| `.github/workflows/release.yml` | 构建并发布 GitHub Release                        |
+| `.cnb/workflows/release.yml`    | API 立即同步或页面手动同步 GitHub Release 到 CNB |
 
 `prepare` job 输出：`tag`（归一化 tag，如 `v1.2.3-rc.1` / `v1.2.4-nightly.20260101`）、`version`（去掉 `v`，注入 `main.currentVersion` 与产物名）、`app_version`（纯数字，供 NSIS / plist / nfpm）、`pre_release`、`release_title`、`build_time`（`scripts/get-build-time.sh`）与 `git_commit` / `git_commit_full`。
 
@@ -85,24 +87,18 @@ Gitee 镜像端只接收**最终 tag**（如 `v1.2.4-nightly.20260101`），传�
 1. `prepare`：归一化版本号（`scripts/ci/resolve-prerelease.sh`），算 `tag` / `version` / `app_version` / 预发布标记 / 构建时间 / 提交。
 2. `build` / `build-linux`（六路并行）：打包 → 签名 → 重命名 → 平台内 `SHA256SUMS` → 上传 artifact（保留 1 天）。
 3. `release`：下载全部 artifact → 预发布时写 `BUILD_TIME`/`GIT_COMMIT` → 统一 `SHA256SUMS`（追加 `# build_time` / `# git_commit` 注释，供更新器判定 nightly 是否真更新）→ `release-changelog.sh` 按渠道选对比基准 → `render-release-body.sh` 生成正文 → 删除同名旧 Release → `softprops/action-gh-release@v3` 用归一化 tag 发布 → nightly 发布后清理旧 Release，GitHub 只保留最近 3 个。版本 tag 必须比已有同渠道版本新且不可重复；nightly 的日期 tag 正常情况下每天新建，同一天重跑时允许删掉重建（镜像平台暂不做同等清理）。
-4. 同步 job（全部 `needs: release`，失败只 `::warning::`，不影响 Release；只传归一化 tag，预发布由各端按后缀自行判定）：
-   - 每个 job 用一个 `if: always()` 的「记录同步状态」步骤（`id: status`）产出唯一的 `outputs.status`，取值 `triggered`（已触发）/ `skipped`（未配置 secret，触发步骤被跳过）/ `failed`（触发失败或步骤报错）——job 结果区分不了「没配 secret」和「同步成功」，只能靠这一步。
-   - `sync-cnb`：延迟 8 秒等 CDN，POST `api.cnb.cool/.../-/build/start`，`event=api_trigger_release`，env 带 `version` 与 `commit`。需要 `SYNC_CNB_TOKEN`（权限 `repo-cnb-trigger:rw`）。
-   - `sync-gitee`：POST Gitee Go webhook（`eventType=certflow-release`，params 带 `VERSION` 与 `COMMIT`）。需要 GitHub 仓库 secret `SYNC_GITEE_WEBHOOK_URL` + `SYNC_GITEE_TOKEN`。`COMMIT` 只是搭车带上（构建元数据，不参与判定），Gitee 端没声明同名全局参数就忽略它，**不需要在 Gitee 后台做任何配置**。
-   - **commit 的取舍**：commit 是**构建元数据**（ldflags 注入二进制），与版本号相互独立、不参与任何判定；它本来就写在二进制、Release 正文和 SHA256SUMS 里，镜像端资产也是那份 commit 编出来的。所以**发出去的请求一律带上**（CNB 的 API env、Gitee 的 webhook params）。
-     - **commit 的真正用途：让下游跑「发布那一版」的代码，而不是分支最新**。发版可能用的是还没进分支头的提交（`inputs.commit`），下游若拉分支最新，跑的就是另一版脚本（下载规则、正文渲染都可能不一致）。
-     - 各平台的落地方式（都带回退：取不到就沿用分支头，不阻断同步）：
-       - **CNB**：第一个 stage 先 `git checkout <commit>`（依次试本地 → 自己的 `origin`，不跨平台拉），再 `source scripts/ci/resolve-prerelease.sh`。commit 走 API env，**无需平台侧配置**。
-       - **Gitee**：step 里先 `git checkout <commit>`，再 `node scripts/ci/gitee-release-*.js`。需要在 Gitee 后台加一个**可选**全局参数 `COMMIT`；不加则沿用分支头（行为与从前一致）。
-5. `notify`：等所有同步 job 结束，用 `SERVERCHAN_SENDKEY` 推送构建完成通知（可选）。通知内容：版本 / 构建时间（UTC+8）/ 提交 / 三个平台的 Release 链接（GitHub / CNB / Gitee）+ 一行「镜像同步」状态（`CNB ✅ 已触发 · Gitee ⏭ 未配置（跳过）`，状态取各 sync job 的 `outputs.status`）。版式与 kai 项目保持一致。
+4. 同步 job（`needs: release`，失败只 `::warning::`，不影响 Release；只传归一化 tag，预发布由 CNB 按后缀自行判定）：
+   - `sync-cnb` 用一个 `if: always()` 的「记录同步状态」步骤（`id: status`）产出 `outputs.status`，取值 `triggered`（已触发）/ `skipped`（未配置 secret，触发步骤被跳过）/ `failed`（触发失败或步骤报错）。
+   - 延迟 8 秒等 CDN，POST `api.cnb.cool/.../-/build/start`，`event=api_trigger_release`，env 带 `version` 与 `commit`。需要 `SYNC_CNB_TOKEN`（权限 `repo-cnb-trigger:rw`）。
+   - **commit 是构建元数据**，与版本号相互独立、不参与任何判定；传它是为了让下游跑「发布那一版」的代码，而不是分支最新。CNB 第一个 stage 先尝试从本地或自己的 `origin` 检出该提交，再 `source scripts/ci/resolve-prerelease.sh`；取不到就沿用分支头，不阻断同步。
+5. `notify`：等 `release` 与 `sync-cnb` 结束，用 `SERVERCHAN_SENDKEY` 推送构建完成通知（可选）。通知内容：版本 / 构建时间（UTC+8）/ 提交 / GitHub 与 CNB 的 Release 链接 + 一行「镜像同步」状态（状态取 `sync-cnb` 的 `outputs.status`）。版式与 kai 项目保持一致。
 
 ## 6. 发布平台范围
 
 按根目录 README 与交接记录：
 
-- **正式发布平台只有三个**：GitHub、CNB、Gitee。
-- Gitee 走 `.workflow/release.yml`（Gitee Go 流水线），由 webhook 触发；也可在页面上改全局参数 `VERSION` 后手动执行。
-- CNB 侧发布配置在 `.cnb/workflows/release.yml`（由根目录 `.cnb.yml` 的 `include` 引入，`.cnb.yml` 自身只留 include 列表）：`web_trigger_release`（页面按钮）与 `api_trigger_release`（GitHub 触发）两者共用同一段 `trigger_release`，从 GitHub Release 拉资产 → 删旧 Release/Tag → `git:release` → 上传附件。⚠️ CNB 的 include 不支持跨文件 YAML 锚点，所以 `.trigger_release` 锚点定义与两处 `*trigger_release` 引用必须留在同一个 `release.yml` 里。
+- **正式发布平台只有两个**：GitHub、CNB。Gitee 工作流已删除，Gitee 仓库仅保留为代码镜像。
+- CNB 侧发布配置在 `.cnb/workflows/release.yml`（由根目录 `.cnb.yml` 的 `include` 引入，`.cnb.yml` 自身只留 include 列表）：`api_trigger_release`（GitHub 发布后立即同步）与 `web_trigger_release`（页面按钮）共用同一段 `trigger_release`，从 GitHub Release 拉资产 → 删旧 Release/Tag → `git:release` → 上传附件。⚠️ CNB 的 include 不支持跨文件 YAML 锚点，所以 `.trigger_release` 锚点定义与两处 `*trigger_release` 引用必须留在同一个 `release.yml` 里。
 
 ## 7. 本地构建
 
@@ -134,24 +130,34 @@ make package VERSION=1.2.3
 - [ ] 版本号与 README 徽章、更新源一致。
 - [ ] 升级文件（`updater-*`）确实生成，`SHA256SUMS` 覆盖到它。
 - [ ] 预发布时确认 `BUILD_TIME` / `GIT_COMMIT` 存在。
-- [ ] 同步用的 Secret 就位（缺了只是跳过，不会让 Release 失败，但镜像不会更新）。
+- [ ] CNB 的 `CERTFLOW_GITHUB_TOKEN` 已配置（用于读取 GitHub Release 与下载附件）。
+- [ ] GitHub 仓库的 `SYNC_CNB_TOKEN` 已配置（权限 `repo-cnb-trigger:rw`，用于发布后触发 CNB）。
 
 ## 9. 常见问题
 
-| 现象                      | 原因 / 处置                                                                                                  |
-|---------------------------|--------------------------------------------------------------------------------------------------------------|
-| Release 建了但没附件      | artifact 下载失败或重命名步骤没产出，看 `build` job 的 `ls -lh`                                              |
-| 更新提示「无更新」        | 中文走 CNB；确认 CNB 已有同名 Release 与 `updater-*` 资产                                                    |
-| mac 包打不开              | 未签名 / 未公证；检查三个 Apple Secret 是否齐全                                                              |
-| Windows 安装包被拦        | 未签名；SmartScreen 属预期                                                                                   |
-| 同步 job 全绿但镜像没更新 | `if: env.X != ''` 整步跳过；确认 Secret 在 job 级 `env` 里可见                                               |
-| Linux 构建失败            | 缺 webkit2gtk 等系统依赖，用官方 runner 或 `ci-image` 镜像                                                   |
-| 公告没自动创建            | 该 stage 只告警不阻断；看 stage 日志里的 HTTP 码；也可在 Issue 页面用「发版公告」模板手工补一条              |
-| GitHub 侧没发公告         | 仓库没打开 Discussions（分类接口 404）；看 announce job 的 `::warning::`；确认 Settings 里已开启 Discussions |
+| 现象                 | 原因 / 处置                                                                                                           |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------|
+| Release 建了但没附件 | artifact 下载失败或重命名步骤没产出，看 `build` job 的 `ls -lh`                                                       |
+| 更新提示「无更新」   | 中文走 CNB；确认 CNB 已有同名 Release 与 `updater-*` 资产                                                             |
+| mac 包打不开         | 未签名 / 未公证；检查三个 Apple Secret 是否齐全                                                                       |
+| Windows 安装包被拦   | 未签名；SmartScreen 属预期                                                                                            |
+| CNB 同步没更新       | 确认 `SYNC_CNB_TOKEN` 可触发、GitHub 已有对应 Release 与附件、CNB `CERTFLOW_GITHUB_TOKEN` 可读取，并查看 API 触发记录 |
+| Linux 构建失败       | 缺 webkit2gtk 等系统依赖，用官方 runner 或 `ci-image` 镜像                                                            |
+| 公告没自动创建       | 该 stage 只告警不阻断；看 stage 日志里的 HTTP 码；也可在 Issue 页面用「发版公告」模板手工补一条                       |
+| GitHub 侧没发公告    | 仓库没打开 Discussions（分类接口 404）；看 announce job 的 `::warning::`；确认 Settings 里已开启 Discussions          |
 
 ## 10. 发版公告 Issue
 
 Release 发布成功后，CNB 侧流水线会**自动开一条 Issue** 作为发版公告（模板见 `.cnb/ISSUE_TEMPLATE/release-announcement.yml`）。
+
+缺陷反馈与功能建议模板：
+
+| 平台   | 缺陷反馈                                | 功能建议                                     |
+|--------|-----------------------------------------|----------------------------------------------|
+| CNB    | `.cnb/ISSUE_TEMPLATE/bug-report.yml`    | `.cnb/ISSUE_TEMPLATE/feature-request.yml`    |
+| GitHub | `.github/ISSUE_TEMPLATE/bug_report.yml` | `.github/ISSUE_TEMPLATE/feature_request.yml` |
+
+两个平台都关闭空白 Issue，并在选择页提供帮助文档、历史 Release 与安全报告入口。
 
 | 项        | 说明                                                                                                                                                                                                               |
 |-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -276,12 +282,12 @@ mutation ($id: ID!, $title: String!, $body: String!) {
 
 ### 10.5 公告清理（定时任务）
 
-公告挂久了没人维护就该收掉。两个平台各有一个定时任务，**每天 0 点（北京时间）**清理超过 7 天的版本公告：
+公告挂久了没人维护就该收掉。CNB 每天北京时间 1 点、GitHub 每天 UTC 1 点清理超过 7 天的版本公告：
 
 | 平台   | 文件                                                                    | 触发                                                                                                    | 清理对象                                                                                               |
 |--------|-------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| CNB    | `.cnb/workflows/announcement-cleanup.yml`（由 `.cnb.yml` include 引入） | `master` 下的字符串键 `"crontab: 0 0 * * *"`；时区是 CNB 系统的 `Asia/Shanghai`（写 `0 0` 即中国 0 点） | 带「发版公告」标签、**更新时间**早于 7 天前的开放 Issue；CLI 只负责筛，关闭交给官方 `git:issue-update` |
-| GitHub | `.github/workflows/announcement-cleanup.yml`                            | `schedule: "0 16 * * *"`（Actions 的 schedule 只认 UTC，UTC 16:00 = 北京 0 点）                         | 标题以 `[发版公告] CertFlow ` 开头、创建时间超过 7 天的讨论                                            |
+| CNB    | `.cnb/workflows/announcement-cleanup.yml`（由 `.cnb.yml` include 引入） | `master` 下的字符串键 `"crontab: 0 1 * * *"`；时区是 CNB 系统的 `Asia/Shanghai`（写 `0 1` 即中国 1 点） | 带「发版公告」标签、**更新时间**早于 7 天前的开放 Issue；CLI 只负责筛，关闭交给官方 `git:issue-update` |
+| GitHub | `.github/workflows/announcement-cleanup.yml`                            | `schedule: "0 1 * * *"`（Actions 的 schedule 只认 UTC，即 UTC 01:00）                                    | 标题以 `[发版公告] CertFlow ` 开头、创建时间超过 7 天的讨论                                            |
 
 要点：
 
