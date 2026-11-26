@@ -6,7 +6,7 @@
   //           不自动开 PR；Dependabot 失效时人工在 Dashboard 勾选需要的更新再创建 PR，
   //           因此两套机器人不会重复提 PR，也无需停用 dependabot.yml。
   extends: ["config:recommended"],
-  // 频率由 workflow 的 cron 控制（每天 00:00 UTC）；这里不额外限制时段。
+  // 频率由 workflow 的 cron 控制（每天 00:30 UTC）；这里不额外限制时段。
   // 备用模式下实际创建 PR 需人工在 Dashboard 批准。
   timezone: "Asia/Shanghai",
   schedule: ["at any time"],

@@ -72,7 +72,6 @@ YAMLFMT_ARGS=()
 YAML_TARGETS=(
   ".cnb"
   ".github"
-  ".workflow"
   "build"
   ".cnb.yml"
   ".golangci.yml"
@@ -153,7 +152,6 @@ SHELL_EXCLUDES=(
 DOCKER_DIRS=(
   ".cnb"
   ".github"
-  ".workflow"
 )
 DOCKER_GLOB="Dockerfile*"
 DOCKERFMT_ARGS=(-w)

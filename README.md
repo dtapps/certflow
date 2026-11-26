@@ -99,8 +99,10 @@ make format-frontend-write # 格式化前端代码（Prettier）
   - `1.2.3-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`：常规预发布，更新内容按同渠道对比
   - `nightly`：每日预发布，自动展开为 `v<最近正式版+1补丁>-nightly.<UTC日期>`（如 `v1.2.4-nightly.20260101`）；应用内「预发布更新」按 `-nightly.` 后缀列出 Release 找最新版本，GitHub 上只保留最近 3 个 nightly Release
 - **Release 正文**：由 `scripts/ci/render-release-body.sh` 统一生成（发布信息表 / 下载表 / SHA256SUMS 校验 / 更新内容），更新内容由 `scripts/ci/release-changelog.sh` 按渠道选对比基准并分组；版本号归一化与预发布判定见 `scripts/ci/resolve-prerelease.sh`，GitHub 与 CNB 共用同一份实现
-- **发布平台**：只有 GitHub / CNB / Gitee 三个平台发布版本，其他平台不发布
-- **镜像同步**：发布成功后自动同步到 CNB；Gitee 通过 webhook 触发 `.workflow/release.yml`（需配置 `GITEE_WEBHOOK_URL` / `GITEE_TOKEN`，未配置时手动执行）
+- **发布平台**：只有 GitHub / CNB 两个平台发布版本，其他平台仅为代码镜像
+- **定时发布**：GitHub 每天 UTC 00:00（北京时间 08:00）构建 nightly
+- **自动同步**：GitHub Release 发布成功后通过 API 触发 CNB 下载对应版本
+- **手动同步**：可在 CNB「发布 Release」按钮填写最终版本号；Gitee 发布工作流已删除
 
 ## 开发文档
 
