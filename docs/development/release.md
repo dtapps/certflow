@@ -12,19 +12,20 @@
 | 输入      | 说明                                                                                                                                                                                                                                                       |
 |-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `version` | 版本号，正式版 `1.2.3`（带不带 `v` 均可，tag 统一为 `v1.2.3`）；预发布看后缀：`-rc.1` / `-beta.1` / `-alpha.1` / `-nightly.20260101`；填 `nightly` 自动展开为 `v<最近正式版+1补丁>-nightly.<UTC日期>`（如最近正式版 `v1.2.3` → `v1.2.4-nightly.20260101`） |
-| `commit`  | 要构建的提交，留空用默认分支最新提交                                                                                                                                                                                                                       |
 
-**没有 `prerelease` 勾选框**：是否预发布只由版本号后缀决定，避免布尔输入与版本号打架。归一化与判定统一走 `scripts/ci/resolve-prerelease.sh`，GitHub 与 CNB 共用同一份实现。
+所有代码检出统一使用触发工作流时的 `github.sha`，不支持自定义构建提交。
 
-**手动执行填 `nightly` 与定时任务完全等价**：两条路径都进 `resolve-prerelease.sh`，都会展开成 `v<最近正式版+1补丁>-nightly.<执行当天UTC日期>`（基版本取最近正式版 tag，日期取**执行当天**的 UTC 日期）。差别只有两点：
+**没有 `prerelease` 勾选框**：是否预发布只由版本号后缀决定，避免布尔输入与版本号打架。GitHub 用 `dtapps/release-version-action@main`，CNB 用 `docker.cnb.cool/dtapp/plugins/release-version:latest`；两边都做解析 + Tag 校验，规则同口径。
+
+**手动执行填 `nightly` 与定时任务完全等价**：两条路径都调用 `dtapps/release-version-action@main`，都会展开成 `v<最近正式版+1补丁>-nightly.<执行当天UTC日期>`；没有正式版 Tag 时从 `v0.0.0` 起算。差别只有两点：
 
 - 定时任务固定在 UTC 00:00（北京时间 08:00）跑；手动执行是随时，日期按点执行那天算。
 - 同一天内手动重跑会得到**同一个 tag**。nightly 允许同日重跑（`release` job 会删掉旧 Release 与 tag 重建）；正式版 / rc / beta / alpha 则不允许——tag 已存在会直接失败，避免把历史 Release 的对比基准挪走。
 
 `.cnb/workflows/release.yml` 有两种触发方式：
 
-- `api_trigger_release`：GitHub Release 发布成功后触发，API 显式传入本次 `version` 与 `commit`，立即同步对应版本。
-- `web_trigger_release`：页面按钮手动填写版本号（最终 tag 或 `nightly`）。
+- `api_trigger_release`：GitHub Release 发布成功后触发，API 只显式传入 `version`，立即同步对应版本。
+- `web_trigger_release`：页面按钮只填写版本号（最终 tag 或 `nightly`）。
 
 CNB 只下载并镜像 GitHub 产物，不重新构建。
 
@@ -35,7 +36,7 @@ CNB 只下载并镜像 GitHub 产物，不重新构建。
 | `.github/workflows/release.yml` | 构建并发布 GitHub Release                        |
 | `.cnb/workflows/release.yml`    | API 立即同步或页面手动同步 GitHub Release 到 CNB |
 
-`prepare` job 输出：`tag`（归一化 tag，如 `v1.2.3-rc.1` / `v1.2.4-nightly.20260101`）、`version`（去掉 `v`，注入 `main.currentVersion` 与产物名）、`app_version`（纯数字，供 NSIS / plist / nfpm）、`pre_release`、`release_title`、`build_time`（`scripts/get-build-time.sh`）与 `git_commit` / `git_commit_full`。
+`version-gate` job（独立门禁，`needs` 前置）输出：`tag`（归一化 tag，如 `v1.2.3-rc.1` / `v1.2.4-nightly.20260101`）、`version`（去掉 `v`）、`prerelease`。`prepare` job（`needs: version-gate`）据此输出 `tag` / `version` / `pre_release`，另算 `app_version`（纯数字，供 NSIS / plist / nfpm）、`release_title`、`build_time`（`scripts/get-build-time.sh`）与 `git_commit` / `git_commit_full`。
 
 ## 2. 六平台矩阵
 
@@ -84,13 +85,12 @@ CNB 只下载并镜像 GitHub 产物，不重新构建。
 
 ## 5. 发布流程
 
-1. `prepare`：归一化版本号（`scripts/ci/resolve-prerelease.sh`），算 `tag` / `version` / `app_version` / 预发布标记 / 构建时间 / 提交。
+1. `version-gate`：独立 job（`runs-on: ubuntu-26.04`），用 `dtapps/release-version-action@main` 解析版本号并校验 Tag；失败则其余 job 全部跳过。随后 `prepare`（`needs: version-gate`）算 `app_version` / 预发布标记 / 构建时间 / 提交。
 2. `build` / `build-linux`（六路并行）：打包 → 签名 → 重命名 → 平台内 `SHA256SUMS` → 上传 artifact（保留 1 天）。
-3. `release`：下载全部 artifact → 预发布时写 `BUILD_TIME`/`GIT_COMMIT` → 统一 `SHA256SUMS`（追加 `# build_time` / `# git_commit` 注释，供更新器判定 nightly 是否真更新）→ `release-changelog.sh` 按渠道选对比基准 → `render-release-body.sh` 生成正文 → 删除同名旧 Release → `softprops/action-gh-release@v3` 用归一化 tag 发布 → nightly 发布后清理旧 Release，GitHub 只保留最近 3 个。版本 tag 必须比已有同渠道版本新且不可重复；nightly 的日期 tag 正常情况下每天新建，同一天重跑时允许删掉重建（镜像平台暂不做同等清理）。
+3. `release`：下载全部 artifact → 预发布时写 `BUILD_TIME`/`GIT_COMMIT` → 统一 `SHA256SUMS`（追加 `# build_time` / `# git_commit` 注释，供更新器判定 nightly 是否真更新）→ `release-changelog.sh` 按渠道选对比基准 → `render-release-body.sh` 生成正文 → 删除同名旧 Release → `softprops/action-gh-release@v3` 用归一化 tag 发布 → nightly 发布后清理旧 Release，GitHub 只保留最近 3 个。正式版 / rc / beta / alpha 的 Tag 已存在时校验失败；正式版号不能早于已有正式版。nightly 校验允许复用同日 Tag，发布阶段删除同名旧 Release 后重建。
 4. 同步 job（`needs: release`，失败只 `::warning::`，不影响 Release；只传归一化 tag，预发布由 CNB 按后缀自行判定）：
    - `sync-cnb` 用一个 `if: always()` 的「记录同步状态」步骤（`id: status`）产出 `outputs.status`，取值 `triggered`（已触发）/ `skipped`（未配置 secret，触发步骤被跳过）/ `failed`（触发失败或步骤报错）。
-   - 延迟 8 秒等 CDN，POST `api.cnb.cool/.../-/build/start`，`event=api_trigger_release`，env 带 `version` 与 `commit`。需要 `SYNC_CNB_TOKEN`（权限 `repo-cnb-trigger:rw`）。
-   - **commit 是构建元数据**，与版本号相互独立、不参与任何判定；传它是为了让下游跑「发布那一版」的代码，而不是分支最新。CNB 第一个 stage 先尝试从本地或自己的 `origin` 检出该提交，再 `source scripts/ci/resolve-prerelease.sh`；取不到就沿用分支头，不阻断同步。
+   - 延迟 8 秒等 CDN，POST `api.cnb.cool/.../-/build/start`，`event=api_trigger_release`，env 只带 `version`。需要 `SYNC_CNB_TOKEN`（权限 `repo-cnb-trigger:rw`）。
 5. `notify`：等 `release` 与 `sync-cnb` 结束，用 `SERVERCHAN_SENDKEY` 推送构建完成通知（可选）。通知内容：版本 / 构建时间（UTC+8）/ 提交 / GitHub 与 CNB 的 Release 链接 + 一行「镜像同步」状态（状态取 `sync-cnb` 的 `outputs.status`）。版式与 kai 项目保持一致。
 
 ## 6. 发布平台范围
@@ -98,7 +98,7 @@ CNB 只下载并镜像 GitHub 产物，不重新构建。
 按根目录 README 与交接记录：
 
 - **正式发布平台只有两个**：GitHub、CNB。Gitee 工作流已删除，Gitee 仓库仅保留为代码镜像。
-- CNB 侧发布配置在 `.cnb/workflows/release.yml`（由根目录 `.cnb.yml` 的 `include` 引入，`.cnb.yml` 自身只留 include 列表）：`api_trigger_release`（GitHub 发布后立即同步）与 `web_trigger_release`（页面按钮）共用同一段 `trigger_release`，从 GitHub Release 拉资产 → 删旧 Release/Tag → `git:release` → 上传附件。⚠️ CNB 的 include 不支持跨文件 YAML 锚点，所以 `.trigger_release` 锚点定义与两处 `*trigger_release` 引用必须留在同一个 `release.yml` 里。
+- CNB 侧发布配置在 `.cnb/workflows/release.yml`（由根目录 `.cnb.yml` 的 `include` 引入，`.cnb.yml` 自身只留 include 列表）：`api_trigger_release`（GitHub 发布后立即同步）与 `web_trigger_release`（页面按钮）共用两条流水线——`resolve_version` 用插件解析 + 校验并以 `cnb:resolve` 发通知，`trigger_release` 首条 stage 用同 key 的 `cnb:await` 等通知，之后才从 GitHub Release 拉资产 → 删旧 Release/Tag → `git:release` → 上传附件。⚠️ CNB 的 include 不支持跨文件 YAML 锚点，所以锚点定义与 `*resolve_version` / `*trigger_release` 引用必须留在同一个 `release.yml` 里；`cnb:await` / `cnb:resolve` 只能写在 `stages` 里。
 
 ## 7. 本地构建
 
@@ -253,7 +253,7 @@ GitHub 侧不在 Issue 里发公告，而是**在仓库 Discussions 里开一条
 
 | 项       | 说明                                                                                                                          |
 |----------|-------------------------------------------------------------------------------------------------------------------------------|
-| 触发位置 | `.github/workflows/release.yml` 的 `announce` job（`needs: [release, prepare]`）                                              |
+| 触发位置 | `.github/workflows/release.yml` 的 `announce` job（`needs: [version-gate, release, prepare]`）                                |
 | 正文来源 | 取已发布 Release 的正文（`gh api repos/…/releases/tags/<tag> --jq .body`）再交给 `render-announcement-body.sh` 渲染           |
 | 发布方式 | 官方 `actions/github-script@v9` + **GraphQL**（`github.graphql`）；GitHub 没有专门「发讨论」的第一方 action                   |
 | 标题     | `[发版公告] CertFlow <版本号>`（与 CNB 侧同一份格式，由渲染脚本 `TITLE_FILE` 产出）                                           |
@@ -302,4 +302,4 @@ mutation ($id: ID!, $title: String!, $body: String!) {
 
 （CNB 侧）手工补一条时，在 Issue 页面选「发版公告」模板提交，字段与自动生成的公告一致。
 
-> ⚠️ 公告正文由「发布用的那个提交」里的脚本渲染。若发布的是早于该脚本的提交，公告会被跳过（stage 会打印提示）。
+> ⚠️ 公告正文由 CNB 触发时分支上的脚本渲染。若该分支缺少脚本，公告会被跳过（stage 会打印提示）。
